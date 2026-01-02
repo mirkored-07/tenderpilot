@@ -17,7 +17,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="grid min-h-screen grid-cols-1 md:grid-cols-[280px_1fr]">
         <aside className="hidden md:flex flex-col border-r bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/40">
           <div className="h-16 px-6 flex items-center justify-between">
-            <Link href="/app" className="font-semibold text-lg tracking-tight">
+            <Link href="/app/jobs" className="font-semibold text-lg tracking-tight">
               TenderPilot
             </Link>
             <span className="text-[10px] rounded-full border px-2 py-1 text-muted-foreground">
@@ -39,7 +39,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <span className="text-xs text-muted-foreground">test</span>
               </div>
               <p className="mt-3 text-xs text-muted-foreground leading-relaxed">
-                Each Bid Kit consumes 1 credit. Upgrade later via Pricing.
+                Each bid kit consumes 1 credit. Upgrade later via pricing.
               </p>
             </div>
           </div>
@@ -50,11 +50,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <div className="flex items-center gap-3">
               <div className="md:hidden font-semibold">TenderPilot</div>
               <div>
-                <p className="text-sm font-medium leading-none">
-                  Bid Kit Generator
-                </p>
+                <p className="text-sm font-medium leading-none">TenderPilot</p>
                 <p className="text-xs text-muted-foreground">
-                  Faster go/no-go and proposal drafts
+                  Go or no go in minutes. Draft bids faster.
                 </p>
               </div>
             </div>
@@ -65,9 +63,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   <Avatar className="h-7 w-7">
                     <AvatarFallback>TP</AvatarFallback>
                   </Avatar>
-                  <span className="hidden md:block text-sm pr-1">
-                    Account
-                  </span>
+                  <span className="hidden md:block text-sm pr-1">Account</span>
                 </div>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -83,9 +79,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
           <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
             <div className="mx-auto max-w-6xl">
-  <AuthGate>{children}</AuthGate>
-</div>
-
+              <AuthGate>{children}</AuthGate>
+            </div>
           </main>
         </div>
       </div>

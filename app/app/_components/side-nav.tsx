@@ -10,9 +10,8 @@ type NavItem = {
 };
 
 const nav: NavItem[] = [
-  { href: "/app", label: "Dashboard" },
-  { href: "/app/new", label: "New Bid Kit" },
-  { href: "/app/jobs", label: "History" },
+  { href: "/app/new", label: "New bid kit" },
+  { href: "/app/jobs", label: "Jobs" },
   { href: "/app/account", label: "Account" },
 ];
 
@@ -27,7 +26,8 @@ export function SideNav() {
 
       <nav className="space-y-1">
         {nav.map((item) => {
-          const active = pathname === item.href;
+          const active =
+            pathname === item.href || pathname.startsWith(item.href + "/");
 
           return (
             <Link
