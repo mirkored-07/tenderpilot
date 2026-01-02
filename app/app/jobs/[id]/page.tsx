@@ -58,35 +58,108 @@ function formatDate(iso?: string | null) {
   }
 }
 
-function statusBadge(status: JobStatus) {
-  if (status === "done") return <Badge className="rounded-full">Ready</Badge>;
-  if (status === "failed") return <Badge variant="destructive" className="rounded-full">Failed</Badge>;
-  if (status === "queued") return <Badge variant="outline" className="rounded-full">Queued</Badge>;
-  return <Badge variant="secondary" className="rounded-full">Processing</Badge>;
+function StatusPill({
+  label,
+  tone,
+}: {
+  label: string;
+  tone: "amber" | "blue";
+}) {
+  const dot =
+    tone === "amber"
+      ? { ring: "bg-amber-500/30", core: "bg-amber-600" }
+      : { ring: "bg-blue-500/30", core: "bg-blue-600" };
+
+  return (
+    <span className="inline-flex items-center gap-2 rounded-full border bg-background/60 px-3 py-1 text-xs font-medium">
+      <span className="relative flex h-2.5 w-2.5">
+        <span
+          className={cn(
+            "absolute inline-flex h-full w-full animate-ping rounded-full",
+            dot.ring
+          )}
+        />
+        <span
+          className={cn("relative inline-flex h-2.5 w-2.5 rounded-full", dot.core)}
+        />
+      </span>
+      <span>{label}</span>
+    </span>
+  );
 }
 
-function Step({ label, state }: { label: string; state: "done" | "active" | "todo" }) {
+function statusBadge(status: JobStatus) {
+  if (status === "done") return <Badge className="rounded-full">Ready</Badge>;
+
+  if (status === "failed")
+    return (
+      <Badge variant="destructive" className="rounded-full">
+        Needs attention
+      </Badge>
+    );
+
+  if (status === "queued") {
+    return <StatusPill label="Getting started" tone="amber" />;
+  }
+
+  return <StatusPill label="Working on your bid review" tone="blue" />;
+}
+
+function ProgressCard({
+  status,
+}: {
+  status: JobStatus;
+}) {
+  const title =
+    status === "done"
+      ? "Bid review complete"
+      : status === "failed"
+      ? "Something needs attention"
+      : "Analyzing your tender";
+
+  const subtitle =
+    status === "queued"
+      ? "Setting things up…"
+      : status === "processing"
+      ? "Extracting requirements, risks, and clarifications"
+      : status === "done"
+      ? "You can now review results below"
+      : "Please try again or re-upload the file.";
+
   return (
-    <div className="flex items-center gap-2">
-      <div
-        className={cn(
-          "h-2.5 w-2.5 rounded-full",
-          state === "done" && "bg-foreground/70",
-          state === "active" && "bg-foreground",
-          state === "todo" && "bg-muted-foreground/30"
-        )}
-      />
-      <span
-        className={cn(
-          "text-xs",
-          state === "active" && "text-foreground font-medium",
-          state === "done" && "text-muted-foreground",
-          state === "todo" && "text-muted-foreground"
-        )}
-      >
-        {label}
-      </span>
-    </div>
+    <Card className="rounded-2xl">
+      <CardContent className="py-5 space-y-3">
+        <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+          <p className="text-sm font-medium">{title}</p>
+          {status !== "done" && status !== "failed" ? (
+            <p className="text-xs text-muted-foreground">
+              This usually takes under a minute
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Drafting support only. Verify against the original RFP.
+            </p>
+          )}
+        </div>
+
+        <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
+          <div
+            className={cn(
+              "absolute left-0 top-0 h-full rounded-full transition-all duration-700",
+              status === "done"
+                ? "w-full bg-green-500"
+                : status === "failed"
+                ? "w-full bg-red-500"
+                : status === "queued"
+                ? "w-1/3 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 animate-pulse"
+                : "w-2/3 bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-500 animate-pulse"
+            )}
+          />
+        </div>
+
+        <p className="text-xs text-muted-foreground">{subtitle}</p>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -108,7 +181,9 @@ export default function JobDetailPage() {
 
     const { data: jobData, error: jobErr } = await supabase
       .from("jobs")
-      .select("id,user_id,file_name,file_path,source_type,status,credits_used,created_at,updated_at")
+      .select(
+        "id,user_id,file_name,file_path,source_type,status,credits_used,created_at,updated_at"
+      )
       .eq("id", jobId)
       .single();
 
@@ -122,7 +197,9 @@ export default function JobDetailPage() {
 
     const { data: resData } = await supabase
       .from("job_results")
-      .select("job_id,user_id,extracted_text,checklist,risks,proposal_draft,created_at,updated_at")
+      .select(
+        "job_id,user_id,extracted_text,checklist,risks,proposal_draft,created_at,updated_at"
+      )
       .eq("job_id", jobId)
       .maybeSingle();
 
@@ -151,11 +228,21 @@ export default function JobDetailPage() {
             </h1>
             {job ? statusBadge(job.status) : null}
           </div>
+
           <p className="mt-1 text-sm text-muted-foreground">
             Job ID: <span className="font-mono">{jobId ?? ""}</span>
             {job?.created_at ? <> • Created: {formatDate(job.created_at)}</> : null}
-            {typeof job?.credits_used === "number" ? <> • Credits: {job.credits_used}</> : null}
+            {typeof job?.credits_used === "number" ? (
+              <> • Credits: {job.credits_used}</>
+            ) : null}
           </p>
+
+          {(job?.status === "queued" || job?.status === "processing") && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Results will appear automatically. You can safely stay on this page.
+            </p>
+          )}
+
           {error ? <p className="mt-2 text-xs text-destructive">{error}</p> : null}
         </div>
 
@@ -169,33 +256,25 @@ export default function JobDetailPage() {
         </div>
       </div>
 
-      <Card className="rounded-2xl">
-        <CardContent className="py-4">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="flex flex-wrap items-center gap-4">
-              {[
-                { label: "Uploaded", state: "done" as const },
-                { label: "Extracting", state: job?.status === "queued" ? "todo" as const : "done" as const },
-                { label: "Drafting", state: job?.status === "done" ? "done" as const : "active" as const },
-                { label: "Ready", state: job?.status === "done" ? "done" as const : "todo" as const },
-              ].map((s) => (
-                <Step key={s.label} label={s.label} state={s.state} />
-              ))}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Drafting support only. Always verify against the original RFP.
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {job ? <ProgressCard status={job.status} /> : null}
 
       <Tabs defaultValue="checklist" className="space-y-4">
         <TabsList className="rounded-full">
-          <TabsTrigger value="checklist" className="rounded-full">Requirements</TabsTrigger>
-          <TabsTrigger value="risks" className="rounded-full">Risks</TabsTrigger>
-          <TabsTrigger value="questions" className="rounded-full">Clarifications</TabsTrigger>
-          <TabsTrigger value="draft" className="rounded-full">Draft</TabsTrigger>
-          <TabsTrigger value="text" className="rounded-full">Source text</TabsTrigger>
+          <TabsTrigger value="checklist" className="rounded-full">
+            Requirements
+          </TabsTrigger>
+          <TabsTrigger value="risks" className="rounded-full">
+            Risks
+          </TabsTrigger>
+          <TabsTrigger value="questions" className="rounded-full">
+            Clarifications
+          </TabsTrigger>
+          <TabsTrigger value="draft" className="rounded-full">
+            Draft
+          </TabsTrigger>
+          <TabsTrigger value="text" className="rounded-full">
+            Source text
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="checklist">
@@ -225,8 +304,8 @@ export default function JobDetailPage() {
 
           <Separator className="my-4" />
           <p className="text-xs text-muted-foreground">
-            This tool provides drafting support only and may contain errors.
-            You must verify all requirements against the original RFP before submission.
+            This tool provides drafting support only and may contain errors. You must verify all
+            requirements against the original RFP before submission.
           </p>
         </TabsContent>
       </Tabs>
