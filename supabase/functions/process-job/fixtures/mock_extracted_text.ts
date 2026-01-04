@@ -1,25 +1,25 @@
 export const MOCK_EXTRACTED_TEXT = `
-REQUEST FOR PROPOSAL (RFP)
+TenderPilot Test Tender v1
 
-Title: Website Redesign and Maintenance Services
-Contracting Authority: City of Exampleville
-Deadline for submission: 15 January 2026, 12:00 CET
+SECTION 1 — Submission
+MUST: Submit by 2026-02-01 12:00 CET.
+MUST: Include a signed cover letter.
+SHOULD: Provide a single PDF in addition to editable source.
 
-MANDATORY REQUIREMENTS
-- Compliance with GDPR
-- ISO 27001 certification
-- Minimum 3 comparable references
-- Fixed-price proposal
+SECTION 2 — Scope
+MUST: Provide delivery to Graz, Austria.
+MUST: Include 12 months warranty minimum.
+SHOULD: Provide implementation plan and timeline.
 
-EVALUATION CRITERIA
-- Price: 40%
-- Technical quality: 40%
-- Team and experience: 20%
+SECTION 3 — Commercial
+MUST: Quote in EUR, fixed price.
+INFO: Payment terms preferred Net 30.
 
-DELIVERABLES
-- Discovery and requirements analysis
-- UX and UI design
-- Implementation and testing
-- Deployment and handover
-- Documentation and training
+SECTION 4 — Compliance & Security
+MUST: GDPR compliance for any personal data.
+SHOULD: Provide ISO 27001 certification evidence (if available).
+
+SECTION 5 — Risks / Notes
+Risk: Tight timeline and strict submission format.
+Risk: Missing warranty detail may disqualify.
 `.trim();

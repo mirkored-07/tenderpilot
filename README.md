@@ -1,40 +1,44 @@
-<<<<<<< HEAD
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+﻿# TenderPilot
 
-## Getting Started
+TenderPilot is an AI-assisted tender review tool designed to help teams quickly assess bid eligibility, risks, and drafting readiness.
 
-First, run the development server:
+## Current status
+This repository represents a stable MVP with a fully working job-processing pipeline.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Key features:
+- PDF and DOCX support
+- Automated extraction of tender requirements (MUST / SHOULD / INFO)
+- Disqualification detection
+- Risk and clarification placeholders
+- Draft outline generation
+- Async job processing via Supabase Edge Functions
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Architecture overview
+- Frontend: Next.js App Router
+- Backend: Supabase (Postgres, Edge Functions, pg_net)
+- Processing: Async job pipeline (process-job)
+- Storage: Supabase Storage
+- Auth: Supabase Auth
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Mock / Demo mode
+For development, testing, and demos, the system supports a deterministic mock mode.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Required Supabase Edge Function secrets:
 
-## Learn More
+TP_MOCK_EXTRACT=1  
+TP_MOCK_AI=1  
 
-To learn more about Next.js, take a look at the following resources:
+When enabled:
+- No real extractor is used
+- No external AI calls are made
+- Deterministic fixture data is injected
+- Full UX and job lifecycle are preserved
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+This mode is intentionally executed **before** runtime capability checks to ensure Edge compatibility.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Notes
+- Always verify results against the original tender document
+- Draft output is a starting point and must be tailored before submission
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-=======
-# tenderpilot
->>>>>>> 3e7786659d410428f2c52e318dee8d276710ce6a
+## License
+Private MVP – not licensed for redistribution.

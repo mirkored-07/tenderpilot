@@ -1,12 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { createJobAction } from "./actions";
 
 type SourceType = "pdf" | "docx";
@@ -28,10 +29,10 @@ export default function UploadForm() {
   const [loading, setLoading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [needsSignIn, setNeedsSignIn] = useState(false);
 
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  // Use @supabase/ssr browser client (works with cookie-based auth + middleware refresh)
   const supabase = useMemo(() => {
     return createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -45,6 +46,8 @@ export default function UploadForm() {
 
   function validateAndSet(f: File | null) {
     setError(null);
+    setNeedsSignIn(false);
+
     if (!f) {
       setFile(null);
       return;
@@ -53,7 +56,7 @@ export default function UploadForm() {
     const ext = f.name.split(".").pop()?.toLowerCase();
     if (ext !== "pdf" && ext !== "docx") {
       setFile(null);
-      setError("Only PDF or DOCX files are allowed");
+      setError("Only PDF or DOCX files are supported");
       return;
     }
 
@@ -65,36 +68,34 @@ export default function UploadForm() {
 
     setLoading(true);
     setError(null);
+    setNeedsSignIn(false);
 
     try {
-      const ext = file.name.split(".").pop()?.toLowerCase();
+      // ✅ Gate BEFORE upload/job creation (prevents late RLS errors)
+      const { data: sessionData } = await supabase.auth.getSession();
+      const session = sessionData?.session;
 
-      if (ext !== "pdf" && ext !== "docx") {
-        throw new Error("Only PDF or DOCX files are allowed");
+      if (!session) {
+        setNeedsSignIn(true);
+        setLoading(false);
+        return;
       }
 
-      const sourceType = ext as SourceType;
+      const ext = file.name.split(".").pop()?.toLowerCase();
+      if (ext !== "pdf" && ext !== "docx") {
+        throw new Error("Only PDF or DOCX files are supported");
+      }
+
+      const sourceType: SourceType = ext as SourceType;
       const filePath = `${crypto.randomUUID()}.${ext}`;
-
-      // 🔍 QUICK PROOF: confirm the browser client has a session
-      const { data: sessionData, error: sessionError } =
-        await supabase.auth.getSession();
-
-      // eslint-disable-next-line no-console
-      console.log("SESSION CHECK", {
-        hasSession: !!sessionData?.session,
-        userId: sessionData?.session?.user?.id ?? null,
-        sessionError: sessionError?.message ?? null,
-      });
 
       const { error: uploadError } = await supabase.storage
         .from("uploads")
         .upload(filePath, file, { upsert: false });
 
-      if (uploadError) {
-        throw new Error(uploadError.message);
-      }
+      if (uploadError) throw new Error(uploadError.message);
 
+      // Server action will create job + redirect to the new job page
       await createJobAction({
         fileName: file.name,
         filePath,
@@ -108,7 +109,6 @@ export default function UploadForm() {
 
   return (
     <div className="space-y-4">
-      {/* Hidden input (keeps native selection + accepts) */}
       <Input
         ref={inputRef}
         type="file"
@@ -117,10 +117,9 @@ export default function UploadForm() {
         onChange={(e) => validateAndSet(e.target.files?.[0] ?? null)}
       />
 
-      {/* Dropzone */}
       <Card
         className={[
-          "rounded-2xl border bg-background/60 p-5 transition",
+          "rounded-2xl border bg-card/60 p-5 shadow-sm transition",
           dragOver ? "ring-2 ring-foreground/20" : "",
         ].join(" ")}
         onClick={pickFile}
@@ -152,10 +151,7 @@ export default function UploadForm() {
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="secondary" className="rounded-full">
-              PDF preferred
-            </Badge>
-            <Badge variant="secondary" className="rounded-full">
-              DOCX supported
+              PDF or DOCX
             </Badge>
             <Badge variant="secondary" className="rounded-full">
               One file per bid
@@ -163,22 +159,16 @@ export default function UploadForm() {
           </div>
 
           <div>
-            <p className="text-sm font-semibold">
-              Drag &amp; drop your tender file here
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Or click to browse your computer.
-            </p>
+            <p className="text-sm font-semibold">Drag &amp; drop your tender file here</p>
+            <p className="mt-1 text-sm text-muted-foreground">Or click to browse your computer.</p>
           </div>
 
           {file ? (
-            <div className="rounded-2xl border bg-background p-4">
+            <div className="rounded-2xl border bg-background/70 p-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <p className="text-sm font-semibold truncate">{file.name}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {formatBytes(file.size)}
-                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">{formatBytes(file.size)}</p>
                 </div>
                 <Button
                   type="button"
@@ -195,12 +185,32 @@ export default function UploadForm() {
               </div>
             </div>
           ) : (
-            <div className="text-xs text-muted-foreground">
-              Supported: .pdf, .docx
-            </div>
+            <div className="text-xs text-muted-foreground">Supported: .pdf, .docx</div>
           )}
         </div>
       </Card>
+
+      {needsSignIn && (
+        <div className="rounded-2xl border bg-muted/40 p-4">
+          <p className="text-sm font-medium">Sign in to create your bid review</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Your file is ready. Sign in via magic link, then click “Create bid review”.
+          </p>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <Button asChild className="rounded-full">
+              <Link href="/login">Sign in</Link>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full"
+              onClick={() => setNeedsSignIn(false)}
+            >
+              Not now
+            </Button>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
@@ -210,15 +220,11 @@ export default function UploadForm() {
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-muted-foreground">
-          After upload, you’ll be redirected to your bid kit.
+          You’ll be redirected to your bid kit after upload.
         </p>
 
-        <Button
-          onClick={handleUpload}
-          disabled={!file || loading}
-          className="rounded-full"
-        >
-          {loading ? "Uploading..." : "Create bid review"}
+        <Button onClick={handleUpload} disabled={!file || loading} className="rounded-full">
+          {loading ? "Preparing…" : "Create bid review"}
         </Button>
       </div>
     </div>

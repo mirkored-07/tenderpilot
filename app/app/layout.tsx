@@ -77,7 +77,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </DropdownMenu>
           </header>
 
-          <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
+          <main className="flex-1 px-4 py-6 md:px-8 md:py-8 bg-muted/20">
             <div className="mx-auto max-w-6xl">
               <AuthGate>{children}</AuthGate>
             </div>
