@@ -81,9 +81,6 @@ export default function BuyerQuestions({ checklist, risks, onJumpToSource }: Pro
               <Badge variant="secondary" className="rounded-full">
                 {questions.length} questions
               </Badge>
-              <Button className="rounded-full" onClick={copyAll} disabled={questions.length === 0}>
-                {copied ? "Copied" : "Copy all"}
-              </Button>
             </div>
           </div>
         </CardContent>

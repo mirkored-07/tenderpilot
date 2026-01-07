@@ -119,9 +119,7 @@ export default function Risks({ risks, extractedText, onJumpToSource }: Props) {
               </p>
             </div>
 
-            <Button variant="outline" className="rounded-full" onClick={copyRisks} disabled={normalized.length === 0}>
-              Copy risks
-            </Button>
+            <div />
           </div>
 
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">

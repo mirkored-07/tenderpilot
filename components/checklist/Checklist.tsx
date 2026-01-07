@@ -126,9 +126,6 @@ export default function Checklist({ checklist, extractedText, onJumpToSource }: 
               <Button className="rounded-full" onClick={() => onJumpToSource("")}>
                 Review source text
               </Button>
-              <Button variant="outline" className="rounded-full" onClick={copyMust} disabled>
-                Copy MUST
-              </Button>
             </div>
           </CardContent>
         </Card>
@@ -148,15 +145,7 @@ export default function Checklist({ checklist, extractedText, onJumpToSource }: 
               </p>
             </div>
 
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-full"
-              onClick={copyMust}
-              disabled={counts.must === 0}
-            >
-              Copy MUST
-            </Button>
+            <div />
           </div>
 
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
