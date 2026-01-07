@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { supabaseBrowser } from "@/lib/supabase/browser";
+import { getJobDisplayName } from "@/lib/pilot-job-names";
 
 type JobStatus = "queued" | "processing" | "done" | "failed";
 
@@ -163,7 +164,7 @@ export default function JobsPage() {
           </DropdownMenu>
 
           <Button asChild className="rounded-full">
-            <Link href="/app/new">New bid kit</Link>
+            <Link href="/app/upload">New bid review</Link>
           </Button>
         </div>
       </div>
@@ -188,7 +189,7 @@ export default function JobsPage() {
               <p className="text-sm font-medium">No jobs found</p>
               <p className="mt-1 text-sm text-muted-foreground">Create your first bid kit to see it here.</p>
               <Button asChild className="mt-4 rounded-full">
-                <Link href="/app/new">Create a bid kit</Link>
+                <Link href="/app/upload">Create a bid review</Link>
               </Button>
             </div>
           ) : (
@@ -205,7 +206,7 @@ export default function JobsPage() {
                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <div className="truncate text-sm font-medium">{job.file_name}</div>
+                        <div className="truncate text-sm font-medium">{getJobDisplayName(job.id) ?? job.file_name}</div>
                         {statusBadge(job.status)}
                       </div>
                       <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">

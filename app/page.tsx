@@ -18,7 +18,7 @@ export default function Home() {
               <Link href="/how-it-works">How it works</Link>
             </Button>
             <Button asChild className="rounded-full">
-              <Link href="/app/upload">Upload PDF</Link>
+              <Link href="/app/upload">Upload file</Link>
             </Button>
           </div>
         </div>
@@ -32,13 +32,13 @@ export default function Home() {
             </h1>
 
             <p className="mt-4 text-base text-muted-foreground leading-relaxed md:text-lg">
-              Upload a tender PDF to get requirements, risks, clarifications, and
-              a short draft outline—structured and easy to scan.
+              Upload a tender file (PDF or DOCX) to get requirements, risks, clarifications, and
+              a short draft outline. Structured and easy to scan.
             </p>
 
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <Button asChild className="rounded-full">
-                <Link href="/app/upload">Upload PDF</Link>
+                <Link href="/app/upload">Upload file</Link>
               </Button>
               <Button asChild variant="outline" className="rounded-full">
                 <Link href="/how-it-works">See how it works</Link>
@@ -51,7 +51,7 @@ export default function Home() {
 
             <div className="mt-6 flex flex-wrap items-center gap-2">
               <span className="rounded-full border bg-background/60 px-3 py-1 text-xs text-muted-foreground">
-                PDF only
+                PDF or DOCX
               </span>
               <span className="rounded-full border bg-background/60 px-3 py-1 text-xs text-muted-foreground">
                 One review per upload
@@ -131,7 +131,7 @@ export default function Home() {
 
       <footer className="mx-auto max-w-6xl px-4 pb-10 md:px-8">
         <p className="text-center text-xs text-muted-foreground">
-          Drafting support only. Always verify against the original tender PDF.
+          Drafting support only. Always verify against the original tender document.
         </p>
       </footer>
     </main>

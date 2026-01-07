@@ -10,7 +10,7 @@ type NavItem = {
 };
 
 const nav: NavItem[] = [
-  { href: "/app/new", label: "New bid kit" },
+  { href: "/app/upload", label: "New bid review" },
   { href: "/app/jobs", label: "Jobs" },
   { href: "/app/account", label: "Account" },
 ];

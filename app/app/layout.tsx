@@ -10,10 +10,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { SideNav } from "./_components/side-nav";
+import { TelemetryInit } from "./_components/telemetry-init";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen premium-bg bg-background">
+      <TelemetryInit />
       <div className="grid min-h-screen grid-cols-1 md:grid-cols-[280px_1fr]">
         <aside className="hidden md:flex flex-col border-r bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/40">
           <div className="h-16 px-6 flex items-center justify-between">

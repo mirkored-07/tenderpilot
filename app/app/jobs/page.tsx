@@ -17,6 +17,8 @@ import {
 // IMPORTANT: this must exist in your project
 // lib/supabase/browser.ts  -> exports supabaseBrowser() that returns createClient(...)
 import { supabaseBrowser } from "@/lib/supabase/browser";
+import { getJobDisplayName } from "@/lib/pilot-job-names";
+import { track } from "@/lib/telemetry";
 
 type JobStatus = "queued" | "processing" | "done" | "failed";
 
@@ -47,13 +49,20 @@ function formatDate(iso: string) {
 }
 
 function statusBadge(status: JobStatus) {
-  if (status === "ready") return <Badge className="rounded-full">Ready</Badge>;
+  if (status === "done") return <Badge className="rounded-full">Ready</Badge>;
   if (status === "failed")
     return (
       <Badge variant="destructive" className="rounded-full">
         Failed
       </Badge>
     );
+  if (status === "queued") {
+    return (
+      <Badge variant="secondary" className="rounded-full">
+        Queued
+      </Badge>
+    );
+  }
   return (
     <Badge variant="secondary" className="rounded-full">
       Processing
@@ -66,6 +75,17 @@ export default function JobsPage() {
   const [jobs, setJobs] = useState<DbJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [nameVersion, setNameVersion] = useState(0);
+
+  useEffect(() => {
+    function onStorage(e: StorageEvent) {
+      if (e.key === "tenderpilot_job_display_names_v1") {
+        setNameVersion((v) => v + 1);
+      }
+    }
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,6 +112,8 @@ export default function JobsPage() {
         setJobs((data ?? []) as DbJob[]);
       }
 
+      track("jobs_list_loaded", { count: (data ?? []).length });
+
       setLoading(false);
     }
 
@@ -106,6 +128,17 @@ export default function JobsPage() {
     if (filter === "all") return jobs;
     return jobs.filter((j) => j.status === filter);
   }, [jobs, filter]);
+
+  const filterLabel =
+    filter === "all"
+      ? "All"
+      : filter === "done"
+      ? "Ready"
+      : filter === "queued"
+      ? "Queued"
+      : filter === "processing"
+      ? "Processing"
+      : "Failed";
 
   return (
     <div className="space-y-6">
@@ -123,27 +156,55 @@ export default function JobsPage() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="rounded-full">
-                Filter: {filter === "all" ? "All" : filter}
+                Filter: {filterLabel}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setFilter("all")}>
+              <DropdownMenuItem
+                onClick={() => {
+                  setFilter("all");
+                  track("jobs_filter_changed", { filter: "all" });
+                }}
+              >
                 All
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setFilter("processing")}>
+              <DropdownMenuItem
+                onClick={() => {
+                  setFilter("queued");
+                  track("jobs_filter_changed", { filter: "queued" });
+                }}
+              >
+                Queued
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => {
+                  setFilter("processing");
+                  track("jobs_filter_changed", { filter: "processing" });
+                }}
+              >
                 Processing
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setFilter("ready")}>
+              <DropdownMenuItem
+                onClick={() => {
+                  setFilter("done");
+                  track("jobs_filter_changed", { filter: "done" });
+                }}
+              >
                 Ready
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setFilter("failed")}>
+              <DropdownMenuItem
+                onClick={() => {
+                  setFilter("failed");
+                  track("jobs_filter_changed", { filter: "failed" });
+                }}
+              >
                 Failed
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
           <Button asChild className="rounded-full">
-            <Link href="/app/new">New Bid Kit</Link>
+            <Link href="/app/upload">New bid review</Link>
           </Button>
         </div>
       </div>
@@ -179,7 +240,7 @@ export default function JobsPage() {
                 Generate your first Bid Kit to see it here.
               </p>
               <Button asChild className="mt-4 rounded-full">
-                <Link href="/app/new">Create a Bid Kit</Link>
+                <Link href="/app/upload">Create a bid review</Link>
               </Button>
             </div>
           ) : (
@@ -197,7 +258,7 @@ export default function JobsPage() {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
                         <div className="truncate text-sm font-medium">
-                          {job.file_name}
+                          {getJobDisplayName(job.id) ?? job.file_name}
                         </div>
                         {statusBadge(job.status)}
                       </div>

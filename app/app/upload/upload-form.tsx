@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { createJobAction } from "./actions";
+import { track } from "@/lib/telemetry";
 
 type SourceType = "pdf" | "docx";
 
@@ -57,10 +58,12 @@ export default function UploadForm() {
     if (ext !== "pdf" && ext !== "docx") {
       setFile(null);
       setError("Only PDF or DOCX files are supported");
+      track("upload_file_rejected", { reason: "unsupported_type" });
       return;
     }
 
     setFile(f);
+    track("upload_file_selected", { ext, size: f.size });
   }
 
   async function handleUpload() {
@@ -78,6 +81,7 @@ export default function UploadForm() {
       if (!session) {
         setNeedsSignIn(true);
         setLoading(false);
+        track("upload_requires_signin");
         return;
       }
 
@@ -89,11 +93,15 @@ export default function UploadForm() {
       const sourceType: SourceType = ext as SourceType;
       const filePath = `${crypto.randomUUID()}.${ext}`;
 
+      track("upload_started", { ext: sourceType, size: file.size });
+
       const { error: uploadError } = await supabase.storage
         .from("uploads")
         .upload(filePath, file, { upsert: false });
 
       if (uploadError) throw new Error(uploadError.message);
+
+      track("upload_storage_completed", { sourceType });
 
       // Server action will create job + redirect to the new job page
       await createJobAction({
@@ -101,8 +109,11 @@ export default function UploadForm() {
         filePath,
         sourceType,
       });
+
+      track("job_created", { sourceType });
     } catch (err: any) {
       setError(err?.message ?? "Upload failed");
+      track("upload_failed", { message: String(err?.message ?? err) });
       setLoading(false);
     }
   }
