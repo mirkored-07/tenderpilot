@@ -10,15 +10,22 @@ export default function UploadPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-xl">Upload tender document</CardTitle>
             <p className="text-sm text-muted-foreground">
-              Upload a PDF or DOCX to generate a bid review workspace with requirements,
-              risks, clarifications, and a short draft outline.
+              Upload a PDF or DOCX to create a bid kit with requirements, risks, clarifications, and a short draft outline.
             </p>
           </CardHeader>
-          <CardContent className="pt-0">
+
+          <CardContent className="pt-0 space-y-4">
+            <div className="rounded-2xl border bg-background/60 p-4">
+              <p className="text-sm font-medium">For your first bid review</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Use the final tender version you plan to respond to. Results appear automatically on the next page.
+              </p>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Drafting support only. Always verify requirements against the original tender documents.
+              </p>
+            </div>
+
             <UploadForm />
-            <p className="mt-4 text-xs text-muted-foreground">
-              Drafting support only. Always verify against the original tender document.
-            </p>
           </CardContent>
         </Card>
 
@@ -38,16 +45,18 @@ export default function UploadPage() {
                     Your file is stored in your workspace.
                   </p>
                 </div>
+
                 <div className="rounded-2xl border bg-background/60 p-4">
                   <p className="text-sm font-semibold">2. Bid kit is prepared</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Key requirements, risks, and questions are organized for fast scanning.
+                    Requirements, risks, clarifications, and a draft outline are extracted.
                   </p>
                 </div>
+
                 <div className="rounded-2xl border bg-background/60 p-4">
-                  <p className="text-sm font-semibold">3. Review</p>
+                  <p className="text-sm font-semibold">3. Review and export</p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    You’ll see Requirements, Risks, Clarifications, Draft, and Source text.
+                    Review Executive summary, Requirements, Risks, Clarifications, Draft, and Source text. Export when ready.
                   </p>
                 </div>
               </div>
@@ -66,7 +75,7 @@ export default function UploadPage() {
                 </li>
                 <li className="flex gap-3 leading-relaxed">
                   <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-foreground/60" />
-                  <span>Start with MUST items to avoid disqualification.</span>
+                  <span>Start with MUST items to reduce disqualification risk.</span>
                 </li>
                 <li className="flex gap-3 leading-relaxed">
                   <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-foreground/60" />
@@ -77,7 +86,7 @@ export default function UploadPage() {
               <Separator className="my-5" />
 
               <p className="text-xs text-muted-foreground leading-relaxed">
-                This is drafting support. Always validate against the source document.
+                Drafting support only. Always verify requirements against the original tender documents.
               </p>
             </CardContent>
           </Card>

@@ -308,28 +308,25 @@ function toPlainTextSummary(args: {
   if (createdAt) lines.push(`Created: ${formatDate(createdAt)}`);
   lines.push("");
 
-  lines.push("Requirements");
-  lines.push(`MUST: ${must.length}  SHOULD: ${should.length}  INFO: ${info.length}`);
-  lines.push("");
-
-  const renderReq = (label: string, items: any[]) => {
+  function render(label: string, items: any[]) {
     lines.push(label);
     if (!items.length) lines.push("None detected.");
-    else items.forEach((x, i) => lines.push(`${i + 1}. ${String(x?.text ?? x?.statement ?? x?.requirement ?? x?.item ?? x?.title ?? "").trim()}`));
+    // ✅ FIX: template literal uses ${t}, not ${$(t)}
+    else items.forEach((t, i) => lines.push(`${i + 1}. ${t}`));
     lines.push("");
-  };
+  }
 
-  renderReq("MUST", must);
-  renderReq("SHOULD", should);
-  renderReq("INFO", info);
+  render("MUST requirements", must.map((x) => String(x?.text ?? x?.requirement ?? "").trim()).filter(Boolean));
+  render("SHOULD items", should.map((x) => String(x?.text ?? x?.requirement ?? "").trim()).filter(Boolean));
+  render("INFO items", info.map((x) => String(x?.text ?? x?.requirement ?? "").trim()).filter(Boolean));
 
   lines.push("Risks");
   if (!risks.length) lines.push("No risks detected.");
   else {
-    risks.forEach((r, i) => {
-      const sev = String(r?.severity ?? r?.level ?? r?.rating ?? "medium");
-      const title = String(r?.title ?? r?.risk ?? r?.name ?? r?.summary ?? r?.text ?? "").trim();
-      const detail = String(r?.detail ?? r?.description ?? r?.why ?? r?.impact ?? "").trim();
+    risks.slice(0, 20).forEach((r, i) => {
+      const sev = String(r?.severity ?? r?.level ?? "medium").toUpperCase();
+      const title = String(r?.title ?? r?.risk ?? r?.text ?? "").trim();
+      const detail = String(r?.detail ?? r?.description ?? "").trim();
       lines.push(`${i + 1}. [${sev}] ${title}${detail ? ` — ${detail}` : ""}`);
     });
   }
@@ -337,10 +334,10 @@ function toPlainTextSummary(args: {
 
   lines.push("Clarifications");
   if (!questions.length) lines.push("No clarifications suggested.");
-  else questions.forEach((q, i) => lines.push(`${i + 1}. ${q}`));
+  else questions.slice(0, 20).forEach((q, i) => lines.push(`${i + 1}. ${q}`));
   lines.push("");
 
-  lines.push("Draft outline");
+  lines.push("Draft");
   if (!draft) lines.push("Draft not available.");
   else if (typeof draft === "string") lines.push(draft);
   else lines.push(JSON.stringify(draft, null, 2));
@@ -348,342 +345,327 @@ function toPlainTextSummary(args: {
 
   lines.push("Note");
   lines.push("Drafting support only. Always verify against the original tender document.");
+
   return lines.join("\n");
 }
 
-function pickText(x: any) {
-  return String(x?.text ?? x?.statement ?? x?.requirement ?? x?.item ?? x?.title ?? x?.summary ?? x?.name ?? "").trim();
+function escapeHtml(input: string) {
+  return String(input ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
-function normalizeSeverity(raw: any): "High" | "Medium" | "Low" {
-  const s = String(raw ?? "").toLowerCase();
-  if (s.includes("high")) return "High";
-  if (s.includes("low")) return "Low";
-  return "Medium";
+function pickText(obj: any) {
+  if (!obj) return "";
+  if (typeof obj === "string") return obj;
+  return String(obj?.title ?? obj?.text ?? obj?.risk ?? obj?.requirement ?? obj?.question ?? obj?.summary ?? "").trim();
 }
 
-function extractDeadlineFromRequirements(mustItems: string[]): string | null {
-  // Very lightweight: if requirement contains "submit" + a date-like token, return the sentence.
-  // We intentionally avoid parsing into a date object to prevent false precision.
-  for (const line of mustItems) {
-    const t = line.toLowerCase();
-    if (!t.includes("submit") && !t.includes("deadline")) continue;
-    // If the line already has a date/time, keep it as-is (user-friendly).
-    const hasDateish =
-      /\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b/.test(line) ||
-      /\b\d{1,2}[-/]\d{1,2}[-/]\d{2,4}\b/.test(line) ||
-      /\b\d{1,2}:\d{2}\b/.test(line);
-    if (hasDateish) return line.replace(/^[-*\d.\s]+/, "").trim();
-  }
-  return null;
+function normalizeChecklist(raw: any): any[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  if (Array.isArray(raw?.items)) return raw.items;
+  if (Array.isArray(raw?.requirements)) return raw.requirements;
+  return [];
+}
+
+function normalizeRisks(raw: any): any[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw;
+  if (Array.isArray(raw?.items)) return raw.items;
+  if (Array.isArray(raw?.risks)) return raw.risks;
+  return [];
+}
+
+function normalizeQuestions(raw: any): string[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw.map((x) => String(x ?? "").trim()).filter(Boolean);
+  if (Array.isArray(raw?.items)) return raw.items.map((x: any) => String(x ?? "").trim()).filter(Boolean);
+  if (Array.isArray(raw?.questions)) return raw.questions.map((x: any) => String(x ?? "").trim()).filter(Boolean);
+  return [];
+}
+
+function decisionFromExecutive(executive: any): DecisionState {
+  const badge = String(executive?.decisionBadge ?? executive?.decision ?? "").toLowerCase();
+  if (badge.includes("risk") || badge.includes("no-go") || badge.includes("no go")) return "risk";
+  if (badge.includes("caution")) return "caution";
+  if (badge.includes("go") || badge.includes("proceed")) return "proceed";
+  // fallback
+  return "caution";
+}
+
+function toExecutiveModel(args: { checklist: any[]; risks: any[]; extractedText: string; raw: any }) {
+  const { checklist, risks, extractedText, raw } = args;
+
+  const decisionBadge = String(raw?.decisionBadge ?? raw?.decision ?? "").trim();
+  const decisionLine = String(raw?.decisionLine ?? "").trim();
+
+  const keyFindings = Array.isArray(raw?.keyFindings) ? raw.keyFindings : [];
+  const nextActions = Array.isArray(raw?.nextActions) ? raw.nextActions : [];
+  const topRisks = Array.isArray(raw?.topRisks) ? raw.topRisks : [];
+
+  const submissionDeadline = raw?.submissionDeadline ? String(raw.submissionDeadline).trim() : "";
+
+  const normalizedTopRisks: ExecutiveRisk[] = topRisks
+    .slice(0, 3)
+    .map((r: any) => ({
+      title: String(r?.title ?? r?.risk ?? r?.text ?? "").trim(),
+      severity: String(r?.severity ?? r?.level ?? "medium").toLowerCase() as any,
+      detail: String(r?.detail ?? r?.description ?? "").trim(),
+    }))
+    .filter((r: any) => r.title);
+
+  return {
+    decisionBadge: decisionBadge || "Proceed with caution",
+    decisionLine,
+    keyFindings: keyFindings.slice(0, 7).map((x: any) => String(x ?? "").trim()).filter(Boolean),
+    nextActions: nextActions.slice(0, 3).map((x: any) => String(x ?? "").trim()).filter(Boolean),
+    topRisks: normalizedTopRisks,
+    submissionDeadline,
+  };
 }
 
 export default function JobDetailPage() {
-  const params = useParams<{ id: string }>();
-  const jobId = params?.id;
+  const params = useParams();
   const router = useRouter();
+
+  const rawId = String((params as any)?.id ?? "").trim();
+  const jobId = rawId;
+
+  const [invalidLink, setInvalidLink] = useState(false);
 
   const [job, setJob] = useState<DbJob | null>(null);
   const [result, setResult] = useState<DbJobResult | null>(null);
   const [loading, setLoading] = useState(true);
+  const [polling, setPolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [displayName, setDisplayName] = useState<string>("");
-  const [renaming, setRenaming] = useState(false);
-
   const [tab, setTab] = useState<"checklist" | "risks" | "questions" | "draft" | "text">("checklist");
-  const [sourceFocus, setSourceFocus] = useState<{ query: string; snippet: string } | null>(null);
+  const [copiedSection, setCopiedSection] = useState<string | null>(null);
+
+  const [displayName, setDisplayNameState] = useState<string>("");
+  const [renaming, setRenaming] = useState(false);
+  const [renameInput, setRenameInput] = useState("");
+
   const [howToOpen, setHowToOpen] = useState(false);
-  const [copiedSection, setCopiedSection] = useState<null | "requirements" | "risks" | "clarifications" | "draft">(null);
-  const [exporting, setExporting] = useState<null | "outline" | "full">(null);
+  const [sourceFocus, setSourceFocus] = useState<{ query: string; snippet: string } | null>(null);
 
-  const pollRef = useRef<number | null>(null);
+  const [exporting, setExporting] = useState<null | "summary" | "outline" | "full">(null);
 
-  async function fetchAll(opts?: { silent?: boolean }) {
-    if (!jobId) return;
-    const silent = opts?.silent ?? false;
+  const mountedRef = useRef(true);
 
-    if (!silent) {
-      setLoading(true);
-      setError(null);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    // Validate route param early to prevent DB errors and error leaks.
+    if (!jobId || jobId === "[id]" || jobId === "%5Bid%5D" || !/^[0-9a-f-]{8,}$/i.test(jobId) || !/^[0-9a-f]{8}-/i.test(jobId)) {
+      setInvalidLink(true);
+      setLoading(false);
+      return;
     }
+    // Strict UUID check
+    const uuidOk = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(jobId);
+    if (!uuidOk) {
+      setInvalidLink(true);
+      setLoading(false);
+      return;
+    }
+  }, [jobId]);
+
+  useEffect(() => {
+    if (invalidLink) return;
 
     const supabase = supabaseBrowser();
 
-    const { data: jobData, error: jobErr } = await supabase
-      .from("jobs")
-      .select("id,user_id,file_name,file_path,source_type,status,credits_used,created_at,updated_at")
-      .eq("id", jobId)
-      .single();
+    let interval: any = null;
 
-    if (jobErr) {
-      setError(jobErr.message);
-      if (!silent) setLoading(false);
-      return;
+    async function load() {
+      setLoading(true);
+      setError(null);
+
+      try {
+        const { data: jobRow, error: jobErr } = await supabase
+          .from("jobs")
+          .select("*")
+          .eq("id", jobId)
+          .single();
+
+        if (jobErr) {
+          console.error(jobErr);
+          setError("This bid review could not be loaded. Please return to your jobs and open it again.");
+          setJob(null);
+          setResult(null);
+          setLoading(false);
+          return;
+        }
+
+        setJob(jobRow as any);
+
+        const stored = getJobDisplayName(jobId) ?? "";
+        const initialName = stored || String((jobRow as any)?.file_name ?? "").trim();
+        setDisplayNameState(initialName);
+        setRenameInput(initialName);
+
+        const { data: resultRow } = await supabase
+          .from("job_results")
+          .select("*")
+          .eq("job_id", jobId)
+          .maybeSingle();
+
+        setResult((resultRow as any) ?? null);
+        setLoading(false);
+
+        // Start polling if not done.
+        const status = String((jobRow as any)?.status ?? "queued") as JobStatus;
+        if (status === "queued" || status === "processing") {
+          setPolling(true);
+        } else {
+          setPolling(false);
+        }
+      } catch (e) {
+        console.error(e);
+        setError("This bid review could not be loaded. Please refresh and try again.");
+        setJob(null);
+        setResult(null);
+        setLoading(false);
+      }
     }
 
-    setJob(jobData as DbJob);
+    async function poll() {
+      const { data: jobRow } = await supabase.from("jobs").select("*").eq("id", jobId).maybeSingle();
+      if (!mountedRef.current) return;
 
-    const { data: resData } = await supabase
-      .from("job_results")
-      .select("job_id,user_id,extracted_text,checklist,risks,proposal_draft,created_at,updated_at")
-      .eq("job_id", jobId)
-      .maybeSingle();
+      if (jobRow) setJob(jobRow as any);
 
-    setResult((resData ?? null) as DbJobResult | null);
+      const status = String((jobRow as any)?.status ?? "queued") as JobStatus;
+      const done = status === "done" || status === "failed";
 
-    if (!silent) setLoading(false);
-  }
+      const { data: resultRow } = await supabase.from("job_results").select("*").eq("job_id", jobId).maybeSingle();
+      if (!mountedRef.current) return;
 
-  useEffect(() => {
-    fetchAll();
-    return () => {
-      if (pollRef.current) window.clearInterval(pollRef.current);
-      pollRef.current = null;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [jobId]);
+      setResult((resultRow as any) ?? null);
 
-  useEffect(() => {
-    if (!jobId) return;
-    const stored = getJobDisplayName(jobId);
-    if (stored) setDisplayName(stored);
-  }, [jobId]);
-
-  useEffect(() => {
-    if (!job) return;
-
-    const isWorking = job.status === "queued" || job.status === "processing";
-    if (!isWorking) {
-      if (pollRef.current) window.clearInterval(pollRef.current);
-      pollRef.current = null;
-      return;
+      if (done) {
+        setPolling(false);
+        if (interval) clearInterval(interval);
+      } else {
+        setPolling(true);
+      }
     }
 
-    if (pollRef.current) return;
+    load();
 
-    pollRef.current = window.setInterval(() => {
-      fetchAll({ silent: true });
-    }, 2000);
+    interval = setInterval(poll, 2500);
 
     return () => {
-      if (pollRef.current) window.clearInterval(pollRef.current);
-      pollRef.current = null;
+      if (interval) clearInterval(interval);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [job?.status, job?.id]);
+  }, [jobId, invalidLink]);
 
-  const checklist = useMemo(() => (Array.isArray(result?.checklist) ? result?.checklist : []), [result?.checklist]);
-  const risks = useMemo(() => (Array.isArray(result?.risks) ? result?.risks : []), [result?.risks]);
-  const extractedText = result?.extracted_text ?? "";
+  const canDownload = useMemo(() => {
+    return Boolean(job && job.status === "done");
+  }, [job]);
+
+  const extractedText = useMemo(() => {
+    return String(result?.extracted_text ?? "").trim();
+  }, [result]);
+
+  const checklist = useMemo(() => normalizeChecklist(result?.checklist), [result]);
+  const risks = useMemo(() => normalizeRisks(result?.risks), [result]);
+  const questions = useMemo(() => normalizeQuestions((result as any)?.buyer_questions ?? (result as any)?.clarifications), [result]);
 
   const mustItems = useMemo(() => {
     return checklist
       .filter((i) => String(i?.type ?? i?.level ?? i?.priority ?? "").toUpperCase().includes("MUST"))
-      .map((x) => pickText(x))
+      .map((x) => String(x?.text ?? x?.requirement ?? "").trim())
       .filter(Boolean);
   }, [checklist]);
 
-  const shouldItems = useMemo(() => {
-    return checklist
-      .filter((i) => String(i?.type ?? i?.level ?? i?.priority ?? "").toUpperCase().includes("SHOULD"))
-      .map((x) => pickText(x))
-      .filter(Boolean);
-  }, [checklist]);
+  const executive = useMemo(() => {
+    const raw = (result as any)?.executive_summary ?? {};
+    return toExecutiveModel({ checklist, risks, extractedText, raw });
+  }, [result, checklist, risks, extractedText]);
 
-  const infoItems = useMemo(() => {
-    return checklist
-      .filter((i) => String(i?.type ?? i?.level ?? i?.priority ?? "").toUpperCase().includes("INFO"))
-      .map((x) => pickText(x))
-      .filter(Boolean);
-  }, [checklist]);
+  const decisionState = useMemo(() => decisionFromExecutive(executive), [executive]);
 
-  const mustCount = useMemo(() => mustItems.length, [mustItems]);
+  const disqualifiersCount = useMemo(() => {
+    return mustItems.length;
+  }, [mustItems]);
 
-  const highRiskCount = useMemo(
-    () => risks.filter((r) => String(r?.severity ?? r?.level ?? r?.rating ?? "").toLowerCase().includes("high")).length,
-    [risks]
-  );
+  async function copySection(which: "requirements" | "risks" | "clarifications" | "draft") {
+    if (!canDownload) return;
 
-  const questions = useMemo(() => {
-    const q: string[] = [];
-    shouldItems.forEach((t) => q.push(`Can you clarify expectations regarding: "${t}"?`));
-    risks.forEach((r) => {
-      const title = pickText(r);
-      if (title) q.push(`Can you clarify the following risk or ambiguity: "${title}"?`);
-    });
-    return Array.from(new Set(q));
-  }, [shouldItems, risks]);
-
-  const decision = useMemo(() => {
-    if (!job) {
-      return {
-        state: "caution" as DecisionState,
-        summary: "Your bid review will appear here.",
-        reasons: ["Analyzing requirements, risks, and clarifications."],
-        disqualifiers: [] as { tone: "ok" | "warn" | "bad"; text: string }[],
-        isSkeleton: true,
-      };
+    let text = "";
+    if (which === "requirements") text = mustItems.join("\n");
+    if (which === "risks") text = risks.map((r) => pickText(r)).filter(Boolean).join("\n");
+    if (which === "clarifications") text = questions.join("\n");
+    if (which === "draft") {
+      const draft = (result as any)?.proposal_draft ?? null;
+      text = typeof draft === "string" ? draft : JSON.stringify(draft, null, 2);
     }
 
-    if (job.status === "failed") {
-      return {
-        state: "caution" as DecisionState,
-        summary: "The analysis could not be completed.",
-        reasons: ["Please try again or re-upload the file.", "If the document is scanned, extraction may be incomplete."],
-        disqualifiers: [{ tone: "warn" as const, text: "Potential disqualifiers could not be fully assessed." }],
-        isSkeleton: false,
-      };
+    const ok = await safeCopy(text);
+    if (ok) {
+      setCopiedSection(which);
+      window.setTimeout(() => setCopiedSection(null), 1200);
     }
+  }
 
-    if (job.status !== "done") {
-      return {
-        state: "caution" as DecisionState,
-        summary: "We’re preparing your decision snapshot.",
-        reasons: ["Analyzing mandatory requirements…", "Evaluating risks and ambiguities…"],
-        disqualifiers: [] as { tone: "ok" | "warn" | "bad"; text: string }[],
-        isSkeleton: true,
-      };
-    }
+  async function handleRenameSave() {
+    const newName = String(renameInput ?? "").trim();
+    if (!job) return;
 
-    const checklistEmpty = checklist.length === 0;
-    const risksEmpty = risks.length === 0;
-
-    const topMust = mustItems.slice(0, 3);
-
-    const disqualifiers: { tone: "ok" | "warn" | "bad"; text: string }[] = [];
-    if (topMust.length) {
-      topMust.forEach((t) => disqualifiers.push({ tone: "warn", text: `Mandatory item to verify: ${t}` }));
-    } else {
-      disqualifiers.push({ tone: "ok", text: "No explicit mandatory requirements extracted." });
-    }
-
-    if (checklistEmpty && risksEmpty) {
-      return {
-        state: "caution" as DecisionState,
-        summary: "Some sections could not be fully analyzed.",
-        reasons: ["Structured items were not extracted reliably.", "Review the source text and verify key requirements manually."],
-        disqualifiers,
-        isSkeleton: false,
-      };
-    }
-
-    if (mustCount > 0) {
-      return {
-        state: "risk" as DecisionState,
-        summary: "Mandatory requirements require careful verification.",
-        reasons: [
-          `Potential disqualifiers identified (${mustCount} mandatory requirement${mustCount === 1 ? "" : "s"}).`,
-          "Confirm submission steps, forms, and eligibility requirements early.",
-        ],
-        disqualifiers,
-        isSkeleton: false,
-      };
-    }
-
-    if (highRiskCount > 0) {
-      return {
-        state: "caution" as DecisionState,
-        summary: "No obvious disqualifiers detected, but risks need review.",
-        reasons: [
-          `There ${highRiskCount === 1 ? "is" : "are"} ${highRiskCount} high risk${highRiskCount === 1 ? "" : "s"} to address.`,
-          "Check ambiguities and clarifications before drafting.",
-        ],
-        disqualifiers,
-        isSkeleton: false,
-      };
-    }
-
-    return {
-      state: "proceed" as DecisionState,
-      summary: "No disqualifiers detected based on extracted items.",
-      reasons: ["Review SHOULD items and clarifications before drafting.", "Tailor the draft to the buyer’s evaluation criteria."],
-      disqualifiers,
-      isSkeleton: false,
-    };
-  }, [job, checklist.length, risks.length, mustItems, mustCount, highRiskCount]);
-
-  const snapshot = useMemo(() => {
-    if (!job) return { tone: "neutral" as const, badge: "Preparing", line: "Your bid kit will appear here." };
-
-    if (job.status === "failed") {
-      return { tone: "risk" as const, badge: "Needs attention", line: "Something went wrong while creating your bid review." };
-    }
-
-    if (job.status !== "done") {
-      return { tone: "neutral" as const, badge: "In progress", line: "We’re preparing your requirements, risks, and clarifications." };
-    }
-
-    const checklistEmpty = checklist.length === 0;
-    const risksEmpty = risks.length === 0;
-
-    if (checklistEmpty && risksEmpty) {
-      return {
-        tone: "warn" as const,
-        badge: "Needs review",
-        line: "We couldn’t extract structured items. Review the source text and verify key requirements manually.",
-      };
-    }
-
-    if (mustCount > 0) {
-      return { tone: "risk" as const, badge: "Check disqualifiers", line: `Potential disqualifiers found (${mustCount} MUST). Review these first.` };
-    }
-
-    if (highRiskCount > 0) {
-      return { tone: "warn" as const, badge: "Review risks", line: `No disqualifiers detected, but there ${highRiskCount === 1 ? "is" : "are"} ${highRiskCount} high risk${highRiskCount === 1 ? "" : "s"} to review.` };
-    }
-
-    return { tone: "good" as const, badge: "Looks clear", line: "No disqualifiers detected. Review SHOULD items and clarifications before drafting." };
-  }, [job, mustCount, highRiskCount, checklist.length, risks.length]);
-
-  function onJumpToSource(query: string) {
-    const q = (query ?? "").trim();
-
-    if (!q) {
-      setSourceFocus(null);
-      setTab("text");
+    if (!newName) {
+      clearJobDisplayName(jobId);
+      setDisplayNameState(String(job.file_name ?? "").trim());
+      setRenaming(false);
       return;
     }
 
-    const hit = findExcerpt(extractedText, q);
-    if (!hit) {
-      setSourceFocus({ query: q, snippet: "No matching excerpt found in the source text." });
-    } else {
-      setSourceFocus({ query: q, snippet: hit.snippet });
+    setJobDisplayName(jobId, newName);
+    setDisplayNameState(newName);
+    setRenaming(false);
+  }
+
+  function onJumpToSource(query: string) {
+    const match = findExcerpt(extractedText, query);
+    if (!match) {
+      setSourceFocus({ query, snippet: "No matching excerpt found in the source text." });
+      setTab("text");
+      return;
     }
+    setSourceFocus({ query, snippet: match.snippet });
     setTab("text");
   }
 
-  async function downloadSummary() {
+  async function exportSummaryTxt() {
+    if (!job) return;
     const text = toPlainTextSummary({
-      fileName: displayName || job?.file_name,
-      createdAt: job?.created_at,
+      fileName: displayName || job.file_name,
+      createdAt: job.created_at,
       checklist,
       risks,
       questions,
-      draft: result?.proposal_draft ?? null,
+      draft: (result as any)?.proposal_draft ?? null,
     });
 
     const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
-
     const a = document.createElement("a");
     a.href = url;
-    const base = getExportBaseName({ displayName, originalFileName: job?.file_name });
-    a.download = `${base}_summary.txt`;
+    a.download = `tenderpilot_summary_${jobId}.txt`;
     document.body.appendChild(a);
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-  }
-
-  function escapeHtml(str: string) {
-    return String(str)
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
   }
 
   async function exportBidBriefPdf() {
@@ -691,33 +673,59 @@ export default function JobDetailPage() {
 
     setError(null);
 
-    const base = getExportBaseName({ displayName, originalFileName: job.file_name });
     const title = String(displayName || job.file_name || "Bid brief").trim() || "Bid brief";
     const created = formatDate(job.created_at);
 
     const mustLines = mustItems.length
       ? `<ol>${mustItems.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ol>`
-      : `<p>No mandatory requirements detected.</p>`;
+      : `<p class="empty">No mandatory requirements detected.</p>`;
 
     const riskLines = risks.length
       ? `<ol>${risks
           .slice(0, 25)
           .map((r: any) => {
-            const sev = String(r?.severity ?? r?.level ?? r?.rating ?? "medium").toLowerCase();
-            const title = escapeHtml(pickText(r));
+            const sevRaw = String(r?.severity ?? r?.level ?? r?.rating ?? "medium").toLowerCase();
+            const sev = sevRaw === "high" || sevRaw === "medium" || sevRaw === "low" ? sevRaw : "medium";
+            const riskTitle = escapeHtml(pickText(r));
             const detail = escapeHtml(String(r?.detail ?? r?.description ?? r?.why ?? r?.impact ?? "").trim());
-            return `<li><strong>${escapeHtml(sev.toUpperCase())}</strong>: ${title}${detail ? `<div class="muted">${detail}</div>` : ""}</li>`;
+
+            const sevLabel = sev === "high" ? "High" : sev === "low" ? "Low" : "Medium";
+            return `
+              <li>
+                <span class="sev sev-${sev}">${sevLabel}</span>
+                <span class="li-title">${riskTitle}</span>
+                ${detail ? `<div class="li-detail">${detail}</div>` : ""}
+              </li>
+            `;
           })
           .join("")}</ol>`
-      : `<p>No risks detected.</p>`;
+      : `<p class="empty">No risks detected.</p>`;
 
     const keyFindingsLines = executive.keyFindings?.length
       ? `<ol>${executive.keyFindings.map((t) => `<li>${escapeHtml(String(t))}</li>`).join("")}</ol>`
-      : `<p>No key findings available.</p>`;
+      : `<p class="empty">No key findings available.</p>`;
 
     const nextActionsLines = executive.nextActions?.length
       ? `<ol>${executive.nextActions.map((t) => `<li>${escapeHtml(String(t))}</li>`).join("")}</ol>`
-      : `<p>No next actions available.</p>`;
+      : `<p class="empty">No next actions available.</p>`;
+
+    const decisionLine = String(executive.decisionLine ?? "").trim();
+    const decisionBadgeRaw = String(executive.decisionBadge ?? executive.decision ?? "").trim();
+	const decisionBadge = decisionBadgeRaw.toLowerCase();
+
+	const decisionLabel =
+	  decisionBadge.includes("risk") || decisionBadge.includes("no-go") || decisionBadge.includes("no go")
+		? "High disqualification risk"
+		: decisionBadge.includes("caution")
+		? "Proceed with caution"
+		: decisionBadge.includes("go") || decisionBadge.includes("proceed")
+		? "Proceed"
+		: decisionBadgeRaw
+		? decisionBadgeRaw
+		: decisionLine
+		? "Decision summary"
+		: "";
+
 
     const deadline = executive.submissionDeadline ? escapeHtml(String(executive.submissionDeadline)) : "";
 
@@ -727,45 +735,241 @@ export default function JobDetailPage() {
     <meta charset="utf-8" />
     <title>${escapeHtml(title)} bid brief</title>
     <style>
-      @page { size: A4; margin: 16mm; }
-      body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; margin: 0; color: #111; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      h1 { font-size: 20px; margin: 0 0 6px 0; }
-      h2 { font-size: 13px; margin: 16px 0 8px 0; break-after: avoid; page-break-after: avoid; }
-      .muted { color: #555; font-size: 12px; }
-      .card { border: 1px solid #ddd; border-radius: 14px; padding: 12px; margin-top: 12px; break-inside: avoid; page-break-inside: avoid; }
-      ol { padding-left: 18px; margin: 8px 0 0 0; }
-      li { margin: 6px 0; }
-      .pill { display: inline-block; padding: 6px 10px; border-radius: 999px; border: 1px solid #ddd; font-size: 12px; }
-      .row { display:flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
-      .disclaimer { margin-top: 14px; font-size: 12px; color: #444; }
+      @page { size: A4; margin: 14mm; }
+
+      :root{
+        --ink:#111;
+        --muted:#5b5b5b;
+        --line:#dedede;
+        --panel:#f7f7f7;
+        --soft:#fbfbfb;
+      }
+
+      body{
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+        margin:0;
+        color:var(--ink);
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        font-size: 12px;
+        line-height: 1.45;
+      }
+
+      .page{
+        padding-bottom: 18mm;
+      }
+
+      .header{
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        gap:16px;
+        padding: 0 0 12px 0;
+        border-bottom: 1px solid var(--line);
+      }
+
+      .brand{
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.2px;
+      }
+
+      .docTitle{
+        margin-top: 6px;
+        font-size: 22px;
+        font-weight: 750;
+      }
+
+      .meta{
+        text-align:right;
+        font-size: 12px;
+        color: var(--muted);
+        max-width: 45%;
+      }
+
+      .meta strong{ color: var(--ink); font-weight: 600; }
+
+      .pillRow{
+        margin-top: 10px;
+        display:flex;
+        flex-wrap:wrap;
+        gap:8px;
+      }
+
+      .pill{
+        display:inline-block;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: var(--soft);
+        font-size: 12px;
+        color: var(--ink);
+        white-space: nowrap;
+      }
+
+      .pill.emph{
+        border-color: #cfcfcf;
+        background: #f1f1f1;
+        font-weight: 650;
+      }
+
+      .section{
+        margin-top: 14px;
+      }
+
+      .section h2{
+        font-size: 13px;
+        margin: 0 0 8px 0;
+        letter-spacing: 0.2px;
+      }
+
+      .card{
+        border: 1px solid var(--line);
+        background: var(--panel);
+        border-radius: 14px;
+        padding: 12px;
+        break-inside: avoid;
+        page-break-inside: avoid;
+      }
+
+      .grid2{
+        display:grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .subhead{
+        font-size: 12px;
+        font-weight: 700;
+        margin: 0 0 6px 0;
+      }
+
+      ol{
+        padding-left: 18px;
+        margin: 0;
+      }
+
+      li{
+        margin: 6px 0;
+      }
+
+      .empty{
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .sev{
+        display:inline-block;
+        min-width: 56px;
+        text-align:center;
+        padding: 3px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: #fff;
+        font-size: 11px;
+        font-weight: 700;
+        margin-right: 8px;
+        vertical-align: top;
+      }
+
+      .sev-high{ border-color:#c9c9c9; background:#f0f0f0; }
+      .sev-medium{ border-color:#d6d6d6; background:#f6f6f6; }
+      .sev-low{ border-color:#e2e2e2; background:#fafafa; }
+
+      .li-title{
+        font-weight: 650;
+      }
+
+      .li-detail{
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .disclaimer{
+        margin-top: 14px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        padding: 10px 12px;
+        background: #fff;
+        color: var(--muted);
+        font-size: 11.5px;
+      }
+
+      .footer{
+        position: fixed;
+        left: 14mm;
+        right: 14mm;
+        bottom: 10mm;
+        display:flex;
+        justify-content:space-between;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .footer span{ white-space: nowrap; }
     </style>
   </head>
+
   <body>
-    <h1>Bid brief</h1>
-    <div class="muted">${escapeHtml(title)}${created ? ` · Created ${escapeHtml(created)}` : ""}</div>
+    <div class="page">
+      <div class="header">
+        <div>
+          <div class="brand">TenderPilot</div>
+          <div class="docTitle">Bid brief</div>
+          <div class="pillRow">
+            ${decisionLabel ? `<span class="pill emph">${escapeHtml(decisionLabel)}</span>` : ""}
+            ${deadline ? `<span class="pill">Submission deadline ${deadline}</span>` : ""}
+          </div>
+        </div>
 
-    <div class="card">
-      <h2>Executive summary</h2>
-      <div class="row">
-        ${executive.decision ? `<span class="pill">${escapeHtml(executive.decisionLine)}</span>` : ""}
-        ${deadline ? `<span class="pill">Deadline ${deadline}</span>` : ""}
+        <div class="meta">
+          <div><strong>${escapeHtml(title)}</strong></div>
+          ${created ? `<div>Created ${escapeHtml(created)}</div>` : ""}
+        </div>
       </div>
-      <div style="margin-top:10px"><strong>Key findings</strong>${keyFindingsLines}</div>
-      <div style="margin-top:10px"><strong>Recommended next actions</strong>${nextActionsLines}</div>
+
+      <div class="section">
+        <div class="card">
+          <h2>Executive summary</h2>
+          ${decisionLine ? `<p style="margin:0;color:var(--muted)">${escapeHtml(decisionLine)}</p>` : ""}
+
+          <div style="margin-top:12px" class="grid2">
+            <div class="card" style="background:#fff">
+              <div class="subhead">Key findings</div>
+              ${keyFindingsLines}
+            </div>
+
+            <div class="card" style="background:#fff">
+              <div class="subhead">Recommended next actions</div>
+              ${nextActionsLines}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="card">
+          <h2>Mandatory requirements</h2>
+          ${mustLines}
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="card">
+          <h2>Risks</h2>
+          ${riskLines}
+        </div>
+      </div>
+
+      <div class="disclaimer">
+        Drafting support only. Always verify requirements against the original tender documents.
+      </div>
     </div>
 
-    <div class="card">
-      <h2>Mandatory requirements</h2>
-      ${mustLines}
-    </div>
-
-    <div class="card">
-      <h2>Risks</h2>
-      ${riskLines}
-    </div>
-
-    <div class="disclaimer">
-      Drafting support only. Always verify requirements against the original tender documents.
+    <div class="footer">
+      <span>TenderPilot</span>
+      <span>Bid brief</span>
     </div>
   </body>
 </html>`;
@@ -803,298 +1007,297 @@ export default function JobDetailPage() {
     }, 300);
   }
 
-  async function deleteJob() {
-    if (!jobId || !job) return;
-    const ok = window.confirm("This permanently deletes the job and all results.");
+  async function handleDelete() {
+    if (!job) return;
+    const ok = window.confirm("Delete this bid review? This cannot be undone.");
     if (!ok) return;
 
-    const supabase = supabaseBrowser();
-
-    // Remove storage object first (best effort)
-    if (job.file_path) {
-      await supabase.storage.from("uploads").remove([job.file_path]);
-    }
-
-    await supabase.from("job_results").delete().eq("job_id", jobId);
-    await supabase.from("job_events").delete().eq("job_id", jobId);
-    await supabase.from("jobs").delete().eq("id", jobId);
-
-    clearJobDisplayName(jobId);
-    router.push("/app/jobs");
-  }
-
-  async function copySection(which: "requirements" | "risks" | "clarifications" | "draft") {
-    if (!job) return;
-
-    if (which === "requirements") {
-      const lines: string[] = [];
-      lines.push("Requirements");
-      lines.push("");
-      const render = (label: string, items: string[]) => {
-        lines.push(label);
-        if (!items.length) lines.push("None detected.");
-        else items.forEach((t, i) => lines.push(`${i + 1}. ${t}`));
-        lines.push("");
-      };
-      render("MUST", mustItems);
-      render("SHOULD", shouldItems);
-      render("INFO", infoItems);
-      const ok = await safeCopy(lines.join("\n").trim());
-      if (ok) {
-        setCopiedSection("requirements");
-        window.setTimeout(() => setCopiedSection(null), 1200);
-      }
-      return;
-    }
-
-    if (which === "risks") {
-      const lines: string[] = [];
-      lines.push("Risks");
-      lines.push("");
-      if (!risks.length) lines.push("No risks detected.");
-      else {
-        risks.forEach((r, i) => {
-          const sev = String(r?.severity ?? r?.level ?? r?.rating ?? "medium").toLowerCase();
-          const title = pickText(r);
-          const detail = String(r?.detail ?? r?.description ?? r?.why ?? r?.impact ?? r?.mitigation ?? "").trim();
-          lines.push(`${i + 1}. [${sev}] ${title}${detail ? ` — ${detail}` : ""}`);
-        });
-      }
-      const ok = await safeCopy(lines.join("\n").trim());
-      if (ok) {
-        setCopiedSection("risks");
-        window.setTimeout(() => setCopiedSection(null), 1200);
-      }
-      return;
-    }
-
-    if (which === "clarifications") {
-      const lines: string[] = [];
-      lines.push("Clarifications");
-      lines.push("");
-      if (!questions.length) lines.push("No clarifications suggested.");
-      else questions.forEach((q, i) => lines.push(`${i + 1}. ${q}`));
-      const ok = await safeCopy(lines.join("\n").trim());
-      if (ok) {
-        setCopiedSection("clarifications");
-        window.setTimeout(() => setCopiedSection(null), 1200);
-      }
-      return;
-    }
-
-    const d = result?.proposal_draft ?? null;
-    const text = !d ? "Draft not available." : typeof d === "string" ? d : JSON.stringify(d, null, 2);
-    const ok = await safeCopy(String(text));
-    if (ok) {
-      setCopiedSection("draft");
-      window.setTimeout(() => setCopiedSection(null), 1200);
+    try {
+      const supabase = supabaseBrowser();
+      await supabase.from("job_results").delete().eq("job_id", jobId);
+      await supabase.from("job_events").delete().eq("job_id", jobId);
+      await supabase.from("jobs").delete().eq("id", jobId);
+      router.push("/app/jobs");
+    } catch (e) {
+      console.error(e);
+      setError("Could not delete this job. Please try again.");
     }
   }
 
-  // -------- Executive Summary composition (no backend changes) --------
-  const executive = useMemo(() => {
-    const decisionLine =
-      decision.state === "proceed"
-        ? "No obvious blockers detected based on extracted items. Review SHOULD items before drafting."
-        : decision.state === "risk"
-        ? "Mandatory requirements require careful verification before committing resources."
-        : "Some items or risks require clarification before committing.";
+  const showInvalidLink = invalidLink || (!loading && !job && !error);
 
-    const deadline = extractDeadlineFromRequirements(mustItems);
+  const showProgress = useMemo(() => {
+    const s = job?.status;
+    return s === "queued" || s === "processing";
+  }, [job]);
 
-    // Key findings: 5–7 bullets, derived from existing items (not new AI)
-    const findings: string[] = [];
+  const showReady = useMemo(() => job?.status === "done", [job]);
+  const showFailed = useMemo(() => job?.status === "failed", [job]);
 
-    if (deadline) findings.push("Submission deadline appears strict. Prepare submission early to reduce disqualification risk.");
-    if (mustItems.some((t) => t.toLowerCase().includes("gdpr"))) findings.push("GDPR compliance is mandatory and should be explicitly confirmed in the offer.");
-    if (mustItems.some((t) => t.toLowerCase().includes("warranty"))) findings.push("Warranty requirements should be stated explicitly in the response.");
-    if (mustItems.some((t) => t.toLowerCase().includes("eur"))) findings.push("Commercial terms suggest pricing must be provided in EUR (fixed price where requested).");
-    if (shouldItems.some((t) => t.toLowerCase().includes("iso 27001"))) findings.push("ISO 27001 evidence may improve scoring but is typically optional unless stated as mandatory.");
+  const mustCount = mustItems.length;
+  const topRisks = (executive.topRisks ?? []).slice(0, 3);
 
-    // Add a couple of top requirements if we still need bullets
-    for (const t of mustItems.slice(0, 2)) {
-      if (findings.length >= 7) break;
-      if (!t) continue;
-      if (findings.some((x) => x.toLowerCase().includes(t.toLowerCase().slice(0, 16)))) continue;
-      findings.push(`Mandatory requirement to verify: ${t}`);
+  const snapshotReasons = useMemo(() => {
+    const list: { tone: "good" | "warn" | "risk" | "neutral"; label: string }[] = [];
+
+    if (!showReady) {
+      list.push({ tone: "neutral", label: "Analyzing requirements, risks, and clarifications." });
+      return list;
     }
 
-    // Ensure at least 5 findings when possible
-    if (findings.length < 5) {
-      for (const t of shouldItems.slice(0, 3)) {
-        if (findings.length >= 5) break;
-        if (!t) continue;
-        findings.push(`Optional / scoring item to consider: ${t}`);
-      }
+    if (mustCount >= 1) list.push({ tone: "risk", label: `Potential disqualifiers found (${mustCount} MUST). Review these first.` });
+    else list.push({ tone: "good", label: "No potential disqualifiers detected from MUST items." });
+
+    if (topRisks.some((r) => String(r?.severity ?? "").toLowerCase() === "high")) {
+      list.push({ tone: "warn", label: "High risk items detected. Confirm feasibility before committing resources." });
+    } else if (topRisks.length) {
+      list.push({ tone: "good", label: "Top risks look manageable with clarifications and careful response." });
+    } else {
+      list.push({ tone: "good", label: "No risks detected." });
     }
 
-    const topRisks: ExecutiveRisk[] = risks
-      .map((r: any) => {
-        const title = String(r?.title ?? r?.risk ?? r?.name ?? r?.summary ?? r?.text ?? "").trim();
-        if (!title) return null;
-        return { level: normalizeSeverity(r?.severity ?? r?.level ?? r?.rating), text: title };
-      })
-      .filter(Boolean)
-      .slice(0, 3) as ExecutiveRisk[];
+    if (executive.submissionDeadline) {
+      list.push({ tone: "warn", label: "Deadline appears strict. Prepare submission early to avoid format errors." });
+    }
 
-    const actions: string[] = [];
-    if (deadline) actions.push("Prepare the submission at least 24 hours before the stated deadline and double-check required formats/signatures.");
-    if (mustItems.some((t) => t.toLowerCase().includes("warranty"))) actions.push("State warranty terms explicitly and ensure they meet or exceed the minimum requirement.");
-    if (mustItems.some((t) => t.toLowerCase().includes("gdpr"))) actions.push("Include a clear GDPR compliance statement and confirm handling of any personal data.");
-    if (shouldItems.some((t) => t.toLowerCase().includes("iso 27001"))) actions.push("Decide whether to include ISO 27001 evidence to strengthen evaluation scoring.");
+    return list.slice(0, 3);
+  }, [showReady, mustCount, topRisks, executive.submissionDeadline]);
 
-    // Keep actions concise (max 3)
-    const nextActions = actions.slice(0, 3);
+  const potentialDisqualifiers = useMemo(() => {
+    if (!showReady) return [];
+    return mustItems.slice(0, 10);
+  }, [showReady, mustItems]);
 
-    return {
-      decision: decision.state,
-      decisionLine,
-      keyFindings: findings.slice(0, 7),
-      topRisks,
-      nextActions,
-      submissionDeadline: deadline,
-    };
-  }, [decision.state, mustItems, shouldItems, risks]);
-  // ------------------------------------------------------------------
+  const snapshotBadge = useMemo(() => {
+    if (!showReady) return { tone: "neutral" as const, label: "Proceed with caution" };
+    if (mustCount >= 1) return { tone: "risk" as const, label: "High disqualification risk" };
+    if (topRisks.some((r) => String(r?.severity ?? "").toLowerCase() === "high"))
+      return { tone: "warn" as const, label: "Proceed with caution" };
+    return { tone: "good" as const, label: "Proceed" };
+  }, [showReady, mustCount, topRisks]);
 
-  const canDownload = job?.status === "done";
+  const decisionSummaryReasons = useMemo(() => {
+    if (!showReady) return [];
+    return snapshotReasons.map((x) => x.label);
+  }, [showReady, snapshotReasons]);
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="truncate text-2xl font-semibold tracking-tight">{loading ? "Loading…" : (displayName || job?.file_name) ?? "Bid kit"}</h1>
-            {job ? (
-              renaming ? (
-                <input
-                  className="h-8 w-64 max-w-[80vw] rounded-full border bg-background px-3 text-sm"
-                  autoFocus
-                  value={displayName}
-                  placeholder="Enter a name"
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      const v = displayName.trim();
-                      setDisplayName(v);
-                      setJobDisplayName(job.id, v);
-                      setRenaming(false);
-                    }
-                    if (e.key === "Escape") {
-                      setRenaming(false);
-                    }
-                  }}
-                  onBlur={() => {
-                    const v = displayName.trim();
-                    setDisplayName(v);
-                    setJobDisplayName(job.id, v);
-                    setRenaming(false);
-                  }}
-                />
-              ) : (
-                <Button variant="outline" className="h-8 rounded-full" onClick={() => setRenaming(true)}>
-                  Rename
-                </Button>
-              )
-            ) : null}
-            {job ? statusBadge(job.status) : null}
+  const decisionSummaryDisqualifiers = useMemo(() => {
+    if (!showReady) return [];
+    return potentialDisqualifiers.map((x) => String(x ?? "").trim()).filter(Boolean);
+  }, [showReady, potentialDisqualifiers]);
+
+  if (showInvalidLink) {
+    return (
+      <div className="mx-auto max-w-5xl space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold">Bid kit</p>
+            <p className="mt-1 text-sm text-muted-foreground">Your bid kit will appear here.</p>
+            <p className="mt-2 text-sm text-red-600">This bid link is invalid. Return to your jobs and open it again.</p>
           </div>
 
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <SnapshotBadge tone={snapshot.tone} label={snapshot.badge} />
-            <p className="text-sm text-muted-foreground">{snapshot.line}</p>
-          </div>
-
-          {error ? <p className="mt-2 text-xs text-destructive">{error}</p> : null}
-
-          <div className="mt-3 flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="rounded-full">
-                  Details
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                <DropdownMenuItem className="text-xs">
-                  Job ID: <span className="ml-2 font-mono">{jobId ?? ""}</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="text-xs">
-                  Created: <span className="ml-2">{formatDate(job?.created_at)}</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="text-xs">
-                  Credits used: <span className="ml-2">{typeof job?.credits_used === "number" ? job.credits_used : "-"}</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="text-xs">
-                  File type: <span className="ml-2 uppercase">{job?.source_type ?? "-"}</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <p className="text-xs text-muted-foreground">Drafting support only. Always verify against the original tender document.</p>
+          <div className="flex items-center gap-2">
+            <Button asChild variant="outline" className="rounded-full">
+              <Link href="/app/jobs">Back to jobs</Link>
+            </Button>
+            <Button variant="outline" className="rounded-full" disabled>
+              Export bid brief PDF
+            </Button>
+            <Button className="rounded-full" disabled>
+              Download summary
+            </Button>
+            <Button variant="destructive" className="rounded-full" disabled>
+              Delete
+            </Button>
           </div>
         </div>
 
+        <Separator />
+
         <div className="flex items-center gap-2">
+          <Badge variant="secondary" className="rounded-full">
+            Preparing
+          </Badge>
+          <p className="text-sm text-muted-foreground">Your bid kit will appear here.</p>
+        </div>
+
+        <Card className="rounded-2xl">
+          <CardContent className="p-6">
+            <p className="text-sm text-muted-foreground">
+              Drafting support only. Always verify against the original tender document.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const canDelete = Boolean(job) && !showProgress;
+
+  return (
+    <div className="mx-auto max-w-6xl space-y-6">
+      {/* Header */}
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="truncate text-2xl font-semibold tracking-tight">
+              {displayName || job?.file_name || "Bid kit"}
+            </h1>
+
+            <Button
+              variant="outline"
+              className="rounded-full"
+              onClick={() => {
+                setRenaming(true);
+              }}
+              disabled={!job || showProgress}
+            >
+              Rename
+            </Button>
+
+            <Badge variant="secondary" className="rounded-full">
+              {statusBadge(job?.status ?? "queued")}
+            </Badge>
+          </div>
+
+          <p className="mt-1 text-sm text-muted-foreground">
+            {showProgress
+              ? "We’re preparing your requirements, risks, and clarifications."
+              : showFailed
+              ? "This bid review needs attention."
+              : "Your bid review is ready."}
+          </p>
+
+          {showReady && disqualifiersCount > 0 ? (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <Badge className="rounded-full" variant="destructive">
+                Check disqualifiers
+              </Badge>
+              <p className="text-sm text-muted-foreground">
+                Potential disqualifiers found ({disqualifiersCount} MUST). Review these first.
+              </p>
+            </div>
+          ) : null}
+
+          <p className="mt-2 text-sm text-muted-foreground">
+            Drafting support only. Always verify against the original tender document.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-end gap-2">
           <Button asChild variant="outline" className="rounded-full">
             <Link href="/app/jobs">Back to jobs</Link>
           </Button>
-          <Button variant="outline" className="rounded-full" onClick={exportBidBriefPdf} disabled={!canDownload}>
+
+          <Button
+            variant="outline"
+            className="rounded-full"
+            onClick={exportBidBriefPdf}
+            disabled={!canDownload || exporting !== null}
+          >
             Export bid brief PDF
           </Button>
-          <Button className="rounded-full" onClick={downloadSummary} disabled={!canDownload}>
-            Download summary
+
+          <Button
+            className="rounded-full"
+            onClick={async () => {
+              if (!canDownload) return;
+              setExporting("summary");
+              try {
+                await exportSummaryTxt();
+              } finally {
+                setExporting(null);
+              }
+            }}
+            disabled={!canDownload || exporting !== null}
+          >
+            {exporting === "summary" ? "Preparing…" : "Download summary"}
           </Button>
-          <Button variant="destructive" className="rounded-full" onClick={deleteJob}>
+
+          <Button
+            variant="destructive"
+            className="rounded-full"
+            onClick={handleDelete}
+            disabled={!canDelete}
+          >
             Delete
           </Button>
         </div>
       </div>
 
-      {job && (job.status === "queued" || job.status === "processing" || job.status === "failed") ? (
-        <ProgressCard status={job.status} />
+      {error ? (
+        <Card className="rounded-2xl border-red-200 bg-red-50">
+          <CardContent className="p-4">
+            <p className="text-sm text-red-700">{error}</p>
+          </CardContent>
+        </Card>
       ) : null}
 
-      {/* Executive Summary (NEW) */}
-      <ExecutiveSummary
-        decision={executive.decision}
-        decisionLine={executive.decisionLine}
-        keyFindings={executive.keyFindings}
-        topRisks={executive.topRisks}
-        nextActions={executive.nextActions}
-        submissionDeadline={executive.submissionDeadline}
-      />
+      {showProgress ? <ProgressCard status={job?.status ?? "processing"} /> : null}
 
-      {/* Decision summary */}
+      {/* Executive summary */}
       <Card className="rounded-2xl">
-        <CardContent className="p-6 space-y-4">
-          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-            <div className="space-y-2">
-              <DecisionBadge state={decision.state} />
-              <p className="text-sm font-medium text-foreground">{decision.summary}</p>
+        <CardContent className="p-6">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold">Executive summary</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {showReady
+                  ? "Mandatory requirements require careful verification before committing resources."
+                  : "Some items or risks require clarification before committing."}
+              </p>
             </div>
-            <p className="text-xs text-muted-foreground">Based on mandatory requirements, identified risks, and ambiguities.</p>
+            <SnapshotBadge tone={snapshotBadge.tone} label={snapshotBadge.label} />
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2">
+          <div className="mt-4">
+            <ExecutiveSummary
+              decisionBadge={snapshotBadge.label}
+              decisionLine={executive.decisionLine}
+              keyFindings={executive.keyFindings}
+              topRisks={executive.topRisks}
+              nextActions={executive.nextActions}
+              submissionDeadline={executive.submissionDeadline}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Decision summary block */}
+      <Card className="rounded-2xl">
+        <CardContent className="p-6 space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <DecisionBadge state={decisionState} />
+              <p className="text-sm text-muted-foreground">
+                Based on mandatory requirements, identified risks, and ambiguities.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
             <div className="rounded-2xl border bg-muted/20 p-4">
-              <p className="text-xs font-medium">Key reasons</p>
+              <p className="text-sm font-semibold">Key reasons</p>
               <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-                {decision.reasons.map((r, i) => (
-                  <li key={i}>{r}</li>
-                ))}
+                {decisionSummaryReasons.length ? (
+                  decisionSummaryReasons.map((x, i) => <li key={i}>{x}</li>)
+                ) : (
+                  <li>Analyzing requirements, risks, and clarifications.</li>
+                )}
               </ul>
             </div>
 
             <div className="rounded-2xl border bg-muted/20 p-4">
-              <p className="text-xs font-medium">Potential disqualifiers</p>
-              <div className="mt-2 space-y-2">
-                {decision.disqualifiers.map((d, i) => (
-                  <div key={i} className="flex items-start gap-2">
-                    <CompactPill tone={d.tone}>{d.tone === "ok" ? "OK" : d.tone === "bad" ? "High" : "Review"}</CompactPill>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{d.text}</p>
-                  </div>
-                ))}
-              </div>
+              <p className="text-sm font-semibold">Potential disqualifiers</p>
+              {decisionSummaryDisqualifiers.length ? (
+                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                  {decisionSummaryDisqualifiers.slice(0, 6).map((x, i) => (
+                    <li key={i}>{x}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-2 text-sm text-muted-foreground">None detected.</p>
+              )}
             </div>
           </div>
 
