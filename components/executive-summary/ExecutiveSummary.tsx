@@ -11,14 +11,30 @@ export type ExecutiveRisk = {
 
 type DecisionLevel = "proceed" | "caution" | "risk";
 
-interface ExecutiveSummaryProps {
-  decision: DecisionLevel;
-  decisionLine: string;
-  keyFindings: string[];
-  topRisks: ExecutiveRisk[];
-  nextActions: string[];
-  submissionDeadline?: string;
-}
+/**
+ * Backward compatible props:
+ * - Old/strict: decision + decisionLine + keyFindings + topRisks + nextActions
+ * - Current page.tsx passes: decisionBadge (string) + decisionLine + keyFindings + topRisks + nextActions
+ */
+type ExecutiveSummaryProps =
+  | {
+      decision: DecisionLevel;
+      decisionLine: string;
+      keyFindings: string[];
+      topRisks: ExecutiveRisk[];
+      nextActions: string[];
+      submissionDeadline?: string;
+      decisionBadge?: never;
+    }
+  | {
+      decisionBadge: string;
+      decisionLine: string;
+      keyFindings: string[];
+      topRisks: ExecutiveRisk[];
+      nextActions: string[];
+      submissionDeadline?: string;
+      decision?: never;
+    };
 
 const decisionLabel: Record<DecisionLevel, string> = {
   proceed: "Proceed with bid",
@@ -32,21 +48,29 @@ function severityBadge(sev: ExecutiveRisk["severity"]) {
   return <Badge variant="outline" className="rounded-full">Low</Badge>;
 }
 
-export function ExecutiveSummary({
-  decision,
-  decisionLine,
-  keyFindings,
-  topRisks,
-  nextActions,
-  submissionDeadline,
-}: ExecutiveSummaryProps) {
+function badgeFromDecision(decision: DecisionLevel): string {
+  return decisionLabel[decision] ?? "Proceed with caution";
+}
+
+export function ExecutiveSummary(props: ExecutiveSummaryProps) {
+  const decisionLine = props.decisionLine ?? "";
+  const keyFindings = props.keyFindings ?? [];
+  const topRisks = props.topRisks ?? [];
+  const nextActions = props.nextActions ?? [];
+  const submissionDeadline = props.submissionDeadline;
+
+  const badgeText =
+    "decisionBadge" in props
+      ? props.decisionBadge
+      : badgeFromDecision(props.decision);
+
   return (
     <Card className="rounded-2xl">
       <CardContent className="p-6 space-y-4">
         <div>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-base font-semibold">Executive summary</h2>
-            <Badge className="rounded-full">{decisionLabel[decision]}</Badge>
+            <Badge className="rounded-full">{badgeText}</Badge>
           </div>
           <p className="mt-2 text-sm text-muted-foreground">{decisionLine}</p>
         </div>
@@ -55,13 +79,13 @@ export function ExecutiveSummary({
           <div className="rounded-2xl border bg-background/60 p-4">
             <p className="text-xs text-muted-foreground">Key findings</p>
             <ul className="mt-2 space-y-1 text-sm">
-              {(keyFindings ?? []).slice(0, 7).map((t, i) => (
+              {keyFindings.slice(0, 7).map((t, i) => (
                 <li key={i} className="flex gap-2">
                   <span className="text-muted-foreground">{i + 1}.</span>
                   <span>{t}</span>
                 </li>
               ))}
-              {!keyFindings?.length ? (
+              {!keyFindings.length ? (
                 <li className="text-sm text-muted-foreground">No highlights available.</li>
               ) : null}
             </ul>
@@ -70,13 +94,13 @@ export function ExecutiveSummary({
           <div className="rounded-2xl border bg-background/60 p-4">
             <p className="text-xs text-muted-foreground">Top risks</p>
             <ul className="mt-2 space-y-2 text-sm">
-              {(topRisks ?? []).slice(0, 3).map((r, i) => (
+              {topRisks.slice(0, 3).map((r, i) => (
                 <li key={i} className="flex items-start gap-2">
                   {severityBadge(r.severity)}
                   <span>{r.text}</span>
                 </li>
               ))}
-              {!topRisks?.length ? (
+              {!topRisks.length ? (
                 <li className="text-sm text-muted-foreground">No risks detected.</li>
               ) : null}
             </ul>
@@ -85,13 +109,13 @@ export function ExecutiveSummary({
           <div className="rounded-2xl border bg-background/60 p-4">
             <p className="text-xs text-muted-foreground">Recommended next actions</p>
             <ul className="mt-2 space-y-1 text-sm">
-              {(nextActions ?? []).slice(0, 3).map((t, i) => (
+              {nextActions.slice(0, 3).map((t, i) => (
                 <li key={i} className="flex gap-2">
                   <span className="text-muted-foreground">{i + 1}.</span>
                   <span>{t}</span>
                 </li>
               ))}
-              {!nextActions?.length ? (
+              {!nextActions.length ? (
                 <li className="text-sm text-muted-foreground">No actions suggested.</li>
               ) : null}
             </ul>
@@ -115,5 +139,4 @@ export function ExecutiveSummary({
   );
 }
 
-// Also provide default export to avoid future import mismatches
 export default ExecutiveSummary;

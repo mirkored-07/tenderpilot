@@ -21,6 +21,9 @@ export default function UploadPage() {
                 Use the final tender version you plan to respond to. Results appear automatically on the next page.
               </p>
               <p className="mt-2 text-xs text-muted-foreground">
+                The bid kit is generated in the same language as your document.
+              </p>
+              <p className="mt-2 text-xs text-muted-foreground">
                 Drafting support only. Always verify requirements against the original tender documents.
               </p>
             </div>
@@ -33,17 +36,13 @@ export default function UploadPage() {
           <Card className="rounded-2xl">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">What happens next</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                A clean bid kit is created automatically.
-              </p>
+              <p className="text-sm text-muted-foreground">A clean bid kit is created automatically.</p>
             </CardHeader>
             <CardContent className="pt-0">
               <div className="space-y-3">
                 <div className="rounded-2xl border bg-background/60 p-4">
                   <p className="text-sm font-semibold">1. Upload</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Your file is stored in your workspace.
-                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">Your file is stored in your workspace.</p>
                 </div>
 
                 <div className="rounded-2xl border bg-background/60 p-4">
