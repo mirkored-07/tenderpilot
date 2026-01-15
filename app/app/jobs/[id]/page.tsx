@@ -420,11 +420,28 @@ export default function JobDetailPage() {
     }
   }, [jobId]);
 
+  // ✅ PATCH 1A: polling robustness + graceful stop + error pressure guard
   useEffect(() => {
     if (invalidLink) return;
 
     const supabase = supabaseBrowser();
+
+    const POLL_INTERVAL_MS = 2500;
+    const MAX_POLL_MS = 10 * 60 * 1000; // hard stop (frontend only)
+    const DONE_GRACE_POLLS = 12; // ~30s grace window when status flips to done but results not visible yet
+    const MAX_POLL_ERRORS = 6;
+
     let interval: any = null;
+
+    const startedAt = Date.now();
+    let pollErrors = 0;
+    let doneWithoutResult = 0;
+
+    function stopPolling() {
+      if (interval) clearInterval(interval);
+      interval = null;
+      if (mountedRef.current) setPolling(false);
+    }
 
     async function load() {
       setLoading(true);
@@ -439,6 +456,7 @@ export default function JobDetailPage() {
           setJob(null);
           setResult(null);
           setLoading(false);
+          stopPolling();
           return;
         }
 
@@ -449,46 +467,120 @@ export default function JobDetailPage() {
         setDisplayNameState(initialName);
         setRenameInput(initialName);
 
-        const { data: resultRow } = await supabase.from("job_results").select("*").eq("job_id", jobId).maybeSingle();
+        const { data: resultRow, error: resErr } = await supabase
+          .from("job_results")
+          .select("*")
+          .eq("job_id", jobId)
+          .maybeSingle();
+
+        if (resErr) {
+          // Can happen temporarily (session/RLS timing); don't fail the page.
+          console.warn(resErr);
+        }
+
         setResult((resultRow as any) ?? null);
 
         setLoading(false);
 
         const status = String((jobRow as any)?.status ?? "queued") as JobStatus;
-        setPolling(status === "queued" || status === "processing");
+        setPolling(status === "queued" || status === "processing" || (status === "done" && !resultRow));
       } catch (e) {
         console.error(e);
         setError("This bid review could not be loaded. Please refresh and try again.");
         setJob(null);
         setResult(null);
         setLoading(false);
+        stopPolling();
       }
     }
 
     async function poll() {
-      const { data: jobRow } = await supabase.from("jobs").select("*").eq("id", jobId).maybeSingle();
-      if (!mountedRef.current) return;
+      // Hard stop: prevent infinite polling from UI side.
+      if (Date.now() - startedAt > MAX_POLL_MS) {
+        setError("This bid review is taking longer than expected. Please refresh the page or check again later.");
+        stopPolling();
+        return;
+      }
 
-      if (jobRow) setJob(jobRow as any);
+      try {
+        const { data: jobRow, error: jobErr } = await supabase.from("jobs").select("*").eq("id", jobId).maybeSingle();
+        if (!mountedRef.current) return;
 
-      const status = String((jobRow as any)?.status ?? "queued") as JobStatus;
-      const done = status === "done" || status === "failed";
+        if (jobErr) {
+          pollErrors += 1;
+          console.warn(jobErr);
+        }
 
-      const { data: resultRow } = await supabase.from("job_results").select("*").eq("job_id", jobId).maybeSingle();
-      if (!mountedRef.current) return;
+        if (jobRow) setJob(jobRow as any);
 
-      setResult((resultRow as any) ?? null);
+        const status = String((jobRow as any)?.status ?? "queued") as JobStatus;
+        const isTerminal = status === "done" || status === "failed";
 
-      if (done) {
-        setPolling(false);
-        if (interval) clearInterval(interval);
-      } else {
-        setPolling(true);
+        const { data: resultRow, error: resErr } = await supabase
+          .from("job_results")
+          .select("*")
+          .eq("job_id", jobId)
+          .maybeSingle();
+
+        if (!mountedRef.current) return;
+
+        if (resErr) {
+          pollErrors += 1;
+          console.warn(resErr);
+        } else {
+          // relieve pressure a bit after successful reads
+          pollErrors = Math.max(0, pollErrors - 1);
+        }
+
+        setResult((resultRow as any) ?? null);
+
+        // Terminal state logic:
+        // - failed: stop polling immediately (results may or may not exist)
+        // - done: stop when results exist; otherwise allow a short grace window
+        if (isTerminal) {
+          if (status === "failed") {
+            stopPolling();
+            return;
+          }
+
+          if (resultRow) {
+            stopPolling();
+            return;
+          }
+
+          doneWithoutResult += 1;
+          if (doneWithoutResult >= DONE_GRACE_POLLS) {
+            setError(
+              "The job completed, but the results are not available yet. Please refresh the page in a moment or re-open the job from your jobs list."
+            );
+            stopPolling();
+            return;
+          }
+        } else {
+          // reset terminal grace counter if we’re not terminal anymore (rare but safe)
+          doneWithoutResult = 0;
+        }
+
+        if (pollErrors >= MAX_POLL_ERRORS) {
+          setError("We are having trouble loading this bid review. Please refresh the page and try again.");
+          stopPolling();
+          return;
+        }
+
+        setPolling(status === "queued" || status === "processing" || (status === "done" && !resultRow));
+      } catch (e) {
+        console.error(e);
+        pollErrors += 1;
+        if (pollErrors >= MAX_POLL_ERRORS) {
+          setError("We are having trouble loading this bid review. Please refresh the page and try again.");
+          stopPolling();
+          return;
+        }
       }
     }
 
     load();
-    interval = setInterval(poll, 2500);
+    interval = setInterval(poll, POLL_INTERVAL_MS);
 
     return () => {
       if (interval) clearInterval(interval);
@@ -513,7 +605,9 @@ export default function JobDetailPage() {
   // ✅ IMPORTANT: questions come from proposal_draft.buyer_questions (DB contract)
   const questions = useMemo(() => {
     const pd = (result as any)?.proposal_draft ?? null;
-    return normalizeQuestions(pd?.buyer_questions ?? pd?.clarifications ?? (result as any)?.buyer_questions ?? (result as any)?.clarifications);
+    return normalizeQuestions(
+      pd?.buyer_questions ?? pd?.clarifications ?? (result as any)?.buyer_questions ?? (result as any)?.clarifications
+    );
   }, [result]);
 
   const mustItems = useMemo(() => {
@@ -533,6 +627,21 @@ export default function JobDetailPage() {
     const pd = (result as any)?.proposal_draft ?? null;
     return pd?.proposal_draft ?? null;
   }, [result]);
+
+  // ✅ PATCH 1B: derive "finalizing" state (job done, but results payload is still empty)
+  const draftLinesForUi = useMemo(() => renderDraftPlain(draftForUi), [draftForUi]);
+
+  const hasDraftForUi = useMemo(() => {
+    if (!draftLinesForUi.length) return false;
+    if (draftLinesForUi.length === 1 && draftLinesForUi[0].toLowerCase().includes("not available")) return false;
+    return true;
+  }, [draftLinesForUi]);
+
+  const hasAnyResultsPayload = useMemo(() => {
+    return Boolean(extractedText || checklist.length || risks.length || questions.length || hasDraftForUi);
+  }, [extractedText, checklist.length, risks.length, questions.length, hasDraftForUi]);
+
+  const finalizingResults = useMemo(() => showReady && !hasAnyResultsPayload, [showReady, hasAnyResultsPayload]);
 
   const decisionState = useMemo(() => decisionFromExecutive(executive), [executive]);
 
@@ -943,12 +1052,7 @@ export default function JobDetailPage() {
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="truncate text-2xl font-semibold tracking-tight">{displayName || job?.file_name || "Bid kit"}</h1>
 
-            <Button
-              variant="outline"
-              className="rounded-full"
-              onClick={() => setRenaming(true)}
-              disabled={!job || showProgress}
-            >
+            <Button variant="outline" className="rounded-full" onClick={() => setRenaming(true)} disabled={!job || showProgress}>
               Rename
             </Button>
 
@@ -964,9 +1068,7 @@ export default function JobDetailPage() {
               : "Your bid review is ready."}
           </p>
 
-          <p className="mt-2 text-sm text-muted-foreground">
-            Drafting support only. Always verify against the original tender document.
-          </p>
+          <p className="mt-2 text-sm text-muted-foreground">Drafting support only. Always verify against the original tender document.</p>
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-2">
@@ -1095,14 +1197,54 @@ export default function JobDetailPage() {
           </TabsTrigger>
         </TabsList>
 
+        {/* ✅ PATCH 1C: section guards + finalizing state + better empty states */}
         <TabsContent value="checklist">
           <div className="flex items-center justify-end">
             <Button variant="outline" className="rounded-full" onClick={() => copySection("requirements")} disabled={!canDownload}>
               {copiedSection === "requirements" ? "Copied" : "Copy section"}
             </Button>
           </div>
+
           <div className="mt-3">
-            <Checklist checklist={checklist} extractedText={extractedText} onJumpToSource={onJumpToSource} />
+            {showFailed ? (
+              <Card className="rounded-2xl">
+                <CardContent className="p-6">
+                  <p className="text-sm font-semibold">Analysis failed</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    This bid review could not be completed. Please re-upload the document or try again.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : !showReady ? (
+              <Card className="rounded-2xl">
+                <CardContent className="p-6">
+                  <p className="text-sm font-semibold">Requirements are being extracted</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    We&apos;re scanning the tender for MUST/SHOULD/INFO items. This section will populate automatically.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : finalizingResults ? (
+              <Card className="rounded-2xl">
+                <CardContent className="p-6">
+                  <p className="text-sm font-semibold">Finalizing results…</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    The job is marked as done, but results are still being written. Please wait a few seconds or refresh.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : checklist.length ? (
+              <Checklist checklist={checklist} extractedText={extractedText} onJumpToSource={onJumpToSource} />
+            ) : (
+              <Card className="rounded-2xl">
+                <CardContent className="p-6">
+                  <p className="text-sm font-semibold">No requirements extracted</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    We didn&apos;t detect explicit MUST/SHOULD/INFO items. Verify the source text, or try re-uploading a cleaner PDF.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </TabsContent>
 
@@ -1112,26 +1254,108 @@ export default function JobDetailPage() {
               {copiedSection === "risks" ? "Copied" : "Copy section"}
             </Button>
           </div>
+
           <div className="mt-3">
-            <Risks risks={risks} extractedText={extractedText} onJumpToSource={onJumpToSource} />
+            {showFailed ? (
+              <Card className="rounded-2xl">
+                <CardContent className="p-6">
+                  <p className="text-sm font-semibold">Analysis failed</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    This bid review could not be completed. Please re-upload the document or try again.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : !showReady ? (
+              <Card className="rounded-2xl">
+                <CardContent className="p-6">
+                  <p className="text-sm font-semibold">Identifying key risks</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    We&apos;re highlighting technical, legal, commercial, and delivery risks from the tender.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : finalizingResults ? (
+              <Card className="rounded-2xl">
+                <CardContent className="p-6">
+                  <p className="text-sm font-semibold">Finalizing results…</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    The job is marked as done, but results are still being written. Please wait a few seconds or refresh.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : risks.length ? (
+              <Risks risks={risks} extractedText={extractedText} onJumpToSource={onJumpToSource} />
+            ) : (
+              <Card className="rounded-2xl">
+                <CardContent className="p-6">
+                  <p className="text-sm font-semibold">No major risks detected</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    We didn&apos;t flag high-impact risks. Still verify deadlines, eligibility, and mandatory deliverables in the source text.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </TabsContent>
 
         <TabsContent value="questions">
           <div className="flex items-center justify-end">
-            <Button variant="outline" className="rounded-full" onClick={() => copySection("clarifications")} disabled={!canDownload}>
+            <Button
+              variant="outline"
+              className="rounded-full"
+              onClick={() => copySection("clarifications")}
+              disabled={!canDownload}
+            >
               {copiedSection === "clarifications" ? "Copied" : "Copy section"}
             </Button>
           </div>
+
           <div className="mt-3">
-            {/* ✅ IMPORTANT: pass questions from DB */}
-            <BuyerQuestions
-              checklist={checklist}
-              risks={risks}
-              extractedText={extractedText}
-              onJumpToSource={onJumpToSource}
-              questions={questions}
-            />
+            {showFailed ? (
+              <Card className="rounded-2xl">
+                <CardContent className="p-6">
+                  <p className="text-sm font-semibold">Analysis failed</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    This bid review could not be completed. Please re-upload the document or try again.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : !showReady ? (
+              <Card className="rounded-2xl">
+                <CardContent className="p-6">
+                  <p className="text-sm font-semibold">Generating clarifications</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    We&apos;re listing buyer questions and ambiguities to resolve before committing to a proposal.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : finalizingResults ? (
+              <Card className="rounded-2xl">
+                <CardContent className="p-6">
+                  <p className="text-sm font-semibold">Finalizing results…</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    The job is marked as done, but results are still being written. Please wait a few seconds or refresh.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : questions.length ? (
+              <BuyerQuestions
+                checklist={checklist}
+                risks={risks}
+                extractedText={extractedText}
+                onJumpToSource={onJumpToSource}
+                questions={questions}
+              />
+            ) : (
+              <Card className="rounded-2xl">
+                <CardContent className="p-6">
+                  <p className="text-sm font-semibold">No clarifications identified</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    We didn&apos;t detect explicit buyer questions or ambiguities. Double-check eligibility, scope boundaries, and submission format in the source text.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </TabsContent>
 
@@ -1153,10 +1377,22 @@ export default function JobDetailPage() {
 
               <Separator className="my-4" />
 
-              {draftForUi ? (
-                <pre className="text-sm whitespace-pre-wrap">{renderDraftPlain(draftForUi).join("\n")}</pre>
+              {showFailed ? (
+                <p className="text-sm text-muted-foreground">
+                  This bid review could not be completed. Please re-upload the document or try again.
+                </p>
+              ) : !showReady ? (
+                <p className="text-sm text-muted-foreground">Preparing a proposal draft outline…</p>
+              ) : finalizingResults ? (
+                <p className="text-sm text-muted-foreground">
+                  Finalizing results… this should take only a few seconds. If it doesn&apos;t, refresh the page.
+                </p>
+              ) : hasDraftForUi ? (
+                <pre className="text-sm whitespace-pre-wrap">{draftLinesForUi.join("\n")}</pre>
               ) : (
-                <p className="text-sm text-muted-foreground">Draft not ready yet.</p>
+                <p className="text-sm text-muted-foreground">
+                  No draft outline was generated. Try re-uploading the PDF or verify the source text tab.
+                </p>
               )}
             </CardContent>
           </Card>

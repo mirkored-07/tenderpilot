@@ -44,3 +44,12 @@ next-env.d.ts
 .env.local
 .env.supabase
 API.txt
+# local secrets (keep in repo folder, never commit)
+API.local.txt
+.env.supabase.local
+.env.local
+.env.*.local
+
+# safety: never commit raw secret file names again
+API.txt
+.env.supabase
