@@ -471,14 +471,26 @@ serve(async (req: Request) => {
       });
     }
 
-    const pdfBytes = new Uint8Array(await dlData.arrayBuffer());
+    const fileBytes = new Uint8Array(await dlData.arrayBuffer());
+
+    // Detect filename + mime for Unstructured (supports PDF + DOCX without changing output contract)
+    const fileNameFromRow = String((jobRow as any)?.file_name ?? "").trim();
+    const fileNameFromPath = String(filePath ?? "").split("/").pop() ?? "";
+    const fileName = (fileNameFromRow || fileNameFromPath || "upload").trim();
+    const ext = (fileName.split(".").pop() ?? "").toLowerCase();
+
+    const mime = ext === "docx"
+      ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      : ext === "doc"
+      ? "application/msword"
+      : "application/pdf";
 
     await logEvent(
       jobId,
       "storage_fetch_completed",
       "info",
       "File downloaded",
-      { bytes: pdfBytes.length },
+      { bytes: fileBytes.length, fileName, ext, mime },
       userId,
     );
 
@@ -503,7 +515,7 @@ serve(async (req: Request) => {
         "extract_started",
         "info",
         "Unstructured extraction started",
-        { url: UNSTRUCTURED_API_URL, timeoutMs: UNSTRUCTURED_TIMEOUT_MS },
+        { url: UNSTRUCTURED_API_URL, timeoutMs: UNSTRUCTURED_TIMEOUT_MS, fileName, ext, mime },
         userId,
       );
 
@@ -514,8 +526,10 @@ serve(async (req: Request) => {
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
         try {
           const form = new FormData();
-          const blob = new Blob([pdfBytes], { type: "application/pdf" });
-          form.append("files", blob, "upload.pdf");
+          const blob = new Blob([fileBytes], { type: mime });
+
+          // IMPORTANT: set correct filename + mime so Unstructured detects DOCX correctly
+          form.append("files", blob, fileName || (ext ? `upload.${ext}` : "upload.pdf"));
           form.append("strategy", "fast");
           form.append("include_page_breaks", "false");
 
@@ -538,7 +552,7 @@ serve(async (req: Request) => {
               "extract_failed",
               "error",
               "Unstructured extraction failed",
-              { attempt, status: res.status, bodyPreview: lastBody.slice(0, 2500) },
+              { attempt, status: res.status, bodyPreview: lastBody.slice(0, 2500), fileName, ext, mime },
               userId,
             );
 
@@ -563,7 +577,7 @@ serve(async (req: Request) => {
             "extract_completed",
             "info",
             "Unstructured extraction completed",
-            { attempt, elements: elements.length, extractedChars: extractedText.length },
+            { attempt, elements: elements.length, extractedChars: extractedText.length, fileName, ext, mime },
             userId,
           );
 
@@ -581,6 +595,9 @@ serve(async (req: Request) => {
               message: asErrorMessage(e),
               status: lastStatus,
               bodyPreview: lastBody.slice(0, 2500),
+              fileName,
+              ext,
+              mime,
             },
             userId,
           );

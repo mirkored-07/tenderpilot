@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +17,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { supabaseBrowser } from "@/lib/supabase/browser";
-import { getJobDisplayName } from "@/lib/pilot-job-names";
 import { track } from "@/lib/telemetry";
 
 type JobStatus = "queued" | "processing" | "done" | "failed";
@@ -48,18 +49,20 @@ function formatDate(iso: string) {
 
 function statusBadge(status: JobStatus) {
   if (status === "done") return <Badge className="rounded-full">Ready</Badge>;
-  if (status === "failed")
+  if (status === "failed") {
     return (
       <Badge variant="destructive" className="rounded-full">
         Failed
       </Badge>
     );
-  if (status === "queued")
+  }
+  if (status === "queued") {
     return (
       <Badge variant="secondary" className="rounded-full">
         Queued
       </Badge>
     );
+  }
   return (
     <Badge variant="secondary" className="rounded-full">
       Processing
@@ -78,17 +81,12 @@ export default function JobsPage() {
   const [jobs, setJobs] = useState<DbJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [nameVersion, setNameVersion] = useState(0);
 
-  useEffect(() => {
-    function onStorage(e: StorageEvent) {
-      if (e.key === "tenderpilot_job_display_names_v1") {
-        setNameVersion((v) => v + 1);
-      }
-    }
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
+  // PATCH: delete UX
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
+
+  const router = useRouter();
 
   useEffect(() => {
     let cancelled = false;
@@ -96,6 +94,7 @@ export default function JobsPage() {
     async function loadJobs() {
       setLoading(true);
       setLoadError(null);
+      setActionError(null);
 
       const supabase = supabaseBrowser();
 
@@ -128,6 +127,38 @@ export default function JobsPage() {
     };
   }, []);
 
+  async function handleDelete(job: DbJob) {
+    const ok = window.confirm(
+      `Delete "${job.file_name}"?\n\nThis will remove the job and its results. This cannot be undone.`
+    );
+    if (!ok) return;
+
+    setActionError(null);
+    setDeletingJobId(job.id);
+
+    try {
+      const supabase = supabaseBrowser();
+
+      // Best-effort cascading deletes (no schema / backend changes)
+      const r1 = await supabase.from("job_results").delete().eq("job_id", job.id);
+      if (r1.error) throw r1.error;
+
+      const r2 = await supabase.from("job_events").delete().eq("job_id", job.id);
+      if (r2.error) throw r2.error;
+
+      const r3 = await supabase.from("jobs").delete().eq("id", job.id);
+      if (r3.error) throw r3.error;
+
+      setJobs((prev) => prev.filter((j) => j.id !== job.id));
+      track("job_deleted", { job_id: job.id, source: "jobs_list" });
+    } catch (e) {
+      console.error("Delete failed", e);
+      setActionError("Could not delete this job. Please try again.");
+    } finally {
+      setDeletingJobId(null);
+    }
+  }
+
   const filtered = useMemo(() => {
     if (filter === "all") return jobs;
     return jobs.filter((j) => j.status === filter);
@@ -151,7 +182,8 @@ export default function JobsPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">History</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            All bid kits you generated. Open a job to review requirements, risks, and drafts.
+            All bid kits you generated. Open a job to review requirements, risks,
+            and drafts.
           </p>
         </div>
 
@@ -201,6 +233,9 @@ export default function JobsPage() {
           {loadError ? (
             <p className="mt-2 text-xs text-destructive">{loadError}</p>
           ) : null}
+          {actionError ? (
+            <p className="mt-2 text-xs text-destructive">{actionError}</p>
+          ) : null}
         </CardHeader>
 
         <CardContent className="space-y-3">
@@ -232,28 +267,68 @@ export default function JobsPage() {
                     "hover:bg-muted/40"
                   )}
                 >
+                  {/* Header row */}
                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    {/* LEFT */}
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <div className="truncate text-sm font-medium">
-                          {getJobDisplayName(job.id) ?? job.file_name}
-                        </div>
-                        {statusBadge(job.status)}
+                      <div className="truncate text-base font-semibold">
+                        {job.file_name}
                       </div>
-                      <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+
+                      <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                        <span className="inline-flex items-center gap-2 min-w-0">
+                          {statusBadge(job.status)}
+                        </span>
                         <span>Created: {formatDate(job.created_at)}</span>
                         <span>Credits: {job.credits_used}</span>
                       </div>
                     </div>
 
+                    {/* RIGHT */}
                     <div className="flex items-center gap-2">
                       <Button
                         variant="outline"
                         className="rounded-full"
-                        onClick={(e) => e.preventDefault()}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          router.push(`/app/jobs/${job.id}`);
+                        }}
                       >
                         Open
                       </Button>
+
+                      {/* PATCH: actions menu */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="rounded-full px-3"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                            }}
+                            aria-label="Job actions"
+                            title="Actions"
+                            disabled={deletingJobId === job.id}
+                          >
+                            ···
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              void handleDelete(job);
+                            }}
+                          >
+                            {deletingJobId === job.id ? "Deleting…" : "Delete"}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+
                       <div className="text-xs text-muted-foreground group-hover:text-foreground">
                         {previewText(job.status)} →
                       </div>
@@ -262,6 +337,7 @@ export default function JobsPage() {
 
                   <Separator className="my-3" />
 
+                  {/* Preview cards */}
                   <div className="grid gap-2 md:grid-cols-3">
                     <div className="rounded-xl border bg-background/60 p-3">
                       <div className="text-xs text-muted-foreground">
