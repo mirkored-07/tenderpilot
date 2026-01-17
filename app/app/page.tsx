@@ -87,6 +87,28 @@ export default function JobsPage() {
   const [jobs, setJobs] = useState<DbJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+const supabase = useMemo(() => supabaseBrowser(), []);
+const [isRefreshing, setIsRefreshing] = useState(false);
+
+async function refreshJobs() {
+  try {
+    setIsRefreshing(true);
+    setLoadError(null);
+
+    const { data, error } = await supabase
+      .from("jobs")
+      .select("id,user_id,file_name,file_path,source_type,status,credits_used,created_at,updated_at")
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    setJobs((data ?? []) as DbJob[]);
+  } catch (e: any) {
+    console.warn(e);
+    setLoadError(e?.message ?? "Could not refresh jobs.");
+  } finally {
+    setIsRefreshing(false);
+  }
+}
 
   useEffect(() => {
     let cancelled = false;
@@ -95,7 +117,6 @@ export default function JobsPage() {
       setLoading(true);
       setLoadError(null);
 
-      const supabase = supabaseBrowser();
 
       const { data, error } = await supabase
         .from("jobs")
@@ -120,6 +141,19 @@ export default function JobsPage() {
       cancelled = true;
     };
   }, []);
+useEffect(() => {
+  if (!jobs?.length) return;
+
+  const hasActive = jobs.some((j) => j.status === "queued" || j.status === "processing");
+  if (!hasActive) return;
+
+  const id = window.setInterval(() => {
+    refreshJobs();
+  }, 15000);
+
+  return () => window.clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [jobs]);
 
   const filtered = useMemo(() => {
     if (filter === "all") return jobs;
@@ -143,7 +177,7 @@ export default function JobsPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Jobs</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Your bid kits. Open one to review requirements, risks, clarifications, and the draft.
+            Your tender reviews. Open one to review requirements, risks, clarifications, and the draft.
           </p>
         </div>
 
@@ -163,8 +197,12 @@ export default function JobsPage() {
             </DropdownMenuContent>
           </DropdownMenu>
 
+          <Button variant="outline" className="rounded-full" onClick={refreshJobs} disabled={loading || isRefreshing}>
+            {isRefreshing ? "Refreshing…" : "Refresh"}
+          </Button>
+
           <Button asChild className="rounded-full">
-            <Link href="/app/upload">New bid review</Link>
+            <Link href="/app/upload">New tender review</Link>
           </Button>
         </div>
       </div>
@@ -182,14 +220,14 @@ export default function JobsPage() {
           {loading ? (
             <div className="rounded-2xl border p-8 text-center">
               <p className="text-sm font-medium">Loading…</p>
-              <p className="mt-1 text-sm text-muted-foreground">Fetching your bid kits.</p>
+              <p className="mt-1 text-sm text-muted-foreground">Fetching your tender reviews.</p>
             </div>
           ) : filtered.length === 0 ? (
             <div className="rounded-2xl border p-8 text-center">
               <p className="text-sm font-medium">No jobs found</p>
-              <p className="mt-1 text-sm text-muted-foreground">Create your first bid kit to see it here.</p>
+              <p className="mt-1 text-sm text-muted-foreground">Create your first tender review to see it here.</p>
               <Button asChild className="mt-4 rounded-full">
-                <Link href="/app/upload">Create a bid review</Link>
+                <Link href="/app/upload">Create a tender review</Link>
               </Button>
             </div>
           ) : (

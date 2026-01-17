@@ -48,7 +48,7 @@ export default function Error(
               <Link href="/app/jobs">Open History</Link>
             </Button>
             <Button asChild variant="outline" className="rounded-full">
-              <Link href="/app/upload">Create a new bid review</Link>
+              <Link href="/app/upload">Create a new tender review</Link>
             </Button>
           </div>
 

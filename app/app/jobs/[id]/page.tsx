@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
@@ -45,15 +46,6 @@ type DbJobResult = {
 };
 
 type DecisionState = "proceed" | "caution" | "risk";
-
-type ExecutiveModel = {
-  decisionBadge: string;
-  decisionLine: string;
-  keyFindings: string[];
-  nextActions: string[];
-  topRisks: ExecutiveRisk[];
-  submissionDeadline: string;
-};
 
 function DecisionBadge({ state }: { state: DecisionState }) {
   const base = "inline-flex items-center rounded-full border px-3 py-1 text-xs";
@@ -237,21 +229,21 @@ function normalizeRisks(raw: any): any[] {
 
 function normalizeQuestions(raw: any): string[] {
   if (!raw) return [];
-  if (Array.isArray(raw)) return raw.map((x: unknown) => String(x ?? "").trim()).filter(Boolean);
-  if (Array.isArray(raw?.items)) return raw.items.map((x: unknown) => String(x ?? "").trim()).filter(Boolean);
-  if (Array.isArray(raw?.questions)) return raw.questions.map((x: unknown) => String(x ?? "").trim()).filter(Boolean);
+  if (Array.isArray(raw)) return raw.map((x) => String(x ?? "").trim()).filter(Boolean);
+  if (Array.isArray(raw?.items)) return raw.items.map((x: any) => String(x ?? "").trim()).filter(Boolean);
+  if (Array.isArray(raw?.questions)) return raw.questions.map((x: any) => String(x ?? "").trim()).filter(Boolean);
   return [];
 }
 
-function decisionFromExecutive(executive: ExecutiveModel): DecisionState {
-  const badge = String(executive?.decisionBadge ?? "").toLowerCase();
+function decisionFromExecutive(executive: any): DecisionState {
+  const badge = String(executive?.decisionBadge ?? executive?.decision ?? "").toLowerCase();
   if (badge.includes("risk") || badge.includes("no-go") || badge.includes("no go")) return "risk";
   if (badge.includes("caution")) return "caution";
   if (badge.includes("go") || badge.includes("proceed")) return "proceed";
   return "caution";
 }
 
-function toExecutiveModel(args: { raw: any }): ExecutiveModel {
+function toExecutiveModel(args: { raw: any }) {
   const { raw } = args;
 
   const decisionBadge = String(raw?.decisionBadge ?? raw?.decision ?? "").trim();
@@ -264,13 +256,28 @@ function toExecutiveModel(args: { raw: any }): ExecutiveModel {
   const submissionDeadline = raw?.submissionDeadline ? String(raw.submissionDeadline).trim() : "";
 
   const normalizedTopRisks: ExecutiveRisk[] = topRisks
-    .slice(0, 3)
-    .map((r: any) => ({
-      title: String(r?.title ?? r?.risk ?? r?.text ?? "").trim(),
+  .slice(0, 3)
+  .map((r: any) => {
+    const titleCandidate = String(r?.title ?? r?.risk ?? r?.text ?? "").trim();
+    const detailCandidate = String(
+      r?.detail ??
+        r?.description ??
+        r?.why ??
+        r?.impact ??
+        r?.mitigation ??
+        ""
+    ).trim();
+
+    // If the model puts the “risk text” into description/detail instead of title, use that.
+    const title = titleCandidate || detailCandidate;
+
+    return {
+      title,
       severity: String(r?.severity ?? r?.level ?? "medium").toLowerCase() as any,
-      detail: String(r?.detail ?? r?.description ?? "").trim(),
-    }))
-    .filter((r: any) => r.title);
+      detail: titleCandidate ? detailCandidate : "",
+    };
+  })
+  .filter((r: any) => r.title);
 
   return {
     decisionBadge: decisionBadge || "Proceed with caution",
@@ -283,6 +290,7 @@ function toExecutiveModel(args: { raw: any }): ExecutiveModel {
 }
 
 function renderDraftPlain(draft: any): string[] {
+  // We store proposal_draft.proposal_draft typically as a STRING with the outline.
   if (!draft) return ["Draft not available."];
 
   if (typeof draft === "string") {
@@ -290,6 +298,7 @@ function renderDraftPlain(draft: any): string[] {
     return lines.filter((l) => l.trim().length > 0);
   }
 
+  // If someone stores structured sections, render a clean outline.
   const sections = Array.isArray(draft?.sections) ? draft.sections : [];
   if (!sections.length) return ["Draft not available."];
 
@@ -371,7 +380,7 @@ function toPlainTextSummary(args: {
   lines.push("");
 
   lines.push("Note");
-  lines.push("Drafting support only. Always verify all requirements against the original tender document.");
+  lines.push("Drafting support only. Always verify against the original tender document.");
 
   return lines.join("\n");
 }
@@ -388,6 +397,7 @@ export default function JobDetailPage() {
   const [job, setJob] = useState<DbJob | null>(null);
   const [result, setResult] = useState<DbJobResult | null>(null);
   const [loading, setLoading] = useState(true);
+  const [polling, setPolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [tab, setTab] = useState<"checklist" | "risks" | "questions" | "draft" | "text">("checklist");
@@ -411,6 +421,7 @@ export default function JobDetailPage() {
   }, []);
 
   useEffect(() => {
+    // Strict UUID check
     if (!jobId || jobId === "[id]" || jobId === "%5Bid%5D") {
       setInvalidLink(true);
       setLoading(false);
@@ -424,14 +435,15 @@ export default function JobDetailPage() {
     }
   }, [jobId]);
 
+  // ✅ PATCH 1A: polling robustness + graceful stop + error pressure guard
   useEffect(() => {
     if (invalidLink) return;
 
     const supabase = supabaseBrowser();
 
     const POLL_INTERVAL_MS = 2500;
-    const MAX_POLL_MS = 10 * 60 * 1000;
-    const DONE_GRACE_POLLS = 12;
+    const MAX_POLL_MS = 10 * 60 * 1000; // hard stop (frontend only)
+    const DONE_GRACE_POLLS = 12; // ~30s grace window when status flips to done but results not visible yet
     const MAX_POLL_ERRORS = 6;
 
     let interval: any = null;
@@ -443,6 +455,7 @@ export default function JobDetailPage() {
     function stopPolling() {
       if (interval) clearInterval(interval);
       interval = null;
+      if (mountedRef.current) setPolling(false);
     }
 
     async function load() {
@@ -476,6 +489,7 @@ export default function JobDetailPage() {
           .maybeSingle();
 
         if (resErr) {
+          // Can happen temporarily (session/RLS timing); don't fail the page.
           console.warn(resErr);
         }
 
@@ -484,9 +498,7 @@ export default function JobDetailPage() {
         setLoading(false);
 
         const status = String((jobRow as any)?.status ?? "queued") as JobStatus;
-        // keep polling if processing OR if status is done but results not visible yet
-        // (we don’t surface polling flag in UI, but the interval remains)
-        void status;
+        setPolling(status === "queued" || status === "processing" || (status === "done" && !resultRow));
       } catch (e) {
         console.error(e);
         setError("This bid review could not be loaded. Please refresh and try again.");
@@ -498,6 +510,7 @@ export default function JobDetailPage() {
     }
 
     async function poll() {
+      // Hard stop: prevent infinite polling from UI side.
       if (Date.now() - startedAt > MAX_POLL_MS) {
         setError("This bid review is taking longer than expected. Please refresh the page or check again later.");
         stopPolling();
@@ -530,11 +543,15 @@ export default function JobDetailPage() {
           pollErrors += 1;
           console.warn(resErr);
         } else {
+          // relieve pressure a bit after successful reads
           pollErrors = Math.max(0, pollErrors - 1);
         }
 
         setResult((resultRow as any) ?? null);
 
+        // Terminal state logic:
+        // - failed: stop polling immediately (results may or may not exist)
+        // - done: stop when results exist; otherwise allow a short grace window
         if (isTerminal) {
           if (status === "failed") {
             stopPolling();
@@ -555,6 +572,7 @@ export default function JobDetailPage() {
             return;
           }
         } else {
+          // reset terminal grace counter if we’re not terminal anymore (rare but safe)
           doneWithoutResult = 0;
         }
 
@@ -563,6 +581,8 @@ export default function JobDetailPage() {
           stopPolling();
           return;
         }
+
+        setPolling(status === "queued" || status === "processing" || (status === "done" && !resultRow));
       } catch (e) {
         console.error(e);
         pollErrors += 1;
@@ -574,12 +594,31 @@ export default function JobDetailPage() {
       }
     }
 
-    load();
-    interval = setInterval(poll, POLL_INTERVAL_MS);
+load();
 
-    return () => {
-      if (interval) clearInterval(interval);
-    };
+function shouldPoll() {
+  return typeof document === "undefined" ? true : document.visibilityState === "visible";
+}
+
+async function pollVisible() {
+  if (!shouldPoll()) return;
+  await poll();
+}
+
+interval = setInterval(pollVisible, POLL_INTERVAL_MS);
+
+function onVisibility() {
+  if (document.visibilityState === "visible") {
+    poll();
+  }
+}
+
+document.addEventListener("visibilitychange", onVisibility);
+
+return () => {
+  if (interval) clearInterval(interval);
+  document.removeEventListener("visibilitychange", onVisibility);
+};
   }, [jobId, invalidLink]);
 
   const showProgress = useMemo(() => {
@@ -597,6 +636,7 @@ export default function JobDetailPage() {
   const checklist = useMemo(() => normalizeChecklist(result?.checklist), [result]);
   const risks = useMemo(() => normalizeRisks(result?.risks), [result]);
 
+  // ✅ IMPORTANT: questions come from proposal_draft.buyer_questions (DB contract)
   const questions = useMemo(() => {
     const pd = (result as any)?.proposal_draft ?? null;
     return normalizeQuestions(
@@ -611,7 +651,7 @@ export default function JobDetailPage() {
       .filter(Boolean);
   }, [checklist]);
 
-  const executive: ExecutiveModel = useMemo(() => {
+  const executive = useMemo(() => {
     const pd = (result as any)?.proposal_draft ?? {};
     const raw = pd?.executive_summary ?? {};
     return toExecutiveModel({ raw });
@@ -622,6 +662,7 @@ export default function JobDetailPage() {
     return pd?.proposal_draft ?? null;
   }, [result]);
 
+  // ✅ PATCH 1B: derive "finalizing" state (job done, but results payload is still empty)
   const draftLinesForUi = useMemo(() => renderDraftPlain(draftForUi), [draftForUi]);
 
   const hasDraftForUi = useMemo(() => {
@@ -787,11 +828,11 @@ export default function JobDetailPage() {
       : `<p class="empty">No risks detected.</p>`;
 
     const keyFindingsLines = executive.keyFindings?.length
-      ? `<ol>${executive.keyFindings.map((t) => `<li>${escapeHtml(String(t))}</li>`).join("")}</ol>`
+      ? `<ol>${executive.keyFindings.map((t: unknown) => `<li>${escapeHtml(String(t))}</li>`).join("")}</ol>`
       : `<p class="empty">No key findings available.</p>`;
 
     const nextActionsLines = executive.nextActions?.length
-      ? `<ol>${executive.nextActions.map((t) => `<li>${escapeHtml(String(t))}</li>`).join("")}</ol>`
+      ? `<ol>${executive.nextActions.map((t: unknown) => `<li>${escapeHtml(String(t))}</li>`).join("")}</ol>`
       : `<p class="empty">No next actions available.</p>`;
 
     const decisionLine = String(executive.decisionLine ?? "").trim();
@@ -1049,6 +1090,7 @@ export default function JobDetailPage() {
               Rename
             </Button>
 
+            {/* ✅ no double-badge nesting */}
             {statusBadge(job?.status ?? "queued")}
           </div>
 
@@ -1189,6 +1231,7 @@ export default function JobDetailPage() {
           </TabsTrigger>
         </TabsList>
 
+        {/* ✅ PATCH 1C: section guards + finalizing state + better empty states */}
         <TabsContent value="checklist">
           <div className="flex items-center justify-end">
             <Button variant="outline" className="rounded-full" onClick={() => copySection("requirements")} disabled={!canDownload}>
@@ -1291,7 +1334,12 @@ export default function JobDetailPage() {
 
         <TabsContent value="questions">
           <div className="flex items-center justify-end">
-            <Button variant="outline" className="rounded-full" onClick={() => copySection("clarifications")} disabled={!canDownload}>
+            <Button
+              variant="outline"
+              className="rounded-full"
+              onClick={() => copySection("clarifications")}
+              disabled={!canDownload}
+            >
               {copiedSection === "clarifications" ? "Copied" : "Copy section"}
             </Button>
           </div>
@@ -1325,7 +1373,13 @@ export default function JobDetailPage() {
                 </CardContent>
               </Card>
             ) : questions.length ? (
-              <BuyerQuestions checklist={checklist} risks={risks} extractedText={extractedText} onJumpToSource={onJumpToSource} questions={questions} />
+              <BuyerQuestions
+                checklist={checklist}
+                risks={risks}
+                extractedText={extractedText}
+                onJumpToSource={onJumpToSource}
+                questions={questions}
+              />
             ) : (
               <Card className="rounded-2xl">
                 <CardContent className="p-6">
@@ -1358,7 +1412,9 @@ export default function JobDetailPage() {
               <Separator className="my-4" />
 
               {showFailed ? (
-                <p className="text-sm text-muted-foreground">This bid review could not be completed. Please re-upload the document or try again.</p>
+                <p className="text-sm text-muted-foreground">
+                  This bid review could not be completed. Please re-upload the document or try again.
+                </p>
               ) : !showReady ? (
                 <p className="text-sm text-muted-foreground">Preparing a proposal draft outline…</p>
               ) : finalizingResults ? (
@@ -1409,7 +1465,6 @@ export default function JobDetailPage() {
           </p>
         </TabsContent>
       </Tabs>
-
     </div>
   );
 }

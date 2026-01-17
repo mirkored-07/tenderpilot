@@ -77,7 +77,7 @@ export default function HowItWorksPage() {
       <section className="mx-auto max-w-6xl px-4 pt-12 pb-8 md:px-8 md:pt-16">
         <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">How TenderPilot works</h1>
         <p className="mt-3 text-base text-muted-foreground leading-relaxed md:text-lg">
-          TenderPilot creates a bid review workspace from your tender document so you can decide
+          TenderPilot creates a tender review workspace from your tender document so you can decide
           faster and reduce surprises.
         </p>
 

@@ -6,8 +6,11 @@ import { Card, CardContent } from "@/components/ui/card";
 
 export type ExecutiveRisk = {
   severity: "high" | "medium" | "low";
-  text: string;
+  text?: string;
+  title?: string;
+  detail?: string;
 };
+
 
 type DecisionLevel = "proceed" | "caution" | "risk";
 
@@ -97,7 +100,7 @@ export function ExecutiveSummary(props: ExecutiveSummaryProps) {
               {topRisks.slice(0, 3).map((r, i) => (
                 <li key={i} className="flex items-start gap-2">
                   {severityBadge(r.severity)}
-                  <span>{r.text}</span>
+                  <span>{r.text ?? r.title ?? r.detail ?? ""}</span>
                 </li>
               ))}
               {!topRisks.length ? (

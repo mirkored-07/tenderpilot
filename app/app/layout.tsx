@@ -41,7 +41,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <span className="text-xs text-muted-foreground">test</span>
               </div>
               <p className="mt-3 text-xs text-muted-foreground leading-relaxed">
-                Each bid kit consumes 1 credit. Upgrade later via pricing.
+                Each tender review consumes 1 credit. Upgrade later via pricing.
               </p>
             </div>
           </div>

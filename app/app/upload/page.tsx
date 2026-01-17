@@ -59,16 +59,35 @@ export default async function UploadPage() {
   const { data: userData } = await supabase.auth.getUser();
   const user = userData?.user ?? null;
 
-  const { data: recentJobs } = user
-    ? await supabase
-        .from("jobs")
-        .select("id,file_name,status,created_at")
-        .order("created_at", { ascending: false })
-        .limit(5)
-    : { data: [] as any[] };
+let recentJobsError: string | null = null;
+
+const recentJobsRes = user
+  ? await supabase
+      .from("jobs")
+      .select("id,file_name,status,created_at")
+      .order("created_at", { ascending: false })
+      .limit(5)
+  : ({ data: [] as any[], error: null } as any);
+
+if (recentJobsRes?.error) {
+  console.warn(recentJobsRes.error);
+  recentJobsError = "Could not load recent tender reviews. You can still upload, or go to Jobs.";
+}
+
+const recentJobs = (recentJobsRes?.data ?? []) as any[];
+
 
   return (
     <div className="mx-auto max-w-6xl">
+{recentJobsError ? (
+  <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+    {recentJobsError}{" "}
+    <Link href="/app" className="underline">
+      Go to Jobs
+    </Link>
+  </div>
+) : null}
+
       <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
         <Card className="rounded-2xl">
           <CardHeader className="pb-3">

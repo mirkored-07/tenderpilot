@@ -8,7 +8,7 @@ export default function Loading() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Preparing your workspace</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Loading your bid review view.
+            Loading your tender review view.
           </p>
         </CardHeader>
 
