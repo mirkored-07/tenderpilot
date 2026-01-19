@@ -47,6 +47,9 @@ type DbJobResult = {
 
 type DecisionState = "proceed" | "caution" | "risk";
 
+/** UI safety: cap initial source-text render to avoid freezing on huge extractions */
+const SOURCE_TEXT_PREVIEW_LIMIT = 20_000;
+
 function DecisionBadge({ state }: { state: DecisionState }) {
   const base = "inline-flex items-center rounded-full border px-3 py-1 text-xs";
   if (state === "proceed") {
@@ -186,14 +189,94 @@ function findExcerpt(text: string, query: string) {
   const q = (query ?? "").trim();
   if (!t || !q) return null;
 
-  const idx = t.toLowerCase().indexOf(q.toLowerCase());
-  if (idx < 0) return null;
+  const hay = t.toLowerCase();
 
-  const start = Math.max(0, idx - 180);
-  const end = Math.min(t.length, idx + q.length + 220);
-  const snippet = t.slice(start, end).replace(/\s+/g, " ").trim();
+  function makeSnippet(centerIdx: number, needleLen: number) {
+    const start = Math.max(0, centerIdx - 220);
+    const end = Math.min(t.length, centerIdx + Math.max(needleLen, 40) + 260);
+    const snippet = t.slice(start, end).replace(/\s+/g, " ").trim();
+    return { idx: centerIdx, snippet };
+  }
 
-  return { idx, snippet };
+  // 1) Try exact match first (fast path)
+  const exactIdx = hay.indexOf(q.toLowerCase());
+  if (exactIdx >= 0) return makeSnippet(exactIdx, q.length);
+
+  // 2) Try short contiguous needles (first 12 / 8 words)
+  const wordsAll = q.split(/\s+/).filter(Boolean);
+  const needles = [
+    wordsAll.slice(0, 12).join(" "),
+    wordsAll.slice(0, 8).join(" "),
+  ].filter(Boolean);
+
+  for (const n of needles) {
+    const idx = hay.indexOf(n.toLowerCase());
+    if (idx >= 0) return makeSnippet(idx, n.length);
+  }
+
+  // 3) Fuzzy keyword match:
+  // Pick meaningful tokens, find occurrences, then choose the best window.
+  const STOP = new Set([
+    "the","a","an","and","or","to","of","in","on","for","with","by","via",
+    "is","are","be","as","at","from","that","this","these","those",
+    "must","should","shall","will","may","can","not","only","all"
+  ]);
+
+  const tokens = wordsAll
+    .map((w) => w.replace(/[^\p{L}\p{N}]/gu, "").toLowerCase())
+    .filter((w) => w.length >= 4 && !STOP.has(w));
+
+  if (!tokens.length) return null;
+
+  // Prefer rarer/stronger tokens first
+  const uniq = Array.from(new Set(tokens)).slice(0, 12);
+
+  // Collect up to N occurrences per token (avoid heavy loops)
+  const MAX_OCC_PER_TOKEN = 25;
+
+  type Occ = { idx: number; token: string };
+  const occs: Occ[] = [];
+
+  for (const tok of uniq) {
+    let start = 0;
+    let found = 0;
+    while (found < MAX_OCC_PER_TOKEN) {
+      const i = hay.indexOf(tok, start);
+      if (i < 0) break;
+      occs.push({ idx: i, token: tok });
+      found += 1;
+      start = i + tok.length;
+    }
+  }
+
+  if (!occs.length) return null;
+
+  // Score windows around occurrence positions:
+  // best window is where most tokens appear in ~700 char neighborhood.
+  const WINDOW = 700;
+
+  let best = { score: 0, center: occs[0].idx, tokenLen: occs[0].token.length };
+  for (const o of occs) {
+    const wStart = o.idx - WINDOW / 2;
+    const wEnd = o.idx + WINDOW / 2;
+
+    const tokensInWindow = new Set<string>();
+    for (const other of occs) {
+      if (other.idx >= wStart && other.idx <= wEnd) tokensInWindow.add(other.token);
+    }
+
+    const score = tokensInWindow.size;
+    if (score > best.score) {
+      best = { score, center: o.idx, tokenLen: o.token.length };
+      // Early exit if we matched most tokens
+      if (best.score >= Math.min(6, uniq.length)) break;
+    }
+  }
+
+  // Require at least 2 strong tokens to avoid random matches
+  if (best.score < 2) return null;
+
+  return makeSnippet(best.center, best.tokenLen);
 }
 
 function escapeHtml(input: string) {
@@ -256,28 +339,28 @@ function toExecutiveModel(args: { raw: any }) {
   const submissionDeadline = raw?.submissionDeadline ? String(raw.submissionDeadline).trim() : "";
 
   const normalizedTopRisks: ExecutiveRisk[] = topRisks
-  .slice(0, 3)
-  .map((r: any) => {
-    const titleCandidate = String(r?.title ?? r?.risk ?? r?.text ?? "").trim();
-    const detailCandidate = String(
-      r?.detail ??
-        r?.description ??
-        r?.why ??
-        r?.impact ??
-        r?.mitigation ??
-        ""
-    ).trim();
+    .slice(0, 3)
+    .map((r: any) => {
+      const titleCandidate = String(r?.title ?? r?.risk ?? r?.text ?? "").trim();
+      const detailCandidate = String(
+        r?.detail ??
+          r?.description ??
+          r?.why ??
+          r?.impact ??
+          r?.mitigation ??
+          ""
+      ).trim();
 
-    // If the model puts the “risk text” into description/detail instead of title, use that.
-    const title = titleCandidate || detailCandidate;
+      // If the model puts the “risk text” into description/detail instead of title, use that.
+      const title = titleCandidate || detailCandidate;
 
-    return {
-      title,
-      severity: String(r?.severity ?? r?.level ?? "medium").toLowerCase() as any,
-      detail: titleCandidate ? detailCandidate : "",
-    };
-  })
-  .filter((r: any) => r.title);
+      return {
+        title,
+        severity: String(r?.severity ?? r?.level ?? "medium").toLowerCase() as any,
+        detail: titleCandidate ? detailCandidate : "",
+      };
+    })
+    .filter((r: any) => r.title);
 
   return {
     decisionBadge: decisionBadge || "Proceed with caution",
@@ -407,11 +490,19 @@ export default function JobDetailPage() {
   const [renaming, setRenaming] = useState(false);
   const [renameInput, setRenameInput] = useState("");
 
-  const [sourceFocus, setSourceFocus] = useState<{ query: string; snippet: string } | null>(null);
+  // ✅ now includes idx so we can auto-scroll
+  const [sourceFocus, setSourceFocus] = useState<{ query: string; snippet: string; idx: number | null } | null>(null);
+
+  /** UI safety state for very large extracted text */
+  const [showFullSourceText, setShowFullSourceText] = useState(false);
 
   const [exporting, setExporting] = useState<null | "summary">(null);
 
   const mountedRef = useRef(true);
+  const sourceAnchorRef = useRef<HTMLSpanElement | null>(null);
+
+  // ✅ used to scroll the ScrollArea viewport to the excerpt
+  const sourceScrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -594,31 +685,31 @@ export default function JobDetailPage() {
       }
     }
 
-load();
+    load();
 
-function shouldPoll() {
-  return typeof document === "undefined" ? true : document.visibilityState === "visible";
-}
+    function shouldPoll() {
+      return typeof document === "undefined" ? true : document.visibilityState === "visible";
+    }
 
-async function pollVisible() {
-  if (!shouldPoll()) return;
-  await poll();
-}
+    async function pollVisible() {
+      if (!shouldPoll()) return;
+      await poll();
+    }
 
-interval = setInterval(pollVisible, POLL_INTERVAL_MS);
+    interval = setInterval(pollVisible, POLL_INTERVAL_MS);
 
-function onVisibility() {
-  if (document.visibilityState === "visible") {
-    poll();
-  }
-}
+    function onVisibility() {
+      if (document.visibilityState === "visible") {
+        poll();
+      }
+    }
 
-document.addEventListener("visibilitychange", onVisibility);
+    document.addEventListener("visibilitychange", onVisibility);
 
-return () => {
-  if (interval) clearInterval(interval);
-  document.removeEventListener("visibilitychange", onVisibility);
-};
+    return () => {
+      if (interval) clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [jobId, invalidLink]);
 
   const showProgress = useMemo(() => {
@@ -701,7 +792,7 @@ return () => {
     else list.push({ tone: "good", label: "No potential disqualifiers detected from MUST items." });
 
     if (topRisks.some((r) => String(r?.severity ?? "").toLowerCase() === "high")) {
-      list.push({ tone: "warn", label: "High risk items detected. Confirm feasibility before committing resources." });
+      list.push({ tone: "warn", label: "High risk items detected. Confirm feasibility before committing resources before committing resources." });
     } else if (topRisks.length) {
       list.push({ tone: "good", label: "Top risks look manageable with clarifications and careful response." });
     } else {
@@ -762,14 +853,35 @@ return () => {
 
   function onJumpToSource(query: string) {
     const match = findExcerpt(extractedText, query);
+
     if (!match) {
-      setSourceFocus({ query, snippet: "No matching excerpt found in the source text." });
+      setSourceFocus({ query, snippet: "No matching excerpt found in the source text.", idx: null });
       setTab("text");
       return;
     }
-    setSourceFocus({ query, snippet: match.snippet });
+
+    // If the match is beyond the preview limit, ensure the full text is rendered so we can scroll to it.
+    if (match.idx > SOURCE_TEXT_PREVIEW_LIMIT) {
+      setShowFullSourceText(true);
+    }
+
+    setSourceFocus({ query, snippet: match.snippet, idx: match.idx });
     setTab("text");
   }
+
+  // ✅ Auto-scroll the Source text viewport to the matched location when opening the tab
+	useEffect(() => {
+	  if (tab !== "text") return;
+	  if (!sourceFocus || sourceFocus.idx === null) return;
+
+	  // wait for render, then scroll to the real anchor
+	  requestAnimationFrame(() => {
+		if (sourceAnchorRef.current) {
+		  sourceAnchorRef.current.scrollIntoView({ block: "center", behavior: "smooth" });
+		}
+	  });
+	}, [tab, sourceFocus?.idx, showFullSourceText]);
+
 
   async function exportSummaryTxt() {
     if (!job) return;
@@ -1455,9 +1567,70 @@ return () => {
             </Card>
           ) : null}
 
-          <ScrollArea className="mt-4 h-[520px] rounded-2xl border bg-muted/20">
-            <pre className="p-4 whitespace-pre-wrap text-sm">{extractedText || "No source text yet."}</pre>
-          </ScrollArea>
+          {/* ✅ Only change: render-safe source text preview + toggle + scroll anchor */}
+          {(() => {
+            const fullText = extractedText || "";
+            const isLarge = fullText.length > SOURCE_TEXT_PREVIEW_LIMIT;
+
+            const visibleText =
+              !isLarge || showFullSourceText
+                ? fullText
+                : fullText.slice(0, SOURCE_TEXT_PREVIEW_LIMIT);
+
+            return (
+              <>
+                <div ref={sourceScrollRef}>
+                  <ScrollArea className="mt-4 h-[520px] rounded-2xl border bg-muted/20">
+                    <pre className="p-4 whitespace-pre-wrap text-sm">
+					  {(() => {
+						const fullText = extractedText || "";
+						const isLarge = fullText.length > SOURCE_TEXT_PREVIEW_LIMIT;
+						const visibleText = !isLarge || showFullSourceText ? fullText : fullText.slice(0, SOURCE_TEXT_PREVIEW_LIMIT);
+
+						if (!sourceFocus?.idx && sourceFocus?.idx !== 0) {
+						  return visibleText || "No source text yet.";
+						}
+
+						const idx = sourceFocus.idx ?? 0;
+						if (idx < 0 || idx >= visibleText.length) {
+						  return visibleText || "No source text yet.";
+						}
+
+						// Highlight a short window (avoid huge spans)
+						const highlightLen = Math.min(120, visibleText.length - idx);
+						const before = visibleText.slice(0, idx);
+						const mid = visibleText.slice(idx, idx + highlightLen);
+						const after = visibleText.slice(idx + highlightLen);
+
+						return (
+						  <>
+							{before}
+							<span ref={sourceAnchorRef} className="bg-yellow-200/60 rounded px-1">
+							  {mid}
+							</span>
+							{after}
+						  </>
+						);
+					  })()}
+					</pre>
+
+                  </ScrollArea>
+                </div>
+
+                {isLarge && (
+                  <div className="mt-2 flex justify-end">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowFullSourceText((v) => !v)}
+                    >
+                      {showFullSourceText ? "Show preview" : "Show full text"}
+                    </Button>
+                  </div>
+                )}
+              </>
+            );
+          })()}
 
           <Separator className="my-4" />
           <p className="text-xs text-muted-foreground">

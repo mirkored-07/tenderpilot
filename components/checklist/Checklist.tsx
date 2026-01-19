@@ -41,17 +41,111 @@ function typeBadge(type: "MUST" | "SHOULD" | "INFO") {
   return <Badge variant="outline" className="rounded-full">Info</Badge>;
 }
 
+/**
+ * Fuzzy excerpt finder:
+ * - exact match first
+ * - then short contiguous needles
+ * - then keyword window scoring
+ * Also snaps snippet to word boundaries to avoid "uestions" style cuts.
+ */
 function findExcerpt(text: string, query: string) {
   const t = text ?? "";
   const q = (query ?? "").trim();
   if (!t || !q) return null;
 
-  const idx = t.toLowerCase().indexOf(q.toLowerCase());
-  if (idx < 0) return null;
+  const hay = t.toLowerCase();
 
-  const start = Math.max(0, idx - 180);
-  const end = Math.min(t.length, idx + q.length + 220);
-  return t.slice(start, end).replace(/\s+/g, " ").trim();
+  function snapToWordBounds(start: number, end: number) {
+    let s = Math.max(0, start);
+    let e = Math.min(t.length, end);
+
+    // move start left until whitespace or beginning
+    while (s > 0 && !/\s/.test(t[s])) s -= 1;
+    // move end right until whitespace or end
+    while (e < t.length && !/\s/.test(t[e - 1])) e += 1;
+
+    s = Math.max(0, s);
+    e = Math.min(t.length, e);
+    return { s, e };
+  }
+
+  function makeSnippet(centerIdx: number, needleLen: number) {
+    const startRaw = Math.max(0, centerIdx - 200);
+    const endRaw = Math.min(t.length, centerIdx + Math.max(needleLen, 40) + 260);
+    const { s, e } = snapToWordBounds(startRaw, endRaw);
+    return t.slice(s, e).replace(/\s+/g, " ").trim();
+  }
+
+  // 1) exact
+  const exactIdx = hay.indexOf(q.toLowerCase());
+  if (exactIdx >= 0) return makeSnippet(exactIdx, q.length);
+
+  // 2) first 12 / 8 words
+  const wordsAll = q.split(/\s+/).filter(Boolean);
+  const needles = [
+    wordsAll.slice(0, 12).join(" "),
+    wordsAll.slice(0, 8).join(" "),
+  ].filter(Boolean);
+
+  for (const n of needles) {
+    const idx = hay.indexOf(n.toLowerCase());
+    if (idx >= 0) return makeSnippet(idx, n.length);
+  }
+
+  // 3) keyword window scoring
+  const STOP = new Set([
+    "the","a","an","and","or","to","of","in","on","for","with","by","via",
+    "is","are","be","as","at","from","that","this","these","those",
+    "must","should","shall","will","may","can","not","only","all"
+  ]);
+
+  const tokens = wordsAll
+    .map((w) => w.replace(/[^\p{L}\p{N}]/gu, "").toLowerCase())
+    .filter((w) => w.length >= 4 && !STOP.has(w));
+
+  if (!tokens.length) return null;
+
+  const uniq = Array.from(new Set(tokens)).slice(0, 12);
+
+  const MAX_OCC_PER_TOKEN = 25;
+  type Occ = { idx: number; token: string };
+  const occs: Occ[] = [];
+
+  for (const tok of uniq) {
+    let start = 0;
+    let found = 0;
+    while (found < MAX_OCC_PER_TOKEN) {
+      const i = hay.indexOf(tok, start);
+      if (i < 0) break;
+      occs.push({ idx: i, token: tok });
+      found += 1;
+      start = i + tok.length;
+    }
+  }
+
+  if (!occs.length) return null;
+
+  const WINDOW = 700;
+
+  let best = { score: 0, center: occs[0].idx, tokenLen: occs[0].token.length };
+  for (const o of occs) {
+    const wStart = o.idx - WINDOW / 2;
+    const wEnd = o.idx + WINDOW / 2;
+
+    const tokensInWindow = new Set<string>();
+    for (const other of occs) {
+      if (other.idx >= wStart && other.idx <= wEnd) tokensInWindow.add(other.token);
+    }
+
+    const score = tokensInWindow.size;
+    if (score > best.score) {
+      best = { score, center: o.idx, tokenLen: o.token.length };
+      if (best.score >= Math.min(6, uniq.length)) break;
+    }
+  }
+
+  if (best.score < 2) return null;
+  return makeSnippet(best.center, best.tokenLen);
 }
 
 export default function Checklist({ checklist, extractedText, onJumpToSource }: Props) {
@@ -97,12 +191,6 @@ export default function Checklist({ checklist, extractedText, onJumpToSource }: 
       return it.text.toLowerCase().includes(query);
     });
   }, [normalized, filter, q]);
-
-  async function copyMust() {
-    const mustItems = normalized.filter((i) => i.type === "MUST");
-    const text = mustItems.map((x, i) => `${i + 1}. ${x.text}`).join("\n");
-    await navigator.clipboard.writeText(text || "No MUST requirements detected.");
-  }
 
   if (allEmpty) {
     return (

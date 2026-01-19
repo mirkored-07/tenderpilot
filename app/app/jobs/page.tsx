@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { cn } from "@/lib/utils";
@@ -82,50 +82,85 @@ export default function JobsPage() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  // PATCH: delete UX
   const [actionError, setActionError] = useState<string | null>(null);
   const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
 
+  const pollRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
 
-  useEffect(() => {
-    let cancelled = false;
+  const hasActiveJobs = useMemo(
+    () => jobs.some((j) => j.status === "queued" || j.status === "processing"),
+    [jobs]
+  );
 
-    async function loadJobs() {
-      setLoading(true);
-      setLoadError(null);
-      setActionError(null);
+  async function loadJobs() {
+    setLoadError(null);
+    setActionError(null);
 
-      const supabase = supabaseBrowser();
+    const supabase = supabaseBrowser();
 
-      const { data, error } = await supabase
-        .from("jobs")
-        .select(
-          "id,user_id,file_name,file_path,source_type,status,credits_used,created_at,updated_at"
-        )
-        .order("created_at", { ascending: false });
+    const { data, error } = await supabase
+      .from("jobs")
+      .select(
+        "id,user_id,file_name,file_path,source_type,status,credits_used,created_at,updated_at"
+      )
+      .order("created_at", { ascending: false });
 
-      if (cancelled) return;
-
-      if (error) {
-        console.error("Failed to load jobs", error);
-        setLoadError("Your jobs could not be loaded. Please refresh the page.");
-        setJobs([]);
-      } else {
-        setJobs((data ?? []) as DbJob[]);
-      }
-
-      track("jobs_list_loaded", { count: (data ?? []).length });
-
-      setLoading(false);
+    if (error) {
+      console.error("Failed to load jobs", error);
+      setLoadError("Your jobs could not be loaded. Please refresh the page.");
+      setJobs([]);
+    } else {
+      setJobs((data ?? []) as DbJob[]);
     }
 
+    track("jobs_list_loaded", { count: (data ?? []).length });
+    setLoading(false);
+  }
+
+  // initial load
+  useEffect(() => {
     loadJobs();
+  }, []);
+
+  // polling (only while active jobs exist + tab visible)
+  useEffect(() => {
+    function stopPolling() {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    }
+
+    function startPolling() {
+      if (pollRef.current) return;
+
+      pollRef.current = setInterval(() => {
+        if (document.visibilityState === "visible") {
+          loadJobs();
+        }
+      }, 15000);
+    }
+
+    function handleVisibility() {
+      if (document.visibilityState === "hidden") stopPolling();
+      if (document.visibilityState === "visible" && hasActiveJobs)
+        startPolling();
+    }
+
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    if (hasActiveJobs && document.visibilityState === "visible") {
+      startPolling();
+    } else {
+      stopPolling();
+    }
 
     return () => {
-      cancelled = true;
+      stopPolling();
+      document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, []);
+  }, [hasActiveJobs]);
 
   async function handleDelete(job: DbJob) {
     const ok = window.confirm(
@@ -139,11 +174,16 @@ export default function JobsPage() {
     try {
       const supabase = supabaseBrowser();
 
-      // Best-effort cascading deletes (no schema / backend changes)
-      const r1 = await supabase.from("job_results").delete().eq("job_id", job.id);
+      const r1 = await supabase
+        .from("job_results")
+        .delete()
+        .eq("job_id", job.id);
       if (r1.error) throw r1.error;
 
-      const r2 = await supabase.from("job_events").delete().eq("job_id", job.id);
+      const r2 = await supabase
+        .from("job_events")
+        .delete()
+        .eq("job_id", job.id);
       if (r2.error) throw r2.error;
 
       const r3 = await supabase.from("jobs").delete().eq("id", job.id);
@@ -188,6 +228,14 @@ export default function JobsPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            className="rounded-full"
+            onClick={loadJobs}
+          >
+            Refresh
+          </Button>
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="rounded-full">
@@ -230,12 +278,12 @@ export default function JobsPage() {
               ? "We could not load your jobs."
               : "Your recent bid reviews appear here."}
           </p>
-          {loadError ? (
+          {loadError && (
             <p className="mt-2 text-xs text-destructive">{loadError}</p>
-          ) : null}
-          {actionError ? (
+          )}
+          {actionError && (
             <p className="mt-2 text-xs text-destructive">{actionError}</p>
-          ) : null}
+          )}
         </CardHeader>
 
         <CardContent className="space-y-3">
@@ -267,49 +315,36 @@ export default function JobsPage() {
                     "hover:bg-muted/40"
                   )}
                 >
-                  {/* Header row */}
                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                    {/* LEFT */}
                     <div className="min-w-0">
                       <div className="truncate text-base font-semibold">
                         {job.file_name}
                       </div>
-
                       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                        <span className="inline-flex items-center gap-2 min-w-0">
-                          {statusBadge(job.status)}
-                        </span>
+                        {statusBadge(job.status)}
                         <span>Created: {formatDate(job.created_at)}</span>
                         <span>Credits: {job.credits_used}</span>
                       </div>
                     </div>
 
-                    {/* RIGHT */}
                     <div className="flex items-center gap-2">
                       <Button
                         variant="outline"
                         className="rounded-full"
                         onClick={(e) => {
                           e.preventDefault();
-                          e.stopPropagation();
                           router.push(`/app/jobs/${job.id}`);
                         }}
                       >
                         Open
                       </Button>
 
-                      {/* PATCH: actions menu */}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
                             variant="outline"
                             className="rounded-full px-3"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                            }}
-                            aria-label="Job actions"
-                            title="Actions"
+                            onClick={(e) => e.preventDefault()}
                             disabled={deletingJobId === job.id}
                           >
                             ···
@@ -317,19 +352,20 @@ export default function JobsPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
-                            className="text-destructive focus:text-destructive"
+                            className="text-destructive"
                             onClick={(e) => {
                               e.preventDefault();
-                              e.stopPropagation();
-                              void handleDelete(job);
+                              handleDelete(job);
                             }}
                           >
-                            {deletingJobId === job.id ? "Deleting…" : "Delete"}
+                            {deletingJobId === job.id
+                              ? "Deleting…"
+                              : "Delete"}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
 
-                      <div className="text-xs text-muted-foreground group-hover:text-foreground">
+                      <div className="text-xs text-muted-foreground">
                         {previewText(job.status)} →
                       </div>
                     </div>
@@ -337,7 +373,6 @@ export default function JobsPage() {
 
                   <Separator className="my-3" />
 
-                  {/* Preview cards */}
                   <div className="grid gap-2 md:grid-cols-3">
                     <div className="rounded-xl border bg-background/60 p-3">
                       <div className="text-xs text-muted-foreground">
