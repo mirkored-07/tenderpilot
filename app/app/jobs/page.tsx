@@ -164,7 +164,7 @@ export default function JobsPage() {
 
   async function handleDelete(job: DbJob) {
     const ok = window.confirm(
-      `Delete "${job.file_name}"?\n\nThis will remove the job and its results. This cannot be undone.`
+      `Delete "${job.file_name}"?\n\nThis will remove the tender review and its results. This cannot be undone.`
     );
     if (!ok) return;
 
@@ -193,7 +193,7 @@ export default function JobsPage() {
       track("job_deleted", { job_id: job.id, source: "jobs_list" });
     } catch (e) {
       console.error("Delete failed", e);
-      setActionError("Could not delete this job. Please try again.");
+      setActionError("Could not delete this tender review. Please try again.");
     } finally {
       setDeletingJobId(null);
     }
@@ -222,8 +222,8 @@ export default function JobsPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">History</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            All bid kits you generated. Open a job to review requirements, risks,
-            and drafts.
+            All tender reviews you generated. Open a job to review requirements,
+            risks, clarifications, and the draft.
           </p>
         </div>
 
@@ -262,7 +262,7 @@ export default function JobsPage() {
           </DropdownMenu>
 
           <Button asChild className="rounded-full">
-            <Link href="/app/upload">New bid review</Link>
+            <Link href="/app/upload">New tender review</Link>
           </Button>
         </div>
       </div>
@@ -276,7 +276,7 @@ export default function JobsPage() {
               ? "Loading jobs from your workspace."
               : loadError
               ? "We could not load your jobs."
-              : "Your recent bid reviews appear here."}
+              : "Your recent tender reviews appear here."}
           </p>
           {loadError && (
             <p className="mt-2 text-xs text-destructive">{loadError}</p>
@@ -291,17 +291,17 @@ export default function JobsPage() {
             <div className="rounded-2xl border p-8 text-center">
               <p className="text-sm font-medium">Loading</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Fetching your bid reviews.
+                Fetching your tender reviews.
               </p>
             </div>
           ) : filtered.length === 0 ? (
             <div className="rounded-2xl border p-8 text-center">
-              <p className="text-sm font-medium">No bid reviews yet</p>
+              <p className="text-sm font-medium">No tender reviews yet</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Upload your first tender document to generate a bid kit.
+                Upload your first tender document to generate a tender kit.
               </p>
               <Button asChild className="mt-4 rounded-full">
-                <Link href="/app/upload">Create your first bid review</Link>
+                <Link href="/app/upload">Create your first tender review</Link>
               </Button>
             </div>
           ) : (
@@ -358,9 +358,7 @@ export default function JobsPage() {
                               handleDelete(job);
                             }}
                           >
-                            {deletingJobId === job.id
-                              ? "Deleting…"
-                              : "Delete"}
+                            {deletingJobId === job.id ? "Deleting…" : "Delete"}
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

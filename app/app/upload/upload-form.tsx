@@ -105,8 +105,8 @@ export default function UploadForm() {
   function phaseLabel(p: UploadPhase) {
     if (p === "checking_session") return "Checking your session…";
     if (p === "uploading") return "Uploading your file…";
-    if (p === "creating_job") return "Creating your bid review…";
-    if (p === "redirecting") return "Redirecting to your bid kit…";
+    if (p === "creating_job") return "Creating your tender review…";
+    if (p === "redirecting") return "Redirecting to your tender kit…";
     return "";
   }
 
@@ -169,7 +169,7 @@ export default function UploadForm() {
     }
   }
 
-  const primaryCtaLabel = loading ? phaseLabel(phase) || "Preparing…" : "Create bid review";
+  const primaryCtaLabel = loading ? phaseLabel(phase) || "Preparing…" : "Create tender review";
 
   return (
     <div className="space-y-4">
@@ -230,7 +230,7 @@ export default function UploadForm() {
               PDF or DOCX
             </Badge>
             <Badge variant="secondary" className="rounded-full">
-              One file per bid
+              One file per tender
             </Badge>
             <Badge variant="secondary" className="rounded-full">
               Up to {formatBytes(MAX_FILE_BYTES)}
@@ -281,20 +281,15 @@ export default function UploadForm() {
 
       {needsSignIn && (
         <div className="rounded-2xl border bg-muted/40 p-4">
-          <p className="text-sm font-medium">Sign in to create your bid review</p>
+          <p className="text-sm font-medium">Sign in to create your tender review</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Your file is ready. Sign in via magic link, then click “Create bid review”.
+            Your file is ready. Sign in via magic link, then click “Create tender review”.
           </p>
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
             <Button asChild className="rounded-full">
               <Link href="/login">Sign in</Link>
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-full"
-              onClick={() => setNeedsSignIn(false)}
-            >
+            <Button type="button" variant="outline" className="rounded-full" onClick={() => setNeedsSignIn(false)}>
               Not now
             </Button>
           </div>
@@ -316,12 +311,7 @@ export default function UploadForm() {
             >
               Dismiss
             </Button>
-            <Button
-              type="button"
-              className="rounded-full"
-              onClick={handleUpload}
-              disabled={!file || loading || needsSignIn}
-            >
+            <Button type="button" className="rounded-full" onClick={handleUpload} disabled={!file || loading || needsSignIn}>
               Try again
             </Button>
           </div>
@@ -329,15 +319,9 @@ export default function UploadForm() {
       )}
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs text-muted-foreground">
-          You will be redirected to your bid kit after upload.
-        </p>
+        <p className="text-xs text-muted-foreground">You will be redirected to your tender kit after upload.</p>
 
-        <Button
-          onClick={handleUpload}
-          disabled={!file || loading || needsSignIn}
-          className="rounded-full"
-        >
+        <Button onClick={handleUpload} disabled={!file || loading || needsSignIn} className="rounded-full">
           {primaryCtaLabel}
         </Button>
       </div>

@@ -11,7 +11,6 @@ export type ExecutiveRisk = {
   detail?: string;
 };
 
-
 type DecisionLevel = "proceed" | "caution" | "risk";
 
 /**
@@ -40,9 +39,9 @@ type ExecutiveSummaryProps =
     };
 
 const decisionLabel: Record<DecisionLevel, string> = {
-  proceed: "Proceed with bid",
+  proceed: "Proceed",
   caution: "Proceed with caution",
-  risk: "High disqualification risk",
+  risk: "Hold – potential blocker",
 };
 
 function severityBadge(sev: ExecutiveRisk["severity"]) {

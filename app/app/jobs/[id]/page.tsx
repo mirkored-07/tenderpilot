@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
@@ -11,7 +10,6 @@ import { getJobDisplayName, setJobDisplayName, clearJobDisplayName } from "@/lib
 import Checklist from "@/components/checklist/Checklist";
 import Risks from "@/components/risks/Risks";
 import BuyerQuestions from "@/components/questions/BuyerQuestions";
-import { ExecutiveSummary, type ExecutiveRisk } from "@/components/executive-summary/ExecutiveSummary";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,20 +43,151 @@ type DbJobResult = {
   updated_at: string;
 };
 
-type DecisionState = "proceed" | "caution" | "risk";
+type VerdictState = "proceed" | "caution" | "hold";
 
 /** UI safety: cap initial source-text render to avoid freezing on huge extractions */
 const SOURCE_TEXT_PREVIEW_LIMIT = 20_000;
 
-function DecisionBadge({ state }: { state: DecisionState }) {
+function VerdictBadge({ state }: { state: VerdictState }) {
   const base = "inline-flex items-center rounded-full border px-3 py-1 text-xs";
   if (state === "proceed") {
     return <span className={`${base} border-green-200 bg-green-50 text-green-800`}>Proceed</span>;
   }
-  if (state === "risk") {
-    return <span className={`${base} border-red-200 bg-red-50 text-red-800`}>High disqualification risk</span>;
+  if (state === "hold") {
+    return <span className={`${base} border-red-200 bg-red-50 text-red-800`}>Hold – potential blocker</span>;
   }
   return <span className={`${base} border-amber-200 bg-amber-50 text-amber-900`}>Proceed with caution</span>;
+}
+
+function verdictMicrocopy(state: VerdictState) {
+  if (state === "proceed") return "No major blockers detected. You can start tender response work.";
+  if (state === "hold") return "A potential blocker was detected. Verify compliance or waiver before continuing.";
+  return "Tender looks feasible, but validate key points before committing.";
+}
+
+function classifyClarification(text: string): { category: string; priority: "P1" | "P2"; hint: string } {
+  const t = String(text ?? "").toLowerCase();
+
+  const isP1 =
+    t.includes("deadline") ||
+    t.includes("due date") ||
+    t.includes("submission") ||
+    t.includes("submit") ||
+    t.includes("portal") ||
+    t.includes("format") ||
+    t.includes("mandatory") ||
+    t.includes("must") ||
+    t.includes("eligib") ||
+    t.includes("disqual");
+
+  // Submission mechanics / deadline / portal / packaging
+  if (
+    t.includes("deadline") ||
+    t.includes("due date") ||
+    t.includes("submission") ||
+    t.includes("submit") ||
+    t.includes("portal") ||
+    t.includes("format") ||
+    t.includes("file") ||
+    t.includes("upload")
+  ) {
+    return { category: "Submission", priority: isP1 ? "P1" : "P2", hint: "How/when you must submit." };
+  }
+
+  // Eligibility / qualification
+  if (
+    t.includes("eligib") ||
+    t.includes("qualification") ||
+    t.includes("turnover") ||
+    t.includes("reference") ||
+    t.includes("experience") ||
+    t.includes("certificate")
+  ) {
+    return { category: "Eligibility", priority: "P1", hint: "May affect whether you can participate." };
+  }
+
+  // Commercial
+  if (
+    t.includes("price") ||
+    t.includes("pricing") ||
+    t.includes("cost") ||
+    t.includes("payment") ||
+    t.includes("invoice") ||
+    t.includes("currency")
+  ) {
+    return { category: "Commercial", priority: isP1 ? "P1" : "P2", hint: "Pricing/payment/commercial terms." };
+  }
+
+  // Legal / contractual
+  if (
+    t.includes("contract") ||
+    t.includes("liability") ||
+    t.includes("indemn") ||
+    t.includes("ip ") ||
+    t.includes("intellectual property") ||
+    t.includes("confidential") ||
+    t.includes("gdpr") ||
+    t.includes("data protection")
+  ) {
+    return { category: "Legal", priority: isP1 ? "P1" : "P2", hint: "Legal/contract terms to confirm." };
+  }
+
+  // Delivery / timeline / support
+  if (
+    t.includes("delivery") ||
+    t.includes("timeline") ||
+    t.includes("schedule") ||
+    t.includes("lead time") ||
+    t.includes("support") ||
+    t.includes("sla")
+  ) {
+    return { category: "Delivery", priority: isP1 ? "P1" : "P2", hint: "Delivery or support commitments." };
+  }
+
+  // Scope / technical
+  if (
+    t.includes("scope") ||
+    t.includes("specification") ||
+    t.includes("technical") ||
+    t.includes("integration") ||
+    t.includes("interface") ||
+    t.includes("requirement")
+  ) {
+    return { category: "Scope", priority: isP1 ? "P1" : "P2", hint: "Technical/scope boundary to confirm." };
+  }
+
+  return { category: "General", priority: isP1 ? "P1" : "P2", hint: "Confirm in the tender source." };
+}
+
+function buildReadyToSendClarifications(args: { tenderName: string; questions: string[] }) {
+  const tenderName = String(args.tenderName ?? "").trim() || "Tender";
+  const raw = (args.questions ?? []).map((q) => String(q ?? "").trim()).filter(Boolean);
+
+  const items = raw.map((q) => ({ q, meta: classifyClarification(q) }));
+
+  const order = ["Submission", "Eligibility", "Commercial", "Legal", "Delivery", "Scope", "General"];
+
+  const grouped = order
+    .map((cat) => ({
+      cat,
+      items: items.filter((x) => x.meta.category === cat).sort((a, b) => (a.meta.priority === b.meta.priority ? 0 : a.meta.priority === "P1" ? -1 : 1)),
+    }))
+    .filter((g) => g.items.length);
+
+  const subject = `Clarification questions – ${tenderName}`;
+  const intro =
+    `Hello,\n\n` +
+    `We are preparing our tender response and would appreciate clarification on the points below.\n` +
+    `Thank you.\n\n`;
+
+  const body = grouped
+    .map((g) => {
+      const lines = g.items.map((x, i) => `${x.meta.priority} – ${i + 1}. ${x.q}`);
+      return `${g.cat}\n${lines.join("\n")}`;
+    })
+    .join("\n\n");
+
+  return { subject, intro, body, grouped };
 }
 
 async function safeCopy(text: string) {
@@ -88,14 +217,14 @@ function formatDate(iso?: string | null) {
 }
 
 function toSafeFileBaseName(input: string) {
-  const raw = String(input ?? "").trim() || "bid_brief";
+  const raw = String(input ?? "").trim() || "tender_brief";
   return (
     raw
       .replaceAll(/\s+/g, " ")
       .replaceAll(/[\\/:*?"<>|]/g, "")
       .replaceAll(".", "_")
       .slice(0, 80)
-      .trim() || "bid_brief"
+      .trim() || "tender_brief"
   );
 }
 
@@ -126,7 +255,7 @@ function ProgressCard({ status }: { status: JobStatus }) {
       ? "Something needs attention"
       : status === "queued"
       ? "Getting started"
-      : "Working on your bid review";
+      : "Working on your tender review";
 
   const subtitle =
     status === "queued"
@@ -165,25 +294,6 @@ function ProgressCard({ status }: { status: JobStatus }) {
   );
 }
 
-function SnapshotBadge({
-  tone,
-  label,
-}: {
-  tone: "good" | "warn" | "risk" | "neutral";
-  label: string;
-}) {
-  const cls =
-    tone === "good"
-      ? "border-green-200 bg-green-50 text-green-800"
-      : tone === "warn"
-      ? "border-amber-200 bg-amber-50 text-amber-900"
-      : tone === "risk"
-      ? "border-red-200 bg-red-50 text-red-800"
-      : "border-muted bg-muted/30 text-muted-foreground";
-
-  return <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs ${cls}`}>{label}</span>;
-}
-
 function findExcerpt(text: string, query: string) {
   const t = text ?? "";
   const q = (query ?? "").trim();
@@ -204,22 +314,47 @@ function findExcerpt(text: string, query: string) {
 
   // 2) Try short contiguous needles (first 12 / 8 words)
   const wordsAll = q.split(/\s+/).filter(Boolean);
-  const needles = [
-    wordsAll.slice(0, 12).join(" "),
-    wordsAll.slice(0, 8).join(" "),
-  ].filter(Boolean);
+  const needles = [wordsAll.slice(0, 12).join(" "), wordsAll.slice(0, 8).join(" ")].filter(Boolean);
 
   for (const n of needles) {
     const idx = hay.indexOf(n.toLowerCase());
     if (idx >= 0) return makeSnippet(idx, n.length);
   }
 
-  // 3) Fuzzy keyword match:
-  // Pick meaningful tokens, find occurrences, then choose the best window.
+  // 3) Fuzzy keyword match
   const STOP = new Set([
-    "the","a","an","and","or","to","of","in","on","for","with","by","via",
-    "is","are","be","as","at","from","that","this","these","those",
-    "must","should","shall","will","may","can","not","only","all"
+    "the",
+    "a",
+    "an",
+    "and",
+    "or",
+    "to",
+    "of",
+    "in",
+    "on",
+    "for",
+    "with",
+    "by",
+    "via",
+    "is",
+    "are",
+    "be",
+    "as",
+    "at",
+    "from",
+    "that",
+    "this",
+    "these",
+    "those",
+    "must",
+    "should",
+    "shall",
+    "will",
+    "may",
+    "can",
+    "not",
+    "only",
+    "all",
   ]);
 
   const tokens = wordsAll
@@ -228,10 +363,8 @@ function findExcerpt(text: string, query: string) {
 
   if (!tokens.length) return null;
 
-  // Prefer rarer/stronger tokens first
   const uniq = Array.from(new Set(tokens)).slice(0, 12);
 
-  // Collect up to N occurrences per token (avoid heavy loops)
   const MAX_OCC_PER_TOKEN = 25;
 
   type Occ = { idx: number; token: string };
@@ -251,8 +384,6 @@ function findExcerpt(text: string, query: string) {
 
   if (!occs.length) return null;
 
-  // Score windows around occurrence positions:
-  // best window is where most tokens appear in ~700 char neighborhood.
   const WINDOW = 700;
 
   let best = { score: 0, center: occs[0].idx, tokenLen: occs[0].token.length };
@@ -268,12 +399,10 @@ function findExcerpt(text: string, query: string) {
     const score = tokensInWindow.size;
     if (score > best.score) {
       best = { score, center: o.idx, tokenLen: o.token.length };
-      // Early exit if we matched most tokens
       if (best.score >= Math.min(6, uniq.length)) break;
     }
   }
 
-  // Require at least 2 strong tokens to avoid random matches
   if (best.score < 2) return null;
 
   return makeSnippet(best.center, best.tokenLen);
@@ -318,14 +447,6 @@ function normalizeQuestions(raw: any): string[] {
   return [];
 }
 
-function decisionFromExecutive(executive: any): DecisionState {
-  const badge = String(executive?.decisionBadge ?? executive?.decision ?? "").toLowerCase();
-  if (badge.includes("risk") || badge.includes("no-go") || badge.includes("no go")) return "risk";
-  if (badge.includes("caution")) return "caution";
-  if (badge.includes("go") || badge.includes("proceed")) return "proceed";
-  return "caution";
-}
-
 function toExecutiveModel(args: { raw: any }) {
   const { raw } = args;
 
@@ -338,25 +459,16 @@ function toExecutiveModel(args: { raw: any }) {
 
   const submissionDeadline = raw?.submissionDeadline ? String(raw.submissionDeadline).trim() : "";
 
-  const normalizedTopRisks: ExecutiveRisk[] = topRisks
+  const normalizedTopRisks = topRisks
     .slice(0, 3)
     .map((r: any) => {
       const titleCandidate = String(r?.title ?? r?.risk ?? r?.text ?? "").trim();
-      const detailCandidate = String(
-        r?.detail ??
-          r?.description ??
-          r?.why ??
-          r?.impact ??
-          r?.mitigation ??
-          ""
-      ).trim();
-
-      // If the model puts the “risk text” into description/detail instead of title, use that.
+      const detailCandidate = String(r?.detail ?? r?.description ?? r?.why ?? r?.impact ?? r?.mitigation ?? "").trim();
       const title = titleCandidate || detailCandidate;
 
       return {
         title,
-        severity: String(r?.severity ?? r?.level ?? "medium").toLowerCase() as any,
+        severity: String(r?.severity ?? r?.level ?? "medium").toLowerCase(),
         detail: titleCandidate ? detailCandidate : "",
       };
     })
@@ -373,7 +485,6 @@ function toExecutiveModel(args: { raw: any }) {
 }
 
 function renderDraftPlain(draft: any): string[] {
-  // We store proposal_draft.proposal_draft typically as a STRING with the outline.
   if (!draft) return ["Draft not available."];
 
   if (typeof draft === "string") {
@@ -381,7 +492,6 @@ function renderDraftPlain(draft: any): string[] {
     return lines.filter((l) => l.trim().length > 0);
   }
 
-  // If someone stores structured sections, render a clean outline.
   const sections = Array.isArray(draft?.sections) ? draft.sections : [];
   if (!sections.length) return ["Draft not available."];
 
@@ -467,6 +577,155 @@ function toPlainTextSummary(args: {
 
   return lines.join("\n");
 }
+function classifyRisk(text: string): { label: string; hint: string } {
+  const t = String(text ?? "").toLowerCase();
+
+  // Delivery / timeline / resourcing
+  if (
+    t.includes("timeline") ||
+    t.includes("schedule") ||
+    t.includes("delivery") ||
+    t.includes("lead time") ||
+    t.includes("resource") ||
+    t.includes("capacity") ||
+    t.includes("availability") ||
+    t.includes("milestone") ||
+    t.includes("slippage")
+  ) {
+    return { label: "Delivery", hint: "May impact timeline, resourcing, or delivery commitments." };
+  }
+
+  // Legal / terms / liability
+  if (
+    t.includes("liability") ||
+    t.includes("indemn") ||
+    t.includes("termination") ||
+    t.includes("jurisdiction") ||
+    t.includes("governing law") ||
+    t.includes("penalt") ||
+    t.includes("damages") ||
+    t.includes("warranty") ||
+    t.includes("ip ") ||
+    t.includes("intellectual property")
+  ) {
+    return { label: "Legal", hint: "Contractual terms may create exposure or require negotiation." };
+  }
+
+  // Commercial / pricing
+  if (
+    t.includes("price") ||
+    t.includes("pricing") ||
+    t.includes("cost") ||
+    t.includes("payment") ||
+    t.includes("currency") ||
+    t.includes("fixed price") ||
+    t.includes("rate") ||
+    t.includes("margin")
+  ) {
+    return { label: "Commercial", hint: "May affect pricing, margins, or commercial viability." };
+  }
+
+  // Scope / technical feasibility
+  if (
+    t.includes("scope") ||
+    t.includes("specification") ||
+    t.includes("technical") ||
+    t.includes("integration") ||
+    t.includes("interface") ||
+    t.includes("compatib") ||
+    t.includes("performance") ||
+    t.includes("requirement")
+  ) {
+    return { label: "Scope", hint: "May require capability confirmation or scope clarification." };
+  }
+
+  // Submission / compliance process risk
+  if (
+    t.includes("submission") ||
+    t.includes("submit") ||
+    t.includes("portal") ||
+    t.includes("format") ||
+    t.includes("deadline") ||
+    t.includes("late") ||
+    t.includes("disqual")
+  ) {
+    return { label: "Submission", hint: "May affect submission compliance (format/deadline/portal)." };
+  }
+
+  return { label: "General", hint: "Verify details in the tender source text." };
+}
+
+
+function classifyBlocker(text: string): { label: string; hint: string } {
+  const t = String(text ?? "").toLowerCase();
+
+  // Submission / portal / format
+  if (
+    t.includes("portal") ||
+    t.includes("e-tender") ||
+    t.includes("etender") ||
+    t.includes("upload") ||
+    t.includes("submit") ||
+    t.includes("submission") ||
+    t.includes("format") ||
+    t.includes("excel") ||
+    t.includes("pdf") ||
+    t.includes("label") ||
+    t.includes("sequence")
+  ) {
+    return { label: "Submission", hint: "How you must submit (portal, format, packaging)." };
+  }
+
+  // Mandatory documents / forms
+  if (
+    t.includes("mandatory") ||
+    t.includes("must include") ||
+    t.includes("include") ||
+    t.includes("form of tender") ||
+    t.includes("pricing document") ||
+    t.includes("method statement") ||
+    t.includes("questionnaire") ||
+    t.includes("declaration") ||
+    t.includes("certificate") ||
+    t.includes("evidence") ||
+    t.includes("supporting information")
+  ) {
+    return { label: "Documents", hint: "Mandatory documents/forms you must provide." };
+  }
+
+  // Eligibility / compliance / legal
+  if (
+    t.includes("eligible") ||
+    t.includes("eligibility") ||
+    t.includes("disqual") ||
+    t.includes("non-compliant") ||
+    t.includes("unqualified") ||
+    t.includes("unconditional") ||
+    t.includes("no canvass") ||
+    t.includes("anti-corruption") ||
+    t.includes("anti-collusion") ||
+    t.includes("code of conduct")
+  ) {
+    return { label: "Compliance", hint: "Rules that can invalidate the tender response." };
+  }
+
+  // Commercial / pricing / currency
+  if (
+    t.includes("price") ||
+    t.includes("pricing") ||
+    t.includes("gbp") ||
+    t.includes("euro") ||
+    t.includes("currency") ||
+    t.includes("turnover") ||
+    t.includes("financial") ||
+    t.includes("ratio")
+  ) {
+    return { label: "Commercial", hint: "Pricing/currency/financial requirements." };
+  }
+
+  return { label: "General", hint: "Check this requirement in the tender source." };
+}
+
 
 export default function JobDetailPage() {
   const params = useParams();
@@ -490,7 +749,6 @@ export default function JobDetailPage() {
   const [renaming, setRenaming] = useState(false);
   const [renameInput, setRenameInput] = useState("");
 
-  // ✅ now includes idx so we can auto-scroll
   const [sourceFocus, setSourceFocus] = useState<{ query: string; snippet: string; idx: number | null } | null>(null);
 
   /** UI safety state for very large extracted text */
@@ -500,9 +758,7 @@ export default function JobDetailPage() {
 
   const mountedRef = useRef(true);
   const sourceAnchorRef = useRef<HTMLSpanElement | null>(null);
-
-  // ✅ used to scroll the ScrollArea viewport to the excerpt
-  const sourceScrollRef = useRef<HTMLDivElement | null>(null);
+  const tabsTopRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -526,15 +782,15 @@ export default function JobDetailPage() {
     }
   }, [jobId]);
 
-  // ✅ PATCH 1A: polling robustness + graceful stop + error pressure guard
+  // Polling robustness + graceful stop + error pressure guard
   useEffect(() => {
     if (invalidLink) return;
 
     const supabase = supabaseBrowser();
 
     const POLL_INTERVAL_MS = 2500;
-    const MAX_POLL_MS = 10 * 60 * 1000; // hard stop (frontend only)
-    const DONE_GRACE_POLLS = 12; // ~30s grace window when status flips to done but results not visible yet
+    const MAX_POLL_MS = 10 * 60 * 1000;
+    const DONE_GRACE_POLLS = 12;
     const MAX_POLL_ERRORS = 6;
 
     let interval: any = null;
@@ -558,7 +814,7 @@ export default function JobDetailPage() {
 
         if (jobErr) {
           console.error(jobErr);
-          setError("This bid review could not be loaded. Please return to your jobs and open it again.");
+          setError("This tender review could not be loaded. Please return to your jobs and open it again.");
           setJob(null);
           setResult(null);
           setLoading(false);
@@ -580,7 +836,6 @@ export default function JobDetailPage() {
           .maybeSingle();
 
         if (resErr) {
-          // Can happen temporarily (session/RLS timing); don't fail the page.
           console.warn(resErr);
         }
 
@@ -592,7 +847,7 @@ export default function JobDetailPage() {
         setPolling(status === "queued" || status === "processing" || (status === "done" && !resultRow));
       } catch (e) {
         console.error(e);
-        setError("This bid review could not be loaded. Please refresh and try again.");
+        setError("This tender review could not be loaded. Please refresh and try again.");
         setJob(null);
         setResult(null);
         setLoading(false);
@@ -601,13 +856,7 @@ export default function JobDetailPage() {
     }
 
     async function poll() {
-      // Hard stop: prevent infinite polling from UI side.
-      if (Date.now() - startedAt > MAX_POLL_MS) {
-        setError("This bid review is taking longer than expected. Please refresh the page or check again later.");
-        stopPolling();
-        return;
-      }
-
+     
       try {
         const { data: jobRow, error: jobErr } = await supabase.from("jobs").select("*").eq("id", jobId).maybeSingle();
         if (!mountedRef.current) return;
@@ -634,15 +883,26 @@ export default function JobDetailPage() {
           pollErrors += 1;
           console.warn(resErr);
         } else {
-          // relieve pressure a bit after successful reads
           pollErrors = Math.max(0, pollErrors - 1);
         }
 
         setResult((resultRow as any) ?? null);
+		// Hard stop only applies while still processing AND results are still missing.
+		// Prevents false “taking longer” errors when the tender is already done.
+		if (!isTerminal && !resultRow && Date.now() - startedAt > MAX_POLL_MS) {
+		  setError("This tender review is taking longer than expected. Please refresh the page or check again later.");
+		  stopPolling();
+		  return;
+		}
 
-        // Terminal state logic:
-        // - failed: stop polling immediately (results may or may not exist)
-        // - done: stop when results exist; otherwise allow a short grace window
+		// If results are present, clear only the “taking longer” message (if it was shown earlier).
+		if (resultRow) {
+		  setError((prev) =>
+			prev?.includes("taking longer than expected") ? null : prev
+		  );
+		}
+
+		
         if (isTerminal) {
           if (status === "failed") {
             stopPolling();
@@ -663,12 +923,11 @@ export default function JobDetailPage() {
             return;
           }
         } else {
-          // reset terminal grace counter if we’re not terminal anymore (rare but safe)
           doneWithoutResult = 0;
         }
 
         if (pollErrors >= MAX_POLL_ERRORS) {
-          setError("We are having trouble loading this bid review. Please refresh the page and try again.");
+          setError("We are having trouble loading this tender review. Please refresh the page and try again.");
           stopPolling();
           return;
         }
@@ -678,7 +937,7 @@ export default function JobDetailPage() {
         console.error(e);
         pollErrors += 1;
         if (pollErrors >= MAX_POLL_ERRORS) {
-          setError("We are having trouble loading this bid review. Please refresh the page and try again.");
+          setError("We are having trouble loading this tender review. Please refresh the page and try again.");
           stopPolling();
           return;
         }
@@ -727,12 +986,10 @@ export default function JobDetailPage() {
   const checklist = useMemo(() => normalizeChecklist(result?.checklist), [result]);
   const risks = useMemo(() => normalizeRisks(result?.risks), [result]);
 
-  // ✅ IMPORTANT: questions come from proposal_draft.buyer_questions (DB contract)
+  // IMPORTANT: questions come from proposal_draft.buyer_questions (DB contract)
   const questions = useMemo(() => {
     const pd = (result as any)?.proposal_draft ?? null;
-    return normalizeQuestions(
-      pd?.buyer_questions ?? pd?.clarifications ?? (result as any)?.buyer_questions ?? (result as any)?.clarifications
-    );
+    return normalizeQuestions(pd?.buyer_questions ?? pd?.clarifications ?? (result as any)?.buyer_questions ?? (result as any)?.clarifications);
   }, [result]);
 
   const mustItems = useMemo(() => {
@@ -753,7 +1010,6 @@ export default function JobDetailPage() {
     return pd?.proposal_draft ?? null;
   }, [result]);
 
-  // ✅ PATCH 1B: derive "finalizing" state (job done, but results payload is still empty)
   const draftLinesForUi = useMemo(() => renderDraftPlain(draftForUi), [draftForUi]);
 
   const hasDraftForUi = useMemo(() => {
@@ -762,62 +1018,39 @@ export default function JobDetailPage() {
     return true;
   }, [draftLinesForUi]);
 
-  const hasAnyResultsPayload = useMemo(() => {
+	const clarificationsPack = useMemo(() => {
+	  const tenderName = String(displayName || job?.file_name || "Tender").trim();
+	  return buildReadyToSendClarifications({ tenderName, questions });
+	}, [displayName, job?.file_name, questions]);
+	 
+
+ const hasAnyResultsPayload = useMemo(() => {
     return Boolean(extractedText || checklist.length || risks.length || questions.length || hasDraftForUi);
   }, [extractedText, checklist.length, risks.length, questions.length, hasDraftForUi]);
 
   const finalizingResults = useMemo(() => showReady && !hasAnyResultsPayload, [showReady, hasAnyResultsPayload]);
 
-  const decisionState = useMemo(() => decisionFromExecutive(executive), [executive]);
+  // Verdict (UI-only heuristic; no backend changes)
+  const verdictState: VerdictState = useMemo(() => {
+    if (!showReady) return "caution";
+    if (mustItems.length >= 1) return "hold";
+    const top = (executive.topRisks ?? []).slice(0, 3);
+    if (top.some((r: any) => String(r?.severity ?? "").toLowerCase() === "high")) return "caution";
+    return "proceed";
+  }, [showReady, mustItems.length, executive.topRisks]);
 
-  const mustCount = mustItems.length;
-  const topRisks = (executive.topRisks ?? []).slice(0, 3);
+  const topRisksForPanel = useMemo(() => (executive.topRisks ?? []).slice(0, 3), [executive.topRisks]);
 
-  const snapshotBadge = useMemo(() => {
-    if (!showReady) return { tone: "neutral" as const, label: "Proceed with caution" };
-    if (mustCount >= 1) return { tone: "risk" as const, label: "High disqualification risk" };
-    if (topRisks.some((r) => String(r?.severity ?? "").toLowerCase() === "high")) return { tone: "warn" as const, label: "Proceed with caution" };
-    return { tone: "good" as const, label: "Proceed" };
-  }, [showReady, mustCount, topRisks]);
-
-  const snapshotReasons = useMemo(() => {
-    const list: { tone: "good" | "warn" | "risk" | "neutral"; label: string }[] = [];
-
-    if (!showReady) {
-      list.push({ tone: "neutral", label: "Analyzing requirements, risks, and clarifications." });
-      return list;
+  const whyLine = useMemo(() => {
+    if (!showReady) return "Why: Analyzing requirements, risks, and clarifications.";
+    if (verdictState === "hold") return `Why: MUST requirements detected (${mustItems.length}). Review potential blockers first.`;
+    if (verdictState === "caution") {
+      const hasHigh = topRisksForPanel.some((r: any) => String(r?.severity ?? "").toLowerCase() === "high");
+      if (hasHigh) return "Why: High-severity risk detected. Confirm feasibility before committing.";
+      return "Why: Key points need validation before committing.";
     }
-
-    if (mustCount >= 1) list.push({ tone: "risk", label: `Potential disqualifiers found (${mustCount} MUST). Review these first.` });
-    else list.push({ tone: "good", label: "No potential disqualifiers detected from MUST items." });
-
-    if (topRisks.some((r) => String(r?.severity ?? "").toLowerCase() === "high")) {
-      list.push({ tone: "warn", label: "High risk items detected. Confirm feasibility before committing resources before committing resources." });
-    } else if (topRisks.length) {
-      list.push({ tone: "good", label: "Top risks look manageable with clarifications and careful response." });
-    } else {
-      list.push({ tone: "good", label: "No risks detected." });
-    }
-
-    if (executive.submissionDeadline) list.push({ tone: "warn", label: "Deadline appears strict. Prepare submission early to avoid format errors." });
-
-    return list.slice(0, 3);
-  }, [showReady, mustCount, topRisks, executive.submissionDeadline]);
-
-  const potentialDisqualifiers = useMemo(() => {
-    if (!showReady) return [];
-    return mustItems.slice(0, 10);
-  }, [showReady, mustItems]);
-
-  const decisionSummaryReasons = useMemo(() => {
-    if (!showReady) return [];
-    return snapshotReasons.map((x) => x.label);
-  }, [showReady, snapshotReasons]);
-
-  const decisionSummaryDisqualifiers = useMemo(() => {
-    if (!showReady) return [];
-    return potentialDisqualifiers.map((x) => String(x ?? "").trim()).filter(Boolean);
-  }, [showReady, potentialDisqualifiers]);
+    return "Why: No potential blockers detected from MUST requirements.";
+  }, [showReady, verdictState, mustItems.length, topRisksForPanel]);
 
   async function copySection(which: "requirements" | "risks" | "clarifications" | "draft") {
     if (!canDownload) return;
@@ -851,37 +1084,42 @@ export default function JobDetailPage() {
     setRenaming(false);
   }
 
+  function openTabAndScroll(next: "checklist" | "risks" | "questions" | "draft" | "text") {
+  setTab(next);
+  requestAnimationFrame(() => {
+    tabsTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+}
+
+
   function onJumpToSource(query: string) {
     const match = findExcerpt(extractedText, query);
 
     if (!match) {
       setSourceFocus({ query, snippet: "No matching excerpt found in the source text.", idx: null });
-      setTab("text");
+      openTabAndScroll("text");
       return;
     }
 
-    // If the match is beyond the preview limit, ensure the full text is rendered so we can scroll to it.
     if (match.idx > SOURCE_TEXT_PREVIEW_LIMIT) {
       setShowFullSourceText(true);
     }
 
     setSourceFocus({ query, snippet: match.snippet, idx: match.idx });
-    setTab("text");
+    openTabAndScroll("text");
   }
 
-  // ✅ Auto-scroll the Source text viewport to the matched location when opening the tab
-	useEffect(() => {
-	  if (tab !== "text") return;
-	  if (!sourceFocus || sourceFocus.idx === null) return;
+  // Auto-scroll the Source text viewport to the matched location when opening the tab
+  useEffect(() => {
+    if (tab !== "text") return;
+    if (!sourceFocus || sourceFocus.idx === null) return;
 
-	  // wait for render, then scroll to the real anchor
-	  requestAnimationFrame(() => {
-		if (sourceAnchorRef.current) {
-		  sourceAnchorRef.current.scrollIntoView({ block: "center", behavior: "smooth" });
-		}
-	  });
-	}, [tab, sourceFocus?.idx, showFullSourceText]);
-
+    requestAnimationFrame(() => {
+      if (sourceAnchorRef.current) {
+        sourceAnchorRef.current.scrollIntoView({ block: "center", behavior: "smooth" });
+      }
+    });
+  }, [tab, sourceFocus?.idx, showFullSourceText]);
 
   async function exportSummaryTxt() {
     if (!job) return;
@@ -906,17 +1144,17 @@ export default function JobDetailPage() {
     URL.revokeObjectURL(url);
   }
 
-  async function exportBidBriefPdf() {
+  async function exportTenderBriefPdf() {
     if (!job) return;
 
     setError(null);
 
-    const title = String(displayName || job.file_name || "Bid brief").trim() || "Bid brief";
+    const title = String(displayName || job.file_name || "Tender brief").trim() || "Tender brief";
     const created = formatDate(job.created_at);
 
     const mustLines = mustItems.length
       ? `<ol>${mustItems.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ol>`
-      : `<p class="empty">No mandatory requirements detected.</p>`;
+      : `<p class="empty">No MUST requirements detected.</p>`;
 
     const riskLines = risks.length
       ? `<ol>${risks
@@ -948,29 +1186,16 @@ export default function JobDetailPage() {
       : `<p class="empty">No next actions available.</p>`;
 
     const decisionLine = String(executive.decisionLine ?? "").trim();
-    const decisionBadgeRaw = String(executive.decisionBadge ?? "").trim();
-    const decisionBadge = decisionBadgeRaw.toLowerCase();
-
-    const decisionLabel =
-      decisionBadge.includes("risk") || decisionBadge.includes("no-go") || decisionBadge.includes("no go")
-        ? "High disqualification risk"
-        : decisionBadge.includes("caution")
-        ? "Proceed with caution"
-        : decisionBadge.includes("go") || decisionBadge.includes("proceed")
-        ? "Proceed"
-        : decisionBadgeRaw
-        ? decisionBadgeRaw
-        : decisionLine
-        ? "Decision summary"
-        : "";
-
     const deadline = executive.submissionDeadline ? escapeHtml(String(executive.submissionDeadline)) : "";
+
+    const verdictLabel =
+      verdictState === "hold" ? "Hold – potential blocker" : verdictState === "caution" ? "Proceed with caution" : "Proceed";
 
     const html = `<!doctype html>
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>${escapeHtml(title)} bid brief</title>
+    <title>${escapeHtml(title)} tender brief</title>
     <style>
       @page { size: A4; margin: 14mm; }
       :root{ --ink:#111; --muted:#5b5b5b; --line:#dedede; --panel:#f7f7f7; --soft:#fbfbfb; }
@@ -1038,9 +1263,9 @@ export default function JobDetailPage() {
       <div class="header">
         <div>
           <div class="brand">TenderPilot</div>
-          <div class="docTitle">Bid brief</div>
+          <div class="docTitle">Tender brief</div>
           <div class="pillRow">
-            ${decisionLabel ? `<span class="pill emph">${escapeHtml(decisionLabel)}</span>` : ""}
+            <span class="pill emph">${escapeHtml(verdictLabel)}</span>
             ${deadline ? `<span class="pill">Submission deadline ${deadline}</span>` : ""}
           </div>
         </div>
@@ -1063,7 +1288,7 @@ export default function JobDetailPage() {
             </div>
 
             <div class="card" style="background:#fff">
-              <div class="subhead">Recommended next actions</div>
+              <div class="subhead">Next actions</div>
               ${nextActionsLines}
             </div>
           </div>
@@ -1072,7 +1297,7 @@ export default function JobDetailPage() {
 
       <div class="section">
         <div class="card">
-          <h2>Mandatory requirements</h2>
+          <h2>MUST requirements</h2>
           ${mustLines}
         </div>
       </div>
@@ -1091,7 +1316,7 @@ export default function JobDetailPage() {
 
     <div class="footer">
       <span>TenderPilot</span>
-      <span>Bid brief</span>
+      <span>Tender brief</span>
     </div>
   </body>
 </html>`;
@@ -1131,7 +1356,7 @@ export default function JobDetailPage() {
 
   async function handleDelete() {
     if (!job) return;
-    const ok = window.confirm("Delete this bid review? This cannot be undone.");
+    const ok = window.confirm("Delete this tender review? This cannot be undone.");
     if (!ok) return;
 
     try {
@@ -1142,7 +1367,7 @@ export default function JobDetailPage() {
       router.push("/app/jobs");
     } catch (e) {
       console.error(e);
-      setError("Could not delete this job. Please try again.");
+      setError("Could not delete this tender review. Please try again.");
     }
   }
 
@@ -1151,9 +1376,9 @@ export default function JobDetailPage() {
       <div className="mx-auto max-w-5xl space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-semibold">Bid kit</p>
-            <p className="mt-1 text-sm text-muted-foreground">Your bid kit will appear here.</p>
-            <p className="mt-2 text-sm text-red-600">This bid link is invalid. Return to your jobs and open it again.</p>
+            <p className="text-sm font-semibold">Tender review</p>
+            <p className="mt-1 text-sm text-muted-foreground">Your tender review will appear here.</p>
+            <p className="mt-2 text-sm text-red-600">This tender link is invalid. Return to your jobs and open it again.</p>
           </div>
 
           <div className="flex items-center gap-2">
@@ -1161,7 +1386,7 @@ export default function JobDetailPage() {
               <Link href="/app/jobs">Back to jobs</Link>
             </Button>
             <Button variant="outline" className="rounded-full" disabled>
-              Export bid brief PDF
+              Export tender brief PDF
             </Button>
             <Button className="rounded-full" disabled>
               Download summary
@@ -1178,7 +1403,7 @@ export default function JobDetailPage() {
           <Badge variant="secondary" className="rounded-full">
             Preparing
           </Badge>
-          <p className="text-sm text-muted-foreground">Your bid kit will appear here.</p>
+          <p className="text-sm text-muted-foreground">Your tender review will appear here.</p>
         </div>
 
         <Card className="rounded-2xl">
@@ -1190,28 +1415,29 @@ export default function JobDetailPage() {
     );
   }
 
+  const deadlineText = executive.submissionDeadline ? String(executive.submissionDeadline).trim() : "";
+
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="truncate text-2xl font-semibold tracking-tight">{displayName || job?.file_name || "Bid kit"}</h1>
+            <h1 className="truncate text-2xl font-semibold tracking-tight">{displayName || job?.file_name || "Tender review"}</h1>
 
             <Button variant="outline" className="rounded-full" onClick={() => setRenaming(true)} disabled={!job || showProgress}>
               Rename
             </Button>
 
-            {/* ✅ no double-badge nesting */}
             {statusBadge(job?.status ?? "queued")}
           </div>
 
           <p className="mt-1 text-sm text-muted-foreground">
             {showProgress
-              ? "Your bid review is being prepared. This page updates automatically."
+              ? "Your tender review is being prepared. This page updates automatically."
               : showFailed
-              ? "This bid review needs attention."
-              : "Your bid review is ready."}
+              ? "This tender review needs attention."
+              : "Your tender review is ready."}
           </p>
 
           <p className="mt-2 text-sm text-muted-foreground">Drafting support only. Always verify against the original tender document.</p>
@@ -1222,8 +1448,8 @@ export default function JobDetailPage() {
             <Link href="/app/jobs">Back to jobs</Link>
           </Button>
 
-          <Button variant="outline" className="rounded-full" onClick={exportBidBriefPdf} disabled={!canDownload}>
-            Export bid brief PDF
+          <Button variant="outline" className="rounded-full" onClick={exportTenderBriefPdf} disabled={!canDownload}>
+            Export tender brief PDF
           </Button>
 
           <Button
@@ -1258,71 +1484,271 @@ export default function JobDetailPage() {
 
       {showProgress ? <ProgressCard status={job?.status ?? "processing"} /> : null}
 
-      {/* Executive summary */}
+      {/* Go/No-Go (Iteration 1) */}
       <Card className="rounded-2xl">
-        <CardContent className="p-6">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold">Executive summary</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {showReady
-                  ? "Mandatory requirements require careful verification before committing resources."
-                  : "We’ll populate findings, risks, and actions once processing completes."}
-              </p>
-            </div>
-            <SnapshotBadge tone={snapshotBadge.tone} label={snapshotBadge.label} />
-          </div>
+        <CardContent className="p-6 space-y-5">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div className="space-y-2">
+              <p className="text-sm font-semibold">Go/No-Go</p>
 
-          <div className="mt-4">
-            <ExecutiveSummary
-              decisionBadge={snapshotBadge.label}
-              decisionLine={executive.decisionLine}
-              keyFindings={executive.keyFindings}
-              topRisks={executive.topRisks}
-              nextActions={executive.nextActions}
-              submissionDeadline={executive.submissionDeadline}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Decision summary block */}
-      <Card className="rounded-2xl">
-        <CardContent className="p-6 space-y-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <DecisionBadge state={decisionState} />
-              <p className="text-sm text-muted-foreground">Based on mandatory requirements, identified risks, and ambiguities.</p>
-            </div>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-2xl border bg-muted/20 p-4">
-              <p className="text-sm font-semibold">Key reasons</p>
-              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-                {decisionSummaryReasons.length ? decisionSummaryReasons.map((x, i) => <li key={i}>{x}</li>) : <li>Analyzing…</li>}
-              </ul>
-            </div>
-
-            <div className="rounded-2xl border bg-muted/20 p-4">
-              <p className="text-sm font-semibold">Potential disqualifiers</p>
-              {decisionSummaryDisqualifiers.length ? (
-                <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-                  {decisionSummaryDisqualifiers.slice(0, 6).map((x, i) => (
-                    <li key={i}>{x}</li>
-                  ))}
-                </ul>
+              {showFailed ? (
+                <>
+                  <p className="text-sm text-muted-foreground">This tender review could not be completed.</p>
+                  <p className="text-xs text-muted-foreground">Re-upload the tender document or try again.</p>
+                </>
+              ) : !showReady ? (
+                <>
+                  <p className="text-sm text-muted-foreground">Preparing decision support for this tender…</p>
+                  <p className="text-xs text-muted-foreground">This panel populates automatically when processing completes.</p>
+                </>
+              ) : finalizingResults ? (
+                <>
+                  <p className="text-sm text-muted-foreground">Finalizing results…</p>
+                  <p className="text-xs text-muted-foreground">The job is marked as done, but results are still being written. Refresh in a moment if needed.</p>
+                </>
               ) : (
-                <p className="mt-2 text-sm text-muted-foreground">None detected.</p>
+                <>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <VerdictBadge state={verdictState} />
+                    <p className="text-sm text-muted-foreground">{verdictMicrocopy(verdictState)}</p>
+                  </div>
+
+                  <p className="text-sm text-muted-foreground">{whyLine}</p>
+
+					<div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+					  <span className="rounded-full border bg-background/60 px-3 py-1">
+						MUST: <span className="font-medium text-foreground">{mustItems.length}</span>
+					  </span>
+					  <span className="rounded-full border bg-background/60 px-3 py-1">
+						Risks: <span className="font-medium text-foreground">{risks.length}</span>
+					  </span>
+					  <span className="rounded-full border bg-background/60 px-3 py-1">
+						Clarifications: <span className="font-medium text-foreground">{questions.length}</span>
+					  </span>
+					  <span className="rounded-full border bg-background/60 px-3 py-1">
+						Outline:{" "}
+						<span className="font-medium text-foreground">
+						  {hasDraftForUi ? "Available" : "Not detected"}
+						</span>
+					  </span>
+					</div>
+
+                </>
               )}
             </div>
+
+            <div className="rounded-2xl border bg-muted/20 p-4 md:min-w-[320px]">
+              <p className="text-xs font-semibold">Submission deadline</p>
+              <p className="mt-1 text-sm">
+                {showReady && deadlineText ? <span className="font-medium">{deadlineText}</span> : <span className="text-muted-foreground">Not detected</span>}
+              </p>
+              <p className="mt-2 text-xs text-muted-foreground">Verify on the tender cover page or timeline section.</p>
+            </div>
           </div>
 
-          <p className="text-xs text-muted-foreground">
-            This assessment supports go/no-go decisions and early drafting. Always verify mandatory requirements against the original tender documents.
-          </p>
+          {showReady && !showFailed && !finalizingResults ? (
+            <>
+              <div className="grid gap-4 md:grid-cols-2">
+                {/* Potential blockers */}
+                <div className="rounded-2xl border bg-muted/20 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold">Potential blockers</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Items that could block a compliant tender response. Use Jump to verify the source.</p>
+                    </div>
+                    <Button variant="outline" className="rounded-full" onClick={() => openTabAndScroll("checklist")} disabled={!showReady}>
+                      Open Requirements
+                    </Button>
+                  </div>
+
+                  <Separator className="my-3" />
+
+                  {mustItems.length ? (
+                    <>
+                      <p className="text-xs text-muted-foreground">MUST requirements detected: {mustItems.length}</p>
+                      <div className="mt-3 space-y-2">
+						  {mustItems.slice(0, 6).map((x, i) => {
+							const meta = classifyBlocker(x);
+
+							return (
+							  <div key={i} className="rounded-2xl border bg-background p-3">
+								<div className="flex items-start justify-between gap-3">
+								  <div className="min-w-0">
+									<div className="flex flex-wrap items-center gap-2">
+									  <span className="inline-flex items-center rounded-full border bg-muted/20 px-2 py-0.5 text-[11px] text-muted-foreground">
+										{meta.label}
+									  </span>
+									  <span className="text-[11px] text-muted-foreground">{meta.hint}</span>
+									</div>
+
+									<p className="mt-2 text-sm text-muted-foreground leading-relaxed">{x}</p>
+								  </div>
+
+								  <Button
+									variant="outline"
+									className="rounded-full shrink-0"
+									onClick={() => onJumpToSource(x)}
+									disabled={!extractedText}
+								  >
+									Jump
+								  </Button>
+								</div>
+							  </div>
+							);
+						  })}
+						</div>
+
+                      {mustItems.length > 6 ? (
+                        <p className="mt-2 text-xs text-muted-foreground">Showing top 6. Review all in Requirements.</p>
+                      ) : null}
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm text-muted-foreground">No potential blockers detected from MUST requirements.</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Still review eligibility and mandatory forms in the tender.</p>
+                    </>
+                  )}
+                </div>
+
+                {/* Top risks */}
+                <div className="rounded-2xl border bg-muted/20 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold">Top risks</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Risks that could derail delivery, cost, or compliance.</p>
+                    </div>
+                    <Button variant="outline" className="rounded-full" onClick={() => openTabAndScroll("risks")} disabled={!showReady}>
+                      Open Risks
+                    </Button>
+                  </div>
+
+                  <Separator className="my-3" />
+
+                  {topRisksForPanel.length ? (
+				  <div className="space-y-2">
+					{topRisksForPanel.map((r: any, i: number) => {
+					  const sev = String(r?.severity ?? "medium").toLowerCase();
+					  const sevLabel = sev === "high" ? "High" : sev === "low" ? "Low" : "Medium";
+					  const sevCls =
+						sev === "high"
+						  ? "border-red-200 bg-red-50 text-red-800"
+						  : sev === "low"
+						  ? "border-muted bg-background text-muted-foreground"
+						  : "border-amber-200 bg-amber-50 text-amber-900";
+
+					  const title = String(r?.title ?? "").trim();
+					  const detail = String(r?.detail ?? "").trim();
+					  const jumpText = detail ? `${title}\n${detail}` : title;
+					  const meta = classifyRisk(`${title} ${detail}`.trim());
+
+					  return (
+						<div key={i} className="rounded-2xl border bg-background p-3">
+						  <div className="flex items-start justify-between gap-3">
+							<div className="min-w-0">
+							  <div className="flex flex-wrap items-center gap-2">
+								<span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] ${sevCls}`}>
+								  {sevLabel}
+								</span>
+								<span className="inline-flex items-center rounded-full border bg-muted/20 px-2 py-0.5 text-[11px] text-muted-foreground">
+								  {meta.label}
+								</span>
+								<span className="text-[11px] text-muted-foreground">{meta.hint}</span>
+							  </div>
+
+							  <p className="mt-2 text-sm font-medium">{title || "Risk"}</p>
+							  {detail ? <p className="mt-1 text-xs text-muted-foreground">{detail}</p> : null}
+							</div>
+
+							<Button
+							  variant="outline"
+							  className="rounded-full shrink-0"
+							  onClick={() => onJumpToSource(jumpText)}
+							  disabled={!extractedText}
+							>
+							  Jump
+							</Button>
+						  </div>
+						</div>
+					  );
+					})}
+				  </div>
+				) : (
+				  <>
+					<p className="text-sm text-muted-foreground">No risks detected.</p>
+					<p className="mt-1 text-xs text-muted-foreground">
+					  Scan legal terms, delivery constraints, and submission format in the tender.
+					</p>
+				  </>
+				)}
+
+                </div>
+              </div>
+
+              {/* Next actions + key findings */}
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-2xl border bg-muted/20 p-4">
+                  <p className="text-sm font-semibold">Next actions (today)</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Start here before writing a full tender response.</p>
+                  <Separator className="my-3" />
+
+                  {executive.nextActions?.length ? (
+                    <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                      {executive.nextActions.slice(0, 3).map((x: string, i: number) => (
+                        <li key={i}>{x}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <>
+                      <p className="text-sm text-muted-foreground">No next actions detected.</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Confirm blockers, deadline, and submission requirements in the tender.</p>
+                    </>
+                  )}
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button variant="outline" className="rounded-full" onClick={() => openTabAndScroll("questions")}>
+                      Open Clarifications
+                    </Button>
+                    <Button variant="outline" className="rounded-full" onClick={() => openTabAndScroll("draft")}>
+                      Open Outline
+                    </Button>
+                    <Button variant="outline" className="rounded-full" onClick={() => openTabAndScroll("text")}>
+                      Open Source
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border bg-muted/20 p-4">
+                  <p className="text-sm font-semibold">Key findings</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Useful context from the tender, not urgent for the go/no-go decision.</p>
+                  <Separator className="my-3" />
+
+                  {executive.keyFindings?.length ? (
+                    <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+                      {executive.keyFindings.slice(0, 7).map((x: string, i: number) => (
+                        <li key={i}>{x}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No key findings detected.</p>
+                  )}
+                </div>
+              </div>
+
+              {String(executive.decisionLine ?? "").trim() ? (
+                <div className="rounded-2xl border bg-background p-4">
+                  <p className="text-xs font-semibold">Executive note</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{String(executive.decisionLine).trim()}</p>
+                </div>
+              ) : null}
+
+              <p className="text-xs text-muted-foreground">
+                Drafting support only. Always verify requirements and legal language against the original tender documents.
+              </p>
+            </>
+          ) : null}
         </CardContent>
       </Card>
+      <div ref={tabsTopRef} />
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="space-y-4">
         <TabsList className="rounded-full">
@@ -1336,47 +1762,58 @@ export default function JobDetailPage() {
             Clarifications
           </TabsTrigger>
           <TabsTrigger value="draft" className="rounded-full">
-            Draft
+            Tender Outline
           </TabsTrigger>
           <TabsTrigger value="text" className="rounded-full">
             Source text
           </TabsTrigger>
         </TabsList>
 
-        {/* ✅ PATCH 1C: section guards + finalizing state + better empty states */}
         <TabsContent value="checklist">
-          <div className="flex items-center justify-end">
-            <Button variant="outline" className="rounded-full" onClick={() => copySection("requirements")} disabled={!canDownload}>
-              {copiedSection === "requirements" ? "Copied" : "Copy section"}
-            </Button>
-          </div>
+          <div className="flex items-center justify-end gap-2">
+			  <Button
+				variant="outline"
+				className="rounded-full"
+				onClick={async () => {
+				  if (!canDownload) return;
+				  const text = `${clarificationsPack.subject}\n\n${clarificationsPack.intro}${clarificationsPack.body}\n`;
+				  const ok = await safeCopy(text);
+				  if (ok) {
+					setCopiedSection("clarifications_ready");
+					window.setTimeout(() => setCopiedSection(null), 1200);
+				  }
+				}}
+				disabled={!canDownload || !questions.length}
+			  >
+				{copiedSection === "clarifications_ready" ? "Copied" : "Copy ready-to-send"}
+			  </Button>
+
+			  <Button variant="outline" className="rounded-full" onClick={() => copySection("clarifications")} disabled={!canDownload}>
+				{copiedSection === "clarifications" ? "Copied" : "Copy raw list"}
+			  </Button>
+			</div>
+
 
           <div className="mt-3">
             {showFailed ? (
               <Card className="rounded-2xl">
                 <CardContent className="p-6">
                   <p className="text-sm font-semibold">Analysis failed</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    This bid review could not be completed. Please re-upload the document or try again.
-                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">This tender review could not be completed. Please re-upload the document or try again.</p>
                 </CardContent>
               </Card>
             ) : !showReady ? (
               <Card className="rounded-2xl">
                 <CardContent className="p-6">
                   <p className="text-sm font-semibold">Requirements are being extracted</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    We&apos;re scanning the tender for MUST/SHOULD/INFO items. This section will populate automatically.
-                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">We&apos;re scanning the tender for MUST/SHOULD/INFO items. This section will populate automatically.</p>
                 </CardContent>
               </Card>
             ) : finalizingResults ? (
               <Card className="rounded-2xl">
                 <CardContent className="p-6">
                   <p className="text-sm font-semibold">Finalizing results…</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    The job is marked as done, but results are still being written. Please wait a few seconds or refresh.
-                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">The job is marked as done, but results are still being written. Please wait a few seconds or refresh.</p>
                 </CardContent>
               </Card>
             ) : checklist.length ? (
@@ -1385,9 +1822,7 @@ export default function JobDetailPage() {
               <Card className="rounded-2xl">
                 <CardContent className="p-6">
                   <p className="text-sm font-semibold">No requirements extracted</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    We didn&apos;t detect explicit MUST/SHOULD/INFO items. Verify the source text, or try re-uploading a cleaner PDF.
-                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">We didn&apos;t detect explicit MUST/SHOULD/INFO items. Verify the source text, or try re-uploading a cleaner PDF.</p>
                 </CardContent>
               </Card>
             )}
@@ -1406,27 +1841,21 @@ export default function JobDetailPage() {
               <Card className="rounded-2xl">
                 <CardContent className="p-6">
                   <p className="text-sm font-semibold">Analysis failed</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    This bid review could not be completed. Please re-upload the document or try again.
-                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">This tender review could not be completed. Please re-upload the document or try again.</p>
                 </CardContent>
               </Card>
             ) : !showReady ? (
               <Card className="rounded-2xl">
                 <CardContent className="p-6">
                   <p className="text-sm font-semibold">Identifying key risks</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    We&apos;re highlighting technical, legal, commercial, and delivery risks from the tender.
-                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">We&apos;re highlighting technical, legal, commercial, and delivery risks from the tender.</p>
                 </CardContent>
               </Card>
             ) : finalizingResults ? (
               <Card className="rounded-2xl">
                 <CardContent className="p-6">
                   <p className="text-sm font-semibold">Finalizing results…</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    The job is marked as done, but results are still being written. Please wait a few seconds or refresh.
-                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">The job is marked as done, but results are still being written. Please wait a few seconds or refresh.</p>
                 </CardContent>
               </Card>
             ) : risks.length ? (
@@ -1435,9 +1864,7 @@ export default function JobDetailPage() {
               <Card className="rounded-2xl">
                 <CardContent className="p-6">
                   <p className="text-sm font-semibold">No major risks detected</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    We didn&apos;t flag high-impact risks. Still verify deadlines, eligibility, and mandatory deliverables in the source text.
-                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">We didn&apos;t flag high-impact risks. Still verify deadlines, eligibility, and mandatory deliverables in the source text.</p>
                 </CardContent>
               </Card>
             )}
@@ -1446,12 +1873,7 @@ export default function JobDetailPage() {
 
         <TabsContent value="questions">
           <div className="flex items-center justify-end">
-            <Button
-              variant="outline"
-              className="rounded-full"
-              onClick={() => copySection("clarifications")}
-              disabled={!canDownload}
-            >
+            <Button variant="outline" className="rounded-full" onClick={() => copySection("clarifications")} disabled={!canDownload}>
               {copiedSection === "clarifications" ? "Copied" : "Copy section"}
             </Button>
           </div>
@@ -1461,44 +1883,80 @@ export default function JobDetailPage() {
               <Card className="rounded-2xl">
                 <CardContent className="p-6">
                   <p className="text-sm font-semibold">Analysis failed</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    This bid review could not be completed. Please re-upload the document or try again.
-                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">This tender review could not be completed. Please re-upload the document or try again.</p>
                 </CardContent>
               </Card>
             ) : !showReady ? (
               <Card className="rounded-2xl">
                 <CardContent className="p-6">
                   <p className="text-sm font-semibold">Generating clarifications</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    We&apos;re listing buyer questions and ambiguities to resolve before committing to a proposal.
-                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">We&apos;re listing buyer questions and ambiguities to resolve before committing to a tender response.</p>
                 </CardContent>
               </Card>
             ) : finalizingResults ? (
               <Card className="rounded-2xl">
                 <CardContent className="p-6">
                   <p className="text-sm font-semibold">Finalizing results…</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    The job is marked as done, but results are still being written. Please wait a few seconds or refresh.
-                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">The job is marked as done, but results are still being written. Please wait a few seconds or refresh.</p>
                 </CardContent>
               </Card>
             ) : questions.length ? (
-              <BuyerQuestions
-                checklist={checklist}
-                risks={risks}
-                extractedText={extractedText}
-                onJumpToSource={onJumpToSource}
-                questions={questions}
-              />
-            ) : (
+			  <>
+				<Card className="rounded-2xl">
+				  <CardContent className="p-6 space-y-3">
+					<div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+					  <div>
+						<p className="text-sm font-semibold">Ready-to-send clarifications</p>
+						<p className="mt-1 text-sm text-muted-foreground">
+						  Copy into an email or the buyer Q&amp;A portal. Prioritized as P1 (urgent) and P2 (nice-to-have).
+						</p>
+					  </div>
+					  <Button
+						variant="outline"
+						className="rounded-full"
+						onClick={async () => {
+						  const text = `${clarificationsPack.subject}\n\n${clarificationsPack.intro}${clarificationsPack.body}\n`;
+						  const ok = await safeCopy(text);
+						  if (ok) {
+							setCopiedSection("clarifications_ready");
+							window.setTimeout(() => setCopiedSection(null), 1200);
+						  }
+						}}
+						disabled={!questions.length}
+					  >
+						{copiedSection === "clarifications_ready" ? "Copied" : "Copy ready-to-send"}
+					  </Button>
+					</div>
+
+					<Separator />
+
+					<div className="rounded-2xl border bg-muted/20 p-4">
+					  <p className="text-xs font-semibold">Subject</p>
+					  <p className="mt-1 text-sm">{clarificationsPack.subject}</p>
+
+					  <p className="mt-4 text-xs font-semibold">Body</p>
+					  <pre className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
+						{clarificationsPack.intro}
+						{clarificationsPack.body}
+					  </pre>
+					</div>
+
+					<p className="text-xs text-muted-foreground">
+					  Tip: Send P1 items first if the deadline is close. Always verify wording against the tender source text.
+					</p>
+				  </CardContent>
+				</Card>
+
+				<div className="mt-4">
+				  <BuyerQuestions checklist={checklist} risks={risks} extractedText={extractedText} onJumpToSource={onJumpToSource} questions={questions} />
+				</div>
+			  </>
+			) : (
+
               <Card className="rounded-2xl">
                 <CardContent className="p-6">
                   <p className="text-sm font-semibold">No clarifications identified</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    We didn&apos;t detect explicit buyer questions or ambiguities. Double-check eligibility, scope boundaries, and submission format in the source text.
-                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">We didn&apos;t detect explicit buyer questions or ambiguities. Double-check eligibility, scope boundaries, and submission format in the source text.</p>
                 </CardContent>
               </Card>
             )}
@@ -1510,8 +1968,8 @@ export default function JobDetailPage() {
             <CardContent className="p-6">
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
-                  <p className="text-sm font-semibold">Draft outline</p>
-                  <p className="mt-1 text-sm text-muted-foreground">A short structured starting point. Always tailor before submission.</p>
+                  <p className="text-sm font-semibold">Tender  outline</p>
+                  <p className="mt-1 text-sm text-muted-foreground"> A structured outline based on the tender text. <span className="font-medium text-foreground">Not a full quotation.</span> Use it to start your tender response, then tailor and verify.</p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
@@ -1524,21 +1982,15 @@ export default function JobDetailPage() {
               <Separator className="my-4" />
 
               {showFailed ? (
-                <p className="text-sm text-muted-foreground">
-                  This bid review could not be completed. Please re-upload the document or try again.
-                </p>
+                <p className="text-sm text-muted-foreground">This tender review could not be completed. Please re-upload the document or try again.</p>
               ) : !showReady ? (
-                <p className="text-sm text-muted-foreground">Preparing a proposal draft outline…</p>
+                <p className="text-sm text-muted-foreground">Preparing a tender draft outline…</p>
               ) : finalizingResults ? (
-                <p className="text-sm text-muted-foreground">
-                  Finalizing results… this should take only a few seconds. If it doesn&apos;t, refresh the page.
-                </p>
+                <p className="text-sm text-muted-foreground">Finalizing results… this should take only a few seconds. If it doesn&apos;t, refresh the page.</p>
               ) : hasDraftForUi ? (
                 <pre className="text-sm whitespace-pre-wrap">{draftLinesForUi.join("\n")}</pre>
               ) : (
-                <p className="text-sm text-muted-foreground">
-                  No draft outline was generated. Try re-uploading the PDF or verify the source text tab.
-                </p>
+                <p className="text-sm text-muted-foreground">No draft outline was generated. Try re-uploading the PDF or verify the source text tab.</p>
               )}
             </CardContent>
           </Card>
@@ -1567,63 +2019,47 @@ export default function JobDetailPage() {
             </Card>
           ) : null}
 
-          {/* ✅ Only change: render-safe source text preview + toggle + scroll anchor */}
           {(() => {
             const fullText = extractedText || "";
             const isLarge = fullText.length > SOURCE_TEXT_PREVIEW_LIMIT;
 
-            const visibleText =
-              !isLarge || showFullSourceText
-                ? fullText
-                : fullText.slice(0, SOURCE_TEXT_PREVIEW_LIMIT);
+            const visibleText = !isLarge || showFullSourceText ? fullText : fullText.slice(0, SOURCE_TEXT_PREVIEW_LIMIT);
 
             return (
               <>
-                <div ref={sourceScrollRef}>
-                  <ScrollArea className="mt-4 h-[520px] rounded-2xl border bg-muted/20">
-                    <pre className="p-4 whitespace-pre-wrap text-sm">
-					  {(() => {
-						const fullText = extractedText || "";
-						const isLarge = fullText.length > SOURCE_TEXT_PREVIEW_LIMIT;
-						const visibleText = !isLarge || showFullSourceText ? fullText : fullText.slice(0, SOURCE_TEXT_PREVIEW_LIMIT);
+                <ScrollArea className="mt-4 h-[520px] rounded-2xl border bg-muted/20">
+                  <pre className="p-4 whitespace-pre-wrap text-sm">
+                    {(() => {
+                      if (!sourceFocus?.idx && sourceFocus?.idx !== 0) {
+                        return visibleText || "No source text yet.";
+                      }
 
-						if (!sourceFocus?.idx && sourceFocus?.idx !== 0) {
-						  return visibleText || "No source text yet.";
-						}
+                      const idx = sourceFocus.idx ?? 0;
+                      if (idx < 0 || idx >= visibleText.length) {
+                        return visibleText || "No source text yet.";
+                      }
 
-						const idx = sourceFocus.idx ?? 0;
-						if (idx < 0 || idx >= visibleText.length) {
-						  return visibleText || "No source text yet.";
-						}
+                      const highlightLen = Math.min(120, visibleText.length - idx);
+                      const before = visibleText.slice(0, idx);
+                      const mid = visibleText.slice(idx, idx + highlightLen);
+                      const after = visibleText.slice(idx + highlightLen);
 
-						// Highlight a short window (avoid huge spans)
-						const highlightLen = Math.min(120, visibleText.length - idx);
-						const before = visibleText.slice(0, idx);
-						const mid = visibleText.slice(idx, idx + highlightLen);
-						const after = visibleText.slice(idx + highlightLen);
-
-						return (
-						  <>
-							{before}
-							<span ref={sourceAnchorRef} className="bg-yellow-200/60 rounded px-1">
-							  {mid}
-							</span>
-							{after}
-						  </>
-						);
-					  })()}
-					</pre>
-
-                  </ScrollArea>
-                </div>
+                      return (
+                        <>
+                          {before}
+                          <span ref={sourceAnchorRef} className="bg-yellow-200/60 rounded px-1">
+                            {mid}
+                          </span>
+                          {after}
+                        </>
+                      );
+                    })()}
+                  </pre>
+                </ScrollArea>
 
                 {isLarge && (
                   <div className="mt-2 flex justify-end">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowFullSourceText((v) => !v)}
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => setShowFullSourceText((v) => !v)}>
                       {showFullSourceText ? "Show preview" : "Show full text"}
                     </Button>
                   </div>
@@ -1638,6 +2074,33 @@ export default function JobDetailPage() {
           </p>
         </TabsContent>
       </Tabs>
+
+      {/* Rename modal (simple inline) */}
+      {renaming ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-2xl border bg-background p-5 shadow-lg">
+            <p className="text-sm font-semibold">Rename</p>
+            <p className="mt-1 text-sm text-muted-foreground">This is a local display name for your tender review.</p>
+
+            <input
+              value={renameInput}
+              onChange={(e) => setRenameInput(e.target.value)}
+              className="mt-4 w-full rounded-xl border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+              placeholder="Enter a name…"
+              autoFocus
+            />
+
+            <div className="mt-4 flex justify-end gap-2">
+              <Button variant="outline" className="rounded-full" onClick={() => setRenaming(false)}>
+                Cancel
+              </Button>
+              <Button className="rounded-full" onClick={handleRenameSave}>
+                Save
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
