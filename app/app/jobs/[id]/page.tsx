@@ -823,6 +823,84 @@ function classifyNextAction(text: string): { target: ActionTargetTab; label: str
   };
 }
 
+function classifyOwnerAndEta(args: { text: string; target: ActionTargetTab; label: string }) {
+  const t = String(args.text ?? "").toLowerCase();
+
+  // Default mapping by target (simple + predictable)
+  let owner =
+    args.target === "questions"
+      ? "Bid Manager"
+      : args.target === "checklist"
+      ? "Sales Ops"
+      : args.target === "risks"
+      ? "Legal"
+      : args.target === "draft"
+      ? "Proposal Lead"
+      : "Bid Manager"; // "text" (source) defaults to Bid Manager
+
+  // Keyword overrides (more accurate)
+  if (
+    t.includes("legal") ||
+    t.includes("liability") ||
+    t.includes("indemn") ||
+    t.includes("contract") ||
+    t.includes("jurisdiction") ||
+    t.includes("gdpr") ||
+    t.includes("data protection") ||
+    t.includes("ip ") ||
+    t.includes("intellectual property")
+  ) {
+    owner = "Legal";
+  }
+
+  if (
+    t.includes("scope") ||
+    t.includes("technical") ||
+    t.includes("specification") ||
+    t.includes("integration") ||
+    t.includes("interface") ||
+    t.includes("delivery") ||
+    t.includes("timeline") ||
+    t.includes("schedule") ||
+    t.includes("sla")
+  ) {
+    // Keep Legal override if it was set above
+    if (owner !== "Legal") owner = "Engineering";
+  }
+
+  if (
+    t.includes("certificate") ||
+    t.includes("registration") ||
+    t.includes("tax") ||
+    t.includes("company") ||
+    t.includes("mandatory") ||
+    t.includes("must") ||
+    t.includes("forms") ||
+    t.includes("appendix") ||
+    t.includes("appendices")
+  ) {
+    if (owner !== "Legal" && owner !== "Engineering") owner = "Sales Ops";
+  }
+
+  // Time estimate (by target, with a couple of keyword nudges)
+  let eta =
+    args.target === "text"
+      ? "2–5 min"
+      : args.target === "checklist"
+      ? "10–20 min"
+      : args.target === "risks"
+      ? "10–20 min"
+      : args.target === "questions"
+      ? "10–30 min"
+      : "15–30 min"; // draft
+
+  if (args.target === "text" && (t.includes("submission") || t.includes("deadline") || t.includes("portal") || t.includes("format"))) {
+    eta = "2–5 min";
+  }
+
+  return { owner, eta };
+}
+
 
 export default function JobDetailPage() {
   const params = useParams();
@@ -1190,32 +1268,40 @@ export default function JobDetailPage() {
       const evidenceQuery = evidenceForAction(cls.target, actionText);
       const evidencePreview = evidencePreviewForQuery(evidenceQuery);
 
-      return {
-        text: actionText,
-        target: cls.target,
-        label: cls.label,
-        why: cls.why,
-        metric: metricForAction(cls.target, actionText),
-        evidenceQuery,
-        evidencePreview,
-      };
+      const meta = classifyOwnerAndEta({ text: actionText, target: cls.target, label: cls.label });
+
+		return {
+		  text: actionText,
+		  target: cls.target,
+		  label: cls.label,
+		  why: cls.why,
+		  metric: metricForAction(cls.target, actionText),
+		  evidenceQuery,
+		  evidencePreview,
+		  owner: meta.owner,
+		  eta: meta.eta,
+		};
     });
   }
 
-  const out: Array<{
-    text: string;
-    target: ActionTargetTab;
-    label: string;
-    why: string;
-    metric: string;
-    evidenceQuery: string;
-    evidencePreview?: string;
-  }> = [];
+    const out: Array<{
+		text: string;
+		target: ActionTargetTab;
+		label: string;
+		why: string;
+		metric: string;
+		evidenceQuery: string;
+		evidencePreview?: string;
+		owner: string;
+		eta: string;
+	  }> = [];
+
 
   // Fallback action 1
   if (mustItems.length) {
     const text = "Verify potential blockers (MUST requirements)";
     const evidenceQuery = evidenceForAction("checklist", text);
+	const meta = classifyOwnerAndEta({ text, target: "<TARGET>", label: "<LABEL>" });
     out.push({
       text,
       target: "checklist",
@@ -1224,10 +1310,15 @@ export default function JobDetailPage() {
       metric: metricForAction("checklist", text),
       evidenceQuery,
       evidencePreview: evidencePreviewForQuery(evidenceQuery),
+	  owner: meta.owner,
+      eta: meta.eta,
+
     });
   } else if (executive?.topRisks?.length) {
     const text = "Validate the top risks and mitigations";
     const evidenceQuery = evidenceForAction("risks", text);
+    const meta = classifyOwnerAndEta({ text, target: "risks", label: "Risks" });
+
     out.push({
       text,
       target: "risks",
@@ -1236,10 +1327,15 @@ export default function JobDetailPage() {
       metric: metricForAction("risks", text),
       evidenceQuery,
       evidencePreview: evidencePreviewForQuery(evidenceQuery),
+      owner: meta.owner,
+      eta: meta.eta,
     });
+
   } else {
     const text = "Confirm mandatory submission requirements";
     const evidenceQuery = evidenceForAction("text", text);
+    const meta = classifyOwnerAndEta({ text, target: "text", label: "Source" });
+
     out.push({
       text,
       target: "text",
@@ -1248,6 +1344,8 @@ export default function JobDetailPage() {
       metric: metricForAction("text", text),
       evidenceQuery,
       evidencePreview: evidencePreviewForQuery(evidenceQuery),
+      owner: meta.owner,
+      eta: meta.eta,
     });
   }
 
@@ -1255,6 +1353,8 @@ export default function JobDetailPage() {
   {
     const text = "Confirm deadline and submission method";
     const evidenceQuery = evidenceForAction("text", text);
+    const meta = classifyOwnerAndEta({ text, target: "text", label: "Source" });
+
     out.push({
       text,
       target: "text",
@@ -1263,13 +1363,18 @@ export default function JobDetailPage() {
       metric: metricForAction("text", text),
       evidenceQuery,
       evidencePreview: evidencePreviewForQuery(evidenceQuery),
+      owner: meta.owner,
+      eta: meta.eta,
     });
+
   }
 
   // Fallback action 3
   if (questions.length) {
     const text = "Draft clarifications to the buyer";
     const evidenceQuery = evidenceForAction("questions", text);
+    const meta = classifyOwnerAndEta({ text, target: "questions", label: "Clarifications" });
+
     out.push({
       text,
       target: "questions",
@@ -1278,10 +1383,15 @@ export default function JobDetailPage() {
       metric: metricForAction("questions", text),
       evidenceQuery,
       evidencePreview: evidencePreviewForQuery(evidenceQuery),
+      owner: meta.owner,
+      eta: meta.eta,
     });
+
   } else if (hasDraftForUi) {
     const text = "Review the tender outline and estimate effort";
     const evidenceQuery = evidenceForAction("draft", text);
+    const meta = classifyOwnerAndEta({ text, target: "draft", label: "Tender outline" });
+
     out.push({
       text,
       target: "draft",
@@ -1290,10 +1400,15 @@ export default function JobDetailPage() {
       metric: metricForAction("draft", text),
       evidenceQuery,
       evidencePreview: evidencePreviewForQuery(evidenceQuery),
+      owner: meta.owner,
+      eta: meta.eta,
     });
-  } else {
+
+    } else {
     const text = "Scan the tender for mandatory forms and formatting";
     const evidenceQuery = evidenceForAction("text", text);
+    const meta = classifyOwnerAndEta({ text, target: "text", label: "Source" });
+
     out.push({
       text,
       target: "text",
@@ -1302,7 +1417,10 @@ export default function JobDetailPage() {
       metric: metricForAction("text", text),
       evidenceQuery,
       evidencePreview: evidencePreviewForQuery(evidenceQuery),
+      owner: meta.owner,
+      eta: meta.eta,
     });
+
   }
 
   return out.slice(0, 3);
@@ -1815,23 +1933,47 @@ export default function JobDetailPage() {
 
                   <p className="text-sm text-muted-foreground">{whyLine}</p>
 
-					<div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
-					  <span className="rounded-full border bg-background/60 px-3 py-1">
-						MUST: <span className="font-medium text-foreground">{mustItems.length}</span>
-					  </span>
-					  <span className="rounded-full border bg-background/60 px-3 py-1">
-						Risks: <span className="font-medium text-foreground">{risks.length}</span>
-					  </span>
-					  <span className="rounded-full border bg-background/60 px-3 py-1">
-						Clarifications: <span className="font-medium text-foreground">{questions.length}</span>
-					  </span>
-					  <span className="rounded-full border bg-background/60 px-3 py-1">
-						Outline:{" "}
-						<span className="font-medium text-foreground">
-						  {hasDraftForUi ? "Available" : "Not detected"}
-						</span>
-					  </span>
-					</div>
+				<div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+				  <button
+					type="button"
+					onClick={() => openTabAndScroll("checklist")}
+					className="rounded-full border bg-background/60 px-3 py-1 transition hover:bg-background hover:border-foreground/20 hover:shadow-sm hover:-translate-y-[1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+					aria-label="Open Requirements tab"
+				  >
+					MUST: <span className="font-medium text-foreground">{mustItems.length}</span>
+				  </button>
+
+				  <button
+					type="button"
+					onClick={() => openTabAndScroll("risks")}
+					className="rounded-full border bg-background/60 px-3 py-1 transition hover:bg-background hover:border-foreground/20 hover:shadow-sm hover:-translate-y-[1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+					aria-label="Open Risks tab"
+				  >
+					Risks: <span className="font-medium text-foreground">{risks.length}</span>
+				  </button>
+
+				  <button
+					type="button"
+					onClick={() => openTabAndScroll("questions")}
+					className="rounded-full border bg-background/60 px-3 py-1 transition hover:bg-background hover:border-foreground/20 hover:shadow-sm hover:-translate-y-[1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+					aria-label="Open Clarifications tab"
+				  >
+					Clarifications: <span className="font-medium text-foreground">{questions.length}</span>
+				  </button>
+
+				  <button
+					type="button"
+					onClick={() => openTabAndScroll("draft")}
+					className="rounded-full border bg-background/60 px-3 py-1 transition hover:bg-background hover:border-foreground/20 hover:shadow-sm hover:-translate-y-[1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+					aria-label="Open Tender outline tab"
+				  >
+					Outline:{" "}
+					<span className="font-medium text-foreground">
+					  {hasDraftForUi ? "Available" : "Not detected"}
+					</span>
+				  </button>
+				</div>
+
 
                 </>
               )}
@@ -2036,13 +2178,23 @@ export default function JobDetailPage() {
 								) : null}
 
                               <div className="mt-2 flex flex-wrap items-center gap-2">
-                                <Badge variant="secondary" className="rounded-full">
-                                  {a.label}
-                                </Badge>
-                                <Badge variant="outline" className="rounded-full text-muted-foreground">
-                                  {a.metric}
-                                </Badge>
-                              </div>
+								  <Badge variant="secondary" className="rounded-full">
+									{a.label}
+								  </Badge>
+
+								  <Badge variant="outline" className="rounded-full text-muted-foreground">
+									{a.metric}
+								  </Badge>
+
+								  <Badge variant="outline" className="rounded-full text-muted-foreground">
+									Owner: <span className="ml-1 text-foreground font-medium">{(a as any).owner}</span>
+								  </Badge>
+
+								  <Badge variant="outline" className="rounded-full text-muted-foreground">
+									Time: <span className="ml-1 text-foreground font-medium">{(a as any).eta}</span>
+								  </Badge>
+								</div>
+
                             </div>
 
                             <div className="shrink-0">
@@ -2077,14 +2229,41 @@ export default function JobDetailPage() {
                   <Separator className="my-3" />
 
                   {executive.keyFindings?.length ? (
-                    <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-                      {executive.keyFindings.slice(0, 7).map((x: string, i: number) => (
-                        <li key={i}>{x}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No key findings detected.</p>
-                  )}
+					  <ul className="space-y-2">
+						{executive.keyFindings.slice(0, 7).map((x: string, i: number) => {
+						  const raw = String(x ?? "").replace(/\s+/g, " ").trim();
+						  const evidenceQuery = raw.length > 240 ? raw.slice(0, 239) + "…" : raw;
+
+						  return (
+							<li key={i} className="flex items-start justify-between gap-3">
+							  <div className="min-w-0 flex-1">
+								<p className="text-sm text-muted-foreground leading-relaxed">
+								  <span className="mr-2">•</span>
+								  {x}
+								</p>
+							  </div>
+
+							  <Button
+								variant="secondary"
+								size="sm"
+								className="h-7 shrink-0 rounded-full px-3 text-xs transition hover:bg-background hover:border-foreground/20 hover:shadow-sm hover:-translate-y-[1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+								onClick={(e) => {
+								  e.preventDefault();
+								  onJumpToSource(evidenceQuery);
+								}}
+								disabled={!extractedText}
+								aria-label={`Show evidence for key finding ${i + 1}`}
+							  >
+								Evidence
+							  </Button>
+							</li>
+						  );
+						})}
+					  </ul>
+					) : (
+					  <p className="text-sm text-muted-foreground">No key findings detected.</p>
+					)}
+
                 </div>
               </div>
 
@@ -2382,43 +2561,49 @@ export default function JobDetailPage() {
             return (
               <>
                 <ScrollArea className="mt-4 h-[520px] rounded-2xl border bg-muted/20">
-                  <pre className="p-4 whitespace-pre-wrap text-sm">
-                    {(() => {
-                      if (!sourceFocus?.idx && sourceFocus?.idx !== 0) {
-                        return visibleText || "No source text yet.";
-                      }
+				  <div className="w-full overflow-x-auto">
+					<pre
+					  className="min-w-max whitespace-pre p-4 text-xs leading-relaxed"
+					  style={{ scrollbarGutter: "stable both-edges" }}
+					>
+					  {(() => {
+						if (!sourceFocus?.idx && sourceFocus?.idx !== 0) {
+						  return visibleText || "No source text yet.";
+						}
 
-                      const idx = sourceFocus.idx ?? 0;
-                      if (idx < 0 || idx >= visibleText.length) {
-                        return visibleText || "No source text yet.";
-                      }
+						const idx = sourceFocus.idx ?? 0;
+						if (idx < 0 || idx >= visibleText.length) {
+						  return visibleText || "No source text yet.";
+						}
 
-                      const lineStartIdx = visibleText.lastIndexOf("\n", idx);
-					const start = lineStartIdx === -1 ? 0 : lineStartIdx + 1;
+						const lineStartIdx = visibleText.lastIndexOf("\n", idx);
+						const start = lineStartIdx === -1 ? 0 : lineStartIdx + 1;
 
-					const lineEndIdx = visibleText.indexOf("\n", idx);
-					const end = lineEndIdx === -1 ? visibleText.length : lineEndIdx;
+						const lineEndIdx = visibleText.indexOf("\n", idx);
+						const end = lineEndIdx === -1 ? visibleText.length : lineEndIdx;
 
-					const before = visibleText.slice(0, start);
-					const mid = visibleText.slice(start, end);
-					const after = visibleText.slice(end);
+						const before = visibleText.slice(0, start);
+						const mid = visibleText.slice(start, end);
+						const after = visibleText.slice(end);
 
-					return (
-					  <>
-						{before}
-						<span
-						  ref={sourceAnchorRef}
-						  className="block rounded-md bg-yellow-200/50 px-2 py-1 border-l-4 border-yellow-500"
-						>
-						  {mid}
-						</span>
-						{after}
-					  </>
-					);
+						return (
+						  <>
+							{before}
+							<span
+							  ref={sourceAnchorRef}
+							  className="block whitespace-pre rounded-md bg-yellow-200/50 px-2 py-1 border-l-4 border-yellow-500"
+							>
+							  {mid}
+							</span>
+							{after}
+						  </>
+						);
+					  })()}
+					</pre>
+				  </div>
+				</ScrollArea>
 
-                    })()}
-                  </pre>
-                </ScrollArea>
+
 
                 {isLarge && (
                   <div className="mt-2 flex justify-end">
