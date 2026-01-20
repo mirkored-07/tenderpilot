@@ -1459,9 +1459,103 @@ export default function JobDetailPage() {
 
   const topRisksForPanel = useMemo(() => (executive.topRisks ?? []).slice(0, 3), [executive.topRisks]);
 
+	  // --- Go/No-Go pills: consistent tones (no new badges) ---
+	const pillBase =
+	  "group inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition hover:shadow-sm hover:-translate-y-[1px] active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2";
+
+	const countBase =
+	  "inline-flex h-5 min-w-[24px] items-center justify-center rounded-full border bg-background px-2 text-[11px] font-semibold";
+
+	type PillKind = "blockers" | "risks" | "questions" | "outline";
+
+	function pillTone(kind: PillKind) {
+	  const blockers = mustItems.length;
+	  const r = risks.length;
+	  const q = questions.length;
+	  const outlineOk = hasDraftForUi;
+
+	  const isHold = verdictState === "hold";
+	  const isCaution = verdictState === "caution";
+
+	  const neutral =
+		"border-muted/60 bg-muted/20 text-muted-foreground hover:bg-background hover:text-foreground";
+	  const critical =
+		"border-red-200 bg-background text-red-800 hover:border-red-300 hover:bg-red-50/40";
+	  const warn =
+		"border-amber-200 bg-background text-amber-900 hover:border-amber-300 hover:bg-amber-50/40";
+	  const info =
+		"border-sky-200 bg-background text-sky-900 hover:border-sky-300 hover:bg-sky-50/40";
+
+	  if (kind === "blockers") {
+		// If HOLD, keep border red even on hover (no “second red fill” needed)
+		if (isHold) return critical;
+		if (blockers > 0) return warn;
+		return neutral;
+	  }
+
+	  if (kind === "risks") {
+		if (isCaution) return warn;
+		if (r >= 3) return warn;
+		if (r > 0) return "border-amber-200/60 bg-background text-amber-900 hover:border-amber-300 hover:bg-amber-50/30";
+		return neutral;
+	  }
+
+	  if (kind === "questions") {
+		if (q >= 5) return info;
+		if (q > 0) return "border-sky-200/60 bg-background text-sky-900 hover:border-sky-300 hover:bg-sky-50/30";
+		return neutral;
+	  }
+
+	  if (kind === "outline") {
+		if (!outlineOk) return warn;
+		return neutral;
+	  }
+
+	  return neutral;
+	}
+
+	function countTone(kind: PillKind) {
+	  const blockers = mustItems.length;
+	  const r = risks.length;
+	  const q = questions.length;
+	  const outlineOk = hasDraftForUi;
+
+	  const isHold = verdictState === "hold";
+	  const isCaution = verdictState === "caution";
+
+	  const neutral = "border-muted/60 text-foreground";
+	  const critical = "border-red-200 text-red-800";
+	  const warn = "border-amber-200 text-amber-900";
+	  const info = "border-sky-200 text-sky-900";
+
+	  if (kind === "blockers") {
+		if (isHold) return critical;
+		if (blockers > 0) return warn;
+		return neutral;
+	  }
+
+	  if (kind === "risks") {
+		if (isCaution) return warn;
+		if (r > 0) return warn;
+		return neutral;
+	  }
+
+	  if (kind === "questions") {
+		if (q > 0) return info;
+		return neutral;
+	  }
+
+	  if (kind === "outline") {
+		if (!outlineOk) return warn;
+		return neutral;
+	  }
+
+	  return neutral;
+	}
+		
   const whyLine = useMemo(() => {
     if (!showReady) return "Why: Analyzing requirements, risks, and clarifications.";
-    if (verdictState === "hold") return `Why: MUST requirements detected (${mustItems.length}). Review potential blockers first.`;
+    if (verdictState === "hold") return `Why: ${mustItems.length} blockers detected. Review blockers first.`;
     if (verdictState === "caution") {
       const hasHigh = topRisksForPanel.some((r: any) => String(r?.severity ?? "").toLowerCase() === "high");
       if (hasHigh) return "Why: High-severity risk detected. Confirm feasibility before committing.";
@@ -1933,47 +2027,49 @@ export default function JobDetailPage() {
 
                   <p className="text-sm text-muted-foreground">{whyLine}</p>
 
-				<div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+				<div className="mt-3 flex flex-wrap gap-2">
 				  <button
 					type="button"
 					onClick={() => openTabAndScroll("checklist")}
-					className="rounded-full border bg-background/60 px-3 py-1 transition hover:bg-background hover:border-foreground/20 hover:shadow-sm hover:-translate-y-[1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+					className={`${pillBase} ${pillTone("blockers")}`}
 					aria-label="Open Requirements tab"
 				  >
-					MUST: <span className="font-medium text-foreground">{mustItems.length}</span>
+					<span className="font-medium">Blockers</span>
+					<span className={`${countBase} ${countTone("blockers")}`}>{mustItems.length}</span>
 				  </button>
 
 				  <button
 					type="button"
 					onClick={() => openTabAndScroll("risks")}
-					className="rounded-full border bg-background/60 px-3 py-1 transition hover:bg-background hover:border-foreground/20 hover:shadow-sm hover:-translate-y-[1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+					className={`${pillBase} ${pillTone("risks")}`}
 					aria-label="Open Risks tab"
 				  >
-					Risks: <span className="font-medium text-foreground">{risks.length}</span>
+					<span className="font-medium">Risks</span>
+					<span className={`${countBase} ${countTone("risks")}`}>{risks.length}</span>
 				  </button>
 
 				  <button
 					type="button"
 					onClick={() => openTabAndScroll("questions")}
-					className="rounded-full border bg-background/60 px-3 py-1 transition hover:bg-background hover:border-foreground/20 hover:shadow-sm hover:-translate-y-[1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-					aria-label="Open Clarifications tab"
+					className={`${pillBase} ${pillTone("questions")}`}
+					aria-label="Open Clarifications tab (Open questions)"
 				  >
-					Clarifications: <span className="font-medium text-foreground">{questions.length}</span>
+					<span className="font-medium">Open questions</span>
+					<span className={`${countBase} ${countTone("questions")}`}>{questions.length}</span>
 				  </button>
 
 				  <button
 					type="button"
 					onClick={() => openTabAndScroll("draft")}
-					className="rounded-full border bg-background/60 px-3 py-1 transition hover:bg-background hover:border-foreground/20 hover:shadow-sm hover:-translate-y-[1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+					className={`${pillBase} ${pillTone("outline")}`}
 					aria-label="Open Tender outline tab"
 				  >
-					Outline:{" "}
-					<span className="font-medium text-foreground">
+					<span className="font-medium">Outline</span>
+					<span className={`${countBase} ${countTone("outline")}`}>
 					  {hasDraftForUi ? "Available" : "Not detected"}
 					</span>
 				  </button>
 				</div>
-
 
                 </>
               )}
@@ -2066,62 +2162,69 @@ export default function JobDetailPage() {
 
                   <Separator className="my-3" />
 
-                  {topRisksForPanel.length ? (
-				  <div className="space-y-2">
-					{topRisksForPanel.map((r: any, i: number) => {
-					  const sev = String(r?.severity ?? "medium").toLowerCase();
-					  const sevLabel = sev === "high" ? "High" : sev === "low" ? "Low" : "Medium";
-					  const sevCls =
-						sev === "high"
-						  ? "border-red-200 bg-red-50 text-red-800"
-						  : sev === "low"
-						  ? "border-muted bg-background text-muted-foreground"
-						  : "border-amber-200 bg-amber-50 text-amber-900";
+									  {topRisksForPanel.length ? (
+					  <div className="space-y-2">
+						{topRisksForPanel.map((r: any, i: number) => {
+						  const sev = String(r?.severity ?? "medium").toLowerCase();
+						  const sevLabel = sev === "high" ? "High" : sev === "low" ? "Low" : "Medium";
 
-					  const title = String(r?.title ?? "").trim();
-					  const detail = String(r?.detail ?? "").trim();
-					  const jumpText = detail ? `${title}\n${detail}` : title;
-					  const meta = classifyRisk(`${title} ${detail}`.trim());
+						  // Outline-only severity chips (don’t compete with Go/No-Go badge)
+						  const sevCls =
+							sev === "high"
+							  ? "border-red-200 text-red-800"
+							  : sev === "low"
+							  ? "border-muted/60 text-muted-foreground"
+							  : "border-amber-200 text-amber-900";
 
-					  return (
-						<div key={i} className="rounded-2xl border bg-background p-3">
-						  <div className="flex items-start justify-between gap-3">
-							<div className="min-w-0">
-							  <div className="flex flex-wrap items-center gap-2">
-								<span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] ${sevCls}`}>
-								  {sevLabel}
-								</span>
-								<span className="inline-flex items-center rounded-full border bg-muted/20 px-2 py-0.5 text-[11px] text-muted-foreground">
-								  {meta.label}
-								</span>
-								<span className="text-[11px] text-muted-foreground">{meta.hint}</span>
+						  const title = String(r?.title ?? "").trim();
+						  const detail = String(r?.detail ?? "").trim();
+						  const jumpText = detail ? `${title}\n${detail}` : title;
+						  const meta = classifyRisk(`${title} ${detail}`.trim());
+
+						  return (
+							<div key={i} className="rounded-2xl border bg-background p-3">
+							  <div className="flex items-start justify-between gap-3">
+								<div className="min-w-0">
+								  <div className="flex flex-wrap items-center gap-2">
+									<span
+									  className={`inline-flex items-center rounded-full border bg-background px-2 py-0.5 text-[11px] font-medium ${sevCls}`}
+									>
+									  {sevLabel}
+									</span>
+
+									<span className="inline-flex items-center rounded-full border bg-muted/20 px-2 py-0.5 text-[11px] text-muted-foreground">
+									  {meta.label}
+									</span>
+
+									<span className="text-[11px] text-muted-foreground">{meta.hint}</span>
+								  </div>
+
+								  <p className="mt-2 text-sm font-medium">{title || "Risk"}</p>
+								  {detail ? <p className="mt-1 text-xs text-muted-foreground">{detail}</p> : null}
+								</div>
+
+								<Button
+								  variant="outline"
+								  className="rounded-full shrink-0"
+								  onClick={() => onJumpToSource(jumpText)}
+								  disabled={!extractedText}
+								>
+								  Jump
+								</Button>
 							  </div>
-
-							  <p className="mt-2 text-sm font-medium">{title || "Risk"}</p>
-							  {detail ? <p className="mt-1 text-xs text-muted-foreground">{detail}</p> : null}
 							</div>
+						  );
+						})}
+					  </div>
+					) : (
+					  <>
+						<p className="text-sm text-muted-foreground">No risks detected.</p>
+						<p className="mt-1 text-xs text-muted-foreground">
+						  Scan legal terms, delivery constraints, and submission format in the tender.
+						</p>
+					  </>
+					)}
 
-							<Button
-							  variant="outline"
-							  className="rounded-full shrink-0"
-							  onClick={() => onJumpToSource(jumpText)}
-							  disabled={!extractedText}
-							>
-							  Jump
-							</Button>
-						  </div>
-						</div>
-					  );
-					})}
-				  </div>
-				) : (
-				  <>
-					<p className="text-sm text-muted-foreground">No risks detected.</p>
-					<p className="mt-1 text-xs text-muted-foreground">
-					  Scan legal terms, delivery constraints, and submission format in the tender.
-					</p>
-				  </>
-				)}
 
                 </div>
               </div>
