@@ -726,6 +726,103 @@ function classifyBlocker(text: string): { label: string; hint: string } {
   return { label: "General", hint: "Check this requirement in the tender source." };
 }
 
+type ActionTargetTab = "checklist" | "risks" | "questions" | "draft" | "text";
+
+function classifyNextAction(text: string): { target: ActionTargetTab; label: string; why: string } {
+  const t = String(text ?? "").toLowerCase();
+
+  // Clarifications / buyer questions
+  if (
+    t.includes("clarification") ||
+    t.includes("clarifications") ||
+    t.includes("question") ||
+    t.includes("questions") ||
+    t.includes("ask") ||
+    t.includes("rfi") ||
+    t.includes("buyer")
+  ) {
+    return {
+      target: "questions",
+      label: "Clarifications",
+      why: "Align unknowns early to avoid rework and reduce bid risk.",
+    };
+  }
+
+  // Requirements / eligibility / must
+  if (
+    t.includes("must") ||
+    t.includes("mandatory") ||
+    t.includes("requirement") ||
+    t.includes("requirements") ||
+    t.includes("eligib") ||
+    t.includes("qualification") ||
+    t.includes("compliance") ||
+    t.includes("certificate") ||
+    t.includes("form")
+  ) {
+    return {
+      target: "checklist",
+      label: "Requirements",
+      why: "Confirm eligibility and mandatory items before investing in the response.",
+    };
+  }
+
+  // Risks / legal / security / penalties
+  if (
+    t.includes("risk") ||
+    t.includes("liability") ||
+    t.includes("penalt") ||
+    t.includes("legal") ||
+    t.includes("security") ||
+    t.includes("privacy") ||
+    t.includes("gdpr") ||
+    t.includes("ip ") ||
+    t.includes("intellectual property")
+  ) {
+    return {
+      target: "risks",
+      label: "Risks",
+      why: "Surface exposure and negotiation points early.",
+    };
+  }
+
+  // Outline / draft
+  if (
+    t.includes("outline") ||
+    t.includes("draft") ||
+    t.includes("structure") ||
+    t.includes("response plan")
+  ) {
+    return {
+      target: "draft",
+      label: "Tender outline",
+      why: "Use the outline to estimate effort and assign owners fast.",
+    };
+  }
+
+  // Deadlines / submission / portal / format -> Source
+  if (
+    t.includes("deadline") ||
+    t.includes("submit") ||
+    t.includes("submission") ||
+    t.includes("portal") ||
+    t.includes("format") ||
+    t.includes("appendix")
+  ) {
+    return {
+      target: "text",
+      label: "Source",
+      why: "Verify submission rules directly in the tender text.",
+    };
+  }
+
+  return {
+    target: "text",
+    label: "Source",
+    why: "Validate details in the original tender text.",
+  };
+}
+
 
 export default function JobDetailPage() {
   const params = useParams();
@@ -1017,6 +1114,209 @@ export default function JobDetailPage() {
     if (draftLinesForUi.length === 1 && draftLinesForUi[0].toLowerCase().includes("not available")) return false;
     return true;
   }, [draftLinesForUi]);
+
+  const nextActionsForUi = useMemo(() => {
+  const deadlineText = String(executive?.submissionDeadline ?? "").trim();
+  const deadlineDetected = Boolean(deadlineText);
+
+  const firstMust = mustItems[0] ?? "";
+  const firstQuestion = questions[0] ?? "";
+  const firstRisk = executive?.topRisks?.[0]?.title
+    ? `${executive.topRisks[0].title}${executive.topRisks[0].detail ? ` — ${executive.topRisks[0].detail}` : ""}`
+    : "";
+  const firstDraftLine = draftLinesForUi[0] ?? "";
+
+  function isSubmissionOrDeadlineAction(actionText: string) {
+    const t = String(actionText ?? "").toLowerCase();
+    return (
+      t.includes("deadline") ||
+      t.includes("due date") ||
+      t.includes("submission") ||
+      t.includes("submit") ||
+      t.includes("delivered") ||
+      t.includes("delivery") ||
+      t.includes("portal") ||
+      t.includes("format") ||
+      t.includes("physic") || // physical/physically
+      t.includes("electronic") ||
+      t.includes("late")
+    );
+  }
+
+  function compactForQuery(input: string, maxLen = 220) {
+    const s = String(input ?? "").replace(/\s+/g, " ").trim();
+    if (!s) return "";
+    return s.length > maxLen ? s.slice(0, maxLen - 1) + "…" : s;
+  }
+
+  // Chips must be truthful (no "Deadline detected" on generic actions)
+  function metricForAction(target: ActionTargetTab, actionText: string): string {
+    if (target === "checklist") return `${mustItems.length} MUST`;
+    if (target === "risks") return `${risks.length} risks`;
+    if (target === "questions") return `${questions.length} questions`;
+    if (target === "draft") return hasDraftForUi ? "Outline available" : "Outline not detected";
+
+    // Source
+    if (deadlineDetected && isSubmissionOrDeadlineAction(actionText)) return "Deadline detected";
+    return "Source";
+  }
+
+  // Evidence query: anchor it to something that exists, keep it short
+  function evidenceForAction(target: ActionTargetTab, actionText: string) {
+    if (target === "checklist" && firstMust) return compactForQuery(firstMust, 240);
+    if (target === "questions" && firstQuestion) return compactForQuery(firstQuestion, 240);
+    if (target === "risks" && firstRisk) return compactForQuery(firstRisk, 240);
+    if (target === "draft" && firstDraftLine) return compactForQuery(firstDraftLine, 240);
+
+    // Source: only use deadline line if the action is actually about submission/deadline
+    if (target === "text" && deadlineDetected && isSubmissionOrDeadlineAction(actionText)) {
+      return compactForQuery(deadlineText, 240);
+    }
+
+    return compactForQuery(actionText, 240);
+  }
+
+  // One-line evidence preview if we can find a match
+  function evidencePreviewForQuery(query: string) {
+    if (!extractedText) return "";
+    const match = findExcerpt(extractedText, query);
+    if (!match?.snippet) return "";
+    return compactForQuery(match.snippet, 140);
+  }
+
+  if (executive?.nextActions?.length) {
+    return executive.nextActions.slice(0, 3).map((actionText: string) => {
+      const cls = classifyNextAction(actionText);
+      const evidenceQuery = evidenceForAction(cls.target, actionText);
+      const evidencePreview = evidencePreviewForQuery(evidenceQuery);
+
+      return {
+        text: actionText,
+        target: cls.target,
+        label: cls.label,
+        why: cls.why,
+        metric: metricForAction(cls.target, actionText),
+        evidenceQuery,
+        evidencePreview,
+      };
+    });
+  }
+
+  const out: Array<{
+    text: string;
+    target: ActionTargetTab;
+    label: string;
+    why: string;
+    metric: string;
+    evidenceQuery: string;
+    evidencePreview?: string;
+  }> = [];
+
+  // Fallback action 1
+  if (mustItems.length) {
+    const text = "Verify potential blockers (MUST requirements)";
+    const evidenceQuery = evidenceForAction("checklist", text);
+    out.push({
+      text,
+      target: "checklist",
+      label: "Requirements",
+      why: "Confirm eligibility and mandatory items before investing in the response.",
+      metric: metricForAction("checklist", text),
+      evidenceQuery,
+      evidencePreview: evidencePreviewForQuery(evidenceQuery),
+    });
+  } else if (executive?.topRisks?.length) {
+    const text = "Validate the top risks and mitigations";
+    const evidenceQuery = evidenceForAction("risks", text);
+    out.push({
+      text,
+      target: "risks",
+      label: "Risks",
+      why: "Surface exposure and negotiation points early.",
+      metric: metricForAction("risks", text),
+      evidenceQuery,
+      evidencePreview: evidencePreviewForQuery(evidenceQuery),
+    });
+  } else {
+    const text = "Confirm mandatory submission requirements";
+    const evidenceQuery = evidenceForAction("text", text);
+    out.push({
+      text,
+      target: "text",
+      label: "Source",
+      why: "Verify submission rules directly in the tender text.",
+      metric: metricForAction("text", text),
+      evidenceQuery,
+      evidencePreview: evidencePreviewForQuery(evidenceQuery),
+    });
+  }
+
+  // Fallback action 2
+  {
+    const text = "Confirm deadline and submission method";
+    const evidenceQuery = evidenceForAction("text", text);
+    out.push({
+      text,
+      target: "text",
+      label: "Source",
+      why: "Avoid last-minute surprises with portal, format, and deadlines.",
+      metric: metricForAction("text", text),
+      evidenceQuery,
+      evidencePreview: evidencePreviewForQuery(evidenceQuery),
+    });
+  }
+
+  // Fallback action 3
+  if (questions.length) {
+    const text = "Draft clarifications to the buyer";
+    const evidenceQuery = evidenceForAction("questions", text);
+    out.push({
+      text,
+      target: "questions",
+      label: "Clarifications",
+      why: "Align unknowns early to avoid rework and reduce bid risk.",
+      metric: metricForAction("questions", text),
+      evidenceQuery,
+      evidencePreview: evidencePreviewForQuery(evidenceQuery),
+    });
+  } else if (hasDraftForUi) {
+    const text = "Review the tender outline and estimate effort";
+    const evidenceQuery = evidenceForAction("draft", text);
+    out.push({
+      text,
+      target: "draft",
+      label: "Tender outline",
+      why: "Use the outline to estimate effort and assign owners fast.",
+      metric: metricForAction("draft", text),
+      evidenceQuery,
+      evidencePreview: evidencePreviewForQuery(evidenceQuery),
+    });
+  } else {
+    const text = "Scan the tender for mandatory forms and formatting";
+    const evidenceQuery = evidenceForAction("text", text);
+    out.push({
+      text,
+      target: "text",
+      label: "Source",
+      why: "Catch hidden submission rules that can invalidate the response.",
+      metric: metricForAction("text", text),
+      evidenceQuery,
+      evidencePreview: evidencePreviewForQuery(evidenceQuery),
+    });
+  }
+
+  return out.slice(0, 3);
+}, [
+  executive,
+  mustItems,
+  risks.length,
+  questions.length,
+  hasDraftForUi,
+  draftLinesForUi,
+  extractedText,
+]);
+
+
 
 	const clarificationsPack = useMemo(() => {
 	  const tenderName = String(displayName || job?.file_name || "Tender").trim();
@@ -1687,34 +1987,88 @@ export default function JobDetailPage() {
               {/* Next actions + key findings */}
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="rounded-2xl border bg-muted/20 p-4">
-                  <p className="text-sm font-semibold">Next actions (today)</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Start here before writing a full tender response.</p>
+                  <p className="text-sm font-semibold">Next actions</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Do these before writing a full tender response.</p>
                   <Separator className="my-3" />
 
-                  {executive.nextActions?.length ? (
-                    <ul className="list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-                      {executive.nextActions.slice(0, 3).map((x: string, i: number) => (
-                        <li key={i}>{x}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <>
-                      <p className="text-sm text-muted-foreground">No next actions detected.</p>
-                      <p className="mt-1 text-xs text-muted-foreground">Confirm blockers, deadline, and submission requirements in the tender.</p>
-                    </>
-                  )}
+                  <div className="space-y-2">
+                    {nextActionsForUi.map(
+                      (
+                        a: {
+						  text: string;
+						  target: ActionTargetTab;
+						  label: string;
+						  why: string;
+						  metric: string;
+						  evidenceQuery: string;
+						  evidencePreview?: string;
+						},
 
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <Button variant="outline" className="rounded-full" onClick={() => openTabAndScroll("questions")}>
-                      Open Clarifications
-                    </Button>
-                    <Button variant="outline" className="rounded-full" onClick={() => openTabAndScroll("draft")}>
-                      Open Outline
-                    </Button>
-                    <Button variant="outline" className="rounded-full" onClick={() => openTabAndScroll("text")}>
-                      Open Source
-                    </Button>
+                        i: number
+                      ) => (
+                        <div
+						  key={`${i}-${a.target}-${a.text}`}
+						  role="button"
+						  tabIndex={0}
+						  onClick={() => openTabAndScroll(a.target)}
+						  onKeyDown={(e) => {
+							if (e.key === "Enter" || e.key === " ") {
+							  e.preventDefault();
+							  openTabAndScroll(a.target);
+							}
+						  }}
+						  className="group w-full cursor-pointer rounded-xl border bg-background/60 p-3 text-left transition hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+						>
+
+                          <div className="flex items-start gap-3">
+                            <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold text-muted-foreground group-hover:text-foreground">
+                              {i + 1}
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-foreground">{a.text}</p>
+                              <p className="mt-1 text-xs text-muted-foreground">{a.why}</p>
+
+								{a.evidencePreview ? (
+								  <p className="mt-1 text-xs text-muted-foreground">
+									<span className="font-medium text-foreground">Evidence:</span> {a.evidencePreview}
+								  </p>
+								) : null}
+
+                              <div className="mt-2 flex flex-wrap items-center gap-2">
+                                <Badge variant="secondary" className="rounded-full">
+                                  {a.label}
+                                </Badge>
+                                <Badge variant="outline" className="rounded-full text-muted-foreground">
+                                  {a.metric}
+                                </Badge>
+                              </div>
+                            </div>
+
+                            <div className="shrink-0">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="rounded-full"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  onJumpToSource(a.evidenceQuery);
+                                }}
+                                disabled={!extractedText}
+                              >
+                                Evidence
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    )}
                   </div>
+
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Tip: click an action to jump to the relevant tab. “Evidence” opens Source and highlights the excerpt used.
+                  </p>
                 </div>
 
                 <div className="rounded-2xl border bg-muted/20 p-4">
@@ -2039,20 +2393,29 @@ export default function JobDetailPage() {
                         return visibleText || "No source text yet.";
                       }
 
-                      const highlightLen = Math.min(120, visibleText.length - idx);
-                      const before = visibleText.slice(0, idx);
-                      const mid = visibleText.slice(idx, idx + highlightLen);
-                      const after = visibleText.slice(idx + highlightLen);
+                      const lineStartIdx = visibleText.lastIndexOf("\n", idx);
+					const start = lineStartIdx === -1 ? 0 : lineStartIdx + 1;
 
-                      return (
-                        <>
-                          {before}
-                          <span ref={sourceAnchorRef} className="bg-yellow-200/60 rounded px-1">
-                            {mid}
-                          </span>
-                          {after}
-                        </>
-                      );
+					const lineEndIdx = visibleText.indexOf("\n", idx);
+					const end = lineEndIdx === -1 ? visibleText.length : lineEndIdx;
+
+					const before = visibleText.slice(0, start);
+					const mid = visibleText.slice(start, end);
+					const after = visibleText.slice(end);
+
+					return (
+					  <>
+						{before}
+						<span
+						  ref={sourceAnchorRef}
+						  className="block rounded-md bg-yellow-200/50 px-2 py-1 border-l-4 border-yellow-500"
+						>
+						  {mid}
+						</span>
+						{after}
+					  </>
+					);
+
                     })()}
                   </pre>
                 </ScrollArea>
