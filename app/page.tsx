@@ -14,13 +14,18 @@ export default function Home() {
           </Link>
 
           <div className="flex items-center gap-2">
-            <Button asChild variant="ghost" className="rounded-full">
-              <Link href="/how-it-works">How it works</Link>
-            </Button>
-            <Button asChild className="rounded-full">
-              <Link href="/app/upload">Upload file</Link>
-            </Button>
-          </div>
+			  <Button asChild variant="ghost" className="rounded-full">
+				<Link href="/how-it-works">How it works</Link>
+			  </Button>
+
+			  <Button asChild variant="outline" className="rounded-full">
+				<Link href="/login">Sign in</Link>
+			  </Button>
+
+			  <Button asChild className="rounded-full">
+				<Link href="/app/upload">Upload file</Link>
+			  </Button>
+			</div>
         </div>
       </header>
 
@@ -48,6 +53,12 @@ export default function Home() {
             <p className="mt-3 text-sm text-muted-foreground">
               You’ll sign in via magic link. No password.
             </p>
+			<p className="mt-2 text-sm text-muted-foreground">
+			  Already have an account?{" "}
+			  <Link href="/login" className="text-foreground underline underline-offset-4">
+				Sign in
+			  </Link>
+			</p>
 
             <div className="mt-6 flex flex-wrap items-center gap-2">
               <span className="rounded-full border bg-background/60 px-3 py-1 text-xs text-muted-foreground">

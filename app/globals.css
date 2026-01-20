@@ -123,6 +123,7 @@
     @apply bg-background text-foreground;
   }
 }
+
 /* Premium background */
 .premium-bg {
   position: relative;
@@ -148,4 +149,37 @@
   opacity: 0.06;
   pointer-events: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E");
+}
+
+/* Premium background — dark mode (clean + subtle, less “smoke”) */
+.dark .premium-bg::before {
+  background:
+    radial-gradient(1200px 600px at 50% -200px, rgba(255, 255, 255, 0.06), transparent 60%),
+    linear-gradient(to bottom, hsl(240 10% 8%), hsl(240 10% 6%));
+}
+
+.dark .premium-bg::after {
+  opacity: 0.02; /* tiny texture; set to 0 for ultra-clean */
+}
+
+/* UI density: only affects desktop/tablet */
+@media (min-width: 768px) {
+  html.tp-density-compact .tp-app-main {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+  }
+
+  html.tp-density-compact .tp-app-main .space-y-6 {
+    row-gap: 1rem !important;
+  }
+
+  html.tp-density-compact .tp-app-main .space-y-8 {
+    row-gap: 1.25rem !important;
+  }
+
+  html.tp-density-compact .tp-app-container {
+    max-width: 90rem !important;
+  }
 }
