@@ -11,24 +11,17 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { SideNav } from "./_components/side-nav";
 import { TelemetryInit } from "./_components/telemetry-init";
-import { SignOutMenuItem } from "./_components/sign-out-menu-item";
-import { UiDensityInit } from "./_components/ui-density-init";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen premium-bg bg-background">
       <TelemetryInit />
       <div className="grid min-h-screen grid-cols-1 md:grid-cols-[280px_1fr]">
-	  <UiDensityInit />
-
         <aside className="hidden md:flex flex-col border-r bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/40">
           <div className="h-16 px-6 flex items-center justify-between">
             <Link href="/app/jobs" className="font-semibold text-lg tracking-tight">
               TenderPilot
             </Link>
-            <span className="text-[10px] rounded-full border px-2 py-1 text-muted-foreground">
-              MVP
-            </span>
           </div>
 
           <Separator />
@@ -74,15 +67,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem asChild>
-                  <Link href="/app/account">Account</Link>
+                  <Link href="/app/account">Settings</Link>
                 </DropdownMenuItem>
-                <SignOutMenuItem />
+                <DropdownMenuItem asChild>
+                  <Link href="/">Sign out</Link>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </header>
 
-          <main className="tp-app-main flex-1 px-4 py-6 md:px-8 md:py-8 bg-muted/20">
-			<div className="tp-app-container mx-auto max-w-6xl">
+          <main className="flex-1 px-4 py-6 md:px-8 md:py-8 bg-muted/20">
+            <div className="mx-auto max-w-6xl">
               <AuthGate>{children}</AuthGate>
             </div>
           </main>

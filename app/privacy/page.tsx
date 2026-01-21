@@ -1,94 +1,75 @@
-export const metadata = {
-  title: "Privacy Policy | TenderPilot",
-};
+import Link from "next/link";
 
-const LAST_UPDATED = "2026-01-20";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default function PrivacyPage() {
   return (
-    <div className="mx-auto max-w-3xl px-6 py-12 space-y-8">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">Privacy Policy</h1>
-        <p className="text-sm text-muted-foreground">Last updated: {LAST_UPDATED}</p>
-      </header>
+    <main className="min-h-screen premium-bg bg-background">
+      <div className="mx-auto max-w-3xl px-4 py-12 md:px-8">
+        <div className="flex items-center justify-between gap-4">
+          <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
+            ← Back to home
+          </Link>
+          <div className="text-sm text-muted-foreground">Privacy</div>
+        </div>
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Overview</h2>
-        <p className="text-sm text-muted-foreground">
-          TenderPilot helps you review tenders by extracting text from uploaded documents and generating structured
-          outputs such as requirements, risks, clarifications, and a draft outline. This Privacy Policy explains what we
-          collect, how we use it, and your choices.
+        <h1 className="mt-6 text-3xl font-semibold tracking-tight">Privacy policy</h1>
+        <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
+          TenderPilot is in early access. This page explains how we handle personal data when you join the waitlist
+          and use the app.
         </p>
-      </section>
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">What we collect</h2>
-        <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-2">
-          <li>
-            <span className="text-foreground">Account data</span>: your email address and optional profile information you
-            provide, such as name and company.
-          </li>
-          <li>
-            <span className="text-foreground">Uploaded content</span>: the documents you upload and the extracted text
-            derived from them.
-          </li>
-          <li>
-            <span className="text-foreground">Generated outputs</span>: requirements, risks, open questions, and a draft
-            outline produced by the system.
-          </li>
-          <li>
-            <span className="text-foreground">Operational and technical data</span>: basic logs needed to run and secure
-            the service, such as error logs and request metadata.
-          </li>
-        </ul>
-      </section>
+        <div className="mt-8 grid gap-4">
+          <Card className="rounded-2xl">
+            <CardContent className="p-6">
+              <div className="text-sm font-semibold">Waitlist emails</div>
+              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                If you submit your email via the waitlist form, we use it only to contact you about TenderPilot early
+                access and product updates related to early access.
+              </p>
+              <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
+                <li>We do not sell your email.</li>
+                <li>You can ask to be removed at any time.</li>
+                <li>We keep the data only as long as needed for early access and onboarding.</li>
+              </ul>
+            </CardContent>
+          </Card>
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">How we use data</h2>
-        <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-2">
-          <li>To provide the service: extract text, generate outputs, store results, and enable downloads.</li>
-          <li>To operate and secure the platform: prevent abuse, monitor reliability, and fix issues.</li>
-          <li>We do not sell your personal data.</li>
-        </ul>
-      </section>
+          <Card className="rounded-2xl">
+            <CardContent className="p-6">
+              <div className="text-sm font-semibold">How submissions are processed</div>
+              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                The waitlist can be hosted by a third party form provider (e.g., Tally/Typeform/Google Forms) depending
+                on the deployment configuration. In that case, your submission is also processed under that provider’s
+                privacy terms.
+              </p>
+            </CardContent>
+          </Card>
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Processors and subprocessors</h2>
-        <p className="text-sm text-muted-foreground">
-          TenderPilot may use third party providers to deliver the service, such as hosting, document extraction, and AI
-          processing providers. These providers process data only to provide the service.
+          <Card className="rounded-2xl">
+            <CardContent className="p-6">
+              <div className="text-sm font-semibold">Product usage data</div>
+              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                To evaluate engagement during early access, we may collect basic, aggregated usage metrics (for example:
+                page views and button clicks). We do not need sensitive personal data for this.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl">
+            <CardContent className="p-6">
+              <div className="text-sm font-semibold">Contact</div>
+              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                If you want your data removed or have questions, contact the TenderPilot team.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <p className="mt-10 text-xs text-muted-foreground">
+          Drafting support only. Always verify requirements and legal language against the original tender document.
         </p>
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Retention</h2>
-        <p className="text-sm text-muted-foreground">
-          We retain account data and generated results while your account is active and as needed to provide the service.
-          You can request deletion of your account and associated data.
-        </p>
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Your choices and rights</h2>
-        <p className="text-sm text-muted-foreground">
-          You can request access, correction, export, or deletion of your data. If you are in the EEA or UK, you may have
-          additional rights under GDPR.
-        </p>
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Security</h2>
-        <p className="text-sm text-muted-foreground">
-          We use reasonable measures to protect your data. No system can be guaranteed completely secure.
-        </p>
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Contact</h2>
-        <p className="text-sm text-muted-foreground">
-          Support contact is coming soon.
-        </p>
-      </section>
-    </div>
+      </div>
+    </main>
   );
 }

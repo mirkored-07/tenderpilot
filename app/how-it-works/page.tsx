@@ -2,7 +2,6 @@ import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 
 function Step({ n, title, text }: { n: string; title: string; text: string }) {
   return (
@@ -64,11 +63,14 @@ export default function HowItWorksPage() {
             <Button asChild variant="ghost" className="rounded-full">
               <Link href="/how-it-works">How it works</Link>
             </Button>
+            <Button asChild variant="ghost" className="rounded-full">
+              <Link href="/sample">Sample output</Link>
+            </Button>
             <Button asChild variant="outline" className="rounded-full">
               <Link href="/login">Sign in</Link>
             </Button>
             <Button asChild className="rounded-full">
-              <Link href="/app/upload">Upload</Link>
+              <Link href="/app/upload">Upload file</Link>
             </Button>
           </div>
         </div>
@@ -83,7 +85,7 @@ export default function HowItWorksPage() {
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
           <Button asChild className="rounded-full">
-            <Link href="/app/upload">Upload</Link>
+            <Link href="/app/upload">Upload file</Link>
           </Button>
           <Button asChild variant="outline" className="rounded-full">
             <Link href="/">Back to home</Link>
@@ -94,17 +96,23 @@ export default function HowItWorksPage() {
       <section className="mx-auto max-w-6xl px-4 pb-10 md:px-8">
         <div className="grid gap-4 md:grid-cols-3">
           <Step n="1" title="Upload" text="PDF or DOCX in. No templates. No setup." />
-          <Step n="2" title="Review what matters" text="Requirements, risks, and questions grouped for fast scanning." />
-          <Step n="3" title="Decide and draft" text="Make a call, then start from a short structured outline." />
+          <Step
+            n="2"
+            title="Review what matters"
+            text="Requirements, risks, and questions grouped for fast scanning."
+          />
+          <Step
+            n="3"
+            title="Decide and draft"
+            text="Make a call, then start from a short structured outline."
+          />
         </div>
       </section>
 
       <section className="mx-auto max-w-6xl px-4 pb-10 md:px-8">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">What you get</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Designed for clarity. Optimized for decision making.
-          </p>
+          <p className="mt-2 text-sm text-muted-foreground">Designed for clarity. Optimized for decision making.</p>
         </div>
 
         <div className="mt-6 grid gap-4 md:grid-cols-2">
@@ -150,30 +158,23 @@ export default function HowItWorksPage() {
       <section className="mx-auto max-w-6xl px-4 pb-16 md:px-8">
         <Card className="rounded-2xl">
           <CardContent className="p-6 md:p-8">
-            <div className="grid gap-6 md:grid-cols-2 md:items-start">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-semibold">Good to know</p>
                 <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                  TenderPilot provides drafting support only. Always verify requirements and legal
-                  language against the original tender document.
+                  Drafting support only. Always verify requirements and legal language against the original tender
+                  document.
                 </p>
               </div>
 
-              <div>
-                <p className="text-sm font-semibold">MVP scope</p>
-                <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                  PDF or DOCX input. One analysis per bid. No dashboards or multi-user workflows in the MVP.
-                </p>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Button asChild variant="outline" className="rounded-full">
+                  <Link href="/sample">View sample output</Link>
+                </Button>
+                <Button asChild className="rounded-full">
+                  <Link href="/app/upload">Upload file</Link>
+                </Button>
               </div>
-            </div>
-
-            <Separator className="my-6" />
-
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-muted-foreground">Ready to try it on a real tender?</p>
-              <Button asChild className="rounded-full">
-                <Link href="/app/upload">Upload</Link>
-              </Button>
             </div>
           </CardContent>
         </Card>
