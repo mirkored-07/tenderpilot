@@ -3,8 +3,6 @@ import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
 import UploadForm from "./upload-form";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
@@ -56,37 +54,9 @@ async function supabaseServer() {
 export default async function UploadPage() {
   const supabase = await supabaseServer();
 
-  const { data: userData } = await supabase.auth.getUser();
-  const user = userData?.user ?? null;
-
-  let recentJobsError: string | null = null;
-
-  const recentJobsRes = user
-    ? await supabase
-        .from("jobs")
-        .select("id,file_name,status,created_at")
-        .order("created_at", { ascending: false })
-        .limit(5)
-    : ({ data: [] as any[], error: null } as any);
-
-  if (recentJobsRes?.error) {
-    console.warn(recentJobsRes.error);
-    recentJobsError = "Could not load recent tender reviews. You can still upload, or go to Jobs.";
-  }
-
-  const recentJobs = (recentJobsRes?.data ?? []) as any[];
-
-  return (
+   return (
     <div className="mx-auto max-w-6xl">
-      {recentJobsError ? (
-        <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-          {recentJobsError}{" "}
-          <Link href="/app" className="underline">
-            Go to Jobs
-          </Link>
-        </div>
-      ) : null}
-
+      
       <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
         <Card className="rounded-2xl">
           <CardHeader className="pb-3">
@@ -109,77 +79,7 @@ export default async function UploadPage() {
 
             <UploadForm />
           </CardContent>
-        </Card>
-
-        <div className="space-y-6">
-          <Card className="rounded-2xl">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Recent tender reviews</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Jump back into your last jobs without hunting through the Jobs page.
-              </p>
-            </CardHeader>
-
-            <CardContent className="pt-0 space-y-3">
-              {!user ? (
-                <div className="rounded-2xl border bg-background/60 p-4">
-                  <p className="text-sm font-semibold">Sign in to see your recent jobs</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    After you sign in, your latest tender reviews will show here.
-                  </p>
-                  <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                    <Button asChild className="rounded-full">
-                      <Link href="/login">Sign in</Link>
-                    </Button>
-                    <Button asChild variant="outline" className="rounded-full">
-                      <Link href="/app/jobs">Go to Jobs</Link>
-                    </Button>
-                  </div>
-                </div>
-              ) : (recentJobs?.length ?? 0) > 0 ? (
-                <>
-                  <div className="space-y-2">
-                    {(recentJobs ?? []).map((j: any) => {
-                      const tone = statusTone(j.status);
-                      return (
-                        <Link
-                          key={j.id}
-                          href={`/app/jobs/${j.id}`}
-                          className="block rounded-2xl border bg-background/60 p-4 hover:bg-background/80 transition"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="text-sm font-semibold truncate">{j.file_name || "Untitled tender"}</p>
-                              <p className="mt-1 text-xs text-muted-foreground">{formatDate(j.created_at)}</p>
-                            </div>
-                            <Badge variant={tone.variant} className="rounded-full">
-                              {tone.label}
-                            </Badge>
-                          </div>
-                        </Link>
-                      );
-                    })}
-                  </div>
-
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <p className="text-xs text-muted-foreground">Tip: open the newest job to verify results after upload.</p>
-                    <Button asChild variant="outline" className="rounded-full">
-                      <Link href="/app/jobs">View all jobs</Link>
-                    </Button>
-                  </div>
-                </>
-              ) : (
-                <div className="rounded-2xl border bg-background/60 p-4">
-                  <p className="text-sm font-semibold">No tender reviews yet</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Upload your first tender to create a tender kit. You’ll see it listed here afterward.
-                  </p>
-                  <Separator className="my-4" />
-                  <p className="text-xs text-muted-foreground">Recommended: start with a 10–30 page tender PDF for your first test.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        
 
           <Card className="rounded-2xl">
             <CardHeader className="pb-3">
