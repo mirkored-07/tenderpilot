@@ -5,24 +5,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { WaitlistInline } from "@/components/marketing/WaitlistInline";
 
-function StepCard({ n, title, text }: { n: string; title: string; text: string }) {
-  return (
-    <Card className="rounded-2xl">
-      <CardContent className="p-6">
-        <div className="flex items-start gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full border bg-background text-sm font-semibold">
-            {n}
-          </div>
-          <div>
-            <div className="text-sm font-semibold">{title}</div>
-            <div className="mt-1 text-sm text-muted-foreground leading-relaxed">{text}</div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 function FeatureCard({ title, subtitle, bullets }: { title: string; subtitle: string; bullets: string[] }) {
   return (
     <Card className="rounded-2xl">
@@ -111,9 +93,6 @@ export default function Home() {
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <Button asChild className="rounded-full">
                 <Link href="/app/upload" data-umami-event="cta_upload_hero">Upload file</Link>
-              </Button>
-              <Button asChild variant="outline" className="rounded-full">
-                <Link href="/how-it-works" data-umami-event="cta_how_hero">See how it works</Link>
               </Button>
               <Button asChild variant="ghost" className="rounded-full">
                 <Link href="/sample" data-umami-event="cta_sample_hero">View sample output</Link>
@@ -242,55 +221,6 @@ export default function Home() {
             ]}
           />
         </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-4 pb-10 md:px-8">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight">How it works</h2>
-          <p className="mt-2 text-sm text-muted-foreground">Three steps. Built for fast triage.</p>
-        </div>
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
-          <StepCard n="1" title="Upload" text="PDF or DOCX in. No templates. No setup." />
-          <StepCard
-            n="2"
-            title="Review what matters"
-            text="Requirements, risks, and questions grouped for fast scanning."
-          />
-          <StepCard n="3" title="Decide and draft" text="Make a call, then start from a short structured outline." />
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-4 pb-12 md:px-8">
-        <Card className="rounded-2xl">
-          <CardContent className="p-6 md:p-8">
-            <div className="grid gap-6 md:grid-cols-2 md:items-start">
-              <div>
-                <p className="text-sm font-semibold">Good to know</p>
-                <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                  Drafting support only. Always verify requirements and legal language against the original
-                  tender document.
-                </p>
-              </div>
-
-              <div>
-                <p className="text-sm font-semibold">What happens after upload</p>
-                <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                  TenderPilot creates a review workspace for your file. If you are not signed in, you will
-                  continue via magic link.
-                </p>
-              </div>
-            </div>
-
-            <Separator className="my-6" />
-
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-muted-foreground">Ready to try it on a real tender?</p>
-              <Button asChild className="rounded-full">
-                <Link href="/app/upload" data-umami-event="cta_upload_good_to_know">Upload file</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
       </section>
 
       <section className="mx-auto max-w-6xl px-4 pb-14 md:px-8">

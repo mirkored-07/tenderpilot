@@ -8,17 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 
-function normalizeWaitlistUrl(raw: string) {
-  const v = (raw || "").trim();
-  if (!v) return "https://tally.so/r/gD9bkM";
-  const doubled = "https://tally.so/r/https://tally.so/r/";
-  if (v.startsWith(doubled)) return "https://tally.so/r/" + v.slice(doubled.length);
-  if (!v.startsWith("http")) return `https://tally.so/r/${v.replace(/^\/+/, "")}`;
-  return v;
-}
-
-const WAITLIST_URL = normalizeWaitlistUrl(process.env.NEXT_PUBLIC_WAITLIST_URL || "");
-
+const WAITLIST_URL = (process.env.NEXT_PUBLIC_WAITLIST_URL && process.env.NEXT_PUBLIC_WAITLIST_URL.trim()) ||
+  "https://tally.so/r/gD9bkM";
 
 const SAMPLE = {
   tenderName: "Public sector IT services tender (sample)",
@@ -148,7 +139,7 @@ export default function SampleOutputPage() {
 
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Button asChild variant="outline" className="rounded-full">
-              <Link href="/">Back to landing</Link>
+              <Link href="/">Back to home</Link>
             </Button>
             <Button asChild variant="outline" className="rounded-full">
               <a
@@ -261,9 +252,6 @@ export default function SampleOutputPage() {
 
               <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-xs text-muted-foreground">Always verify MUST items against the source.</p>
-                <Button asChild className="rounded-full">
-                  <Link href="/app/upload">Upload file</Link>
-                </Button>
               </div>
             </CardContent>
           </Card>
@@ -292,13 +280,10 @@ export default function SampleOutputPage() {
           <div className="text-sm text-muted-foreground">TenderPilot</div>
           <div className="flex flex-wrap items-center gap-4 text-sm">
             <Link href="/" className="text-muted-foreground hover:text-foreground">
-              Landing
+              Home
             </Link>
             <Link href="/how-it-works" className="text-muted-foreground hover:text-foreground">
               How it works
-            </Link>
-            <Link href="/app/upload" className="text-muted-foreground hover:text-foreground">
-              Upload file
             </Link>
             <Link href="/privacy" className="text-muted-foreground hover:text-foreground">
               Privacy

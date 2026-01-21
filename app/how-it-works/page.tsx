@@ -171,9 +171,6 @@ export default function HowItWorksPage() {
                 <Button asChild variant="outline" className="rounded-full">
                   <Link href="/sample">View sample output</Link>
                 </Button>
-                <Button asChild className="rounded-full">
-                  <Link href="/app/upload">Upload file</Link>
-                </Button>
               </div>
             </div>
           </CardContent>
