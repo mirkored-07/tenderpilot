@@ -1301,7 +1301,7 @@ export default function JobDetailPage() {
   if (mustItems.length) {
     const text = "Verify potential blockers (MUST requirements)";
     const evidenceQuery = evidenceForAction("checklist", text);
-	const meta = classifyOwnerAndEta({ text, target: "<TARGET>", label: "<LABEL>" });
+	const meta = classifyOwnerAndEta({ text, target: "checklist", label: "Compliance" });
     out.push({
       text,
       target: "checklist",
