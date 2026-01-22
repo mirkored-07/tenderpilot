@@ -93,6 +93,14 @@ function SeverityBadge({ sev }: { sev: "high" | "medium" | "low" }) {
   if (sev === "medium") return <Badge variant="secondary" className="rounded-full">Medium</Badge>;
   return <Badge variant="outline" className="rounded-full">Low</Badge>;
 }
+	type Tag = "MUST" | "SHOULD" | "INFO";
+
+	function asTag(value: string): Tag {
+	  const v = value.trim().toUpperCase();
+	  if (v === "MUST" || v === "SHOULD" || v === "INFO") return v;
+	  return "INFO";
+	}
+
 
 function TagBadge({ tag }: { tag: "MUST" | "SHOULD" | "INFO" }) {
   if (tag === "MUST") return <Badge variant="destructive" className="rounded-full">MUST</Badge>;
@@ -228,7 +236,7 @@ export default function SamplePage() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
-                            <TagBadge tag={m.tag} />
+                            <TagBadge tag={asTag(m.tag)} />
                             <p className="text-sm font-medium">{m.title}</p>
                           </div>
                           <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{m.detail}</p>
