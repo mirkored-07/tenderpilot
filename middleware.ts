@@ -1,32 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createServerClient } from "@supabase/ssr";
 
-export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  });
+export function middleware(request: NextRequest) {
+  const url = request.nextUrl.clone();
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set(name, value, { ...options, httpOnly: false });
-          });
-        },
-      },
-    }
-  );
+  // Any /app/* route is not available on the public marketing site
+  url.pathname = "/";
+  url.searchParams.set("from", "app");
 
-  await supabase.auth.getUser();
-  return response;
+  return NextResponse.redirect(url);
 }
 
 export const config = {
