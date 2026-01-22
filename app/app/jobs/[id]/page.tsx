@@ -287,8 +287,14 @@ function ProgressCard({ status }: { status: JobStatus }) {
 
         <p className="text-xs text-muted-foreground">{subtitle}</p>
         <p className="text-xs text-muted-foreground">
-          Steps: upload → extract → AI → results. If this stays here for more than 2 minutes, check job_events.
-        </p>
+		  Steps: upload → extract → analyze → results. This usually takes 1–3 minutes (large files can take longer).
+		  If it takes longer, refresh this page or open{" "}
+		  <Link href="/app/jobs" className="underline underline-offset-4">
+			My jobs
+		  </Link>
+		  .
+		</p>
+
       </CardContent>
     </Card>
   );
