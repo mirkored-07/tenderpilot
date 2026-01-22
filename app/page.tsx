@@ -191,11 +191,7 @@ export default function Page() {
                   View sample output
                 </Link>
               </Button>
-              <Button asChild className="rounded-full">
-                <Link href="#early-access" data-umami-event="cta_waitlist_mid">
-                  Join early access
-                </Link>
-              </Button>
+              
             </div>
           </CardContent>
         </Card>
