@@ -101,7 +101,6 @@ function SeverityBadge({ sev }: { sev: "high" | "medium" | "low" }) {
 	  return "INFO";
 	}
 
-
 function TagBadge({ tag }: { tag: "MUST" | "SHOULD" | "INFO" }) {
   if (tag === "MUST") return <Badge variant="destructive" className="rounded-full">MUST</Badge>;
   if (tag === "SHOULD") return <Badge variant="secondary" className="rounded-full">SHOULD</Badge>;
@@ -164,7 +163,9 @@ export default function SamplePage() {
                   <div>
                     <CardTitle className="text-base">Your tender workspace</CardTitle>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      This is a static sample to preview the review format. Always verify against the original PDF.
+                      This is a static sample showing how TenderPilot structures a tender review. It reflects the format
+                      teams use to avoid missing mandatory requirements and hidden risks. Always verify against the
+                      original PDF.
                     </p>
                   </div>
 
@@ -209,7 +210,8 @@ export default function SamplePage() {
                     </div>
 
                     <div className="mt-4 text-xs text-muted-foreground">
-                      Designed for speed. Built for traceability.
+                      Typically replaces hours of manual reading, highlighting, and note-taking. Designed for speed.
+                      Built for traceability.
                     </div>
                   </div>
                 </div>
@@ -304,7 +306,12 @@ export default function SamplePage() {
                 <Separator className="my-4" />
 
                 <Button asChild className="w-full rounded-xl">
-                  <a href={WAITLIST_URL} target="_blank" rel="noreferrer" data-umami-event="cta_join_early_access_sample_sidebar">
+                  <a
+                    href={WAITLIST_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    data-umami-event="cta_join_early_access_sample_sidebar"
+                  >
                     Join early access
                   </a>
                 </Button>
@@ -366,7 +373,8 @@ export default function SamplePage() {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">Requirements</CardTitle>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    These are the MUST/SHOULD items extracted from the tender.
+                    These are the MUST, SHOULD, and INFO items extracted from the tender. Each item is paired with
+                    extracted source text to support verification and auditability.
                   </p>
                 </CardHeader>
                 <CardContent className="pt-0 space-y-3">
@@ -395,7 +403,8 @@ export default function SamplePage() {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">Risks</CardTitle>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Potential deal-breakers or cost drivers that need clarification.
+                    Potential deal-breakers or cost drivers that need clarification before committing to scope, price,
+                    or timeline.
                   </p>
                 </CardHeader>
                 <CardContent className="pt-0 grid gap-3 md:grid-cols-2">
@@ -440,7 +449,7 @@ export default function SamplePage() {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">Tender outline</CardTitle>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    A starting structure you can paste into your bid template.
+                    A starting structure you can paste into your bid template. Final content stays your responsibility.
                   </p>
                 </CardHeader>
                 <CardContent className="pt-0">

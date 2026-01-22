@@ -56,13 +56,18 @@ export default function Page() {
       <section className="mx-auto max-w-6xl px-4 pt-12 pb-10 md:px-8 md:pt-16">
         <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div>
-            <p className="text-sm font-semibold text-muted-foreground">AI models tailored for tender and RFP analysis</p>
+            <p className="text-sm font-semibold text-muted-foreground">
+              For consultants, SMEs, and bid teams reviewing public tenders and RFPs under time pressure.
+            </p>
 
-            <h1 className="mt-3 text-4xl font-semibold tracking-tight md:text-5xl">Tender reviews, distilled.</h1>
+            <h1 className="mt-3 text-4xl font-semibold tracking-tight md:text-5xl">
+              AI-powered tender and RFP review focused on compliance and bid decisions
+            </h1>
 
             <p className="mt-4 text-base text-muted-foreground leading-relaxed md:text-lg">
-              TenderPilot uses AI models designed specifically for tender and RFP review. Get a clear executive
-              summary, a structured requirements checklist, risk flags, and a draft proposal outline in one place.
+              TenderPilot helps you analyze tender and RFP documents quickly and systematically. You receive a clear
+              executive summary, a mandatory requirements checklist, identified risks, and a structured proposal outline
+              before committing time and budget to a bid.
             </p>
 
             <div className="mt-6">
@@ -75,9 +80,9 @@ export default function Page() {
                 className="text-foreground underline underline-offset-4"
                 data-umami-event="cta_sample_hero"
               >
-                View sample output
+                View a real sample output
               </Link>
-              <span className="text-muted-foreground">Private beta. No spam.</span>
+              <span className="text-muted-foreground">Private beta. Early access is limited to a small number of teams.</span>
             </div>
 
             <div className="mt-6 flex flex-wrap items-center gap-2">
@@ -107,17 +112,17 @@ export default function Page() {
         <div className="grid gap-6 md:grid-cols-3">
           <FeatureCard
             title="Executive summary"
-            subtitle="A fast, structured view of what matters and what to decide."
+            subtitle="A concise, decision-oriented summary of scope, constraints, and key points designed to support go or no-go decisions."
             bullets={["Scope and context", "Decision points", "Key constraints"]}
           />
           <FeatureCard
             title="Checklist"
-            subtitle="Requirements extracted and laid out in a format you can actually work with."
+            subtitle="Mandatory and optional requirements extracted from the tender and structured into a clear checklist to reduce disqualification risk."
             bullets={["Mandatory vs optional items", "Scannable structure", "Review-ready format"]}
           />
           <FeatureCard
             title="Risks"
-            subtitle="Ambiguities, gaps, and potential blockers highlighted early."
+            subtitle="Unclear clauses, gaps, and potential cost or delivery risks highlighted early with consistent severity labels."
             bullets={["Consistent severity labels", "Open points", "Escalation guidance"]}
           />
         </div>
@@ -130,8 +135,11 @@ export default function Page() {
               <div>
                 <p className="text-sm font-semibold">Why this is different</p>
                 <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                  General AI tools are not built for tenders. TenderPilot uses AI models tailored for tender and RFP
-                  analysis, so the output is structured, consistent, and aligned with how tender teams work.
+                  Most AI tools generate generic summaries or chat-style answers. TenderPilot is built specifically for
+                  tender and RFP analysis, with structured outputs aligned to real bid workflows. TenderPilot is
+                  designed for tender compliance review and bid decision support. It is not a generic document
+                  summarization tool. The focus is on compliance, risk awareness, and decision clarity rather than
+                  automated proposal submission.
                 </p>
               </div>
               <div className="rounded-2xl border bg-background/60 p-5">
@@ -167,15 +175,15 @@ export default function Page() {
               <div className="md:col-span-1">
                 <p className="text-sm font-semibold">How it works</p>
                 <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                  Built around the tender workflow, with AI models tailored for this document type.
+                  A simple flow that matches how bid teams work, optimized for tender and RFP documents.
                 </p>
               </div>
 
               <div className="md:col-span-2 grid gap-3">
                 {[
-                  { t: "Submit a tender", d: "Private beta. You will get access when we open." },
-                  { t: "Extract and analyze", d: "TenderPilot reads structure, requirements, and evaluation logic." },
-                  { t: "Review and export", d: "Clear outputs and next steps, ready to share." },
+                  { t: "Submit a tender or RFP", d: "Private beta. You will get access when we open." },
+                  { t: "Extract and organize", d: "TenderPilot extracts structure, requirements, and evaluation logic." },
+                  { t: "Review and share", d: "Decision-ready outputs and next steps, designed for verification." },
                 ].map((x) => (
                   <div key={x.t} className="rounded-2xl border bg-background/60 p-5">
                     <div className="text-sm font-semibold">{x.t}</div>
@@ -191,7 +199,6 @@ export default function Page() {
                   View sample output
                 </Link>
               </Button>
-              
             </div>
           </CardContent>
         </Card>
@@ -204,8 +211,9 @@ export default function Page() {
               <div>
                 <p className="text-sm font-semibold">Early access</p>
                 <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                  Join early access and get notified when the private beta opens. You will receive a single email when
-                  access is available.
+                  Join early access to be notified when the private beta opens. You will receive a single email when
+                  access becomes available. Drafting support only. Always verify all requirements against the original
+                  tender document. TenderPilot does not replace legal, procurement, or final bid review.
                 </p>
               </div>
 
@@ -234,7 +242,11 @@ export default function Page() {
             <Link href="/sample" className="text-muted-foreground hover:text-foreground">
               Sample output
             </Link>
-            <Link href="#early-access" className="text-muted-foreground hover:text-foreground" data-umami-event="cta_waitlist_footer">
+            <Link
+              href="#early-access"
+              className="text-muted-foreground hover:text-foreground"
+              data-umami-event="cta_waitlist_footer"
+            >
               Join early access
             </Link>
             <Link href="/privacy" className="text-muted-foreground hover:text-foreground">

@@ -17,8 +17,6 @@ import {
 const WAITLIST_URL =
   process.env.NEXT_PUBLIC_WAITLIST_URL || "https://tally.so/r/gD9bkM";
 
-
-
 const STEPS = [
   {
     icon: FileText,
@@ -69,6 +67,10 @@ const FAQ = [
   {
     q: "What about confidentiality?",
     a: "Use your internal process. If your organization has strict rules, validate with your compliance and IT policies before uploading sensitive tenders.",
+  },
+  {
+    q: "Is this suitable for public-sector and regulated tenders?",
+    a: "Yes. TenderPilot supports structured review and drafting. All outputs must be verified against the original tender documents. It does not provide legal or procurement advice.",
   },
 ];
 
@@ -128,9 +130,9 @@ export default function HowItWorksPage() {
               How it works
             </h1>
             <p className="mt-2 max-w-xl text-base text-muted-foreground">
-              TenderPilot helps you go from a long tender PDF to a structured plan:
-              MUST items, risks, and a draft outline. It is designed to speed up
-              decision-making, not replace final review.
+              TenderPilot helps you decide whether to bid, identify mandatory requirements, and detect risks in tender
+              and RFP documents. It turns long PDFs into structured, review-ready outputs that support compliance checks
+              and bid planning. It is designed to support decision-making and drafting, not to replace final human review.
             </p>
 
             <div className="mt-6 flex flex-wrap gap-2">
@@ -156,9 +158,8 @@ export default function HowItWorksPage() {
                 <div>
                   <div className="font-medium">What you get</div>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    A clean, action-oriented view of the tender: key requirements,
-                    what can disqualify you, what looks risky, and a structured
-                    outline to start your bid response.
+                    A practical, action-oriented view of a tender: what can disqualify you, what looks risky or unclear,
+                    what needs clarification, and a structured outline to start your bid response.
                   </p>
                 </div>
               </div>
@@ -184,8 +185,7 @@ export default function HowItWorksPage() {
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="mt-0.5 h-4 w-4 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">
-                    Always verify MUST items against the source and the original
-                    PDF before submitting.
+                    Always verify MUST items against the source and the original PDF before submitting.
                   </p>
                 </div>
               </div>
