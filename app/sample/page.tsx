@@ -112,7 +112,7 @@ export default function SamplePage() {
     <main className="min-h-screen premium-bg bg-background">
       {/* Sticky workspace-like header */}
       <header className="sticky top-0 z-20 border-b bg-background/70 backdrop-blur supports-[backdrop-filter]:bg-background/40">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 md:px-8">
+               <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:h-16 md:px-8 md:py-0">
           {/* Text only (no logo) */}
           <div className="flex items-center gap-3">
             <Link href="/" className="font-semibold text-lg tracking-tight">
@@ -129,19 +129,23 @@ export default function SamplePage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            {/* Match real app vibe: small, tight actions */}
+          {/* Desktop / tablet actions */}
+          <div className="hidden md:flex items-center gap-2">
             <Button asChild variant="ghost" className="rounded-full">
               <Link href="/">Back to home</Link>
             </Button>
 
             <Button variant="outline" className="rounded-full" disabled title="Disabled on sample page">
-			  Export sample (PDF)
-			</Button>
-
+              Export sample (PDF)
+            </Button>
 
             <Button asChild className="rounded-full">
-              <a href={WAITLIST_URL} target="_blank" rel="noreferrer" data-umami-event="cta_join_early_access_sample">
+              <a
+                href={WAITLIST_URL}
+                target="_blank"
+                rel="noreferrer"
+                data-umami-event="cta_join_early_access_sample"
+              >
                 Join early access
               </a>
             </Button>
@@ -150,7 +154,49 @@ export default function SamplePage() {
               Delete
             </Button>
           </div>
+
+          {/* Mobile actions */}
+          <div className="flex items-center gap-2 md:hidden">
+            <Button asChild variant="ghost" className="rounded-full">
+              <Link href="/">Back</Link>
+            </Button>
+
+            <Button asChild className="rounded-full">
+              <a
+                href={WAITLIST_URL}
+                target="_blank"
+                rel="noreferrer"
+                data-umami-event="cta_join_early_access_sample"
+              >
+                Join
+              </a>
+            </Button>
+
+            <details className="relative">
+              <summary className="cursor-pointer list-none rounded-full border bg-background/60 px-3 py-2 text-sm font-medium text-foreground/90 [&::-webkit-details-marker]:hidden">
+                More
+              </summary>
+
+              <div className="absolute right-0 mt-2 w-64 rounded-2xl border bg-background p-2 shadow-lg">
+                <button
+                  type="button"
+                  disabled
+                  className="w-full rounded-xl px-3 py-2 text-left text-sm text-muted-foreground opacity-60 cursor-not-allowed"
+                >
+                  Export sample (PDF)
+                </button>
+                <button
+                  type="button"
+                  disabled
+                  className="w-full rounded-xl px-3 py-2 text-left text-sm text-muted-foreground opacity-60 cursor-not-allowed"
+                >
+                  Delete
+                </button>
+              </div>
+            </details>
+          </div>
         </div>
+
       </header>
 
       {/* Content */}
@@ -341,23 +387,24 @@ export default function SamplePage() {
         <div className="mt-8">
           <Tabs defaultValue="requirements">
             <div className="flex items-center justify-between gap-3">
-              <TabsList className="rounded-full">
-                <TabsTrigger value="requirements" className="rounded-full">
+                            <TabsList className="w-full max-w-full rounded-full justify-start overflow-x-auto">
+                <TabsTrigger value="requirements" className="rounded-full flex-none px-3 text-xs sm:text-sm">
                   Requirements
                 </TabsTrigger>
-                <TabsTrigger value="risks" className="rounded-full">
+                <TabsTrigger value="risks" className="rounded-full flex-none px-3 text-xs sm:text-sm">
                   Risks
                 </TabsTrigger>
-                <TabsTrigger value="questions" className="rounded-full">
+                <TabsTrigger value="questions" className="rounded-full flex-none px-3 text-xs sm:text-sm">
                   Clarifications
                 </TabsTrigger>
-                <TabsTrigger value="draft" className="rounded-full">
+                <TabsTrigger value="draft" className="rounded-full flex-none px-3 text-xs sm:text-sm">
                   Tender outline
                 </TabsTrigger>
-                <TabsTrigger value="source" className="rounded-full">
+                <TabsTrigger value="source" className="rounded-full flex-none px-3 text-xs sm:text-sm">
                   Source text
                 </TabsTrigger>
               </TabsList>
+
 
               <div className="hidden sm:flex items-center gap-2">
                 <Button variant="outline" className="rounded-full" disabled title="Sample page">

@@ -8,29 +8,62 @@ export default function HowItWorksPage() {
   return (
     <main className="min-h-screen premium-bg bg-background">
       <header className="sticky top-0 z-10 border-b bg-background/70 backdrop-blur supports-[backdrop-filter]:bg-background/40">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 md:px-8">
-          <Link href="/" className="font-semibold text-lg tracking-tight">
-            TenderPilot
-          </Link>
+                <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:h-16 md:px-8 md:py-0">
+				  <Link href="/" className="font-semibold text-lg tracking-tight">
+					TenderPilot
+				  </Link>
 
-          <div className="flex items-center gap-2">
-            <Button asChild variant="ghost" className="rounded-full">
-              <Link href="/" data-umami-event="cta_home_how_header">
-                Back to home
-              </Link>
-            </Button>
-            <Button asChild variant="ghost" className="rounded-full">
-              <Link href="/sample" data-umami-event="cta_sample_how_header">
-                Sample
-              </Link>
-            </Button>
-            <Button asChild className="rounded-full">
-              <Link href="#early-access" data-umami-event="cta_waitlist_how_header">
-                Get early access
-              </Link>
-            </Button>
-          </div>
-        </div>
+				  {/* Desktop / tablet nav */}
+				  <div className="hidden md:flex items-center gap-2">
+					<Button asChild variant="ghost" className="rounded-full">
+					  <Link href="/" data-umami-event="cta_home_how_header">
+						Back to home
+					  </Link>
+					</Button>
+					<Button asChild variant="ghost" className="rounded-full">
+					  <Link href="/sample" data-umami-event="cta_sample_how_header">
+						Sample
+					  </Link>
+					</Button>
+					<Button asChild className="rounded-full">
+					  <Link href="#early-access" data-umami-event="cta_waitlist_how_header">
+						Get early access
+					  </Link>
+					</Button>
+				  </div>
+
+				  {/* Mobile nav */}
+				  <details className="relative md:hidden">
+					<summary className="cursor-pointer list-none rounded-full border bg-background/60 px-3 py-2 text-sm font-medium text-foreground/90 [&::-webkit-details-marker]:hidden">
+					  Menu
+					</summary>
+
+					<div className="absolute right-0 mt-2 w-56 rounded-2xl border bg-background p-2 shadow-lg">
+					  <Link
+						href="/"
+						className="block rounded-xl px-3 py-2 text-sm hover:bg-muted"
+						data-umami-event="cta_home_how_header"
+					  >
+						Back to home
+					  </Link>
+					  <Link
+						href="/sample"
+						className="block rounded-xl px-3 py-2 text-sm hover:bg-muted"
+						data-umami-event="cta_sample_how_header"
+					  >
+						Sample
+					  </Link>
+					  <Link
+						href="#early-access"
+						className="block rounded-xl px-3 py-2 text-sm hover:bg-muted"
+						data-umami-event="cta_waitlist_how_header"
+					  >
+						Get early access
+					  </Link>
+					</div>
+				  </details>
+				</div>
+
       </header>
 
       {/* HERO */}
