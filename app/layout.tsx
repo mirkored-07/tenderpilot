@@ -15,11 +15,13 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "TenderPilot",
+    default: "TenderPilot – Go/No-Go Tender Review",
     template: "%s · TenderPilot",
   },
-  description: "Go / no go in minutes. Requirements, risks, clarifications, and a short draft.",
+  description:
+    "Go/no-go decision support for tender consultants and SMEs. Extract mandatory requirements, evaluation criteria, and early risks from tenders and RFPs in minutes.",
 };
+
 
 export default function RootLayout({
   children,

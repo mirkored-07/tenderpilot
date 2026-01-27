@@ -68,20 +68,20 @@ export default function Page() {
         <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
           <div>
             <p className="text-sm font-semibold text-muted-foreground">
-              Decision support for professionals working with tenders and RFPs.
-            </p>
+			  Go/no-go decision support for tender consultants and SMEs.
+			</p>
 
-            <h1 className="mt-3 text-4xl font-semibold tracking-tight md:text-5xl">
-              Understand tenders faster.
-              <br />
-              Decide whether to bid  with confidence.
-            </h1>
+			<h1 className="mt-3 text-4xl font-semibold tracking-tight md:text-5xl">
+			  Understand tenders faster.
+			  <br />
+			  Decide whether to bid with confidence.
+			</h1>
 
             <p className="mt-4 text-base text-muted-foreground leading-relaxed md:text-lg">
-              TenderPilot helps consultants, SMEs, and bid teams review RFPs and
-              public tenders, identify mandatory requirements, risks, and
-              evaluation criteria  in minutes, not days.
-            </p>
+			  TenderPilot helps tender consultants and SMEs review RFPs and public tenders, extract mandatory requirements,
+			  risks, and evaluation criteria, and make a go/no-go decision in minutes, not days.
+			</p>
+
 
             <p className="mt-3 text-sm text-muted-foreground">
               Decision-support only. No legal advice. You always verify against
@@ -106,11 +106,12 @@ export default function Page() {
         <div className="max-w-3xl">
           <h2 className="text-xl font-semibold">Who TenderPilot is for</h2>
           <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-            <li>Consultants reviewing multiple tenders for clients</li>
-            <li>SMEs deciding where to invest limited bid resources</li>
-            <li>Bid and proposal teams working under tight deadlines</li>
-            <li>Procurement support freelancers handling complex RFPs</li>
-          </ul>
+			  <li>Tender consultants reviewing multiple tenders for clients</li>
+			  <li>SMEs deciding where to invest limited bid resources</li>
+			  <li>Small teams preparing bids under tight deadlines</li>
+			  <li>Freelance bid and procurement support handling complex RFPs</li>
+			</ul>
+
           <p className="mt-4 text-sm text-muted-foreground">
             If you regularly read long tender documents to understand what
             really matters, this is for you.
@@ -155,9 +156,9 @@ export default function Page() {
         </div>
 
         <p className="mt-6 text-sm text-muted-foreground">
-          Designed to support go / no-go decisions and early proposal drafting 
-          not to replace expert review.
-        </p>
+		  Designed to support go/no-go decisions and early drafting. It does not replace expert review.
+		</p>
+
       </section>
 
       {/* HOW IT WORKS */}
@@ -230,11 +231,12 @@ export default function Page() {
 
               <div>
                 <h2 className="text-sm font-semibold">What it is not</h2>
-                <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-                  <li>Legal advice</li>
-                  <li>Procurement consulting</li>
-                  <li>Automated bid submission</li>
-                </ul>
+                <<ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+				  <li>Tender search and alerts</li>
+				  <li>Legal advice</li>
+				  <li>Procurement consulting</li>
+				  <li>Automated bid submission</li>
+				</ul>
               </div>
             </div>
           </CardContent>
@@ -252,10 +254,10 @@ export default function Page() {
               <div>
                 <h2 className="text-sm font-semibold">Join the private beta</h2>
                 <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                  TenderPilot is currently in private beta. Early access is
-                  limited and focused on collecting real feedback from
-                  professionals working with tenders and RFPs.
-                </p>
+				  TenderPilot is currently in private beta. Early access is limited and focused on collecting real feedback from
+				  tender consultants and SMEs working with public tenders and RFPs.
+				</p>
+
               </div>
 
               <div>

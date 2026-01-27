@@ -41,10 +41,10 @@ export default function HowItWorksPage() {
           <h1 className="mt-3 text-4xl font-semibold tracking-tight md:text-5xl">How it works</h1>
 
           <p className="mt-4 text-base text-muted-foreground leading-relaxed md:text-lg">
-            TenderPilot helps you understand a tender faster so you can decide whether to bid  with confidence. It
-            structures RFPs and public tenders into review-ready outputs: mandatory requirements, evaluation criteria,
-            risks and ambiguities, and a proposal outline.
-          </p>
+			  TenderPilot helps you understand a tender fast so you can make a go/no-go decision with confidence. It
+			  structures RFPs and public tenders into review-ready outputs: mandatory requirements, evaluation criteria,
+			  risks and ambiguities, and a proposal outline.
+			</p>
 
           <p className="mt-3 text-sm text-muted-foreground">
             Decision-support only. No legal or procurement advice. Always verify against the original tender document.
@@ -73,8 +73,8 @@ export default function HowItWorksPage() {
               <div>
                 <h2 className="text-sm font-semibold">Outputs you’ll see</h2>
                 <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                  A practical set of artifacts you can review quickly  built for traceability and verification.
-                </p>
+				  A practical set of artifacts you can review quickly, built for traceability and verification.
+				</p>
               </div>
 
               <ul className="space-y-2 text-sm text-muted-foreground">
@@ -130,8 +130,9 @@ export default function HowItWorksPage() {
               <div className="md:col-span-1">
                 <h2 className="text-sm font-semibold">Step by step</h2>
                 <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                  A simple flow that matches how teams actually work.
-                </p>
+				  A simple flow that matches how consultants and small teams actually work.
+				</p>
+
               </div>
 
               <div className="md:col-span-2 grid gap-3">
@@ -142,7 +143,7 @@ export default function HowItWorksPage() {
                   },
                   {
                     t: "Get a structured bid kit",
-                    d: "Summary, mandatory requirements, evaluation criteria, and risks  organized for review.",
+                    d: "Summary, mandatory requirements, evaluation criteria, and risks organized for review.",
                   },
                   {
                     t: "Verify with source excerpts",
@@ -161,7 +162,7 @@ export default function HowItWorksPage() {
               </div>
             </div>
 
-            <p className="mt-6 text-sm text-muted-foreground">The goal is clarity  especially when time is limited.</p>
+            <p className="mt-6 text-sm text-muted-foreground">The goal is clarity, especially when time is limited.</p>
           </CardContent>
         </Card>
       </section>
