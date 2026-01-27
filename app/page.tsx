@@ -231,7 +231,7 @@ export default function Page() {
 
               <div>
                 <h2 className="text-sm font-semibold">What it is not</h2>
-                <<ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+                <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
 				  <li>Tender search and alerts</li>
 				  <li>Legal advice</li>
 				  <li>Procurement consulting</li>
