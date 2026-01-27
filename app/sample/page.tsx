@@ -136,8 +136,9 @@ export default function SamplePage() {
             </Button>
 
             <Button variant="outline" className="rounded-full" disabled title="Disabled on sample page">
-              Export tender list (PDF)
-            </Button>
+			  Export sample (PDF)
+			</Button>
+
 
             <Button asChild className="rounded-full">
               <a href={WAITLIST_URL} target="_blank" rel="noreferrer" data-umami-event="cta_join_early_access_sample">
@@ -163,8 +164,8 @@ export default function SamplePage() {
                   <div>
                     <CardTitle className="text-base">Your tender workspace</CardTitle>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      This is a static sample showing how TenderPilot structures a tender review. It reflects the format
-                      teams use to avoid missing mandatory requirements and hidden risks. Always verify against the
+                      This is a static sample showing how TenderPilot structures a tender review. It reflects the format consultants and small teams use to avoid missing mandatory requirements and hidden risks.
+						Always verify against the
                       original PDF.
                     </p>
                   </div>
@@ -360,7 +361,7 @@ export default function SamplePage() {
 
               <div className="hidden sm:flex items-center gap-2">
                 <Button variant="outline" className="rounded-full" disabled title="Sample page">
-                  Copy ready to send
+                  Copy for email
                 </Button>
                 <Button variant="outline" className="rounded-full" disabled title="Sample page">
                   Copy risks
