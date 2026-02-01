@@ -7,8 +7,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      // Block Google from indexing your private dashboard or API
-      disallow: ["/app/", "/api/", "/dashboard/"],
+      // Keep bots out of the actual SaaS application and API
+      disallow: ["/app/", "/api/", "/dashboard/", "/auth/"],
     },
     sitemap: `${baseUrl}/sitemap.xml`,
   };
