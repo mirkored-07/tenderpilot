@@ -9,7 +9,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/how-it-works",      // Feature page
     "/sample",            // Sample output
     "/tenders/software",
-	"/tenders/construction",	// <--- YOUR NEW PAGE (Crucial!)
+	"/tenders/construction",
+	"/tenders/engineering",	// <--- YOUR NEW PAGE (Crucial!)
     "/privacy",
     "/terms",
   ];
