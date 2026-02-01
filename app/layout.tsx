@@ -14,12 +14,30 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  // The "Template" puts your brand at the end of every page automatically
+  // e.g. "Software Tenders | TenderPilot"
   title: {
-    default: "TenderPilot – Go/No-Go Tender Review",
-    template: "%s · TenderPilot",
+    default: "TenderPilot - AI Bid Writing & Proposal Software",
+    template: "%s | TenderPilot",
   },
-  description:
-    "Go/no-go decision support for tender consultants and SMEs. Extract mandatory requirements, evaluation criteria, and early risks from tenders and RFPs in minutes.",
+  description: "Automate your public procurement. TenderPilot helps Austrian, German, and Italian SMEs analyze tenders, assess risks, and write proposals 10x faster with AI.",
+  keywords: [
+    "Tender Management Software",
+    "AI Bid Writer",
+    "Proposal Automation",
+    "RFP Response Tool",
+    "Tenders Electronic Daily",
+    "Opentender Austria",
+    "Gare d'appalto IA" // Italian Keyword
+  ],
+  openGraph: {
+    title: "TenderPilot - Win More Tenders with AI",
+    description: "Stop reading 200-page PDFs. Upload them to TenderPilot and get a risk analysis in seconds.",
+    url: "https://www.trytenderpilot.com",
+    siteName: "TenderPilot",
+    locale: "en_EU",
+    type: "website",
+  },
 };
 
 
