@@ -125,11 +125,17 @@
     radial-gradient(at 100% 0%, hsla(339,49%,15%,0.4) 0, transparent 40%);
   background-attachment: fixed;
 }
-.dark .aurora-bg {
-  background-image: 
-    radial-gradient(at 0% 0%, hsla(253,16%,5%,1) 0, transparent 50%), 
-    radial-gradient(at 50% 0%, hsla(225,39%,10%,0.4) 0, transparent 50%), 
-    radial-gradient(at 100% 0%, hsla(339,49%,12%,0.2) 0, transparent 50%);
+
+.dark .premium-bg::before {
+  background:
+    /* Top-left subtle glow (Deep Indigo) */
+    radial-gradient(900px circle at 15% 10%, hsl(240 25% 15% / 0.4), transparent 55%),
+    /* Bottom-right subtle glow (Dark Slate) */
+    radial-gradient(700px circle at 85% 15%, hsl(217 30% 18% / 0.3), transparent 55%),
+    /* Bottom-left glow (Deep Blue) */
+    radial-gradient(900px circle at 40% 90%, hsl(220 30% 12% / 0.4), transparent 60%),
+    /* Base background (Keeps it dark, but allows the glows to sit on top) */
+    linear-gradient(to bottom, hsl(240 10% 6%), hsl(240 10% 4%)); 
 }
 
 /* HIGH CONTRAST GLASS CARDS */

@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { WaitlistInline } from "@/components/marketing/WaitlistInline";
+import { ModeToggle } from "@/components/mode-toggle";
 
 // --- 3D SCANNER HERO (Fixed: Looping Animation) ---
 function ScannerHero() {
@@ -226,14 +227,45 @@ export default function LandingPage() {
                 Get Audit Engine Access
               </Link>
             </Button>
+            {/* Added Toggle Here */}
+            <div className="ml-2 pl-2 border-l border-white/10">
+               <ModeToggle />
+            </div>
           </div>
 
-          {/* Mobile nav placeholder */}
-          <div className="md:hidden">
-             <Button asChild size="sm" className="rounded-full">
-                <Link href="#early-access">Get Access</Link>
-             </Button>
-          </div>
+          {/* Mobile nav */}
+          <details className="relative md:hidden z-50">
+            <summary className="cursor-pointer list-none rounded-full border border-white/10 bg-zinc-900/50 px-3 py-2 text-sm font-medium text-foreground backdrop-blur-md [&::-webkit-details-marker]:hidden">
+              Menu
+            </summary>
+
+            <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-white/10 bg-zinc-900/95 p-2 shadow-xl backdrop-blur-xl ring-1 ring-black/5">
+              <Link
+                href="/how-it-works"
+                className="block rounded-xl px-3 py-2 text-sm hover:bg-white/5 text-muted-foreground hover:text-foreground"
+              >
+                How it works
+              </Link>
+              <Link
+                href="/sample"
+                className="block rounded-xl px-3 py-2 text-sm hover:bg-white/5 text-muted-foreground hover:text-foreground"
+              >
+                Sample output
+              </Link>
+              <Link
+                href="#early-access"
+                className="block rounded-xl px-3 py-2 text-sm font-medium text-blue-400 hover:bg-blue-500/10"
+              >
+                Get Audit Engine Access
+              </Link>
+              
+              {/* Mobile Toggle */}
+              <div className="mt-2 flex items-center justify-between border-t border-white/10 px-3 pt-3 pb-1">
+                <span className="text-sm text-muted-foreground">Theme</span>
+                <ModeToggle />
+              </div>
+            </div>
+          </details>
         </div>
       </header>
 
