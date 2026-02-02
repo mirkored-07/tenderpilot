@@ -1,0 +1,480 @@
+{
+  "nav": {
+    "title": "TenderPilot",
+    "howItWorks": "How it works",
+    "sample": "Sample output",
+    "waitlist": "Get early access",
+    "menu": "Menu",
+    "backHome": "Back to home",
+    "back": "Back",
+    "join": "Join",
+    "export": "Export sample (PDF)",
+    "delete": "Delete"
+  },
+  "hero": {
+    "subtitle": "Go/no-go decision support for tender consultants and SMEs.",
+    "title1": "Understand tenders faster.",
+    "title2": "Decide whether to bid with confidence.",
+    "description": "Stop manually scanning 100-page PDFs. Upload your tender documents and get an AI-analyzed summary of risks, requirements, and criteria in minutes.",
+    "cta_upload": "Analyze your first tender",
+    "cta_limit": "Free during beta · No credit card required",
+    "privacy": "Secure & Private. We do not use your data to train our models."
+  },
+  "features": {
+    "analyze": {
+      "title": "Review-ready outputs",
+      "subtitle": "No chat bots. Just structured facts."
+    },
+    "extract": {
+      "title": "Mandatory requirements checklist",
+      "subtitle": "Requirements extracted and structured to reduce missed criteria."
+    },
+    "draft": {
+      "title": "Proposal outline draft",
+      "subtitle": "Jumpstart your response structure."
+    },
+    "security": {
+      "title": "Risks and ambiguities",
+      "subtitle": "Spot red flags before you bid."
+    }
+  },
+  "roi": {
+    "header": "Time and cost impact",
+    "subheader": "Built to reduce non-billable review effort and help you avoid low-fit bids earlier.",
+    "disclaimer": "Illustrative only · varies by document complexity",
+    "time": {
+      "title": "Save review time",
+      "desc": "Less manual extraction and reformatting. Faster first-pass understanding."
+    },
+    "margin": {
+      "title": "Protect bid margin",
+      "desc": "Spend fewer paid hours on tenders that do not fit. Focus effort where it counts."
+    },
+    "misses": {
+      "title": "Reduce costly misses",
+      "desc": "Surface disqualifiers and open points earlier so fewer surprises land late."
+    },
+    "summary_title": "A clearer first pass supports better go/no-go decisions",
+    "summary_desc": "Less admin work · earlier clarity · cleaner internal handoffs",
+    "footer": "This section explains intended benefits. It is not a guarantee of time or money saved."
+  },
+  "howItWorks": {
+    "eyebrow": "Practical workflow. Minimal noise.",
+    "title": "How it works",
+    "description": "TenderPilot helps you understand a tender fast so you can make a go/no-go decision with confidence. It structures RFPs and public tenders into review-ready outputs: mandatory requirements, evaluation criteria, risks and ambiguities, and a proposal outline.",
+    "disclaimer": "Decision-support only. No legal or procurement advice. Always verify against the original tender document.",
+    "cta_sample": "View sample output",
+    "cta_join": "Join early access",
+    "outputs_title": "Outputs you’ll see",
+    "outputs_desc": "A practical set of artifacts you can review quickly, built for traceability and verification.",
+    "outputs_list": [
+      "Mandatory requirements checklist",
+      "Evaluation criteria and scoring",
+      "Risks, ambiguities, missing information",
+      "Source excerpts for traceability",
+      "Proposal outline starter"
+    ]
+  },
+  "sample": {
+    "fileName": "standard-tender-document.pdf",
+    "status": "Review",
+    "decision_badge": "Proceed with caution",
+    "decision_text": "No clear disqualifier detected, but two points need clarification: submission packaging and acceptance criteria for the support SLA.",
+    "actions_title": "Next actions",
+    "actions_list": [
+      "Confirm submission packaging rules (PDF set + signed declarations).",
+      "Clarify acceptance tests and deliverable sign-off process.",
+      "Validate ISO 27001 evidence requirements and acceptable alternatives."
+    ],
+    "tabs": {
+      "reqs": "Requirements",
+      "risks": "Risks",
+      "questions": "Clarifications",
+      "source": "Source",
+      "outline": "Draft Outline"
+    },
+    "mock": {
+      "m1_title": "Submission method and deadline",
+      "m1_desc": "Submit through the e-procurement portal before the deadline. Technical and commercial offers as separate PDFs. File naming conventions apply.",
+      "m2_title": "Signed declarations and annexes",
+      "m2_desc": "Include signed declarations (eligibility, non-collusion, confidentiality). Authority may request additional documentation during clarification.",
+      "m3_title": "Security evidence (ISO 27001 or equivalent)",
+      "m3_desc": "Tender requests evidence of security controls for processing personal data. Confirm whether ISO 27001 is strictly required or equivalence is accepted.",
+      "r1_title": "Acceptance criteria unclear",
+      "r1_desc": "Acceptance testing is referenced but pass/fail criteria and sign-off roles are not defined. Risk of scope creep and late disputes.",
+      "r2_title": "Support SLA ambiguity",
+      "r2_desc": "Response times and service hours are unclear (business hours vs 24/7). Confirm escalation path, exclusions, and planned downtime handling.",
+      "r3_title": "Reference project template may be strict",
+      "r3_desc": "Annex suggests a fixed structure for references. Confirm if your format is accepted or if a template is mandatory.",
+      "key_bullets": [
+        "Submission via portal; strict file naming rules.",
+        "ISO 27001 evidence requested for data processing.",
+        "Milestones exist but acceptance tests not defined.",
+        "Evaluation weighted: price (40%), approach (40%), experience (20%)."
+      ],
+      "questions": [
+        "Can you confirm the exact submission packaging rules (file naming, number of files, signatures)?",
+        "What are the acceptance test criteria and who provides final sign-off?",
+        "Is ISO 27001 mandatory, or are equivalent certifications/controls acceptable?"
+      ],
+      "outline": "1. Executive summary\n2. Understanding of scope\n3. Proposed approach and methodology\n4. Delivery plan and milestones\n5. Team and references\n6. Security and data protection\n7. Service and support model (SLA)\n8. Pricing\n9. Compliance and declarations",
+      "source": "1. Submission\nOffers must be submitted through the Authority e-procurement portal no later than 12:00 CET on 14 May 2026..."
+    }
+  },
+  "tenders": {
+    "construction": {
+      "title": "Live Construction Tenders (EU)",
+      "subtitle": "Browse active EU construction tenders (CPV 45000000). Track opportunities for road works, building renovation, and infrastructure in Germany, Italy, and Austria.",
+      "list": [
+        {
+          "title": "Autobahn A7 Road Maintenance & Resurfacing",
+          "desc": "Large-scale road maintenance works including asphalt resurfacing and barrier replacement on the A7 section near Hamburg.",
+          "risk": "Medium"
+        },
+        {
+          "title": "Renovation of Public School 'Leonardo da Vinci'",
+          "desc": "Energy efficiency upgrades and structural seismic retrofitting for secondary school buildings in Milan.",
+          "risk": "Low"
+        },
+        {
+          "title": "Railway Tunnel Infrastructure Expansion",
+          "desc": "Construction of new tunnel segments and track laying for the Koralmbahn expansion project.",
+          "risk": "High (Complex)"
+        },
+        {
+          "title": "Construction of New Hospital Wing (Lyon)",
+          "desc": "General contractor services for the construction of a new pediatric wing, including HVAC and electrical systems.",
+          "risk": "Medium"
+        },
+        {
+          "title": "Municipal Water Pipeline Replacement",
+          "desc": "Excavation and replacement of underground water supply pipelines in the city center.",
+          "risk": "Low"
+        }
+      ]
+    },
+    "engineering": {
+      "title": "Live Engineering & Architectural Tenders",
+      "subtitle": "Browse active Engineering and Architectural tenders (CPV 71000000). Find opportunities for civil engineering, design, and technical analysis in the EU.",
+      "list": [
+        {
+          "title": "Structural Engineering Services for Bridge Renovation",
+          "desc": "Statics calculation, structural analysis, and safety inspection for the renovation of highway bridges (A9).",
+          "risk": "High"
+        },
+        {
+          "title": "Architectural Design Competition: New City Library",
+          "desc": "Architectural design services including urban planning and feasibility studies for the new sustainable library complex.",
+          "risk": "Medium"
+        },
+        {
+          "title": "Technical Supervision & Project Management (Rail)",
+          "desc": "Construction supervision and quality control management for the Koralm Tunnel expansion project.",
+          "risk": "Low"
+        },
+        {
+          "title": "HVAC and Electrical Engineering Services",
+          "desc": "Consultative engineering services for energy efficiency upgrades (HVAC/Electrical) across campus buildings.",
+          "risk": "Low"
+        },
+        {
+          "title": "Environmental Impact Assessment (EIA)",
+          "desc": "Provision of environmental engineering consultancy for cross-border sustainability projects.",
+          "risk": "Medium"
+        }
+      ]
+    },
+    "software": {
+      "title": "Live Software Development Tenders",
+      "subtitle": "Browse active EU software tenders (CPV 72200000) in Germany, Italy, and Austria. Use AI to analyze risks and write winning bids instantly.",
+      "list": [
+        {
+          "title": "Development of Specialized Software for Traffic Management",
+          "desc": "Framework agreement for the agile development of traffic control center software (Java/Spring Boot).",
+          "risk": "Medium"
+        },
+        {
+          "title": "Digital Transformation & Cloud Services (SaaS)",
+          "desc": "Supply and maintenance of cloud-native application software for administrative processes. GDPR compliance mandatory.",
+          "risk": "High (Security)"
+        },
+        {
+          "title": "IT Consulting and Software Engineering Services",
+          "desc": "Provision of external IT specialists for SAP and custom web development projects.",
+          "risk": "Low"
+        },
+        {
+          "title": "AI & Data Analytics Platform Development",
+          "desc": "Design and implementation of a data lake and AI analysis tools for environmental reporting.",
+          "risk": "Complex"
+        },
+        {
+          "title": "Maintenance of Hospital Information Systems (HIS)",
+          "desc": "Corrective and evolutionary maintenance of patient management software modules.",
+          "risk": "Medium"
+        }
+      ]
+    },
+    "labels": {
+      "deadline": "Deadline",
+      "value": "Value",
+      "risk": "Risk estimate",
+      "cta_view": "View details"
+    }
+  },
+  "landing": {
+    "nav": {
+      "cta": "Get Audit Engine Access",
+      "theme": "Theme"
+    },
+    "hero": {
+      "badge": "Specialized Tender AI Model",
+      "title_line1": "Stop Reading.",
+      "title_line2": "Start Deciding.",
+      "description": "The \"Friday 4PM\" solution. Upload complex tender PDFs and get an instant Go/No-Go decision based on risks and mandatory requirements.",
+      "primary_cta": "Get Audit Engine Access",
+      "secondary_cta": "See Sample Output",
+      "validated_prefix": "Validated in private pilots by",
+      "validated_emphasis": "Tier-1 Consultants"
+    },
+    "scanner": {
+      "risk_badge": "Liability Risk"
+    },
+    "features": {
+      "section_title": "What you get from a tender document",
+      "section_subtitle": "We turn 100 pages of PDF into 3 actionable lists.",
+      "cards": {
+        "executive": {
+          "title": "Executive summary",
+          "subtitle": "A concise, decision-oriented summary to support early go/no-go decisions and faster stakeholder alignment.",
+          "bullets": [
+            "Scope and context",
+            "Key constraints",
+            "Decision points"
+          ]
+        },
+        "mandatory": {
+          "title": "Mandatory requirements",
+          "subtitle": "Requirements extracted and structured to reduce the risk of missing disqualifying conditions.",
+          "bullets": [
+            "Mandatory vs optional",
+            "Clear pass / review",
+            "Verification-ready"
+          ]
+        },
+        "risks": {
+          "title": "Risks and ambiguities",
+          "subtitle": "Unclear clauses, gaps, and potential delivery or cost risks highlighted early so you can clarify sooner.",
+          "bullets": [
+            "Severity labels",
+            "Open points",
+            "Clarification prompts"
+          ]
+        }
+      }
+    },
+    "roi": {
+      "header": "Time and cost impact",
+      "subheader": "Built to reduce non-billable review effort instantly.",
+      "cards": {
+        "time": {
+          "title": "Save 4+ Hours",
+          "desc": "Per tender on manual reading and extraction."
+        },
+        "margin": {
+          "title": "Protect Margin",
+          "desc": "Avoid bidding on projects with hidden penalties."
+        },
+        "compliance": {
+          "title": "Compliance",
+          "desc": "Never miss a mandatory ISO or GDPR requirement."
+        }
+      }
+    },
+    "zero_training": {
+      "title": "Zero-Training Policy:",
+      "text": "We do not use your tender data to train our models."
+    },
+    "early_access": {
+      "title": "Cut Tender Evaluation Time by 90%",
+      "description": "Secure your spot in the early access program. Analyze your first tender in minutes.",
+      "limited": "Limited spots available for the beta program."
+    },
+        "footer": {
+      "browse": "Browse Software Tenders",
+      "privacy": "Privacy",
+      "terms": "Terms"
+    }
+  },
+  "howItWorksPage": {
+
+  "header": {
+    "backToHome": "Back to Home"
+  },
+  "hero": {
+    "titleA": "From PDF to Decision",
+    "titleB": "in",
+    "highlight": "Three Steps",
+    "subtitle": "We don't write the proposal. We help you decide if it's worth writing."
+  },
+  "steps": [
+    {
+      "step": "01",
+      "title": "Upload Tender Docs",
+      "desc": "Drag and drop your complex RFPs, RFIs, or Tender PDFs. We support files up to 100MB."
+    },
+    {
+      "step": "02",
+      "title": "Deep Extraction",
+      "desc": "Our engine reads every line, extracting mandatory requirements ('shall', 'must') and identifying liability risks."
+    },
+    {
+      "step": "03",
+      "title": "The Go/No-Go Report",
+      "desc": "Receive a structured executive summary with a Compliance Matrix and Risk Register ready for export."
+    }
+  ],
+    "bottomCta": {
+    "title": "Have a tender on your desk right now?",
+    "desc": "Test the \"Friday 4PM\" workflow yourself.",
+    "button": "Get Early Audit Access"
+  }
+  },
+  "samplePage": {
+
+  "severity": {
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low"
+  },
+  "header": {
+    "backToHome": "Back to home",
+    "exportPdf": "Export PDF",
+    "joinEarlyAccess": "Join early access",
+    "join": "Join",
+    "exportSample": "Export sample",
+    "delete": "Delete"
+  },
+  "workspace": {
+    "title": "Your tender workspace",
+    "desc": "This is a static sample showing how TenderPilot structures a tender review. Always verify against the original PDF."
+  },
+  "nextActions": {
+    "title": "Next actions"
+  },
+  "counts": {
+    "title": "Quick counts",
+    "must": "MUST",
+    "risks": "Risks",
+    "qa": "Q&A",
+    "microcopy": "Designed for speed. Built for traceability."
+  },
+  "mustItems": {
+    "title": "MUST items",
+    "subtitle": "Hard requirements that can disqualify you.",
+    "export": "Export",
+    "jump": "Jump"
+  },
+  "risks": {
+    "title": "Top risks",
+    "subtitle": "Ambiguities that can impact delivery or cost.",
+    "export": "Export",
+    "jump": "Jump"
+  },
+  "deadline": {
+    "title": "Deadline",
+    "helper": "Confirm timezone and portal rules",
+    "cta": "Join early access"
+  },
+  "keyBullets": {
+    "title": "Key bullets",
+    "subtitle": "Quick scan of what matters."
+  },
+  "tabs": {
+    "requirements": "Requirements",
+    "risks": "Risks",
+    "questions": "Clarifications",
+    "draft": "Outline",
+    "source": "Source",
+    "copyAll": "Copy all"
+  },
+  "tabContent": {
+    "detailedRequirements": "Detailed Requirements",
+    "riskRegister": "Risk Register",
+    "clarificationTitle": "Clarification questions",
+    "clarificationDesc": "Ask these before committing to price, timeline, or SLA.",
+    "outlineTitle": "Tender outline",
+    "outlineDesc": "A starting structure you can paste into your bid template.",
+    "sourceTitle": "Source text",
+    "sourceDesc": "Extracted text for traceability."
+  },
+  "data": {
+    "fileName": "standard-tender-document.pdf",
+    "status": "Review",
+    "submissionDeadline": "14 May 2026, 12:00 CET",
+    "decision": {
+      "badge": "Proceed with caution",
+      "line": "No clear disqualifier detected, but two points need clarification: submission packaging and acceptance criteria for the support SLA."
+    },
+    "nextActions": [
+      "Confirm submission packaging rules (PDF set + signed declarations).",
+      "Clarify acceptance tests and deliverable sign-off process.",
+      "Validate ISO 27001 evidence requirements and acceptable alternatives."
+    ],
+    "mustItems": [
+      {
+        "id": "m1",
+        "title": "Submission method and deadline",
+        "detail": "Submit through the e-procurement portal before the deadline. Technical and commercial offers as separate PDFs. File naming conventions apply.",
+        "tag": "MUST"
+      },
+      {
+        "id": "m2",
+        "title": "Signed declarations and annexes",
+        "detail": "Include signed declarations (eligibility, non-collusion, confidentiality). Authority may request additional documentation during clarification.",
+        "tag": "MUST"
+      },
+      {
+        "id": "m3",
+        "title": "Security evidence (ISO 27001 or equivalent)",
+        "detail": "Tender requests evidence of security controls for processing personal data. Confirm whether ISO 27001 is strictly required or equivalence is accepted.",
+        "tag": "MUST"
+      }
+    ],
+    "risks": [
+      {
+        "id": "r1",
+        "severity": "high",
+        "title": "Acceptance criteria unclear",
+        "detail": "Acceptance testing is referenced but pass/fail criteria and sign-off roles are not defined. Risk of scope creep and late disputes."
+      },
+      {
+        "id": "r2",
+        "severity": "medium",
+        "title": "Support SLA ambiguity",
+        "detail": "Response times and service hours are unclear (business hours vs 24/7). Confirm escalation path, exclusions, and planned downtime handling."
+      },
+      {
+        "id": "r3",
+        "severity": "low",
+        "title": "Reference project template may be strict",
+        "detail": "Annex suggests a fixed structure for references. Confirm if your format is accepted or if a template is mandatory."
+      }
+    ],
+    "keyBullets": [
+      "Submission via portal; strict file naming rules.",
+      "ISO 27001 evidence requested for data processing.",
+      "Milestones exist but acceptance tests not defined.",
+      "Evaluation weighted: price (40%), approach (40%), experience (20%)."
+    ],
+    "questions": [
+      "Can you confirm the exact submission packaging rules (file naming, number of files, signatures)?",
+      "What are the acceptance test criteria and who provides final sign-off?",
+      "Is ISO 27001 mandatory, or are equivalent certifications or controls acceptable?"
+    ],
+    "draftOutline": "1. Executive summary\n2. Understanding of scope\n3. Proposed approach and methodology\n4. Delivery plan and milestones\n5. Team and references\n6. Security and data protection\n7. Service and support model (SLA)\n8. Pricing\n9. Compliance and declarations",
+    "sourceExcerpt": "1. Submission\nOffers must be submitted through the Authority e-procurement portal no later than 12:00 CET on 14 May 2026. The submission must include a technical offer and a commercial offer as separate PDF files. File naming conventions apply.\n\n2. Eligibility and declarations\nBidders shall include signed declarations regarding eligibility, non-collusion, and confidentiality. The Authority may request additional documentation during clarification.\n\n3. Data protection and security\nThe Contractor will process personal data. Evidence of information security controls (ISO 27001 certification or equivalent) is requested.\n\n4. Delivery and acceptance\nThe delivery shall follow the milestone schedule described in Annex B. Acceptance testing will be performed prior to go-live. Acceptance criteria are referenced but not specified in measurable terms.\n\n5. Support and SLA\nThe Contractor shall provide support services. The tender mentions response times and escalation paths but does not explicitly define whether service hours are business hours or 24/7.\n\n6. Evaluation\nAwards will be based on price (40%), technical approach (40%), and team experience (20%)."
+   }
+  }
+}
+

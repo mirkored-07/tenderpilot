@@ -21,6 +21,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { WaitlistInline } from "@/components/marketing/WaitlistInline";
 import { ModeToggle } from "@/components/mode-toggle";
+import LanguageSwitcherSlot from "@/components/marketing/LanguageSwitcherSlot";
+
 
 type LandingDict = {
   nav: { cta: string; theme: string };
@@ -237,7 +239,7 @@ function RoiBenefitGraphic({ roi }: { roi: LandingDict["roi"] }) {
 }
 
 export default async function LandingPage() {
-  const dict = (await import("@/dictionaries/en.json")).default as any;
+  const dict = (await import("@/dictionaries/de.json")).default as any;
   const t = dict.landing as LandingDict;
   const nav = dict.nav as {
     howItWorks: string;
@@ -252,7 +254,7 @@ export default async function LandingPage() {
       <header className="sticky top-0 z-50 border-b border-white/5 bg-background/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:h-16 md:px-8 md:py-0">
           <Link
-            href="/"
+            href="/de"
             className="flex items-center gap-2 font-bold text-lg tracking-tight hover:opacity-80 transition-opacity"
           >
             <div className="h-8 w-8 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-lg flex items-center justify-center shadow-lg">
@@ -264,13 +266,13 @@ export default async function LandingPage() {
           {/* Desktop nav */}
           <div className="hidden md:flex items-center gap-4">
             <Link
-              href="/how-it-works"
+              href="/de/how-it-works"
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               {nav.howItWorks}
             </Link>
             <Link
-              href="/sample"
+              href="/de/sample"
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               {nav.sample}
@@ -282,9 +284,10 @@ export default async function LandingPage() {
               <Link href="#early-access">{t.nav.cta}</Link>
             </Button>
             {/* Theme toggle */}
-            <div className="ml-2 pl-2 border-l border-white/10">
-              <ModeToggle />
-            </div>
+            <div className="ml-2 pl-2 border-l border-white/10 flex items-center gap-2">
+			  <LanguageSwitcherSlot />
+			  <ModeToggle />
+			</div>
           </div>
 
           {/* Mobile nav */}
@@ -295,13 +298,13 @@ export default async function LandingPage() {
 
             <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-white/10 bg-zinc-900/95 p-2 shadow-xl backdrop-blur-xl ring-1 ring-black/5">
               <Link
-                href="/how-it-works"
+                href="/de/how-it-works"
                 className="block rounded-xl px-3 py-2 text-sm hover:bg-white/5 text-muted-foreground hover:text-foreground"
               >
                 {nav.howItWorks}
               </Link>
               <Link
-                href="/sample"
+                href="/de/sample"
                 className="block rounded-xl px-3 py-2 text-sm hover:bg-white/5 text-muted-foreground hover:text-foreground"
               >
                 {nav.sample}
@@ -320,6 +323,11 @@ export default async function LandingPage() {
                 </span>
                 <ModeToggle />
               </div>
+			  <div className="mt-2 flex items-center justify-between border-t border-white/10 px-3 pt-3 pb-1">
+				  <span className="text-sm text-muted-foreground">Language</span>
+				  <LanguageSwitcherSlot />
+				</div>
+
             </div>
           </details>
         </div>
@@ -467,13 +475,13 @@ export default async function LandingPage() {
           </div>
           <div className="flex flex-wrap items-center gap-8 text-sm font-medium">
             <Link
-              href="/how-it-works"
+              href="/de/how-it-works"
               className="text-zinc-400 hover:text-white transition-colors"
             >
               {nav.howItWorks}
             </Link>
             <Link
-              href="/sample"
+              href="/de/sample"
               className="text-zinc-400 hover:text-white transition-colors"
             >
               {nav.sample}

@@ -1,0 +1,477 @@
+{
+  "nav": {
+    "title": "TenderPilot",
+    "howItWorks": "Comment ça marche",
+    "sample": "Exemple de sortie",
+    "waitlist": "Obtenir un accès anticipé",
+    "menu": "Menu",
+    "backHome": "Retour à l’accueil",
+    "back": "Retour",
+    "join": "S’inscrire",
+    "export": "Exporter l’exemple (PDF)",
+    "delete": "Supprimer"
+  },
+  "hero": {
+    "subtitle": "Aide à la décision go/no-go pour consultants en appels d’offres et PME.",
+    "title1": "Comprenez les appels d’offres plus vite.",
+    "title2": "Décidez de répondre avec confiance.",
+    "description": "Arrêtez de parcourir manuellement des PDF de 100 pages. Importez vos documents et obtenez en quelques minutes une synthèse assistée par IA des risques, exigences et critères.",
+    "cta_upload": "Analyser votre premier appel d’offres",
+    "cta_limit": "Gratuit pendant la bêta · Aucune carte bancaire requise",
+    "privacy": "Sécurisé et confidentiel. Nous n’utilisons pas vos données pour entraîner nos modèles."
+  },
+  "features": {
+    "analyze": {
+      "title": "Résultats prêts à être relus",
+      "subtitle": "Pas de chatbot. Des faits structurés."
+    },
+    "extract": {
+      "title": "Checklist des exigences obligatoires",
+      "subtitle": "Exigences extraites et structurées pour réduire les oublis."
+    },
+    "draft": {
+      "title": "Brouillon de plan de réponse",
+      "subtitle": "Démarrez plus vite avec une structure claire."
+    },
+    "security": {
+      "title": "Risques et ambiguïtés",
+      "subtitle": "Repérez les signaux d’alerte avant de répondre."
+    }
+  },
+  "roi": {
+    "header": "Impact temps et coûts",
+    "subheader": "Conçu pour réduire le travail de revue non facturable et écarter plus tôt les dossiers peu pertinents.",
+    "disclaimer": "À titre indicatif · dépend de la complexité du document",
+    "time": {
+      "title": "Gagnez du temps de revue",
+      "desc": "Moins d’extraction et de mise en forme manuelles. Plus de clarté dès le premier passage."
+    },
+    "margin": {
+      "title": "Protégez la marge",
+      "desc": "Moins d’heures payées sur des appels d’offres qui ne conviennent pas. Concentrez l’effort là où ça compte."
+    },
+    "misses": {
+      "title": "Réduisez les oublis coûteux",
+      "desc": "Faites ressortir plus tôt les critères éliminatoires et les points ouverts pour éviter les surprises de dernière minute."
+    },
+    "summary_title": "Un premier passage plus clair aide à prendre de meilleures décisions go/no-go",
+    "summary_desc": "Moins d’administratif · clarté plus tôt · meilleurs relais internes",
+    "footer": "Cette section décrit des bénéfices attendus. Elle ne garantit pas des économies de temps ou d’argent."
+  },
+  "howItWorks": {
+    "eyebrow": "Flux de travail concret. Peu de bruit.",
+    "title": "Comment ça marche",
+    "description": "TenderPilot vous aide à comprendre rapidement un appel d’offres afin de prendre une décision go/no-go avec confiance. Il structure les RFP et appels d’offres publics en livrables prêts à relire : exigences obligatoires, critères d’évaluation, risques et ambiguïtés, et un plan de réponse initial.",
+    "disclaimer": "Aide à la décision uniquement. Ce n’est pas un conseil juridique ni un conseil en commande publique. Vérifiez toujours sur le document source.",
+    "cta_sample": "Voir l’exemple de sortie",
+    "cta_join": "Obtenir un accès anticipé",
+    "outputs_title": "Ce que vous verrez",
+    "outputs_desc": "Un ensemble pratique de livrables à relire rapidement, avec un focus sur la traçabilité et la vérification.",
+    "outputs_list": [
+      "Checklist des exigences obligatoires",
+      "Critères d’évaluation et notation",
+      "Risques, ambiguïtés, informations manquantes",
+      "Extraits de source pour la traçabilité",
+      "Point de départ pour un plan de réponse"
+    ]
+  },
+  "sample": {
+    "fileName": "standard-tender-document.pdf",
+    "status": "En revue",
+    "decision_badge": "Poursuivre avec prudence",
+    "decision_text": "Aucun motif d’exclusion évident, mais deux points doivent être clarifiés : le dossier de remise et les critères d’acceptation du SLA de support.",
+    "actions_title": "Prochaines actions",
+    "actions_list": [
+      "Confirmer les règles du dossier de remise (jeu de PDF plus déclarations signées).",
+      "Clarifier les tests d’acceptation et le processus de validation des livrables.",
+      "Vérifier l’exigence de preuve ISO 27001 et les alternatives acceptées."
+    ],
+    "tabs": {
+      "reqs": "Exigences",
+      "risks": "Risques",
+      "questions": "Clarifications",
+      "source": "Source",
+      "outline": "Brouillon de plan"
+    },
+    "mock": {
+      "m1_title": "Canal de remise et date limite",
+      "m1_desc": "Remise via le portail d’e-procurement avant l’échéance. Offre technique et offre commerciale en PDF séparés. Des conventions de nommage s’appliquent.",
+      "m2_title": "Déclarations signées et annexes",
+      "m2_desc": "Inclure les déclarations signées (éligibilité, absence de collusion, confidentialité). L’acheteur peut demander des pièces supplémentaires lors des clarifications.",
+      "m3_title": "Justificatifs de sécurité (ISO 27001 ou équivalent)",
+      "m3_desc": "Le dossier exige des preuves de contrôles de sécurité pour le traitement de données personnelles. Confirmer si ISO 27001 est obligatoire ou si un équivalent est accepté.",
+      "r1_title": "Critères d’acceptation non définis",
+      "r1_desc": "Les tests d’acceptation sont mentionnés, mais les critères de réussite/échec et les rôles pour l’acceptation finale ne sont pas définis. Risque de dérive de périmètre et de litiges tardifs.",
+      "r2_title": "Ambiguïté sur le SLA de support",
+      "r2_desc": "Les temps de réponse et les plages de service ne sont pas clairs (heures ouvrées vs 24/7). Confirmer l’escalade, les exclusions et la gestion des arrêts planifiés.",
+      "r3_title": "Le modèle de références pourrait être strict",
+      "r3_desc": "Une annexe suggère une structure imposée pour les références. Confirmer si votre format est accepté ou si le modèle est obligatoire.",
+      "key_bullets": [
+        "Remise via portail, règles strictes de nommage.",
+        "Justificatif ISO 27001 requis pour le traitement des données.",
+        "Des jalons existent, mais les tests d’acceptation ne sont pas définis.",
+        "Évaluation pondérée : prix (40%), approche (40%), expérience (20%)."
+      ],
+      "questions": [
+        "Pouvez-vous confirmer les règles exactes du dossier de remise (noms, nombre de fichiers, signatures) ?",
+        "Quels sont les critères d’acceptation et qui donne l’acceptation finale ?",
+        "ISO 27001 est-elle obligatoire ou des certifications/contrôles équivalents sont-ils acceptés ?"
+      ],
+      "outline": "1. Synthèse exécutive\n2. Compréhension du périmètre\n3. Approche proposée et méthodologie\n4. Plan de livraison et jalons\n5. Équipe et références\n6. Sécurité et protection des données\n7. Modèle de service et support (SLA)\n8. Prix\n9. Conformité et déclarations",
+      "source": "1. Remise\nLes offres doivent être déposées via le portail d’e-procurement de l’acheteur au plus tard à 12:00 CET le 14 mai 2026..."
+    }
+  },
+  "tenders": {
+    "construction": {
+      "title": "Appels d’offres construction actifs (UE)",
+      "subtitle": "Parcourez les appels d’offres construction actifs dans l’UE (CPV 45000000). Suivez des opportunités de voirie, rénovation et infrastructures en Allemagne, Italie et Autriche.",
+      "list": [
+        {
+          "title": "Maintenance et réfection de chaussée sur l’Autobahn A7",
+          "desc": "Projet de maintenance d’envergure incluant réfection d’enrobés et remplacement de glissières de sécurité sur un tronçon de l’A7 près de Hambourg.",
+          "risk": "Moyen"
+        },
+        {
+          "title": "Rénovation de l’école publique « Leonardo da Vinci »",
+          "desc": "Amélioration de l’efficacité énergétique et renforcement sismique d’établissements scolaires secondaires à Milan.",
+          "risk": "Faible"
+        },
+        {
+          "title": "Extension d’infrastructure de tunnels ferroviaires",
+          "desc": "Construction de nouveaux segments de tunnel et travaux de voie pour le projet d’extension Koralmbahn.",
+          "risk": "Élevé (Complexe)"
+        },
+        {
+          "title": "Construction d’une nouvelle aile d’hôpital (Lyon)",
+          "desc": "Mission d’entreprise générale pour une nouvelle aile pédiatrique, incluant CVC et installations électriques.",
+          "risk": "Moyen"
+        },
+        {
+          "title": "Renouvellement de canalisations d’eau urbaines",
+          "desc": "Terrassement et remplacement de conduites d’eau enterrées en centre-ville.",
+          "risk": "Faible"
+        }
+      ]
+    },
+    "engineering": {
+      "title": "Appels d’offres ingénierie et architecture actifs",
+      "subtitle": "Parcourez les appels d’offres ingénierie et architecture actifs (CPV 71000000). Trouvez des opportunités de génie civil, conception et analyses techniques dans l’UE.",
+      "list": [
+        {
+          "title": "Études de structure pour réhabilitation de ponts",
+          "desc": "Calculs, analyses structurelles et inspection de sécurité pour la réhabilitation de ponts autoroutiers (A9).",
+          "risk": "Élevé"
+        },
+        {
+          "title": "Concours d’architecture : nouvelle bibliothèque municipale",
+          "desc": "Prestations d’architecture incluant urbanisme et études de faisabilité pour un complexe de bibliothèque durable.",
+          "risk": "Moyen"
+        },
+        {
+          "title": "Supervision technique de chantier et gestion de projet (ferroviaire)",
+          "desc": "Suivi de chantier et management qualité pour le projet d’extension du tunnel Koralm.",
+          "risk": "Faible"
+        },
+        {
+          "title": "Ingénierie CVC et électricité",
+          "desc": "Conseil en ingénierie pour des améliorations d’efficacité énergétique (CVC et électricité) sur des bâtiments de campus.",
+          "risk": "Faible"
+        },
+        {
+          "title": "Étude d’impact environnemental",
+          "desc": "Conseil en ingénierie environnementale pour des projets de durabilité transfrontaliers.",
+          "risk": "Moyen"
+        }
+      ]
+    },
+    "software": {
+      "title": "Appels d’offres développement logiciel actifs",
+      "subtitle": "Parcourez des appels d’offres logiciels actifs dans l’UE (CPV 72200000) en Allemagne, Italie et Autriche. Utilisez l’IA pour analyser les risques rapidement et accélérer la préparation d’une offre.",
+      "list": [
+        {
+          "title": "Développement d’un logiciel spécialisé de gestion du trafic",
+          "desc": "Accord-cadre pour développement agile d’un logiciel de centre de supervision (Java et Spring Boot).",
+          "risk": "Moyen"
+        },
+        {
+          "title": "Transformation digitale et services cloud (SaaS)",
+          "desc": "Fourniture et maintenance d’une application cloud-native pour des processus administratifs. Conformité RGPD obligatoire.",
+          "risk": "Élevé (Sécurité)"
+        },
+        {
+          "title": "Conseil IT et ingénierie logicielle",
+          "desc": "Mise à disposition d’experts IT externes pour SAP et des projets web sur mesure.",
+          "risk": "Faible"
+        },
+        {
+          "title": "Plateforme IA et data analytics",
+          "desc": "Conception et mise en œuvre d’un data lake et d’outils d’analyse IA pour le reporting environnemental.",
+          "risk": "Complexe"
+        },
+        {
+          "title": "Maintenance de systèmes d’information hospitaliers (SIH)",
+          "desc": "Maintenance corrective et évolutive de modules de gestion des patients.",
+          "risk": "Moyen"
+        }
+      ]
+    },
+    "labels": {
+      "deadline": "Échéance",
+      "value": "Valeur",
+      "risk": "Estimation du risque",
+      "cta_view": "Voir les détails"
+    }
+  },
+  "landing": {
+    "nav": {
+      "cta": "Obtenir l’accès au moteur d’audit",
+      "theme": "Thème"
+    },
+    "hero": {
+      "badge": "Modèle IA spécialisé appels d’offres",
+      "title_line1": "Arrêtez de lire.",
+      "title_line2": "Commencez à décider.",
+      "description": "La solution « vendredi 16:00 ». Importez des PDF d’appels d’offres complexes et obtenez instantanément une décision go/no-go basée sur les risques et les exigences obligatoires.",
+      "primary_cta": "Obtenir l’accès au moteur d’audit",
+      "secondary_cta": "Voir l’exemple de sortie",
+      "validated_prefix": "Validé en pilotes privés par",
+      "validated_emphasis": "des consultants Tier-1"
+    },
+    "scanner": {
+      "risk_badge": "Risque de responsabilité"
+    },
+    "features": {
+      "section_title": "Ce que vous obtenez d’un document d’appel d’offres",
+      "section_subtitle": "Nous transformons 100 pages de PDF en trois listes actionnables.",
+      "cards": {
+        "executive": {
+          "title": "Synthèse exécutive",
+          "subtitle": "Une synthèse courte orientée décision pour des go/no-go plus tôt et un alignement plus rapide des parties prenantes.",
+          "bullets": [
+            "Périmètre et contexte",
+            "Contraintes clés",
+            "Points de décision"
+          ]
+        },
+        "mandatory": {
+          "title": "Exigences obligatoires",
+          "subtitle": "Exigences extraites et structurées pour réduire le risque d’oublier des conditions éliminatoires.",
+          "bullets": [
+            "Obligatoire vs optionnel",
+            "Clair : OK ou à vérifier",
+            "Prêt pour vérification"
+          ]
+        },
+        "risks": {
+          "title": "Risques et ambiguïtés",
+          "subtitle": "Clauses floues, zones grises et risques potentiels de livraison ou de coûts mis en évidence tôt pour clarifier rapidement.",
+          "bullets": [
+            "Niveaux de criticité",
+            "Points ouverts",
+            "Pistes de clarification"
+          ]
+        }
+      }
+    },
+    "roi": {
+      "header": "Impact temps et coûts",
+      "subheader": "Conçu pour réduire immédiatement le travail de revue non facturable.",
+      "cards": {
+        "time": {
+          "title": "Économisez plus de 4 heures",
+          "desc": "Par dossier sur la lecture et l’extraction manuelles."
+        },
+        "margin": {
+          "title": "Protégez la marge",
+          "desc": "Évitez des dossiers avec pénalités contractuelles cachées."
+        },
+        "compliance": {
+          "title": "Conformité",
+          "desc": "Ne manquez pas les exigences ISO ou RGPD obligatoires."
+        }
+      }
+    },
+    "zero_training": {
+      "title": "Politique zéro entraînement :",
+      "text": "Nous n’utilisons pas les données de vos appels d’offres pour entraîner nos modèles."
+    },
+    "early_access": {
+      "title": "Réduisez de 90% le temps d’évaluation des appels d’offres",
+      "description": "Réservez une place dans le programme d’accès anticipé. Analysez votre premier dossier en quelques minutes.",
+      "limited": "Places limitées disponibles pour le programme bêta."
+    },
+    "footer": {
+      "browse": "Parcourir les appels d’offres logiciels",
+      "privacy": "Privacy",
+      "terms": "Terms"
+    }
+  },
+  "howItWorksPage": {
+    "header": {
+      "backToHome": "Retour à l’accueil"
+    },
+    "hero": {
+      "titleA": "Du PDF à la décision",
+      "titleB": "en",
+      "highlight": "trois étapes",
+      "subtitle": "Nous n’écrivons pas l’offre. Nous vous aidons à décider si cela vaut la peine d’en écrire une."
+    },
+    "steps": [
+      {
+        "step": "01",
+        "title": "Importer les documents",
+        "desc": "Glissez-déposez des RFP, RFI ou PDF d’appels d’offres complexes. Nous supportons des fichiers jusqu’à 100MB."
+      },
+      {
+        "step": "02",
+        "title": "Analyse approfondie et extraction",
+        "desc": "Notre moteur lit chaque ligne, extrait les exigences obligatoires (\"shall\", \"must\") et identifie les risques de responsabilité."
+      },
+      {
+        "step": "03",
+        "title": "Rapport go/no-go",
+        "desc": "Vous recevez une synthèse exécutive structurée avec une matrice de conformité et un registre des risques, prête à l’export."
+      }
+    ],
+    "bottomCta": {
+      "title": "Vous avez un appel d’offres sur votre bureau maintenant ?",
+      "desc": "Testez vous-même le workflow « vendredi 16:00 ».",
+      "button": "Obtenir un accès anticipé à l’audit"
+    }
+  },
+  "samplePage": {
+    "severity": {
+      "high": "Élevée",
+      "medium": "Moyenne",
+      "low": "Faible"
+    },
+    "header": {
+      "backToHome": "Retour à l’accueil",
+      "exportPdf": "Exporter en PDF",
+      "joinEarlyAccess": "Accès anticipé",
+      "join": "S’inscrire",
+      "exportSample": "Exporter l’exemple",
+      "delete": "Supprimer"
+    },
+    "workspace": {
+      "title": "Votre espace de travail",
+      "desc": "Ceci est un exemple statique montrant comment TenderPilot structure la revue d’un appel d’offres. Vérifiez toujours sur le PDF source."
+    },
+    "nextActions": {
+      "title": "Prochaines actions"
+    },
+    "counts": {
+      "title": "Comptes rapides",
+      "must": "MUST",
+      "risks": "Risques",
+      "qa": "Q&A",
+      "microcopy": "Pensé pour aller vite. Conçu pour la traçabilité."
+    },
+    "mustItems": {
+      "title": "Éléments MUST",
+      "subtitle": "Exigences strictes pouvant entraîner une disqualification.",
+      "export": "Exporter",
+      "jump": "Aller"
+    },
+    "risks": {
+      "title": "Risques principaux",
+      "subtitle": "Ambiguïtés pouvant impacter la livraison ou les coûts.",
+      "export": "Exporter",
+      "jump": "Aller"
+    },
+    "deadline": {
+      "title": "Échéance",
+      "helper": "Confirmer le fuseau horaire et les règles du portail",
+      "cta": "Accès anticipé"
+    },
+    "keyBullets": {
+      "title": "Points clés",
+      "subtitle": "Scan rapide de l’essentiel."
+    },
+    "tabs": {
+      "requirements": "Exigences",
+      "risks": "Risques",
+      "questions": "Clarifications",
+      "draft": "Plan",
+      "source": "Source",
+      "copyAll": "Tout copier"
+    },
+    "tabContent": {
+      "detailedRequirements": "Exigences détaillées",
+      "riskRegister": "Registre des risques",
+      "clarificationTitle": "Questions de clarification",
+      "clarificationDesc": "Posez ces questions avant de vous engager sur le prix, le planning ou le SLA.",
+      "outlineTitle": "Plan de réponse",
+      "outlineDesc": "Une structure de départ à copier dans votre modèle d’offre.",
+      "sourceTitle": "Texte source",
+      "sourceDesc": "Texte extrait pour la traçabilité."
+    },
+    "data": {
+      "fileName": "standard-tender-document.pdf",
+      "status": "En revue",
+      "submissionDeadline": "14 mai 2026, 12:00 CET",
+      "decision": {
+        "badge": "Poursuivre avec prudence",
+        "line": "Aucun motif d’exclusion évident, mais deux points doivent être clarifiés : le dossier de remise et les critères d’acceptation du SLA de support."
+      },
+      "nextActions": [
+        "Confirmer les règles du dossier de remise (jeu de PDF plus déclarations signées).",
+        "Clarifier les tests d’acceptation et le processus de validation des livrables.",
+        "Vérifier l’exigence de preuve ISO 27001 et les alternatives acceptées."
+      ],
+      "mustItems": [
+        {
+          "id": "m1",
+          "title": "Canal de remise et date limite",
+          "detail": "Remise via le portail d’e-procurement avant l’échéance. Offre technique et offre commerciale en PDF séparés. Des conventions de nommage s’appliquent.",
+          "tag": "MUST"
+        },
+        {
+          "id": "m2",
+          "title": "Déclarations signées et annexes",
+          "detail": "Inclure les déclarations signées (éligibilité, absence de collusion, confidentialité). L’acheteur peut demander des pièces supplémentaires lors des clarifications.",
+          "tag": "MUST"
+        },
+        {
+          "id": "m3",
+          "title": "Justificatifs de sécurité (ISO 27001 ou équivalent)",
+          "detail": "Le dossier exige des preuves de contrôles de sécurité pour le traitement de données personnelles. Confirmer si ISO 27001 est obligatoire ou si un équivalent est accepté.",
+          "tag": "MUST"
+        }
+      ],
+      "risks": [
+        {
+          "id": "r1",
+          "severity": "high",
+          "title": "Critères d’acceptation non définis",
+          "detail": "Les tests d’acceptation sont mentionnés, mais les critères de réussite/échec et les rôles pour l’acceptation finale ne sont pas définis. Risque de dérive de périmètre et de litiges tardifs."
+        },
+        {
+          "id": "r2",
+          "severity": "medium",
+          "title": "Ambiguïté sur le SLA de support",
+          "detail": "Les temps de réponse et les plages de service ne sont pas clairs (heures ouvrées vs 24/7). Confirmer l’escalade, les exclusions et la gestion des arrêts planifiés."
+        },
+        {
+          "id": "r3",
+          "severity": "low",
+          "title": "Le modèle de références pourrait être strict",
+          "detail": "Une annexe suggère une structure imposée pour les références. Confirmer si votre format est accepté ou si le modèle est obligatoire."
+        }
+      ],
+      "keyBullets": [
+        "Remise via portail, règles strictes de nommage.",
+        "Justificatif ISO 27001 requis pour le traitement des données.",
+        "Des jalons existent, mais les tests d’acceptation ne sont pas définis.",
+        "Évaluation pondérée : prix (40%), approche (40%), expérience (20%)."
+      ],
+      "questions": [
+        "Pouvez-vous confirmer les règles exactes du dossier de remise (noms, nombre de fichiers, signatures) ?",
+        "Quels sont les critères d’acceptation et qui donne l’acceptation finale ?",
+        "ISO 27001 est-elle obligatoire ou des certifications/contrôles équivalents sont-ils acceptés ?"
+      ],
+      "draftOutline": "1. Synthèse exécutive\n2. Compréhension du périmètre\n3. Approche proposée et méthodologie\n4. Plan de livraison et jalons\n5. Équipe et références\n6. Sécurité et protection des données\n7. Modèle de service et support (SLA)\n8. Prix\n9. Conformité et déclarations",
+      "sourceExcerpt": "1. Remise\nLes offres doivent être déposées via le portail d’e-procurement de l’acheteur au plus tard à 12:00 CET le 14 mai 2026. La remise doit inclure une offre technique et une offre commerciale en PDF séparés. Des conventions de nommage s’appliquent.\n\n2. Éligibilité et déclarations\nLes soumissionnaires doivent inclure des déclarations signées relatives à l’éligibilité, l’absence de collusion et la confidentialité. L’acheteur peut demander des pièces supplémentaires lors de la phase de clarification.\n\n3. Données personnelles et sécurité\nLe titulaire traitera des données personnelles. Une preuve de contrôles de sécurité de l’information (certification ISO 27001 ou équivalent) est exigée.\n\n4. Livraison et acceptation\nLa livraison doit suivre le plan de jalons décrit en annexe B. Des tests d’acceptation seront réalisés avant la mise en production. Des critères d’acceptation sont mentionnés mais ne sont pas spécifiés de manière mesurable.\n\n5. Support et SLA\nLe titulaire doit fournir des services de support. Le dossier mentionne des temps de réponse et des voies d’escalade, sans définir clairement si les heures de service sont en heures ouvrées ou 24/7.\n\n6. Évaluation\nL’attribution se fera sur la base du prix (40%), de l’approche technique (40%) et de l’expérience de l’équipe (20%)."
+    }
+  }
+}
