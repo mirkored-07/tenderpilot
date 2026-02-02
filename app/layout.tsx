@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { LanguageFixer } from "@/components/marketing/LanguageFixer"; // <--- 1. Import the fixer
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -45,10 +46,9 @@ export const metadata: Metadata = {
     siteName: "TenderPilot",
     locale: "en_US",
     type: "website",
-    // Images will now resolve correctly because of metadataBase
     images: [
       {
-        url: "/og-image.jpg", // Make sure you have an image at public/og-image.jpg
+        url: "/og-image.jpg", 
         width: 1200,
         height: 630,
         alt: "TenderPilot Dashboard Preview",
@@ -79,11 +79,21 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  
   return (
+    // 2. Added suppressHydrationWarning to prevent errors when LanguageFixer updates the attribute
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        {/* 3. The LanguageFixer runs immediately to set the correct lang tag (e.g., 'de') */}
+        <LanguageFixer />
+        
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
           {children}
         </ThemeProvider>
       </body>
