@@ -1,34 +1,58 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createServerClient } from "@supabase/ssr";
 
-export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  });
+const LOCALE_COOKIE = "tp_locale";
+const SUPPORTED = ["en", "de", "it", "es", "fr"] as const;
+type Locale = (typeof SUPPORTED)[number];
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll();
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set(name, value, { ...options, httpOnly: false });
-          });
-        },
-      },
-    }
-  );
+function isSupportedLocale(v: string | undefined | null): v is Locale {
+  return !!v && (SUPPORTED as readonly string[]).includes(v);
+}
 
-  await supabase.auth.getUser();
-  return response;
+// Default is EN. Cookie overrides if user selected a language.
+function detectLocale(req: NextRequest): Locale {
+  const cookie = req.cookies.get(LOCALE_COOKIE)?.value;
+  if (isSupportedLocale(cookie)) return cookie;
+  return "en";
+}
+
+export function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+
+  // Keep existing behavior: block /app/* on marketing site
+  if (pathname.startsWith("/app")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    url.searchParams.set("from", "app");
+    return NextResponse.redirect(url);
+  }
+
+  // If user visits /{locale} directly, remember it
+  const firstSeg = pathname.split("/")[1];
+  if (isSupportedLocale(firstSeg)) {
+    const res = NextResponse.next();
+    res.cookies.set(LOCALE_COOKIE, firstSeg, { path: "/", sameSite: "lax" });
+    return res;
+  }
+
+  // Redirect root to locale (default: en)
+  if (pathname === "/") {
+    const locale = detectLocale(request);
+    const url = request.nextUrl.clone();
+    url.pathname = `/${locale}`;
+    return NextResponse.redirect(url);
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/app/:path*"],
+  matcher: [
+    "/",
+    "/en/:path*",
+    "/de/:path*",
+    "/it/:path*",
+    "/es/:path*",
+    "/fr/:path*",
+    "/app/:path*",
+  ],
 };

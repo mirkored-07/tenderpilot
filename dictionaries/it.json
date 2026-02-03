@@ -1,0 +1,477 @@
+{
+  "nav": {
+    "title": "TenderPilot",
+    "howItWorks": "Come funziona",
+    "sample": "Esempio di output",
+    "waitlist": "Accesso anticipato",
+    "menu": "Menu",
+    "backHome": "Torna alla home",
+    "back": "Indietro",
+    "join": "Iscriviti",
+    "export": "Esporta esempio (PDF)",
+    "delete": "Elimina"
+  },
+  "hero": {
+    "subtitle": "Supporto decisionale go/no-go per consulenti gare e PMI.",
+    "title1": "Comprendi le gare più velocemente.",
+    "title2": "Decidi se partecipare con sicurezza.",
+    "description": "Basta scorrere manualmente PDF da 100 pagine. Carica i documenti di gara e ottieni in pochi minuti un’analisi assistita da IA su rischi, requisiti e criteri.",
+    "cta_upload": "Analizza la prima gara",
+    "cta_limit": "Gratis durante la beta · Nessuna carta richiesta",
+    "privacy": "Sicuro e riservato. Non usiamo i tuoi dati per addestrare i nostri modelli."
+  },
+  "features": {
+    "analyze": {
+      "title": "Risultati pronti per la revisione",
+      "subtitle": "Niente chatbot. Solo contenuti strutturati."
+    },
+    "extract": {
+      "title": "Checklist dei requisiti obbligatori",
+      "subtitle": "Requisiti estratti e strutturati per ridurre omissioni critiche."
+    },
+    "draft": {
+      "title": "Bozza di struttura dell’offerta",
+      "subtitle": "Parti più rapidamente con una struttura chiara."
+    },
+    "security": {
+      "title": "Rischi e ambiguità",
+      "subtitle": "Individua segnali di allarme prima di partecipare."
+    }
+  },
+  "roi": {
+    "header": "Impatto su tempo e costi",
+    "subheader": "Progettato per ridurre subito il lavoro di revisione non fatturabile e scartare prima le gare poco adatte.",
+    "disclaimer": "Solo a scopo illustrativo · dipende dalla complessità del documento",
+    "time": {
+      "title": "Risparmia tempo di revisione",
+      "desc": "Meno estrazione e riformattazione manuale. Più chiarezza già al primo passaggio."
+    },
+    "margin": {
+      "title": "Proteggi il margine",
+      "desc": "Meno ore spese su gare che non sono in target. Concentrati dove conta."
+    },
+    "misses": {
+      "title": "Riduci errori costosi",
+      "desc": "Evidenzia prima requisiti eliminatori e punti aperti per evitare sorprese in fase avanzata."
+    },
+    "summary_title": "Un primo passaggio più chiaro supporta decisioni go/no-go migliori",
+    "summary_desc": "Meno attività amministrative · chiarezza anticipata · passaggi interni più fluidi",
+    "footer": "Questa sezione descrive benefici attesi. Non garantisce risparmi di tempo o costi."
+  },
+  "howItWorks": {
+    "eyebrow": "Flusso pratico. Poco rumore.",
+    "title": "Come funziona",
+    "description": "TenderPilot ti aiuta a capire rapidamente una gara per prendere una decisione go/no-go con sicurezza. Struttura RFP e gare pubbliche in output pronti per la revisione: requisiti obbligatori, criteri di valutazione, rischi e ambiguità, e una bozza di struttura dell’offerta.",
+    "disclaimer": "Solo supporto decisionale. Nessuna consulenza legale o di procurement. Verifica sempre con il documento originale.",
+    "cta_sample": "Vedi esempio di output",
+    "cta_join": "Accesso anticipato",
+    "outputs_title": "Output inclusi",
+    "outputs_desc": "Un set pratico di risultati da verificare rapidamente, con focus su tracciabilità e verifica.",
+    "outputs_list": [
+      "Checklist dei requisiti obbligatori",
+      "Criteri di valutazione e punteggi",
+      "Rischi, ambiguità e informazioni mancanti",
+      "Estratti della fonte per tracciabilità",
+      "Punto di partenza per la struttura dell’offerta"
+    ]
+  },
+  "sample": {
+    "fileName": "standard-tender-document.pdf",
+    "status": "In revisione",
+    "decision_badge": "Procedere con cautela",
+    "decision_text": "Nessun motivo di esclusione evidente, ma due punti richiedono chiarimenti: il pacchetto di presentazione e i criteri di accettazione dello SLA di supporto.",
+    "actions_title": "Prossimi passi",
+    "actions_list": [
+      "Confermare le regole del pacchetto di presentazione (set di PDF e dichiarazioni firmate).",
+      "Chiarire i test di accettazione e il processo di validazione dei deliverable.",
+      "Verificare la richiesta di evidenze ISO 27001 e le alternative accettate."
+    ],
+    "tabs": {
+      "reqs": "Requisiti",
+      "risks": "Rischi",
+      "questions": "Chiarimenti",
+      "source": "Fonte",
+      "outline": "Struttura"
+    },
+    "mock": {
+      "m1_title": "Modalità di presentazione e scadenza",
+      "m1_desc": "Presentazione tramite portale di e-procurement entro la scadenza. Offerta tecnica e offerta economica in PDF separati. Si applicano regole di nomenclatura dei file.",
+      "m2_title": "Dichiarazioni firmate e allegati",
+      "m2_desc": "Includere dichiarazioni firmate (idoneità, non collusione, riservatezza). La stazione appaltante può richiedere documentazione aggiuntiva durante la fase di chiarimenti.",
+      "m3_title": "Evidenze di sicurezza (ISO 27001 o equivalente)",
+      "m3_desc": "La gara richiede evidenze di controlli di sicurezza per il trattamento di dati personali. Verificare se ISO 27001 è obbligatoria o se è accettata equivalenza.",
+      "r1_title": "Criteri di accettazione non definiti",
+      "r1_desc": "Sono citati test di accettazione, ma non sono definiti criteri pass/fail né ruoli per l’accettazione finale. Rischio di estensione non controllata del perimetro e contestazioni tardive.",
+      "r2_title": "Ambiguità sullo SLA di supporto",
+      "r2_desc": "Tempi di risposta e fasce di servizio non sono chiari (orario lavorativo vs 24/7). Chiarire escalation, esclusioni e gestione delle finestre di manutenzione pianificate.",
+      "r3_title": "Template delle referenze potenzialmente rigido",
+      "r3_desc": "Un allegato suggerisce una struttura fissa per i progetti di riferimento. Verificare se è accettato il tuo formato o se il template è obbligatorio.",
+      "key_bullets": [
+        "Presentazione tramite portale con regole di nomenclatura stringenti.",
+        "Richiesta evidenza ISO 27001 per il trattamento dati.",
+        "Milestone presenti, ma test di accettazione non definiti.",
+        "Valutazione ponderata: prezzo (40%), approccio (40%), esperienza (20%)."
+      ],
+      "questions": [
+        "Potete confermare le regole esatte del pacchetto di presentazione (nomenclatura, numero di file, firme)?",
+        "Quali sono i criteri di accettazione e chi concede l’accettazione finale?",
+        "ISO 27001 è obbligatoria o sono accettate certificazioni o controlli equivalenti?"
+      ],
+      "outline": "1. Executive Summary\n2. Comprensione del perimetro\n3. Approccio e metodologia\n4. Piano di consegna e milestone\n5. Team e referenze\n6. Sicurezza e protezione dei dati\n7. Modello di servizio e supporto (SLA)\n8. Prezzo\n9. Conformità e dichiarazioni",
+      "source": "1. Presentazione\nLe offerte devono essere presentate tramite il portale di e-procurement entro le 12:00 CET del 14 maggio 2026..."
+    }
+  },
+  "tenders": {
+    "construction": {
+      "title": "Gare di costruzioni attive (UE)",
+      "subtitle": "Esplora gare di costruzioni attive nell’UE (CPV 45000000). Segui opportunità su strade, riqualificazioni e infrastrutture in Germania, Italia e Austria.",
+      "list": [
+        {
+          "title": "Manutenzione e rifacimento carreggiata Autobahn A7",
+          "desc": "Progetto di manutenzione su larga scala con rifacimento asfalto e sostituzione barriere di sicurezza su un tratto della A7 vicino ad Amburgo.",
+          "risk": "Medio"
+        },
+        {
+          "title": "Ristrutturazione della scuola pubblica \"Leonardo da Vinci\"",
+          "desc": "Interventi di efficientamento energetico e adeguamento sismico per edifici scolastici secondari a Milano.",
+          "risk": "Basso"
+        },
+        {
+          "title": "Potenziamento infrastruttura di gallerie ferroviarie",
+          "desc": "Costruzione di nuovi tratti di galleria e lavori ferroviari per il progetto di potenziamento Koralmbahn.",
+          "risk": "Alto (Complesso)"
+        },
+        {
+          "title": "Costruzione di una nuova ala ospedaliera (Lione)",
+          "desc": "Appalto da general contractor per una nuova ala pediatrica, incluse installazioni HVAC ed elettriche.",
+          "risk": "Medio"
+        },
+        {
+          "title": "Sostituzione di condotte idriche urbane",
+          "desc": "Scavo e sostituzione di condotte idriche interrate nel centro città.",
+          "risk": "Basso"
+        }
+      ]
+    },
+    "engineering": {
+      "title": "Gare attive di ingegneria e architettura",
+      "subtitle": "Esplora gare attive per servizi di ingegneria e architettura (CPV 71000000). Trova opportunità in progettazione, analisi tecniche e ingegneria civile nell’UE.",
+      "list": [
+        {
+          "title": "Progettazione strutturale per riqualificazione ponti",
+          "desc": "Calcoli, analisi strutturale e verifiche di sicurezza per la riqualificazione di ponti autostradali (A9).",
+          "risk": "Alto"
+        },
+        {
+          "title": "Concorso di architettura: nuova biblioteca civica",
+          "desc": "Servizi di architettura, inclusi urbanistica e studi di fattibilità, per un complesso bibliotecario sostenibile.",
+          "risk": "Medio"
+        },
+        {
+          "title": "Direzione lavori e project management (ferrovia)",
+          "desc": "Supervisione lavori e gestione qualità per il progetto di ampliamento del tunnel Koralm.",
+          "risk": "Basso"
+        },
+        {
+          "title": "Servizi di ingegneria HVAC ed elettrica",
+          "desc": "Consulenza ingegneristica per interventi di efficienza energetica (HVAC ed elettrico) su edifici campus.",
+          "risk": "Basso"
+        },
+        {
+          "title": "Valutazione di impatto ambientale",
+          "desc": "Consulenza di ingegneria ambientale per progetti transfrontalieri di sostenibilità.",
+          "risk": "Medio"
+        }
+      ]
+    },
+    "software": {
+      "title": "Gare attive di sviluppo software",
+      "subtitle": "Esplora gare software attive nell’UE (CPV 72200000) in Germania, Italia e Austria. Usa l’IA per valutare rapidamente i rischi e accelerare la preparazione dell’offerta.",
+      "list": [
+        {
+          "title": "Sviluppo di software specialistico per gestione del traffico",
+          "desc": "Accordo quadro per sviluppo agile di software di control room (Java e Spring Boot).",
+          "risk": "Medio"
+        },
+        {
+          "title": "Trasformazione digitale e servizi cloud (SaaS)",
+          "desc": "Fornitura e manutenzione di un’applicazione cloud-native per processi amministrativi. Conformità GDPR obbligatoria.",
+          "risk": "Alto (Sicurezza)"
+        },
+        {
+          "title": "Consulenza IT e software engineering",
+          "desc": "Fornitura di specialisti IT esterni per SAP e progetti web su misura.",
+          "risk": "Basso"
+        },
+        {
+          "title": "Piattaforma IA e data analytics",
+          "desc": "Progettazione e implementazione di un data lake e strumenti di analytics IA per reporting ambientale.",
+          "risk": "Complesso"
+        },
+        {
+          "title": "Manutenzione di sistemi informativi ospedalieri (HIS)",
+          "desc": "Manutenzione correttiva ed evolutiva di moduli per la gestione pazienti.",
+          "risk": "Medio"
+        }
+      ]
+    },
+    "labels": {
+      "deadline": "Scadenza",
+      "value": "Valore",
+      "risk": "Stima del rischio",
+      "cta_view": "Vedi dettagli"
+    }
+  },
+  "landing": {
+    "nav": {
+      "cta": "Accesso al motore di audit",
+      "theme": "Tema"
+    },
+    "hero": {
+      "badge": "Modello IA specializzato per gare",
+      "title_line1": "Smetti di leggere.",
+      "title_line2": "Inizia a decidere.",
+      "description": "Una revisione rapida della gara per decisioni urgenti. Carica PDF di gara complessi e ottieni subito una decisione go/no-go basata su rischi e requisiti obbligatori.",
+      "primary_cta": "Accesso al motore di audit",
+      "secondary_cta": "Vedi esempio di output",
+      "validated_prefix": "Validato in pilot privati da",
+      "validated_emphasis": "consulenti di livello Tier 1"
+    },
+    "scanner": {
+      "risk_badge": "Rischio di responsabilità"
+    },
+    "features": {
+      "section_title": "Cosa ottieni da un documento di gara",
+      "section_subtitle": "Trasformiamo 100 pagine di PDF in tre liste operative.",
+      "cards": {
+        "executive": {
+          "title": "Executive Summary",
+          "subtitle": "Sintesi breve e orientata alla decisione per go/no-go anticipati e un allineamento più rapido con gli stakeholder.",
+          "bullets": [
+            "Perimetro e contesto",
+            "Vincoli principali",
+            "Punti decisionali"
+          ]
+        },
+        "mandatory": {
+          "title": "Requisiti obbligatori",
+          "subtitle": "Requisiti estratti e strutturati per ridurre il rischio di non vedere condizioni eliminatorie.",
+          "bullets": [
+            "Obbligatorio vs opzionale",
+            "Chiaro: ok o da verificare",
+            "Pronto per la verifica"
+          ]
+        },
+        "risks": {
+          "title": "Rischi e ambiguità",
+          "subtitle": "Clausole poco chiare, lacune e possibili rischi su consegna o costi evidenziati subito per chiarire prima.",
+          "bullets": [
+            "Etichette di severità",
+            "Punti aperti",
+            "Spunti di chiarimento"
+          ]
+        }
+      }
+    },
+    "roi": {
+      "header": "Impatto su tempo e costi",
+      "subheader": "Progettato per ridurre immediatamente il lavoro di revisione non fatturabile.",
+      "cards": {
+        "time": {
+          "title": "Risparmia oltre 4 ore",
+          "desc": "Per gara nella lettura ed estrazione manuale."
+        },
+        "margin": {
+          "title": "Proteggi il margine",
+          "desc": "Evita gare con penali contrattuali nascoste."
+        },
+        "compliance": {
+          "title": "Compliance",
+          "desc": "Non perdere requisiti obbligatori ISO o GDPR."
+        }
+      }
+    },
+    "zero_training": {
+      "title": "Zero-Training Policy:",
+      "text": "Non utilizziamo i dati delle tue gare per addestrare i nostri modelli."
+    },
+    "early_access": {
+      "title": "Riduci del 90% il tempo di valutazione delle gare",
+      "description": "Prenota un posto nel programma di accesso anticipato. Analizza il primo bando in pochi minuti.",
+      "limited": "Posti limitati disponibili per il programma beta."
+    },
+    "footer": {
+      "browse": "Sfoglia gare software",
+      "privacy": "Privacy",
+      "terms": "Terms"
+    }
+  },
+  "howItWorksPage": {
+    "header": {
+      "backToHome": "Torna alla home"
+    },
+    "hero": {
+      "titleA": "Dal PDF alla decisione",
+      "titleB": "in",
+      "highlight": "tre passaggi",
+      "subtitle": "Non scriviamo l’offerta. Ti aiutiamo a decidere se vale la pena scriverla."
+    },
+    "steps": [
+      {
+        "step": "01",
+        "title": "Carica i documenti",
+        "desc": "Trascina e rilascia RFP, RFI o PDF di gara complessi. Supportiamo file fino a 100MB."
+      },
+      {
+        "step": "02",
+        "title": "Analisi approfondita ed estrazione",
+        "desc": "Il nostro motore legge ogni riga, estrae requisiti obbligatori (\"shall\", \"must\") e identifica rischi di responsabilità."
+      },
+      {
+        "step": "03",
+        "title": "Report go/no-go",
+        "desc": "Ricevi una Executive Summary strutturata con matrice di compliance e risk register, pronta per l’export."
+      }
+    ],
+    "bottomCta": {
+      "title": "Hai una gara sul tavolo in questo momento?",
+      "desc": "Prova il flusso pensato per decisioni di gara rapide e urgenti.",
+      "button": "Accesso anticipato all’audit"
+    }
+  },
+  "samplePage": {
+    "severity": {
+      "high": "Alta",
+      "medium": "Media",
+      "low": "Bassa"
+    },
+    "header": {
+      "backToHome": "Torna alla home",
+      "exportPdf": "Esporta PDF",
+      "joinEarlyAccess": "Accesso anticipato",
+      "join": "Iscriviti",
+      "exportSample": "Esporta esempio",
+      "delete": "Elimina"
+    },
+    "workspace": {
+      "title": "Il tuo workspace di gara",
+      "desc": "Questo è un esempio statico che mostra come TenderPilot struttura la revisione di una gara. Verifica sempre con il PDF originale."
+    },
+    "nextActions": {
+      "title": "Prossime azioni"
+    },
+    "counts": {
+      "title": "Panoramica rapida",
+      "must": "MUST",
+      "risks": "Rischi",
+      "qa": "Q&A",
+      "microcopy": "Pensato per la velocità. Progettato per la tracciabilità."
+    },
+    "mustItems": {
+      "title": "Elementi MUST",
+      "subtitle": "Requisiti stringenti che possono portare a esclusione.",
+      "export": "Esporta",
+      "jump": "Vai"
+    },
+    "risks": {
+      "title": "Rischi principali",
+      "subtitle": "Ambiguità che possono impattare consegna o costi.",
+      "export": "Esporta",
+      "jump": "Vai"
+    },
+    "deadline": {
+      "title": "Scadenza",
+      "helper": "Confermare fuso orario e regole del portale",
+      "cta": "Accesso anticipato"
+    },
+    "keyBullets": {
+      "title": "Punti chiave",
+      "subtitle": "Scansione rapida di ciò che conta."
+    },
+    "tabs": {
+      "requirements": "Requisiti",
+      "risks": "Rischi",
+      "questions": "Chiarimenti",
+      "draft": "Struttura",
+      "source": "Fonte",
+      "copyAll": "Copia tutto"
+    },
+    "tabContent": {
+      "detailedRequirements": "Requisiti dettagliati",
+      "riskRegister": "Risk register",
+      "clarificationTitle": "Domande di chiarimento",
+      "clarificationDesc": "Fai queste domande prima di impegnarti su prezzo, tempi o SLA.",
+      "outlineTitle": "Struttura dell’offerta",
+      "outlineDesc": "Una struttura iniziale da copiare nel tuo template di offerta.",
+      "sourceTitle": "Testo fonte",
+      "sourceDesc": "Testo estratto per tracciabilità."
+    },
+    "data": {
+      "fileName": "standard-tender-document.pdf",
+      "status": "In revisione",
+      "submissionDeadline": "14 maggio 2026, 12:00 CET",
+      "decision": {
+        "badge": "Procedere con cautela",
+        "line": "Nessun motivo di esclusione evidente, ma due punti richiedono chiarimenti: il pacchetto di presentazione e i criteri di accettazione dello SLA di supporto."
+      },
+      "nextActions": [
+        "Confermare le regole del pacchetto di presentazione (set di PDF e dichiarazioni firmate).",
+        "Chiarire i test di accettazione e il processo di validazione dei deliverable.",
+        "Verificare la richiesta di evidenze ISO 27001 e le alternative accettate."
+      ],
+      "mustItems": [
+        {
+          "id": "m1",
+          "title": "Modalità di presentazione e scadenza",
+          "detail": "Presentazione tramite portale di e-procurement entro la scadenza. Offerta tecnica e offerta economica in PDF separati. Si applicano regole di nomenclatura dei file.",
+          "tag": "MUST"
+        },
+        {
+          "id": "m2",
+          "title": "Dichiarazioni firmate e allegati",
+          "detail": "Includere dichiarazioni firmate (idoneità, non collusione, riservatezza). La stazione appaltante può richiedere documentazione aggiuntiva durante la fase di chiarimenti.",
+          "tag": "MUST"
+        },
+        {
+          "id": "m3",
+          "title": "Evidenze di sicurezza (ISO 27001 o equivalente)",
+          "detail": "La gara richiede evidenze di controlli di sicurezza delle informazioni per il trattamento di dati personali. Verificare se ISO 27001 è obbligatoria o se sono accettati equivalenti.",
+          "tag": "MUST"
+        }
+      ],
+      "risks": [
+        {
+          "id": "r1",
+          "severity": "high",
+          "title": "Criteri di accettazione non definiti",
+          "detail": "Sono citati test di accettazione, ma non sono definiti criteri di successo o fallimento né ruoli per l’accettazione finale. Rischio di estensione non controllata del perimetro e contestazioni tardive."
+        },
+        {
+          "id": "r2",
+          "severity": "medium",
+          "title": "Ambiguità sullo SLA di supporto",
+          "detail": "Tempi di risposta e fasce di servizio non sono chiaramente definiti (orario lavorativo vs 24/7). Chiarire escalation, esclusioni e gestione delle manutenzioni pianificate."
+        },
+        {
+          "id": "r3",
+          "severity": "low",
+          "title": "Template delle referenze potenzialmente rigido",
+          "detail": "Un allegato suggerisce una struttura obbligatoria per le referenze. Verificare se il tuo formato è accettato o se il template è imposto."
+        }
+      ],
+      "keyBullets": [
+        "Presentazione tramite portale con regole di nomenclatura stringenti.",
+        "Evidenza ISO 27001 richiesta per il trattamento dati.",
+        "Milestone presenti, ma test di accettazione non definiti.",
+        "Valutazione ponderata: prezzo (40%), approccio (40%), esperienza (20%)."
+      ],
+      "questions": [
+        "Potete confermare le regole esatte del pacchetto di presentazione (nomenclatura, numero di file, firme)?",
+        "Quali sono i criteri di accettazione e chi concede l’accettazione finale?",
+        "ISO 27001 è obbligatoria o sono accettate certificazioni o controlli equivalenti?"
+      ],
+      "draftOutline": "1. Executive Summary\n2. Comprensione del perimetro\n3. Approccio e metodologia\n4. Piano di consegna e milestone\n5. Team e referenze\n6. Sicurezza e protezione dei dati\n7. Modello di servizio e supporto (SLA)\n8. Prezzo\n9. Conformità e dichiarazioni",
+      "sourceExcerpt": "1. Presentazione\nLe offerte devono essere presentate tramite il portale di e-procurement della stazione appaltante entro le 12:00 CET del 14 maggio 2026. La presentazione deve includere un’offerta tecnica e un’offerta economica come file PDF separati. Si applicano regole di nomenclatura dei file.\n\n2. Idoneità e dichiarazioni\nI concorrenti devono includere dichiarazioni firmate relative a idoneità, non collusione e riservatezza. La stazione appaltante può richiedere documentazione aggiuntiva durante la fase di chiarimenti.\n\n3. Protezione dati e sicurezza\nL’aggiudicatario tratterà dati personali. È richiesta evidenza di controlli di sicurezza delle informazioni (certificazione ISO 27001 o equivalente).\n\n4. Consegna e accettazione\nLa consegna deve seguire il piano milestone descritto nell’Allegato B. Saranno eseguiti test di accettazione prima del go-live. I criteri di accettazione sono menzionati, ma non sono specificati in modo misurabile.\n\n5. Supporto e SLA\nL’aggiudicatario deve fornire servizi di supporto. La gara menziona tempi di risposta e percorsi di escalation, ma non definisce in modo chiaro se le fasce di servizio siano in orario lavorativo o 24/7.\n\n6. Valutazione\nL’aggiudicazione si basa su prezzo (40%), approccio tecnico (40%) ed esperienza del team (20%)."
+    }
+  }
+}

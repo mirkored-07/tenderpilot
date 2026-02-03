@@ -1,0 +1,477 @@
+{
+  "nav": {
+    "title": "TenderPilot",
+    "howItWorks": "So funktioniert es",
+    "sample": "Beispielausgabe",
+    "waitlist": "Frühzugang erhalten",
+    "menu": "Menü",
+    "backHome": "Zur Startseite",
+    "back": "Zurück",
+    "join": "Beitreten",
+    "export": "Beispiel exportieren (PDF)",
+    "delete": "Löschen"
+  },
+  "hero": {
+    "subtitle": "Go/No-Go Entscheidungshilfe für Ausschreibungsberater und KMU.",
+    "title1": "Ausschreibungen schneller verstehen.",
+    "title2": "Sicher entscheiden, ob Sie bieten.",
+    "description": "Keine manuelle Durchsicht von 100-seitigen PDFs mehr. Laden Sie Ihre Ausschreibungsunterlagen hoch und erhalten Sie in wenigen Minuten eine KI-gestützte Auswertung zu Risiken, Anforderungen und Kriterien.",
+    "cta_upload": "Erste Ausschreibung analysieren",
+    "cta_limit": "Kostenlos während der Beta · Keine Kreditkarte erforderlich",
+    "privacy": "Sicher und vertraulich. Wir verwenden Ihre Daten nicht zum Trainieren unserer Modelle."
+  },
+  "features": {
+    "analyze": {
+      "title": "Ergebnisse bereit zur Prüfung",
+      "subtitle": "Keine Chatbots. Nur strukturierte Fakten."
+    },
+    "extract": {
+      "title": "Checkliste der zwingenden Anforderungen",
+      "subtitle": "Extrahierte und strukturierte Anforderungen zur Reduktion übersehener Ausschlusskriterien."
+    },
+    "draft": {
+      "title": "Entwurf einer Angebotsstruktur",
+      "subtitle": "Schneller Start mit einer klaren Gliederung."
+    },
+    "security": {
+      "title": "Risiken und Unklarheiten",
+      "subtitle": "Warnsignale erkennen, bevor Sie ein Angebot abgeben."
+    }
+  },
+  "roi": {
+    "header": "Auswirkungen auf Zeit und Kosten",
+    "subheader": "Entwickelt, um unbezahlten Prüfaufwand zu reduzieren und ungeeignete Ausschreibungen frühzeitig auszusortieren.",
+    "disclaimer": "Nur zur Veranschaulichung · abhängig von der Dokumentkomplexität",
+    "time": {
+      "title": "Prüfzeit einsparen",
+      "desc": "Weniger manuelle Extraktion und Aufbereitung. Schnellere Orientierung beim ersten Durchgang."
+    },
+    "margin": {
+      "title": "Marge schützen",
+      "desc": "Weniger Stunden für Ausschreibungen, die nicht passen. Fokus auf relevante Chancen."
+    },
+    "misses": {
+      "title": "Kostspielige Versäumnisse vermeiden",
+      "desc": "Ausschlusskriterien und offene Punkte früh erkennen, um späte Überraschungen zu vermeiden."
+    },
+    "summary_title": "Ein klarerer erster Durchgang unterstützt bessere Go/No-Go Entscheidungen",
+    "summary_desc": "Weniger Administration · frühere Klarheit · sauberere interne Übergaben",
+    "footer": "Dieser Abschnitt beschreibt erwartete Vorteile. Er stellt keine Garantie für Zeit- oder Kosteneinsparungen dar."
+  },
+  "howItWorks": {
+    "eyebrow": "Praktischer Ablauf. Wenig Rauschen.",
+    "title": "So funktioniert es",
+    "description": "TenderPilot hilft Ihnen, eine Ausschreibung schnell zu verstehen, um eine fundierte Go/No-Go Entscheidung zu treffen. RFPs und öffentliche Ausschreibungen werden in prüffertige Ergebnisse strukturiert: zwingende Anforderungen, Bewertungskriterien, Risiken und Unklarheiten sowie eine erste Angebotsstruktur.",
+    "disclaimer": "Reine Entscheidungshilfe. Keine Rechts- oder Vergabeberatung. Immer anhand des Originaldokuments prüfen.",
+    "cta_sample": "Beispielausgabe ansehen",
+    "cta_join": "Frühzugang erhalten",
+    "outputs_title": "Enthaltene Ergebnisse",
+    "outputs_desc": "Ein praxisnahes Set an Ergebnissen zur schnellen Prüfung mit Fokus auf Nachvollziehbarkeit und Verifikation.",
+    "outputs_list": [
+      "Checkliste der zwingenden Anforderungen",
+      "Bewertungskriterien und Gewichtung",
+      "Risiken, Unklarheiten und fehlende Informationen",
+      "Quelltextauszüge zur Nachvollziehbarkeit",
+      "Ausgangspunkt für eine Angebotsgliederung"
+    ]
+  },
+  "sample": {
+    "fileName": "standard-tender-document.pdf",
+    "status": "In Prüfung",
+    "decision_badge": "Mit Vorsicht fortfahren",
+    "decision_text": "Kein eindeutiger Ausschlussgrund erkennbar, jedoch bestehen zwei Klärungspunkte: Einreichungspaket und Abnahmekriterien für das Support-SLA.",
+    "actions_title": "Nächste Schritte",
+    "actions_list": [
+      "Einreichungsregeln bestätigen (PDF-Set und unterschriebene Erklärungen).",
+      "Abnahmetests und Freigabeprozess für Deliverables klären.",
+      "ISO-27001-Nachweisanforderungen und akzeptierte Alternativen prüfen."
+    ],
+    "tabs": {
+      "reqs": "Anforderungen",
+      "risks": "Risiken",
+      "questions": "Klärungen",
+      "source": "Quelle",
+      "outline": "Gliederung"
+    },
+    "mock": {
+      "m1_title": "Einreichungsweg und Frist",
+      "m1_desc": "Einreichung über das E-Vergabeportal vor Ablauf der Frist. Technisches und kaufmännisches Angebot als separate PDF-Dateien. Dateibenennungsregeln sind einzuhalten.",
+      "m2_title": "Unterschriebene Erklärungen und Anlagen",
+      "m2_desc": "Beizufügen sind unterschriebene Erklärungen zu Eignung, Nicht-Kollusion und Vertraulichkeit. Die Vergabestelle kann während der Klärungsphase weitere Unterlagen anfordern.",
+      "m3_title": "Sicherheitsnachweise (ISO 27001 oder gleichwertig)",
+      "m3_desc": "Die Ausschreibung verlangt Nachweise zu Informationssicherheitskontrollen bei der Verarbeitung personenbezogener Daten. Zu klären ist, ob ISO 27001 zwingend ist oder Gleichwertigkeit akzeptiert wird.",
+      "r1_title": "Abnahmekriterien nicht definiert",
+      "r1_desc": "Abnahmetests werden erwähnt, jedoch sind keine messbaren Pass/Fail-Kriterien oder Rollen für die finale Abnahme festgelegt. Risiko von Scope Creep und späteren Streitigkeiten.",
+      "r2_title": "Unklarheit beim Support-SLA",
+      "r2_desc": "Reaktionszeiten und Servicezeiten sind nicht eindeutig definiert (Geschäftszeiten versus 24/7). Eskalationswege, Ausschlüsse und geplante Wartungsfenster klären.",
+      "r3_title": "Referenzprojekt-Vorlage möglicherweise strikt",
+      "r3_desc": "Ein Anhang deutet auf eine verpflichtende Struktur für Referenzen hin. Zu klären ist, ob ein eigenes Format akzeptiert wird.",
+      "key_bullets": [
+        "Einreichung über Portal mit strikten Benennungsregeln.",
+        "ISO-27001-Nachweis für Datenverarbeitung gefordert.",
+        "Meilensteine vorhanden, Abnahmetests jedoch nicht definiert.",
+        "Gewichtete Bewertung: Preis (40%), Vorgehen (40%), Erfahrung (20%)."
+      ],
+      "questions": [
+        "Können Sie die genauen Regeln für das Einreichungspaket bestätigen (Benennung, Anzahl Dateien, Unterschriften)?",
+        "Welche Abnahmekriterien gelten und wer erteilt die finale Freigabe?",
+        "Ist ISO 27001 zwingend oder werden gleichwertige Zertifizierungen oder Kontrollen akzeptiert?"
+      ],
+      "outline": "1. Executive Summary\n2. Verständnis des Leistungsumfangs\n3. Vorgehensweise und Methodik\n4. Lieferplan und Meilensteine\n5. Team und Referenzen\n6. Sicherheit und Datenschutz\n7. Service- und Supportmodell (SLA)\n8. Preis\n9. Compliance und Erklärungen",
+      "source": "1. Einreichung\nAngebote sind über das E-Vergabeportal bis spätestens 14. Mai 2026, 12:00 CET einzureichen..."
+    }
+  },
+  "tenders": {
+    "construction": {
+      "title": "Aktive Bauausschreibungen (EU)",
+      "subtitle": "Durchsuchen Sie aktive EU-Bauausschreibungen (CPV 45000000). Verfolgen Sie Chancen im Straßenbau, bei Sanierungen und Infrastrukturprojekten in Deutschland, Italien und Österreich.",
+      "list": [
+        {
+          "title": "Instandhaltung und Fahrbahnerneuerung Autobahn A7",
+          "desc": "Großes Instandhaltungsprojekt mit Asphaltarbeiten und Austausch von Schutzeinrichtungen auf einem Abschnitt der A7 bei Hamburg.",
+          "risk": "Mittel"
+        },
+        {
+          "title": "Sanierung der öffentlichen Schule \"Leonardo da Vinci\"",
+          "desc": "Energieeffizienzmaßnahmen und seismische Ertüchtigung von Schulgebäuden in Mailand.",
+          "risk": "Niedrig"
+        },
+        {
+          "title": "Ausbau von Eisenbahntunnel-Infrastruktur",
+          "desc": "Bau neuer Tunnelabschnitte und Gleisarbeiten für das Koralmbahn-Ausbauprojekt.",
+          "risk": "Hoch (Komplex)"
+        },
+        {
+          "title": "Neubau eines Krankenhausflügels (Lyon)",
+          "desc": "Generalunternehmerleistungen für einen neuen pädiatrischen Flügel inklusive HLK- und Elektroinstallationen.",
+          "risk": "Mittel"
+        },
+        {
+          "title": "Erneuerung kommunaler Wasserleitungen",
+          "desc": "Aushub und Austausch unterirdischer Wasserleitungen im Stadtzentrum.",
+          "risk": "Niedrig"
+        }
+      ]
+    },
+    "engineering": {
+      "title": "Aktive Ingenieur- und Architekturausschreibungen",
+      "subtitle": "Durchsuchen Sie aktive Ausschreibungen für Ingenieur- und Architektenleistungen (CPV 71000000). Finden Sie Chancen in Planung, Bauingenieurwesen und technischer Analyse in der EU.",
+      "list": [
+        {
+          "title": "Tragwerksplanung für Brückensanierungen",
+          "desc": "Statik, Strukturanalyse und Sicherheitsprüfungen für die Sanierung von Autobahnbrücken (A9).",
+          "risk": "Hoch"
+        },
+        {
+          "title": "Architekturwettbewerb: Neue Stadtbibliothek",
+          "desc": "Architekturleistungen inklusive Städtebau und Machbarkeitsstudien für ein nachhaltiges Bibliotheksprojekt.",
+          "risk": "Mittel"
+        },
+        {
+          "title": "Technische Bauüberwachung und Projektmanagement (Bahn)",
+          "desc": "Bauüberwachung und Qualitätsmanagement für das Koralm-Tunnelprojekt.",
+          "risk": "Niedrig"
+        },
+        {
+          "title": "HLK- und Elektroingenieurleistungen",
+          "desc": "Ingenieurberatung für Energieeffizienzmaßnahmen in Campusgebäuden.",
+          "risk": "Niedrig"
+        },
+        {
+          "title": "Umweltverträglichkeitsprüfung",
+          "desc": "Umweltingenieurleistungen für grenzüberschreitende Nachhaltigkeitsprojekte.",
+          "risk": "Mittel"
+        }
+      ]
+    },
+    "software": {
+      "title": "Aktive Softwareentwicklungs-Ausschreibungen",
+      "subtitle": "Durchsuchen Sie aktive EU-Softwareausschreibungen (CPV 72200000) in Deutschland, Italien und Österreich. Nutzen Sie KI zur schnellen Risikoanalyse und Angebotsvorbereitung.",
+      "list": [
+        {
+          "title": "Entwicklung spezialisierter Verkehrsmanagement-Software",
+          "desc": "Rahmenvertrag für agile Entwicklung von Leitstellen-Software (Java und Spring Boot).",
+          "risk": "Mittel"
+        },
+        {
+          "title": "Digitale Transformation und Cloud-Services (SaaS)",
+          "desc": "Bereitstellung und Wartung cloud-nativer Software für Verwaltungsprozesse. GDPR-Compliance erforderlich.",
+          "risk": "Hoch (Sicherheit)"
+        },
+        {
+          "title": "IT-Consulting und Software Engineering",
+          "desc": "Bereitstellung externer IT-Spezialisten für SAP- und kundenspezifische Webprojekte.",
+          "risk": "Niedrig"
+        },
+        {
+          "title": "KI- und Data-Analytics-Plattform",
+          "desc": "Konzeption und Umsetzung eines Data Lakes sowie KI-Analysetools für Umweltreporting.",
+          "risk": "Komplex"
+        },
+        {
+          "title": "Wartung von Krankenhausinformationssystemen (HIS)",
+          "desc": "Korrektive und weiterentwickelnde Wartung von Modulen zur Patientenverwaltung.",
+          "risk": "Mittel"
+        }
+      ]
+    },
+    "labels": {
+      "deadline": "Frist",
+      "value": "Wert",
+      "risk": "Risikoeinschätzung",
+      "cta_view": "Details ansehen"
+    }
+  },
+  "landing": {
+    "nav": {
+      "cta": "Zugang zur Audit-Engine",
+      "theme": "Theme"
+    },
+    "hero": {
+      "badge": "Spezialisiertes KI-Modell für Ausschreibungen",
+      "title_line1": "Nicht mehr lesen.",
+      "title_line2": "Besser entscheiden.",
+      "description": "Eine schnelle Ausschreibungsprüfung für zeitkritische Entscheidungen. Laden Sie komplexe Ausschreibungs-PDFs hoch und erhalten Sie sofort eine Go/No-Go Entscheidung auf Basis von Risiken und zwingenden Anforderungen.",
+      "primary_cta": "Zugang zur Audit-Engine",
+      "secondary_cta": "Beispielausgabe ansehen",
+      "validated_prefix": "In privaten Pilotprojekten validiert von",
+      "validated_emphasis": "Tier-1-Beratern"
+    },
+    "scanner": {
+      "risk_badge": "Haftungsrisiko"
+    },
+    "features": {
+      "section_title": "Was Sie aus einem Ausschreibungsdokument erhalten",
+      "section_subtitle": "Wir machen aus 100 Seiten PDF drei umsetzbare Listen.",
+      "cards": {
+        "executive": {
+          "title": "Executive Summary",
+          "subtitle": "Kompakte, entscheidungsorientierte Zusammenfassung für frühere Go/No-Go Entscheidungen und schnellere Abstimmung.",
+          "bullets": [
+            "Leistungsumfang und Kontext",
+            "Zentrale Einschränkungen",
+            "Entscheidungspunkte"
+          ]
+        },
+        "mandatory": {
+          "title": "Zwingende Anforderungen",
+          "subtitle": "Extrahierte und strukturierte Anforderungen zur Reduktion von Ausschlussrisiken.",
+          "bullets": [
+            "Zwingend vs optional",
+            "Klar: erfüllt oder prüfen",
+            "Bereit zur Verifikation"
+          ]
+        },
+        "risks": {
+          "title": "Risiken und Unklarheiten",
+          "subtitle": "Unklare Klauseln, Lücken sowie potenzielle Kosten- oder Liefer­risiken werden früh hervorgehoben.",
+          "bullets": [
+            "Schweregrad-Kennzeichnung",
+            "Offene Punkte",
+            "Klärungshinweise"
+          ]
+        }
+      }
+    },
+    "roi": {
+      "header": "Auswirkungen auf Zeit und Kosten",
+      "subheader": "Entwickelt zur sofortigen Reduktion unbezahlten Prüfaufwands.",
+      "cards": {
+        "time": {
+          "title": "Über 4 Stunden sparen",
+          "desc": "Pro Ausschreibung bei manueller Prüfung."
+        },
+        "margin": {
+          "title": "Marge sichern",
+          "desc": "Vermeiden Sie Angebote mit versteckten Vertragsstrafen."
+        },
+        "compliance": {
+          "title": "Compliance",
+          "desc": "Keine zwingende ISO- oder GDPR-Anforderung übersehen."
+        }
+      }
+    },
+    "zero_training": {
+      "title": "Zero-Training-Policy:",
+      "text": "Wir verwenden Ihre Ausschreibungsdaten nicht zum Trainieren unserer Modelle."
+    },
+    "early_access": {
+      "title": "Reduzieren Sie die Ausschreibungsbewertung um 90%",
+      "description": "Sichern Sie sich einen Platz im Frühzugangsprogramm. Analysieren Sie Ihre erste Ausschreibung in wenigen Minuten.",
+      "limited": "Begrenzte Plätze für das Beta-Programm verfügbar."
+    },
+    "footer": {
+      "browse": "Softwareausschreibungen durchsuchen",
+      "privacy": "Privacy",
+      "terms": "Terms"
+    }
+  },
+  "howItWorksPage": {
+    "header": {
+      "backToHome": "Zur Startseite"
+    },
+    "hero": {
+      "titleA": "Vom PDF zur Entscheidung",
+      "titleB": "in",
+      "highlight": "drei Schritten",
+      "subtitle": "Wir schreiben kein Angebot. Wir helfen Ihnen zu entscheiden, ob es sinnvoll ist."
+    },
+    "steps": [
+      {
+        "step": "01",
+        "title": "Ausschreibungsunterlagen hochladen",
+        "desc": "Ziehen Sie RFPs, RFIs oder komplexe Ausschreibungs-PDFs per Drag and Drop hinein. Dateien bis 100MB werden unterstützt."
+      },
+      {
+        "step": "02",
+        "title": "Tiefenanalyse und Extraktion",
+        "desc": "Unsere Engine liest jede Zeile, extrahiert zwingende Anforderungen (\"shall\", \"must\") und identifiziert Haftungsrisiken."
+      },
+      {
+        "step": "03",
+        "title": "Go/No-Go Bericht",
+        "desc": "Sie erhalten eine strukturierte Executive Summary mit Compliance-Matrix und Risikoregister, exportbereit."
+      }
+    ],
+    "bottomCta": {
+      "title": "Liegt gerade eine Ausschreibung auf Ihrem Tisch?",
+      "desc": "Testen Sie den Workflow für schnelle, zeitkritische Ausschreibungsentscheidungen.",
+      "button": "Frühzugang zur Audit-Engine"
+    }
+  },
+  "samplePage": {
+    "severity": {
+      "high": "Hoch",
+      "medium": "Mittel",
+      "low": "Niedrig"
+    },
+    "header": {
+      "backToHome": "Zur Startseite",
+      "exportPdf": "PDF exportieren",
+      "joinEarlyAccess": "Frühzugang",
+      "join": "Beitreten",
+      "exportSample": "Beispiel exportieren",
+      "delete": "Löschen"
+    },
+    "workspace": {
+      "title": "Ihr Ausschreibungs-Workspace",
+      "desc": "Dies ist ein statisches Beispiel zur Veranschaulichung der TenderPilot-Struktur. Prüfen Sie stets das Original-PDF."
+    },
+    "nextActions": {
+      "title": "Nächste Schritte"
+    },
+    "counts": {
+      "title": "Schnellübersicht",
+      "must": "MUST",
+      "risks": "Risiken",
+      "qa": "Q&A",
+      "microcopy": "Für Geschwindigkeit gebaut. Für Nachvollziehbarkeit ausgelegt."
+    },
+    "mustItems": {
+      "title": "MUST-Punkte",
+      "subtitle": "Zwingende Anforderungen mit Ausschlussrisiko.",
+      "export": "Exportieren",
+      "jump": "Springen"
+    },
+    "risks": {
+      "title": "Zentrale Risiken",
+      "subtitle": "Unklarheiten mit potenziellen Auswirkungen auf Kosten oder Lieferung.",
+      "export": "Exportieren",
+      "jump": "Springen"
+    },
+    "deadline": {
+      "title": "Frist",
+      "helper": "Zeitzone und Portalregeln prüfen",
+      "cta": "Frühzugang"
+    },
+    "keyBullets": {
+      "title": "Kernpunkte",
+      "subtitle": "Schneller Überblick über das Wesentliche."
+    },
+    "tabs": {
+      "requirements": "Anforderungen",
+      "risks": "Risiken",
+      "questions": "Klärungen",
+      "draft": "Gliederung",
+      "source": "Quelle",
+      "copyAll": "Alles kopieren"
+    },
+    "tabContent": {
+      "detailedRequirements": "Detaillierte Anforderungen",
+      "riskRegister": "Risikoregister",
+      "clarificationTitle": "Klärungsfragen",
+      "clarificationDesc": "Stellen Sie diese Fragen, bevor Sie Preis, Zeitplan oder SLA fest zusagen.",
+      "outlineTitle": "Angebotsgliederung",
+      "outlineDesc": "Startstruktur zur Verwendung in Ihrer Angebotsvorlage.",
+      "sourceTitle": "Quelltext",
+      "sourceDesc": "Extrahierter Text zur Nachvollziehbarkeit."
+    },
+    "data": {
+      "fileName": "standard-tender-document.pdf",
+      "status": "In Prüfung",
+      "submissionDeadline": "14. Mai 2026, 12:00 CET",
+      "decision": {
+        "badge": "Mit Vorsicht fortfahren",
+        "line": "Kein eindeutiger Ausschlussgrund erkennbar, jedoch bestehen zwei Klärungspunkte: Einreichungspaket und Abnahmekriterien für das Support-SLA."
+      },
+      "nextActions": [
+        "Einreichungsregeln bestätigen (PDF-Set und unterschriebene Erklärungen).",
+        "Abnahmetests und Freigabeprozess klären.",
+        "ISO-27001-Nachweisanforderungen und akzeptierte Alternativen prüfen."
+      ],
+      "mustItems": [
+        {
+          "id": "m1",
+          "title": "Einreichungsweg und Frist",
+          "detail": "Einreichung über das E-Vergabeportal vor Ablauf der Frist. Technisches und kaufmännisches Angebot als separate PDF-Dateien. Dateibenennungsregeln sind einzuhalten.",
+          "tag": "MUST"
+        },
+        {
+          "id": "m2",
+          "title": "Unterschriebene Erklärungen und Anlagen",
+          "detail": "Beizufügen sind unterschriebene Erklärungen zu Eignung, Nicht-Kollusion und Vertraulichkeit. Die Vergabestelle kann während der Klärungsphase weitere Unterlagen anfordern.",
+          "tag": "MUST"
+        },
+        {
+          "id": "m3",
+          "title": "Sicherheitsnachweise (ISO 27001 oder gleichwertig)",
+          "detail": "Die Ausschreibung verlangt Nachweise zu Informationssicherheitskontrollen bei der Verarbeitung personenbezogener Daten. Zu klären ist, ob ISO 27001 zwingend ist oder Gleichwertigkeit akzeptiert wird.",
+          "tag": "MUST"
+        }
+      ],
+      "risks": [
+        {
+          "id": "r1",
+          "severity": "high",
+          "title": "Abnahmekriterien nicht definiert",
+          "detail": "Abnahmetests werden erwähnt, jedoch sind keine messbaren Kriterien oder Rollen für die finale Abnahme festgelegt. Risiko späterer Konflikte."
+        },
+        {
+          "id": "r2",
+          "severity": "medium",
+          "title": "Unklarheit beim Support-SLA",
+          "detail": "Reaktionszeiten und Servicezeiten sind nicht eindeutig definiert. Klärung zu Geschäftszeiten, 24/7-Support, Eskalation und Wartungsfenstern erforderlich."
+        },
+        {
+          "id": "r3",
+          "severity": "low",
+          "title": "Referenzvorlage möglicherweise restriktiv",
+          "detail": "Ein Anhang deutet auf eine feste Struktur für Referenzen hin. Zu klären ist, ob eigene Formate zulässig sind."
+        }
+      ],
+      "keyBullets": [
+        "Einreichung über Portal mit strikten Benennungsregeln.",
+        "ISO-27001-Nachweis für Datenverarbeitung erforderlich.",
+        "Meilensteine vorhanden, Abnahmetests jedoch nicht spezifiziert.",
+        "Bewertung gewichtet: Preis (40%), Vorgehen (40%), Erfahrung (20%)."
+      ],
+      "questions": [
+        "Können Sie die genauen Regeln für das Einreichungspaket bestätigen (Benennung, Anzahl Dateien, Unterschriften)?",
+        "Welche Abnahmekriterien gelten und wer erteilt die finale Freigabe?",
+        "Ist ISO 27001 zwingend oder werden gleichwertige Zertifizierungen akzeptiert?"
+      ],
+      "draftOutline": "1. Executive Summary\n2. Verständnis des Leistungsumfangs\n3. Vorgehensweise und Methodik\n4. Lieferplan und Meilensteine\n5. Team und Referenzen\n6. Sicherheit und Datenschutz\n7. Service- und Supportmodell (SLA)\n8. Preis\n9. Compliance und Erklärungen",
+      "sourceExcerpt": "1. Einreichung\nAngebote sind über das E-Vergabeportal der Vergabestelle bis spätestens 14. Mai 2026, 12:00 CET einzureichen. Die Einreichung muss ein technisches und ein kaufmännisches Angebot als separate PDF-Dateien enthalten.\n\n2. Eignung und Erklärungen\nBieter müssen unterschriebene Erklärungen zu Eignung, Nicht-Kollusion und Vertraulichkeit beifügen. Die Vergabestelle kann in der Klärungsphase weitere Unterlagen anfordern.\n\n3. Datenschutz und Sicherheit\nDer Auftragnehmer verarbeitet personenbezogene Daten. Es sind Nachweise zu Informationssicherheitskontrollen erforderlich (ISO-27001-Zertifizierung oder gleichwertig).\n\n4. Lieferung und Abnahme\nDie Lieferung erfolgt gemäß dem in Anhang B beschriebenen Meilensteinplan. Vor dem Go-Live werden Abnahmetests durchgeführt. Abnahmekriterien werden erwähnt, sind jedoch nicht messbar spezifiziert.\n\n5. Support und SLA\nDer Auftragnehmer erbringt Supportleistungen. Die Ausschreibung nennt Reaktionszeiten und Eskalationswege, definiert jedoch nicht eindeutig die Servicezeiten (Geschäftszeiten oder 24/7).\n\n6. Bewertung\nDie Zuschlagserteilung erfolgt auf Basis von Preis (40%), technischem Vorgehen (40%) und Erfahrung des Teams (20%)."
+    }
+  }
+}

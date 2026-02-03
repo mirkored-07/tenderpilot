@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -12,21 +11,15 @@ type Props = {
 
 const DEFAULT_WAITLIST_URL = "https://tally.so/r/gD9bkM";
 
-// Accepts:
-// - full URL: https://tally.so/r/gD9bkM
-// - just ID: gD9bkM
-// - accidental doubled URL: https://tally.so/r/https://tally.so/r/gD9bkM
 function normalizeWaitlistUrl(raw: string) {
   const v = (raw || "").trim();
   if (!v) return DEFAULT_WAITLIST_URL;
-
-  // Fix the exact broken pattern you’re seeing
+  
   const doubled = "https://tally.so/r/https://tally.so/r/";
   if (v.startsWith(doubled)) {
     return "https://tally.so/r/" + v.slice(doubled.length);
   }
 
-  // If only ID provided
   if (!v.startsWith("http")) {
     return `https://tally.so/r/${v.replace(/^\/+/, "")}`;
   }
@@ -66,22 +59,25 @@ export function WaitlistInline({ className, source = "landing" }: Props) {
         <Input
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="you@company.com"
+          placeholder="work@consultancy.com"
           type="email"
-          className="h-11 rounded-full"
+          className="h-11 rounded-full border-muted-foreground/20 bg-background/50 backdrop-blur"
           aria-label="Email address"
           autoComplete="email"
         />
         <Button
           type="submit"
-          className="h-11 rounded-full"
+          className="h-11 rounded-full px-6 font-medium shadow-lg hover:shadow-xl transition-all"
           data-umami-event="early_access_submit"
           data-umami-event-source={source}
         >
-          Get early access
+          Get Audit Engine Access
         </Button>
       </div>
-      <div className="mt-2 text-xs text-muted-foreground">No spam. One email when access opens.</div>
+      <div className="mt-3 flex items-center gap-2 text-[10px] uppercase tracking-wider text-muted-foreground/70">
+        <span className="h-1.5 w-1.5 rounded-full bg-green-500/80 animate-pulse" />
+        <span>Accepting early users</span>
+      </div>
       {error ? <div className="mt-2 text-xs text-destructive">{error}</div> : null}
     </form>
   );

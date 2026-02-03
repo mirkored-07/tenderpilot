@@ -1,4 +1,4 @@
-﻿# TenderPilot
+﻿# TenderPilot V1
 
 TenderPilot is an AI-assisted tender review tool designed to help teams quickly assess bid eligibility, risks, and drafting readiness.
 

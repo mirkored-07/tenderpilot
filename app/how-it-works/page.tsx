@@ -1,185 +1,114 @@
 import Link from "next/link";
-
+import { ArrowRight, UploadCloud, ScanLine, FileCheck, Command, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-function Step({ n, title, text }: { n: string; title: string; text: string }) {
-  return (
-    <Card className="rounded-2xl">
-      <CardContent className="p-6">
-        <div className="flex items-start gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full border bg-background text-sm font-semibold">
-            {n}
-          </div>
-          <div>
-            <div className="text-sm font-semibold">{title}</div>
-            <div className="mt-1 text-sm text-muted-foreground leading-relaxed">{text}</div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function WhatYouGetItem({
-  title,
-  subtitle,
-  bullets,
-}: {
-  title: string;
-  subtitle: string;
-  bullets: string[];
+function StepCard({ 
+  icon, 
+  step, 
+  title, 
+  desc,
+  colorClass
+}: { 
+  icon: React.ReactNode; 
+  step: string; 
+  title: string; 
+  desc: string;
+  colorClass: string;
 }) {
   return (
-    <Card className="rounded-2xl">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base">{title}</CardTitle>
-        <p className="text-sm text-muted-foreground">{subtitle}</p>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <ul className="space-y-2 text-sm text-muted-foreground">
-          {bullets.map((b) => (
-            <li key={b} className="flex gap-3 leading-relaxed">
-              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-foreground/60" />
-              <span>{b}</span>
-            </li>
-          ))}
-        </ul>
-      </CardContent>
-    </Card>
+    <div className="relative group">
+      {/* Hover Glow */}
+      <div className={`absolute inset-0 bg-gradient-to-b ${colorClass} to-transparent rounded-3xl blur-2xl opacity-0 group-hover:opacity-20 transition-opacity duration-500`} />
+      
+      <div className="relative h-full glass-card p-8 rounded-3xl border border-white/10 overflow-hidden flex flex-col">
+        <div className="flex items-start justify-between mb-8">
+           <div className="h-14 w-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-foreground shadow-inner">
+             {icon}
+           </div>
+           <span className="text-5xl font-bold text-white/[0.05] font-mono">{step}</span>
+        </div>
+        
+        <h3 className="text-xl font-bold mb-4">{title}</h3>
+        <p className="text-muted-foreground leading-relaxed mb-6 flex-grow">
+          {desc}
+        </p>
+      </div>
+    </div>
   );
 }
 
-export default function HowItWorksPage() {
+export default function HowItWorks() {
   return (
-    <main className="min-h-screen premium-bg bg-background">
-      <header className="sticky top-0 z-10 border-b bg-background/70 backdrop-blur supports-[backdrop-filter]:bg-background/40">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 md:px-8">
-          <Link href="/" className="font-semibold text-lg tracking-tight">
-            TenderPilot
+    <div className="min-h-screen bg-background aurora-bg">
+      {/* Header */}
+      <header className="sticky top-0 z-50 border-b border-white/5 bg-background/60 backdrop-blur-xl">
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2 font-bold text-lg hover:opacity-80 transition-opacity">
+            <div className="h-8 w-8 bg-zinc-800 text-white rounded-lg flex items-center justify-center">
+               <Command className="h-5 w-5" />
+            </div>
+            <span>TenderPilot</span>
           </Link>
-
-          <div className="flex items-center gap-2">
-            <Button asChild variant="ghost" className="rounded-full">
-              <Link href="/how-it-works">How it works</Link>
-            </Button>
-            <Button asChild variant="ghost" className="rounded-full">
-              <Link href="/sample">Sample output</Link>
-            </Button>
-            <Button asChild variant="outline" className="rounded-full">
-              <Link href="/login">Sign in</Link>
-            </Button>
-            <Button asChild className="rounded-full">
-              <Link href="/app/upload">Upload file</Link>
-            </Button>
-          </div>
+          
+          <Button asChild size="sm" variant="ghost" className="rounded-full">
+            <Link href="/" className="gap-2">
+               Back to Home <ChevronRight className="w-4 h-4" />
+            </Link>
+          </Button>
         </div>
       </header>
 
-      <section className="mx-auto max-w-6xl px-4 pt-12 pb-8 md:px-8 md:pt-16">
-        <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">How TenderPilot works</h1>
-        <p className="mt-3 text-base text-muted-foreground leading-relaxed md:text-lg">
-          TenderPilot creates a tender review workspace from your tender document so you can decide
-          faster and reduce surprises.
-        </p>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+        <div className="max-w-3xl mx-auto text-center mb-24">
+          <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-8">
+            From PDF to Decision <br/> in <span className="text-gradient-brand">Three Steps</span>
+          </h1>
+          <p className="text-xl text-muted-foreground">
+            We don't write the proposal. We help you decide if it's worth writing.
+          </p>
+        </div>
 
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-          <Button asChild className="rounded-full">
-            <Link href="/app/upload">Upload file</Link>
+        <div className="grid md:grid-cols-3 gap-8 relative">
+           {/* Desktop Connecting Line */}
+           <div className="hidden md:block absolute top-[28%] left-[16%] right-[16%] h-px bg-gradient-to-r from-blue-500/0 via-blue-500/30 to-blue-500/0 border-t border-dashed border-white/10 z-0" />
+
+           <StepCard 
+             step="01"
+             icon={<UploadCloud className="w-7 h-7 text-blue-400" />}
+             title="Upload Tender Docs"
+             desc="Drag and drop your complex RFPs, RFIs, or Tender PDFs. We support files up to 100MB."
+             colorClass="from-blue-500"
+           />
+           
+           <StepCard 
+             step="02"
+             icon={<ScanLine className="w-7 h-7 text-purple-400" />}
+             title="Deep Extraction"
+             desc="Our engine reads every line, extracting mandatory requirements ('shall', 'must') and identifying liability risks."
+             colorClass="from-purple-500"
+           />
+           
+           <StepCard 
+             step="03"
+             icon={<FileCheck className="w-7 h-7 text-emerald-400" />}
+             title="The Go/No-Go Report"
+             desc="Receive a structured executive summary with a Compliance Matrix and Risk Register ready for export."
+             colorClass="from-emerald-500"
+           />
+        </div>
+
+        {/* Bottom CTA */}
+        <div className="mt-32 text-center bg-white/5 border border-white/10 rounded-3xl p-12 max-w-4xl mx-auto backdrop-blur-sm">
+          <h3 className="text-2xl font-bold mb-4">Have a tender on your desk right now?</h3>
+          <p className="text-muted-foreground mb-8">Test the "Friday 4PM" workflow yourself.</p>
+          
+          <Button asChild size="lg" className="rounded-full px-12 h-14 text-lg bg-white text-black hover:bg-gray-200">
+            <Link href="/app/upload">
+                Get Early Audit Access <ArrowRight className="ml-2 w-5 h-5" />
+            </Link>
           </Button>
-          <Button asChild variant="outline" className="rounded-full">
-            <Link href="/">Back to home</Link>
-          </Button>
         </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-4 pb-10 md:px-8">
-        <div className="grid gap-4 md:grid-cols-3">
-          <Step n="1" title="Upload" text="PDF or DOCX in. No templates. No setup." />
-          <Step
-            n="2"
-            title="Review what matters"
-            text="Requirements, risks, and questions grouped for fast scanning."
-          />
-          <Step
-            n="3"
-            title="Decide and draft"
-            text="Make a call, then start from a short structured outline."
-          />
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-4 pb-10 md:px-8">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight">What you get</h2>
-          <p className="mt-2 text-sm text-muted-foreground">Designed for clarity. Optimized for decision making.</p>
-        </div>
-
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
-          <WhatYouGetItem
-            title="Requirements"
-            subtitle="Disqualifiers and obligations"
-            bullets={[
-              "MUST items are shown first to prevent disqualification.",
-              "SHOULD items highlight expectations that affect scoring.",
-              "Each item is phrased to be actionable, not academic.",
-            ]}
-          />
-          <WhatYouGetItem
-            title="Risks"
-            subtitle="Gaps, assumptions, and delivery threats"
-            bullets={[
-              "Severity helps prioritize what to resolve first.",
-              "Focus on ambiguity, dependencies, and delivery impact.",
-              "Mitigation wording stays short and practical.",
-            ]}
-          />
-          <WhatYouGetItem
-            title="Clarifications"
-            subtitle="Questions to ask the buyer"
-            bullets={[
-              "A ready-to-send list for the Q&A window.",
-              "Reduces scope ambiguity before you submit.",
-              "Helps avoid hidden obligations and acceptance traps.",
-            ]}
-          />
-          <WhatYouGetItem
-            title="Draft outline"
-            subtitle="A structured starting point"
-            bullets={[
-              "Not a full proposal, a clean outline you can refine.",
-              "Keeps effort proportional to bid likelihood.",
-              "Improves consistency and reduces blank-page time.",
-            ]}
-          />
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-4 pb-16 md:px-8">
-        <Card className="rounded-2xl">
-          <CardContent className="p-6 md:p-8">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-semibold">Good to know</p>
-                <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                  Drafting support only. Always verify requirements and legal language against the original tender
-                  document.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <Button asChild variant="outline" className="rounded-full">
-                  <Link href="/sample">View sample output</Link>
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <p className="mt-6 text-center text-xs text-muted-foreground">
-          Drafting support only. Always verify against the original tender document.
-        </p>
-      </section>
-    </main>
+      </main>
+    </div>
   );
 }

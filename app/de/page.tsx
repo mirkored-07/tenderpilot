@@ -21,6 +21,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { WaitlistInline } from "@/components/marketing/WaitlistInline";
 import { ModeToggle } from "@/components/mode-toggle";
+import LanguageSwitcherSlot from "@/components/marketing/LanguageSwitcherSlot";
+
 
 type LandingDict = {
   nav: { cta: string; theme: string };
@@ -67,9 +69,10 @@ function ScannerHero({ riskBadge }: { riskBadge: string }) {
 
       {/* --- FLOATING RISK BADGE (Loops perfectly with scanner) --- */}
       <div
-        className="absolute top-[45%] -right-12 z-50 flex items-center gap-2 opacity-0 pointer-events-none"
-        style={{ animation: "cycle-risk-badge 4s ease-in-out infinite" }}
-      >
+		  className="absolute top-[45%] right-2 sm:-right-12 z-50 flex items-center gap-2 opacity-0 pointer-events-none"
+		  style={{ animation: "cycle-risk-badge 4s ease-in-out infinite" }}
+		>
+
         {/* Connecting Line */}
         <div className="w-8 h-px bg-red-500/50" />
         {/* The Badge */}
@@ -176,7 +179,7 @@ function FeatureCard({
 
         <ul className="mt-5 space-y-3">
           {bullets.map((b) => (
-            <li key={b} className="flex gap-3 text-sm text-zinc-400">
+            <li key={b} className="flex gap-3 text-sm text-muted-foreground">
               <CheckCircle2 className="h-4 w-4 shrink-0 text-blue-500" />
               <span>{b}</span>
             </li>
@@ -202,8 +205,9 @@ function RoiBenefitGraphic({ roi }: { roi: LandingDict["roi"] }) {
           <div className="flex items-start gap-4">
             <Clock className="h-6 w-6 text-blue-400" />
             <div>
-              <div className="font-bold text-white">{roi.cards.time.title}</div>
-              <p className="mt-1 text-sm text-zinc-600">{roi.cards.time.desc}</p>
+              <div className="font-bold text-foreground">{roi.cards.time.title}</div>
+              <p className="mt-1 text-sm text-muted-foreground">
+{roi.cards.time.desc}</p>
             </div>
           </div>
         </div>
@@ -212,8 +216,9 @@ function RoiBenefitGraphic({ roi }: { roi: LandingDict["roi"] }) {
           <div className="flex items-start gap-4">
             <Euro className="h-6 w-6 text-emerald-400" />
             <div>
-              <div className="font-bold text-white">{roi.cards.margin.title}</div>
-              <p className="mt-1 text-sm text-zinc-600">{roi.cards.margin.desc}</p>
+              <div className="font-bold text-foreground">{roi.cards.margin.title}</div>
+              <p className="mt-1 text-sm text-muted-foreground">
+{roi.cards.margin.desc}</p>
             </div>
           </div>
         </div>
@@ -222,10 +227,11 @@ function RoiBenefitGraphic({ roi }: { roi: LandingDict["roi"] }) {
           <div className="flex items-start gap-4">
             <ShieldCheck className="h-6 w-6 text-purple-400" />
             <div>
-              <div className="font-bold text-white">
+              <div className="font-bold text-foreground">
                 {roi.cards.compliance.title}
               </div>
-              <p className="mt-1 text-sm text-zinc-600">
+              <p className="mt-1 text-sm text-muted-foreground">
+
                 {roi.cards.compliance.desc}
               </p>
             </div>
@@ -237,7 +243,7 @@ function RoiBenefitGraphic({ roi }: { roi: LandingDict["roi"] }) {
 }
 
 export default async function LandingPage() {
-  const dict = (await import("@/dictionaries/en.json")).default as any;
+  const dict = (await import("@/dictionaries/de.json")).default as any;
   const t = dict.landing as LandingDict;
   const nav = dict.nav as {
     howItWorks: string;
@@ -252,7 +258,7 @@ export default async function LandingPage() {
       <header className="sticky top-0 z-50 border-b border-white/5 bg-background/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:h-16 md:px-8 md:py-0">
           <Link
-            href="/"
+            href="/de"
             className="flex items-center gap-2 font-bold text-lg tracking-tight hover:opacity-80 transition-opacity"
           >
             <div className="h-8 w-8 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-lg flex items-center justify-center shadow-lg">
@@ -264,13 +270,13 @@ export default async function LandingPage() {
           {/* Desktop nav */}
           <div className="hidden md:flex items-center gap-4">
             <Link
-              href="/how-it-works"
+              href="/de/how-it-works"
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               {nav.howItWorks}
             </Link>
             <Link
-              href="/sample"
+              href="/de/sample"
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               {nav.sample}
@@ -282,26 +288,27 @@ export default async function LandingPage() {
               <Link href="#early-access">{t.nav.cta}</Link>
             </Button>
             {/* Theme toggle */}
-            <div className="ml-2 pl-2 border-l border-white/10">
-              <ModeToggle />
-            </div>
+            <div className="ml-2 pl-2 border-l border-white/10 flex items-center gap-2">
+			  <LanguageSwitcherSlot />
+			  <ModeToggle />
+			</div>
           </div>
 
           {/* Mobile nav */}
           <details className="relative md:hidden z-50">
-            <summary className="cursor-pointer list-none rounded-full border border-white/10 bg-zinc-900/50 px-3 py-2 text-sm font-medium text-foreground backdrop-blur-md [&::-webkit-details-marker]:hidden">
+            <summary className="cursor-pointer list-none rounded-full border border-white/10 bg-background/70 dark:bg-zinc-900/50 px-3 py-2 text-sm font-medium text-foreground backdrop-blur-md [&::-webkit-details-marker]:hidden">
               {nav.menu}
             </summary>
 
-            <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-white/10 bg-zinc-900/95 p-2 shadow-xl backdrop-blur-xl ring-1 ring-black/5">
+            <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-white/10 bg-background/95 dark:bg-zinc-900/95 p-2 shadow-xl backdrop-blur-xl ring-1 ring-black/5">
               <Link
-                href="/how-it-works"
+                href="/de/how-it-works"
                 className="block rounded-xl px-3 py-2 text-sm hover:bg-white/5 text-muted-foreground hover:text-foreground"
               >
                 {nav.howItWorks}
               </Link>
               <Link
-                href="/sample"
+                href="/de/sample"
                 className="block rounded-xl px-3 py-2 text-sm hover:bg-white/5 text-muted-foreground hover:text-foreground"
               >
                 {nav.sample}
@@ -320,6 +327,11 @@ export default async function LandingPage() {
                 </span>
                 <ModeToggle />
               </div>
+			  <div className="mt-2 flex items-center justify-between border-t border-white/10 px-3 pt-3 pb-1">
+				  <span className="text-sm text-muted-foreground">Language</span>
+				  <LanguageSwitcherSlot />
+				</div>
+
             </div>
           </details>
         </div>
@@ -342,7 +354,7 @@ export default async function LandingPage() {
               <span className="text-gradient-brand">{t.hero.title_line2}</span>
             </h1>
 
-            <p className="text-xl text-zinc-800 leading-relaxed mb-10 max-w-lg">
+            <p className="text-xl text-muted-foreground leading-relaxed mb-10 max-w-lg">
               {t.hero.description}
             </p>
 
@@ -467,13 +479,13 @@ export default async function LandingPage() {
           </div>
           <div className="flex flex-wrap items-center gap-8 text-sm font-medium">
             <Link
-              href="/how-it-works"
+              href="/de/how-it-works"
               className="text-zinc-400 hover:text-white transition-colors"
             >
               {nav.howItWorks}
             </Link>
             <Link
-              href="/sample"
+              href="/de/sample"
               className="text-zinc-400 hover:text-white transition-colors"
             >
               {nav.sample}

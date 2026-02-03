@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { LanguageFixer } from "@/components/marketing/LanguageFixer"; // <--- 1. Import the fixer
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,32 +15,64 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  // The "Template" puts your brand at the end of every page automatically
-  // e.g. "Software Tenders | TenderPilot"
+  // CRITICAL FOR SEO: This resolves all relative social image URLs
+  metadataBase: new URL("https://www.trytenderpilot.com"),
+  
   title: {
-    default: "TenderPilot - AI Bid Writing & Proposal Software",
+    default: "TenderPilot - AI Tender Analysis & Risk Assessment",
     template: "%s | TenderPilot",
   },
-  description: "Automate your public procurement. TenderPilot helps Austrian, German, and Italian SMEs analyze tenders, assess risks, and write proposals 10x faster with AI.",
+  description: "The Friday 4PM solution. Upload complex tender PDFs and get instant go/no-go decision support, risk analysis, and compliance checklists.",
   keywords: [
-    "Tender Management Software",
-    "AI Bid Writer",
-    "Proposal Automation",
-    "RFP Response Tool",
-    "Tenders Electronic Daily",
-    "Opentender Austria",
-    "Gare d'appalto IA" // Italian Keyword
+    "Tender Analysis AI",
+    "RFP Review Software",
+    "Bid/No-Bid Decision",
+    "Procurement Risk Assessment",
+    "Automated Tender Summary",
+    "Proposal Management Tool",
   ],
+  authors: [{ name: "TenderPilot Team" }],
+  creator: "TenderPilot",
+  publisher: "TenderPilot",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
   openGraph: {
-    title: "TenderPilot - Win More Tenders with AI",
-    description: "Stop reading 200-page PDFs. Upload them to TenderPilot and get a risk analysis in seconds.",
+    title: "Stop Reading. Start Deciding.",
+    description: "Instant risk analysis and compliance checklists for public tenders. Make your Go/No-Go decision in minutes, not hours.",
     url: "https://www.trytenderpilot.com",
     siteName: "TenderPilot",
-    locale: "en_EU",
+    locale: "en_US",
     type: "website",
+    images: [
+      {
+        url: "/og-image.jpg", 
+        width: 1200,
+        height: 630,
+        alt: "TenderPilot Dashboard Preview",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "TenderPilot - AI Tender Analysis",
+    description: "Automated risk analysis for RFPs and Tenders.",
+    creator: "@tenderpilot", 
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
   },
 };
-
 
 export default function RootLayout({
   children,
@@ -47,9 +80,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+    // 2. Added suppressHydrationWarning to prevent errors when LanguageFixer updates the attribute
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <ThemeProvider>{children}</ThemeProvider>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        {/* 3. The LanguageFixer runs immediately to set the correct lang tag (e.g., 'de') */}
+        <LanguageFixer />
+        
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

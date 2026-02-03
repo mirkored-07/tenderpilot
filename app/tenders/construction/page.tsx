@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ArrowRight, Command, Search, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
-// 1. FORCE STATIC: Instant load, perfect SEO
+// 1. FORCE STATIC
 export const dynamic = "force-static";
 
-// 2. SEO METADATA: Targeted for Construction Companies
+// 2. SEO METADATA
 export const metadata: Metadata = {
   title: "Live Construction Tenders (CPV 45000000) | TenderPilot",
   description: "Browse active EU construction tenders (CPV 45000000). Track opportunities for road works, building renovation, and infrastructure in Germany, Italy, and Austria.",
@@ -22,7 +23,7 @@ export const metadata: Metadata = {
   },
 };
 
-// 3. DATA: Realistic Construction Examples (CPV 45000000)
+// 3. DATA
 const REAL_TENDERS = [
   {
     id: "TED-DE-CONST-1",
@@ -87,7 +88,6 @@ const REAL_TENDERS = [
 ];
 
 export default function ConstructionTendersPage() {
-  // 4. JSON-LD: Structured Data for Construction
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",
@@ -97,10 +97,7 @@ export default function ConstructionTendersPage() {
       "item": {
         "@type": "GovernmentService",
         "name": tender.title,
-        "provider": {
-          "@type": "Organization",
-          "name": tender.buyer
-        },
+        "provider": { "@type": "Organization", "name": tender.buyer },
         "areaServed": tender.country,
         "serviceType": "Public Works",
         "url": "https://www.trytenderpilot.com/tenders/construction"
@@ -109,31 +106,35 @@ export default function ConstructionTendersPage() {
   };
 
   return (
-    <main className="min-h-screen premium-bg bg-background">
-      {/* INJECT JSON-LD */}
+    <main className="min-h-screen bg-background aurora-bg selection:bg-orange-500/30">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
       {/* HEADER */}
-      <header className="sticky top-0 z-10 border-b bg-background/70 backdrop-blur supports-[backdrop-filter]:bg-background/40">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 md:h-16 md:px-8 md:py-0">
-          <Link href="/" className="font-semibold text-lg tracking-tight">
-            TenderPilot
+      <header className="sticky top-0 z-50 border-b border-white/5 bg-background/80 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8 h-16">
+          <Link href="/" className="flex items-center gap-2 font-bold text-lg tracking-tight hover:opacity-80 transition-opacity">
+            <div className="h-8 w-8 bg-zinc-800 text-white rounded-lg flex items-center justify-center">
+               <Command className="h-5 w-5" />
+            </div>
+            <span>TenderPilot</span>
           </Link>
-          <div className="hidden md:flex items-center gap-2">
-            <Button asChild className="rounded-full">
-              <Link href="/#early-access">Get early access</Link>
+          <div className="hidden md:flex items-center gap-4">
+            <Button asChild className="rounded-full shadow-lg shadow-orange-500/20 bg-white text-black hover:bg-gray-100 font-semibold">
+              <Link href="/app/upload">
+                Get Early Audit Access <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
             </Button>
           </div>
         </div>
       </header>
 
       {/* HERO */}
-      <section className="mx-auto max-w-6xl px-4 pt-12 pb-10 md:px-8 md:pt-16">
+      <section className="mx-auto max-w-7xl px-4 pt-16 pb-12 sm:px-6 lg:px-8">
         <div className="max-w-3xl">
-          <div className="inline-flex items-center gap-2 rounded-full border bg-background/50 px-3 py-1 text-xs font-medium text-muted-foreground backdrop-blur">
+          <div className="inline-flex items-center gap-2 rounded-full border border-orange-500/20 bg-orange-500/10 px-3 py-1 text-xs font-medium text-orange-300 backdrop-blur">
             <span className="relative flex h-2 w-2">
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-orange-400 opacity-75"></span>
               <span className="relative inline-flex h-2 w-2 rounded-full bg-orange-500"></span>
@@ -141,52 +142,54 @@ export default function ConstructionTendersPage() {
             Live Construction Data
           </div>
 
-          <h1 className="mt-6 text-4xl font-semibold tracking-tight md:text-5xl">
-            Real Construction Tenders (EU)
+          <h1 className="mt-6 text-4xl font-bold tracking-tight md:text-5xl">
+            Construction Tenders (EU)
           </h1>
-          <p className="mt-6 text-base text-muted-foreground leading-relaxed md:text-lg">
+          <p className="mt-6 text-lg text-muted-foreground leading-relaxed max-w-2xl">
             Stop searching manually. We track CPV 45000000 (Construction Works) for infrastructure, renovation, and public works across Europe.
           </p>
         </div>
       </section>
 
       {/* TENDER LIST */}
-      <section className="mx-auto max-w-6xl px-4 pb-20 md:px-8">
-        <div className="grid gap-4">
+      <section className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 lg:px-8">
+        <div className="grid gap-6">
           {REAL_TENDERS.map((tender) => (
-            <Card key={tender.id} className="rounded-2xl hover:border-foreground/20 transition-all">
+            <Card key={tender.id} className="glass-card rounded-2xl border-white/10 hover:border-white/20 transition-all group">
               <CardContent className="p-6">
                 <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
                   {/* Left Side: Info */}
-                  <div className="flex-1 space-y-3">
+                  <div className="flex-1 space-y-4">
                     <div className="flex flex-wrap items-center gap-2 text-xs">
-                      <span className="rounded-full bg-orange-100 px-2 py-0.5 font-medium text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">
+                      <span className="rounded-full bg-orange-500/10 px-2.5 py-1 font-medium text-orange-300 border border-orange-500/20">
                         {tender.buyer}
                       </span>
-                      <span className="rounded-full border bg-background px-2 py-0.5 text-muted-foreground">
+                      <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-muted-foreground">
                         {tender.country}
                       </span>
                     </div>
                     <div>
-                      <h3 className="text-base font-semibold leading-tight">{tender.title}</h3>
-                      <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                      <h3 className="text-lg font-semibold leading-tight group-hover:text-orange-400 transition-colors">
+                        {tender.title}
+                      </h3>
+                      <p className="mt-2 text-sm text-muted-foreground leading-relaxed max-w-3xl">
                         {tender.description}
                       </p>
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">📅 Due: {tender.deadline}</span>
-                      <span className="flex items-center gap-1">💰 {tender.value}</span>
+                    <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-2"><Search className="w-4 h-4 opacity-50"/> Due: <span className="text-foreground">{tender.deadline}</span></span>
+                      <span className="flex items-center gap-2"><div className="w-1 h-1 rounded-full bg-white/50"/> Est. Value: <span className="text-foreground">{tender.value}</span></span>
                     </div>
                   </div>
 
                   {/* Right Side: Buttons */}
-                  <div className="flex shrink-0 flex-col gap-2 md:w-48">
-                    <Button asChild className="w-full rounded-full">
-                      <Link href="/#early-access">Analyze Risk</Link>
+                  <div className="flex shrink-0 flex-col gap-3 md:w-48">
+                    <Button asChild className="w-full rounded-full shadow-md shadow-orange-500/10">
+                      <Link href="/app/upload">Analyze Risk</Link>
                     </Button>
-                    <Button asChild variant="outline" className="w-full rounded-full bg-background">
+                    <Button asChild variant="outline" className="w-full rounded-full border-white/10 bg-transparent hover:bg-white/5">
                       <Link href={tender.link} target="_blank">
-                        View Source
+                        View Source <ExternalLink className="ml-2 w-3 h-3 opacity-50"/>
                       </Link>
                     </Button>
                   </div>
@@ -198,8 +201,8 @@ export default function ConstructionTendersPage() {
       </section>
 
       {/* SEO FOOTER */}
-      <section className="mx-auto max-w-6xl px-4 pb-8 md:px-8">
-         <div className="border-t pt-8 text-xs text-muted-foreground">
+      <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
+         <div className="border-t border-white/10 pt-8 text-xs text-muted-foreground/60">
             <p>Active CPV 45000000 listings for General Construction, Civil Engineering, and Infrastructure Works in the European Union. Data sourced from Tenders Electronic Daily (TED).</p>
          </div>
       </section>
