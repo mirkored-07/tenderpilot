@@ -231,7 +231,7 @@
       "badge": "Specialized Tender AI Model",
       "title_line1": "Stop Reading.",
       "title_line2": "Start Deciding.",
-      "description": "The \"Friday 4PM\" solution. Upload complex tender PDFs and get an instant Go/No-Go decision based on risks and mandatory requirements.",
+      "description": "A fast, last-minute tender review. Upload complex tender PDFs and get an instant go/no-go decision based on risks and mandatory requirements.",
       "primary_cta": "Get Audit Engine Access",
       "secondary_cta": "See Sample Output",
       "validated_prefix": "Validated in private pilots by",
@@ -336,7 +336,7 @@
   ],
     "bottomCta": {
     "title": "Have a tender on your desk right now?",
-    "desc": "Test the \"Friday 4PM\" workflow yourself.",
+    "desc": "Try the workflow designed for fast, time-critical tender decisions.",
     "button": "Get Early Audit Access"
   }
   },

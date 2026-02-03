@@ -2,8 +2,8 @@
   "nav": {
     "title": "TenderPilot",
     "howItWorks": "Cómo funciona",
-    "sample": "Salida de ejemplo",
-    "waitlist": "Obtener acceso anticipado",
+    "sample": "Ejemplo de salida",
+    "waitlist": "Acceso anticipado",
     "menu": "Menú",
     "backHome": "Volver al inicio",
     "back": "Atrás",
@@ -12,10 +12,10 @@
     "delete": "Eliminar"
   },
   "hero": {
-    "subtitle": "Soporte de decisión go/no-go para consultores de licitaciones y pymes.",
-    "title1": "Entiende licitaciones más rápido.",
+    "subtitle": "Ayuda para la decisión go/no-go para consultores de licitaciones y pymes.",
+    "title1": "Comprende las licitaciones más rápido.",
     "title2": "Decide si presentar oferta con confianza.",
-    "description": "Deja de revisar manualmente PDFs de 100 páginas. Sube tus documentos de licitación y obtén en minutos un resumen analizado por IA con riesgos, requisitos y criterios.",
+    "description": "Deja de revisar manualmente PDFs de 100 páginas. Sube la documentación de la licitación y obtén en minutos un resumen asistido por IA de riesgos, requisitos y criterios.",
     "cta_upload": "Analiza tu primera licitación",
     "cta_limit": "Gratis durante la beta · No se requiere tarjeta de crédito",
     "privacy": "Seguro y privado. No usamos tus datos para entrenar nuestros modelos."
@@ -23,7 +23,7 @@
   "features": {
     "analyze": {
       "title": "Resultados listos para revisión",
-      "subtitle": "Sin chatbots. Solo hechos estructurados."
+      "subtitle": "Sin chatbots. Solo información estructurada."
     },
     "extract": {
       "title": "Checklist de requisitos obligatorios",
@@ -31,7 +31,7 @@
     },
     "draft": {
       "title": "Borrador de esquema de propuesta",
-      "subtitle": "Arranca la estructura de tu respuesta más rápido."
+      "subtitle": "Empieza con una estructura clara más rápido."
     },
     "security": {
       "title": "Riesgos y ambigüedades",
@@ -40,115 +40,115 @@
   },
   "roi": {
     "header": "Impacto en tiempo y costes",
-    "subheader": "Diseñado para reducir trabajo de revisión no facturable y descartar antes licitaciones poco adecuadas.",
-    "disclaimer": "Solo a modo ilustrativo · depende de la complejidad del documento",
+    "subheader": "Diseñado para reducir el esfuerzo de revisión no facturable y descartar antes licitaciones poco adecuadas.",
+    "disclaimer": "Solo ilustrativo · depende de la complejidad del documento",
     "time": {
       "title": "Ahorra tiempo de revisión",
-      "desc": "Menos extracción y reformateo manual. Más claridad en el primer pase."
+      "desc": "Menos extracción y reformateo manual. Más claridad desde el primer análisis."
     },
     "margin": {
       "title": "Protege el margen",
-      "desc": "Menos horas pagadas en licitaciones que no encajan. Enfócate en lo importante."
+      "desc": "Menos horas dedicadas a licitaciones que no encajan. Centra el esfuerzo donde importa."
     },
     "misses": {
       "title": "Reduce errores costosos",
-      "desc": "Identifica antes criterios excluyentes y puntos abiertos, para evitar sorpresas al final."
+      "desc": "Identifica antes criterios excluyentes y puntos abiertos para evitar sorpresas a última hora."
     },
-    "summary_title": "Un primer pase más claro ayuda a tomar mejores decisiones go/no-go",
-    "summary_desc": "Menos trabajo administrativo · claridad antes · traspasos internos más limpios",
-    "footer": "Esta sección describe beneficios esperados. No garantiza ahorro de tiempo o dinero."
+    "summary_title": "Un primer análisis más claro ayuda a tomar mejores decisiones go/no-go",
+    "summary_desc": "Menos trabajo administrativo · claridad antes · traspasos internos más fluidos",
+    "footer": "Esta sección describe beneficios esperados. No garantiza ahorro de tiempo ni de costes."
   },
   "howItWorks": {
     "eyebrow": "Flujo práctico. Poco ruido.",
     "title": "Cómo funciona",
-    "description": "TenderPilot te ayuda a entender rápidamente una licitación para tomar una decisión go/no-go con seguridad. Estructura RFPs y licitaciones públicas en resultados listos para revisión: requisitos obligatorios, criterios de evaluación, riesgos y ambigüedades, y un esquema inicial de la propuesta.",
-    "disclaimer": "Solo soporte de decisión. No es asesoramiento legal ni de contratación pública. Verifica siempre contra el documento original.",
-    "cta_sample": "Ver salida de ejemplo",
-    "cta_join": "Obtener acceso anticipado",
-    "outputs_title": "Resultados que verás",
-    "outputs_desc": "Un conjunto práctico de artefactos para revisar rápido, con foco en trazabilidad y verificación.",
+    "description": "TenderPilot te ayuda a entender rápidamente una licitación para tomar una decisión go/no-go con seguridad. Estructura RFP y licitaciones públicas en entregables listos para revisar: requisitos obligatorios, criterios de evaluación, riesgos y ambigüedades, y un esquema inicial de la propuesta.",
+    "disclaimer": "Solo apoyo a la decisión. No es asesoramiento legal ni de contratación pública. Verifica siempre con el documento original.",
+    "cta_sample": "Ver ejemplo de salida",
+    "cta_join": "Acceso anticipado",
+    "outputs_title": "Lo que verás",
+    "outputs_desc": "Un conjunto práctico de entregables para revisar rápido, con foco en trazabilidad y verificación.",
     "outputs_list": [
       "Checklist de requisitos obligatorios",
       "Criterios de evaluación y puntuación",
       "Riesgos, ambigüedades e información faltante",
-      "Extractos de la fuente para trazabilidad",
-      "Punto de partida para el esquema de la propuesta"
+      "Extractos de fuente para trazabilidad",
+      "Punto de partida para un esquema de propuesta"
     ]
   },
   "sample": {
     "fileName": "standard-tender-document.pdf",
     "status": "En revisión",
-    "decision_badge": "Continuar con cautela",
-    "decision_text": "No se detectó un motivo claro de exclusión, pero hay dos puntos que requieren aclaración: paquete de entrega y criterios de aceptación del SLA de soporte.",
-    "actions_title": "Siguientes acciones",
+    "decision_badge": "Proceder con cautela",
+    "decision_text": "No se detecta un criterio de exclusión claro, pero hay dos puntos que requieren aclaración: el paquete de presentación y los criterios de aceptación del SLA de soporte.",
+    "actions_title": "Próximas acciones",
     "actions_list": [
-      "Confirmar reglas del paquete de presentación (set de PDFs más declaraciones firmadas).",
-      "Aclarar pruebas de aceptación y proceso de validación de entregables.",
-      "Verificar requisitos de evidencia ISO 27001 y alternativas aceptables."
+      "Confirmar las reglas del paquete de presentación (conjunto de PDF y declaraciones firmadas).",
+      "Aclarar las pruebas de aceptación y el proceso de validación de entregables.",
+      "Verificar los requisitos de evidencia ISO 27001 y las alternativas aceptables."
     ],
     "tabs": {
       "reqs": "Requisitos",
       "risks": "Riesgos",
       "questions": "Aclaraciones",
       "source": "Fuente",
-      "outline": "Borrador de esquema"
+      "outline": "Esquema"
     },
     "mock": {
-      "m1_title": "Canal de presentación y fecha límite",
-      "m1_desc": "Presentación a través del portal de contratación electrónica antes de la fecha límite. Oferta técnica y comercial como PDFs separados. Se aplican convenciones de nombre de archivo.",
+      "m1_title": "Canal de presentación y plazo",
+      "m1_desc": "Presentación a través del portal de contratación electrónica antes del plazo. Oferta técnica y oferta económica en PDF por separado. Se aplican convenciones de nomenclatura de archivos.",
       "m2_title": "Declaraciones firmadas y anexos",
       "m2_desc": "Incluir declaraciones firmadas (elegibilidad, no colusión, confidencialidad). La entidad puede solicitar documentación adicional durante la fase de aclaraciones.",
       "m3_title": "Evidencias de seguridad (ISO 27001 o equivalente)",
-      "m3_desc": "La licitación solicita evidencias de controles de seguridad para el tratamiento de datos personales. Confirmar si ISO 27001 es obligatoria o si se acepta equivalencia.",
+      "m3_desc": "La licitación requiere evidencias de controles de seguridad para el tratamiento de datos personales. Confirmar si ISO 27001 es obligatoria o si se acepta equivalencia.",
       "r1_title": "Criterios de aceptación no definidos",
-      "r1_desc": "Se mencionan pruebas de aceptación, pero no se definen criterios pass/fail ni roles para la aceptación final. Riesgo de ampliación de alcance y disputas tardías.",
+      "r1_desc": "Se mencionan pruebas de aceptación, pero no se definen criterios de éxito o fallo ni los roles de aprobación final. Riesgo de ampliación de alcance y disputas tardías.",
       "r2_title": "Ambigüedad en el SLA de soporte",
-      "r2_desc": "No queda claro el horario de servicio y los tiempos de respuesta (horario laboral vs 24/7). Confirmar escalado, exclusiones y gestión de paradas planificadas.",
-      "r3_title": "La plantilla de referencias podría ser estricta",
-      "r3_desc": "Un anexo sugiere una estructura fija para proyectos de referencia. Confirmar si se acepta tu formato o si la plantilla es obligatoria.",
+      "r2_desc": "Los tiempos de respuesta y las franjas de servicio no están claros (horario laboral frente a 24/7). Confirmar escalado, exclusiones y gestión de paradas planificadas.",
+      "r3_title": "El modelo de referencias puede ser estricto",
+      "r3_desc": "Un anexo sugiere una estructura fija para referencias. Confirmar si tu formato es aceptado o si el modelo es obligatorio.",
       "key_bullets": [
-        "Presentación por portal, reglas estrictas de nombres de archivo.",
-        "Se exige evidencia ISO 27001 para tratamiento de datos.",
-        "Hay hitos, pero las pruebas de aceptación no están definidas.",
+        "Presentación mediante portal con reglas estrictas de nomenclatura.",
+        "Se solicita evidencia ISO 27001 para el tratamiento de datos.",
+        "Existen hitos, pero las pruebas de aceptación no están definidas.",
         "Evaluación ponderada: precio (40%), enfoque (40%), experiencia (20%)."
       ],
       "questions": [
-        "¿Pueden confirmar las reglas exactas del paquete de presentación (nombres, número de archivos, firmas)?",
-        "¿Qué criterios de aceptación aplican y quién otorga la aceptación final?",
+        "¿Podéis confirmar las reglas exactas del paquete de presentación (nombres, número de archivos, firmas)?",
+        "¿Cuáles son los criterios de aceptación y quién concede la aceptación final?",
         "¿ISO 27001 es obligatoria o se aceptan certificaciones o controles equivalentes?"
       ],
-      "outline": "1. Resumen ejecutivo\n2. Entendimiento del alcance\n3. Enfoque y metodología\n4. Plan de entrega e hitos\n5. Equipo y referencias\n6. Seguridad y protección de datos\n7. Modelo de servicio y soporte (SLA)\n8. Precio\n9. Cumplimiento y declaraciones",
+      "outline": "1. Resumen ejecutivo\n2. Comprensión del alcance\n3. Enfoque propuesto y metodología\n4. Plan de entrega e hitos\n5. Equipo y referencias\n6. Seguridad y protección de datos\n7. Modelo de servicio y soporte (SLA)\n8. Precio\n9. Cumplimiento y declaraciones",
       "source": "1. Presentación\nLas ofertas deben presentarse a través del portal de contratación electrónica de la entidad antes de las 12:00 CET del 14 de mayo de 2026..."
     }
   },
   "tenders": {
     "construction": {
-      "title": "Licitaciones de construcción activas (UE)",
-      "subtitle": "Explora licitaciones de construcción activas en la UE (CPV 45000000). Sigue oportunidades de carreteras, rehabilitación e infraestructuras en Alemania, Italia y Austria.",
+      "title": "Licitaciones activas de construcción (UE)",
+      "subtitle": "Explora licitaciones activas de construcción en la UE (CPV 45000000). Sigue oportunidades de carreteras, rehabilitación e infraestructuras en Alemania, Italia y Austria.",
       "list": [
         {
-          "title": "Mantenimiento y renovación de calzada en la Autopista A7",
-          "desc": "Proyecto de mantenimiento a gran escala, incluyendo renovación de asfalto y sustitución de barreras en un tramo de la A7 cerca de Hamburgo.",
+          "title": "Mantenimiento y rehabilitación de calzada en la Autobahn A7",
+          "desc": "Proyecto de mantenimiento a gran escala que incluye rehabilitación de asfalto y sustitución de barreras de seguridad en un tramo de la A7 cerca de Hamburgo.",
           "risk": "Medio"
         },
         {
           "title": "Rehabilitación de la escuela pública \"Leonardo da Vinci\"",
-          "desc": "Mejoras de eficiencia energética y refuerzo sísmico de edificios escolares de secundaria en Milán.",
+          "desc": "Mejoras de eficiencia energética y refuerzo sísmico para edificios de secundaria en Milán.",
           "risk": "Bajo"
         },
         {
           "title": "Ampliación de infraestructura de túneles ferroviarios",
-          "desc": "Construcción de nuevos segmentos de túnel y trabajos de vía para el proyecto de ampliación de la Koralmbahn.",
+          "desc": "Construcción de nuevos tramos de túnel y obras de vía para el proyecto de ampliación de Koralmbahn.",
           "risk": "Alto (Complejo)"
         },
         {
           "title": "Construcción de un nuevo ala hospitalaria (Lyon)",
-          "desc": "Servicios de contratista principal para un nuevo ala pediátrica, incluyendo HVAC e instalaciones eléctricas.",
+          "desc": "Contrato de empresa general para una nueva unidad pediátrica, incluidos HVAC e instalaciones eléctricas.",
           "risk": "Medio"
         },
         {
-          "title": "Renovación de conducciones de agua urbanas",
-          "desc": "Excavación y sustitución de conducciones de agua subterráneas en el centro de la ciudad.",
+          "title": "Renovación de conducciones urbanas de agua",
+          "desc": "Excavación y sustitución de conducciones enterradas de agua en el centro urbano.",
           "risk": "Bajo"
         }
       ]
@@ -158,58 +158,58 @@
       "subtitle": "Explora licitaciones activas de ingeniería y arquitectura (CPV 71000000). Encuentra oportunidades de ingeniería civil, diseño y análisis técnico en la UE.",
       "list": [
         {
-          "title": "Servicios estructurales para rehabilitación de puentes",
-          "desc": "Cálculo estructural, análisis y revisión de seguridad para la rehabilitación de puentes en autopista (A9).",
+          "title": "Ingeniería estructural para rehabilitación de puentes",
+          "desc": "Cálculo, análisis estructural e inspección de seguridad para la rehabilitación de puentes de autopista (A9).",
           "risk": "Alto"
         },
         {
           "title": "Concurso de arquitectura: nueva biblioteca municipal",
-          "desc": "Servicios de arquitectura, incluyendo urbanismo y estudios de viabilidad para un complejo bibliotecario sostenible.",
+          "desc": "Servicios de arquitectura que incluyen urbanismo y estudios de viabilidad para un complejo bibliotecario sostenible.",
           "risk": "Medio"
         },
         {
-          "title": "Dirección de obra técnica y gestión de proyecto (ferrocarril)",
-          "desc": "Supervisión de obra y control de calidad para el proyecto de ampliación del túnel Koralm.",
+          "title": "Dirección técnica de obra y gestión de proyecto (ferrocarril)",
+          "desc": "Supervisión de obra y gestión de calidad para el proyecto de ampliación del túnel Koralm.",
           "risk": "Bajo"
         },
         {
-          "title": "Servicios de ingeniería HVAC y eléctrica",
+          "title": "Ingeniería HVAC y eléctrica",
           "desc": "Consultoría de ingeniería para mejoras de eficiencia energética (HVAC y eléctrica) en edificios de campus.",
           "risk": "Bajo"
         },
         {
-          "title": "Evaluación de impacto ambiental (EIA)",
-          "desc": "Consultoría de ingeniería ambiental para proyectos de sostenibilidad transfronterizos.",
+          "title": "Estudio de impacto ambiental",
+          "desc": "Consultoría de ingeniería ambiental para proyectos transfronterizos de sostenibilidad.",
           "risk": "Medio"
         }
       ]
     },
     "software": {
       "title": "Licitaciones activas de desarrollo de software",
-      "subtitle": "Explora licitaciones activas de software en la UE (CPV 72200000) en Alemania, Italia y Austria. Usa IA para revisar riesgos rápido y preparar ofertas más deprisa.",
+      "subtitle": "Explora licitaciones activas de software en la UE (CPV 72200000) en Alemania, Italia y Austria. Usa IA para revisar riesgos rápido y acelerar la preparación de la oferta.",
       "list": [
         {
-          "title": "Desarrollo de software especializado para gestión de tráfico",
+          "title": "Desarrollo de software especializado de gestión del tráfico",
           "desc": "Acuerdo marco para desarrollo ágil de software de centro de control (Java y Spring Boot).",
           "risk": "Medio"
         },
         {
           "title": "Transformación digital y servicios cloud (SaaS)",
-          "desc": "Entrega y mantenimiento de una aplicación cloud-native para procesos administrativos. Cumplimiento GDPR obligatorio.",
+          "desc": "Suministro y mantenimiento de una aplicación cloud-native para procesos administrativos. Cumplimiento GDPR obligatorio.",
           "risk": "Alto (Seguridad)"
         },
         {
-          "title": "Consultoría IT y software engineering",
-          "desc": "Provisión de especialistas IT externos para SAP y proyectos de desarrollo web a medida.",
+          "title": "Consultoría IT e ingeniería de software",
+          "desc": "Provisión de expertos IT externos para SAP y proyectos web a medida.",
           "risk": "Bajo"
         },
         {
           "title": "Plataforma de IA y analítica de datos",
-          "desc": "Diseño e implementación de un data lake y herramientas de analítica con IA para reporting ambiental.",
+          "desc": "Diseño e implementación de un data lake y herramientas de analítica IA para reporting ambiental.",
           "risk": "Complejo"
         },
         {
-          "title": "Mantenimiento de sistemas de información hospitalaria (HIS)",
+          "title": "Mantenimiento de sistemas de información hospitalarios (HIS)",
           "desc": "Mantenimiento correctivo y evolutivo de módulos de gestión de pacientes.",
           "risk": "Medio"
         }
@@ -224,29 +224,29 @@
   },
   "landing": {
     "nav": {
-      "cta": "Obtener acceso al motor de auditoría",
+      "cta": "Acceso al motor de auditoría",
       "theme": "Tema"
     },
     "hero": {
       "badge": "Modelo de IA especializado en licitaciones",
       "title_line1": "Deja de leer.",
       "title_line2": "Empieza a decidir.",
-      "description": "La solución \"viernes a las 16:00\". Sube PDFs complejos de licitación y obtén al instante una decisión go/no-go basada en riesgos y requisitos obligatorios.",
-      "primary_cta": "Obtener acceso al motor de auditoría",
-      "secondary_cta": "Ver salida de ejemplo",
+      "description": "Una revisión rápida de licitaciones para decisiones urgentes. Sube PDFs de licitación complejos y obtén al instante una decisión go/no-go basada en riesgos y requisitos obligatorios.",
+      "primary_cta": "Acceso al motor de auditoría",
+      "secondary_cta": "Ver ejemplo de salida",
       "validated_prefix": "Validado en pilotos privados por",
-      "validated_emphasis": "consultores Tier-1"
+      "validated_emphasis": "consultores de primer nivel"
     },
     "scanner": {
       "risk_badge": "Riesgo de responsabilidad"
     },
     "features": {
-      "section_title": "Qué obtienes de un documento de licitación",
+      "section_title": "Lo que obtienes de un pliego de licitación",
       "section_subtitle": "Convertimos 100 páginas de PDF en tres listas accionables.",
       "cards": {
         "executive": {
           "title": "Resumen ejecutivo",
-          "subtitle": "Un resumen breve orientado a la decisión para tomar go/no-go antes y alinear a los stakeholders más rápido.",
+          "subtitle": "Un resumen breve orientado a la decisión para go/no-go más temprano y una alineación más rápida con los interesados.",
           "bullets": [
             "Alcance y contexto",
             "Restricciones clave",
@@ -258,13 +258,13 @@
           "subtitle": "Requisitos extraídos y estructurados para reducir el riesgo de pasar por alto condiciones excluyentes.",
           "bullets": [
             "Obligatorio vs opcional",
-            "Claro: OK o revisar",
+            "Claro: ok o por verificar",
             "Listo para verificación"
           ]
         },
         "risks": {
           "title": "Riesgos y ambigüedades",
-          "subtitle": "Cláusulas poco claras, lagunas y posibles riesgos de entrega o coste se destacan pronto para poder aclarar antes.",
+          "subtitle": "Cláusulas poco claras, lagunas y posibles riesgos de entrega o costes destacados desde el inicio para poder aclarar antes.",
           "bullets": [
             "Etiquetas de severidad",
             "Puntos abiertos",
@@ -275,7 +275,7 @@
     },
     "roi": {
       "header": "Impacto en tiempo y costes",
-      "subheader": "Diseñado para reducir de inmediato trabajo de revisión no facturable.",
+      "subheader": "Diseñado para reducir de inmediato el trabajo de revisión no facturable.",
       "cards": {
         "time": {
           "title": "Ahorra más de 4 horas",
@@ -287,17 +287,17 @@
         },
         "compliance": {
           "title": "Cumplimiento",
-          "desc": "No pases por alto requisitos obligatorios de ISO o GDPR."
+          "desc": "No pases por alto requisitos ISO o GDPR obligatorios."
         }
       }
     },
     "zero_training": {
       "title": "Política de cero entrenamiento:",
-      "text": "No usamos los datos de tus licitaciones para entrenar nuestros modelos."
+      "text": "No utilizamos los datos de tus licitaciones para entrenar nuestros modelos."
     },
     "early_access": {
       "title": "Reduce en un 90% el tiempo de evaluación de licitaciones",
-      "description": "Reserva tu plaza en el programa de acceso anticipado. Analiza tu primera licitación en minutos.",
+      "description": "Reserva una plaza en el programa de acceso anticipado. Analiza tu primer expediente en minutos.",
       "limited": "Plazas limitadas disponibles para el programa beta."
     },
     "footer": {
@@ -314,13 +314,13 @@
       "titleA": "Del PDF a la decisión",
       "titleB": "en",
       "highlight": "tres pasos",
-      "subtitle": "No escribimos la oferta. Te ayudamos a decidir si merece la pena escribirla."
+      "subtitle": "No redactamos la oferta. Te ayudamos a decidir si merece la pena hacerlo."
     },
     "steps": [
       {
         "step": "01",
-        "title": "Sube los documentos de licitación",
-        "desc": "Arrastra y suelta RFPs, RFIs o PDFs de licitación complejos. Admitimos archivos de hasta 100MB."
+        "title": "Sube los documentos",
+        "desc": "Arrastra y suelta RFP, RFI o PDFs complejos de licitación. Admitimos archivos de hasta 100MB."
       },
       {
         "step": "02",
@@ -334,9 +334,9 @@
       }
     ],
     "bottomCta": {
-      "title": "¿Tienes una licitación sobre la mesa ahora mismo?",
-      "desc": "Prueba tú mismo el flujo \"viernes a las 16:00\".",
-      "button": "Obtener acceso anticipado a la auditoría"
+      "title": "¿Tienes una licitación encima de la mesa ahora mismo?",
+      "desc": "Prueba el flujo diseñado para decisiones de licitación rápidas y urgentes.",
+      "button": "Acceso anticipado a la auditoría"
     }
   },
   "samplePage": {
@@ -348,24 +348,24 @@
     "header": {
       "backToHome": "Volver al inicio",
       "exportPdf": "Exportar PDF",
-      "joinEarlyAccess": "Obtener acceso anticipado",
+      "joinEarlyAccess": "Acceso anticipado",
       "join": "Unirse",
       "exportSample": "Exportar ejemplo",
       "delete": "Eliminar"
     },
     "workspace": {
-      "title": "Tu workspace de licitación",
-      "desc": "Este es un ejemplo estático que muestra cómo TenderPilot estructura la revisión de una licitación. Verifica siempre contra el PDF original."
+      "title": "Tu espacio de trabajo de licitación",
+      "desc": "Este es un ejemplo estático que muestra cómo TenderPilot estructura la revisión de una licitación. Verifica siempre con el PDF fuente."
     },
     "nextActions": {
-      "title": "Siguientes acciones"
+      "title": "Próximas acciones"
     },
     "counts": {
-      "title": "Recuento rápido",
+      "title": "Resumen rápido",
       "must": "MUST",
       "risks": "Riesgos",
       "qa": "Q&A",
-      "microcopy": "Hecho para ir rápido. Construido para trazabilidad."
+      "microcopy": "Pensado para ir rápido. Diseñado para la trazabilidad."
     },
     "mustItems": {
       "title": "Elementos MUST",
@@ -375,18 +375,18 @@
     },
     "risks": {
       "title": "Riesgos principales",
-      "subtitle": "Ambigüedades que pueden afectar entrega o costes.",
+      "subtitle": "Ambigüedades que pueden afectar a la entrega o a los costes.",
       "export": "Exportar",
       "jump": "Ir"
     },
     "deadline": {
       "title": "Plazo",
       "helper": "Confirmar zona horaria y reglas del portal",
-      "cta": "Obtener acceso anticipado"
+      "cta": "Acceso anticipado"
     },
     "keyBullets": {
       "title": "Puntos clave",
-      "subtitle": "Escaneo rápido de lo que importa."
+      "subtitle": "Un vistazo rápido a lo esencial."
     },
     "tabs": {
       "requirements": "Requisitos",
@@ -400,8 +400,8 @@
       "detailedRequirements": "Requisitos detallados",
       "riskRegister": "Registro de riesgos",
       "clarificationTitle": "Preguntas de aclaración",
-      "clarificationDesc": "Haz estas preguntas antes de comprometer precio, calendario o SLA.",
-      "outlineTitle": "Esquema de la propuesta",
+      "clarificationDesc": "Haz estas preguntas antes de comprometerte con el precio, el calendario o el SLA.",
+      "outlineTitle": "Esquema de propuesta",
       "outlineDesc": "Una estructura inicial para copiar en tu plantilla de oferta.",
       "sourceTitle": "Texto fuente",
       "sourceDesc": "Texto extraído para trazabilidad."
@@ -411,19 +411,19 @@
       "status": "En revisión",
       "submissionDeadline": "14 de mayo de 2026, 12:00 CET",
       "decision": {
-        "badge": "Continuar con cautela",
-        "line": "No se detectó un motivo claro de exclusión, pero hay dos puntos que requieren aclaración: paquete de entrega y criterios de aceptación del SLA de soporte."
+        "badge": "Proceder con cautela",
+        "line": "No se detecta un criterio de exclusión claro, pero hay dos puntos que requieren aclaración: el paquete de presentación y los criterios de aceptación del SLA de soporte."
       },
       "nextActions": [
-        "Confirmar reglas del paquete de presentación (set de PDFs más declaraciones firmadas).",
-        "Aclarar pruebas de aceptación y proceso de validación de entregables.",
-        "Verificar requisitos de evidencia ISO 27001 y alternativas aceptables."
+        "Confirmar las reglas del paquete de presentación (conjunto de PDF y declaraciones firmadas).",
+        "Aclarar las pruebas de aceptación y el proceso de validación de entregables.",
+        "Verificar los requisitos de evidencia ISO 27001 y las alternativas aceptables."
       ],
       "mustItems": [
         {
           "id": "m1",
-          "title": "Canal de presentación y fecha límite",
-          "detail": "Presentación a través del portal de contratación electrónica antes de la fecha límite. Oferta técnica y comercial como PDFs separados. Se aplican convenciones de nombre de archivo.",
+          "title": "Canal de presentación y plazo",
+          "detail": "Presentación a través del portal de contratación electrónica antes del plazo. Oferta técnica y oferta económica en PDF por separado. Se aplican convenciones de nomenclatura de archivos.",
           "tag": "MUST"
         },
         {
@@ -435,7 +435,7 @@
         {
           "id": "m3",
           "title": "Evidencias de seguridad (ISO 27001 o equivalente)",
-          "detail": "La licitación requiere evidencias de controles de seguridad para el tratamiento de datos personales. Confirmar si ISO 27001 es obligatoria o si se acepta equivalencia.",
+          "detail": "La licitación exige evidencias de controles de seguridad de la información para el tratamiento de datos personales. Confirmar si ISO 27001 es obligatoria o si se aceptan equivalentes.",
           "tag": "MUST"
         }
       ],
@@ -444,34 +444,34 @@
           "id": "r1",
           "severity": "high",
           "title": "Criterios de aceptación no definidos",
-          "detail": "Se mencionan pruebas de aceptación, pero no se definen criterios pass/fail ni roles para la aceptación final. Riesgo de ampliación de alcance y disputas tardías."
+          "detail": "Se mencionan pruebas de aceptación, pero no se definen criterios de éxito o fallo ni los roles para la aceptación final. Riesgo de ampliación de alcance y disputas tardías."
         },
         {
           "id": "r2",
           "severity": "medium",
           "title": "Ambigüedad en el SLA de soporte",
-          "detail": "No queda claro el horario de servicio y los tiempos de respuesta (horario laboral vs 24/7). Confirmar escalado, exclusiones y gestión de paradas planificadas."
+          "detail": "Los tiempos de respuesta y las franjas de servicio no están claros (horario laboral frente a 24/7). Confirmar escalado, exclusiones y gestión de paradas planificadas."
         },
         {
           "id": "r3",
           "severity": "low",
-          "title": "La plantilla de referencias podría ser estricta",
-          "detail": "Un anexo sugiere una estructura fija para proyectos de referencia. Confirmar si se acepta tu formato o si la plantilla es obligatoria."
+          "title": "La plantilla de referencias puede ser estricta",
+          "detail": "Un anexo sugiere una estructura obligatoria para referencias. Confirmar si tu formato es aceptado o si la plantilla es obligatoria."
         }
       ],
       "keyBullets": [
-        "Presentación por portal, reglas estrictas de nombres de archivo.",
-        "Se exige evidencia ISO 27001 para tratamiento de datos.",
+        "Presentación mediante portal con reglas estrictas de nomenclatura.",
+        "Evidencia ISO 27001 requerida para el tratamiento de datos.",
         "Hay hitos, pero las pruebas de aceptación no están definidas.",
         "Evaluación ponderada: precio (40%), enfoque (40%), experiencia (20%)."
       ],
       "questions": [
-        "¿Pueden confirmar las reglas exactas del paquete de presentación (nombres, número de archivos, firmas)?",
-        "¿Qué criterios de aceptación aplican y quién otorga la aceptación final?",
+        "¿Podéis confirmar las reglas exactas del paquete de presentación (nombres, número de archivos, firmas)?",
+        "¿Cuáles son los criterios de aceptación y quién concede la aceptación final?",
         "¿ISO 27001 es obligatoria o se aceptan certificaciones o controles equivalentes?"
       ],
-      "draftOutline": "1. Resumen ejecutivo\n2. Entendimiento del alcance\n3. Enfoque y metodología\n4. Plan de entrega e hitos\n5. Equipo y referencias\n6. Seguridad y protección de datos\n7. Modelo de servicio y soporte (SLA)\n8. Precio\n9. Cumplimiento y declaraciones",
-      "sourceExcerpt": "1. Presentación\nLas ofertas deben presentarse a través del portal de contratación electrónica de la entidad a más tardar a las 12:00 CET del 14 de mayo de 2026. La presentación debe incluir una oferta técnica y una oferta comercial como archivos PDF separados. Se aplican convenciones de nombre de archivo.\n\n2. Elegibilidad y declaraciones\nLos licitadores deberán incluir declaraciones firmadas relativas a elegibilidad, no colusión y confidencialidad. La entidad puede solicitar documentación adicional durante la fase de aclaraciones.\n\n3. Protección de datos y seguridad\nEl adjudicatario tratará datos personales. Se exige evidencia de controles de seguridad de la información (certificación ISO 27001 o equivalente).\n\n4. Entrega y aceptación\nLa entrega deberá seguir el plan de hitos descrito en el Anexo B. Se realizarán pruebas de aceptación antes del go-live. Se mencionan criterios de aceptación, pero no se especifican de forma medible.\n\n5. Soporte y SLA\nEl adjudicatario debe proporcionar servicios de soporte. La licitación menciona tiempos de respuesta y rutas de escalado, pero no define de forma explícita si el horario de servicio es en horario laboral o 24/7.\n\n6. Evaluación\nLa adjudicación se basará en precio (40%), enfoque técnico (40%) y experiencia del equipo (20%)."
+      "draftOutline": "1. Resumen ejecutivo\n2. Comprensión del alcance\n3. Enfoque propuesto y metodología\n4. Plan de entrega e hitos\n5. Equipo y referencias\n6. Seguridad y protección de datos\n7. Modelo de servicio y soporte (SLA)\n8. Precio\n9. Cumplimiento y declaraciones",
+      "sourceExcerpt": "1. Presentación\nLas ofertas deben presentarse a través del portal de contratación electrónica de la entidad antes de las 12:00 CET del 14 de mayo de 2026. La presentación debe incluir una oferta técnica y una oferta económica en archivos PDF por separado. Se aplican convenciones de nomenclatura de archivos.\n\n2. Elegibilidad y declaraciones\nLos licitadores deberán incluir declaraciones firmadas relativas a elegibilidad, no colusión y confidencialidad. La entidad puede solicitar documentación adicional durante la fase de aclaraciones.\n\n3. Protección de datos y seguridad\nEl adjudicatario tratará datos personales. Se exige prueba de controles de seguridad de la información (certificación ISO 27001 o equivalente).\n\n4. Entrega y aceptación\nLa entrega deberá seguir el plan de hitos descrito en el Anexo B. Se realizarán pruebas de aceptación antes de la puesta en producción. Se mencionan criterios de aceptación, pero no se especifican de forma medible.\n\n5. Soporte y SLA\nEl adjudicatario debe proporcionar servicios de soporte. La licitación menciona tiempos de respuesta y vías de escalado, pero no define de forma explícita si el horario de servicio es en horario laboral o 24/7.\n\n6. Evaluación\nLa adjudicación se basará en precio (40%), enfoque técnico (40%) y experiencia del equipo (20%)."
     }
   }
 }
