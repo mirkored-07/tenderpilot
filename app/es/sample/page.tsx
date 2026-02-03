@@ -100,7 +100,7 @@ export default async function SamplePage() {
                 <MoreVertical className="w-4 h-4" />
               </summary>
 
-              <div className="absolute right-0 mt-2 w-56 rounded-xl border border-white/10 bg-zinc-900 p-2 shadow-xl backdrop-blur-xl z-50">
+              <div className="absolute right-0 mt-2 w-56 rounded-xl border border-white/10 bg-background/95 dark:bg-zinc-900 p-2 shadow-xl backdrop-blur-xl z-50">
                 <button
                   type="button"
                   disabled
@@ -298,23 +298,24 @@ export default async function SamplePage() {
         <div className="mt-12">
           <Tabs defaultValue="requirements">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <TabsList className="h-auto p-1 bg-white/5 border border-white/10 rounded-full overflow-x-auto justify-start w-full sm:w-auto">
-                <TabsTrigger value="requirements" className="rounded-full px-4 py-2 text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white">
-                  {t.tabs.requirements}
-                </TabsTrigger>
-                <TabsTrigger value="risks" className="rounded-full px-4 py-2 text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white">
-                  {t.tabs.risks}
-                </TabsTrigger>
-                <TabsTrigger value="questions" className="rounded-full px-4 py-2 text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white">
-                  {t.tabs.questions}
-                </TabsTrigger>
-                <TabsTrigger value="draft" className="rounded-full px-4 py-2 text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white">
-                  {t.tabs.draft}
-                </TabsTrigger>
-                <TabsTrigger value="source" className="rounded-full px-4 py-2 text-sm data-[state=active]:bg-blue-600 data-[state=active]:text-white">
-                  {t.tabs.source}
-                </TabsTrigger>
-              </TabsList>
+              <TabsList className="h-auto p-1 bg-white/5 border border-white/10 rounded-2xl sm:rounded-full flex flex-wrap sm:flex-nowrap gap-1 sm:gap-0 overflow-visible sm:overflow-x-auto justify-start w-full sm:w-auto">
+				  <TabsTrigger value="requirements" className="rounded-full px-3 py-2 text-xs sm:px-4 sm:text-sm flex-1 sm:flex-none justify-center data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+					{t.tabs.requirements}
+				  </TabsTrigger>
+				  <TabsTrigger value="risks" className="rounded-full px-3 py-2 text-xs sm:px-4 sm:text-sm flex-1 sm:flex-none justify-center data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+					{t.tabs.risks}
+				  </TabsTrigger>
+				  <TabsTrigger value="questions" className="rounded-full px-3 py-2 text-xs sm:px-4 sm:text-sm flex-1 sm:flex-none justify-center data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+					{t.tabs.questions}
+				  </TabsTrigger>
+				  <TabsTrigger value="draft" className="rounded-full px-3 py-2 text-xs sm:px-4 sm:text-sm flex-1 sm:flex-none justify-center data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+					{t.tabs.draft}
+				  </TabsTrigger>
+				  <TabsTrigger value="source" className="rounded-full px-3 py-2 text-xs sm:px-4 sm:text-sm flex-1 sm:flex-none justify-center data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+					{t.tabs.source}
+				  </TabsTrigger>
+				</TabsList>
+
 
               <div className="hidden sm:flex items-center gap-2">
                 <Button variant="outline" size="sm" className="rounded-full border-white/10 hover:bg-white/5" disabled>

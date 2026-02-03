@@ -69,9 +69,10 @@ function ScannerHero({ riskBadge }: { riskBadge: string }) {
 
       {/* --- FLOATING RISK BADGE (Loops perfectly with scanner) --- */}
       <div
-        className="absolute top-[45%] -right-12 z-50 flex items-center gap-2 opacity-0 pointer-events-none"
-        style={{ animation: "cycle-risk-badge 4s ease-in-out infinite" }}
-      >
+		  className="absolute top-[45%] right-2 sm:-right-12 z-50 flex items-center gap-2 opacity-0 pointer-events-none"
+		  style={{ animation: "cycle-risk-badge 4s ease-in-out infinite" }}
+		>
+
         {/* Connecting Line */}
         <div className="w-8 h-px bg-red-500/50" />
         {/* The Badge */}
@@ -178,7 +179,7 @@ function FeatureCard({
 
         <ul className="mt-5 space-y-3">
           {bullets.map((b) => (
-            <li key={b} className="flex gap-3 text-sm text-zinc-400">
+            <li key={b} className="flex gap-3 text-sm text-muted-foreground">
               <CheckCircle2 className="h-4 w-4 shrink-0 text-blue-500" />
               <span>{b}</span>
             </li>
@@ -204,8 +205,9 @@ function RoiBenefitGraphic({ roi }: { roi: LandingDict["roi"] }) {
           <div className="flex items-start gap-4">
             <Clock className="h-6 w-6 text-blue-400" />
             <div>
-              <div className="font-bold text-white">{roi.cards.time.title}</div>
-              <p className="mt-1 text-sm text-zinc-600">{roi.cards.time.desc}</p>
+              <div className="font-bold text-foreground">{roi.cards.time.title}</div>
+              <p className="mt-1 text-sm text-muted-foreground">
+{roi.cards.time.desc}</p>
             </div>
           </div>
         </div>
@@ -214,8 +216,9 @@ function RoiBenefitGraphic({ roi }: { roi: LandingDict["roi"] }) {
           <div className="flex items-start gap-4">
             <Euro className="h-6 w-6 text-emerald-400" />
             <div>
-              <div className="font-bold text-white">{roi.cards.margin.title}</div>
-              <p className="mt-1 text-sm text-zinc-600">{roi.cards.margin.desc}</p>
+              <div className="font-bold text-foreground">{roi.cards.margin.title}</div>
+              <p className="mt-1 text-sm text-muted-foreground">
+{roi.cards.margin.desc}</p>
             </div>
           </div>
         </div>
@@ -224,10 +227,11 @@ function RoiBenefitGraphic({ roi }: { roi: LandingDict["roi"] }) {
           <div className="flex items-start gap-4">
             <ShieldCheck className="h-6 w-6 text-purple-400" />
             <div>
-              <div className="font-bold text-white">
+              <div className="font-bold text-foreground">
                 {roi.cards.compliance.title}
               </div>
-              <p className="mt-1 text-sm text-zinc-600">
+              <p className="mt-1 text-sm text-muted-foreground">
+
                 {roi.cards.compliance.desc}
               </p>
             </div>
@@ -292,11 +296,11 @@ export default async function LandingPage() {
 
           {/* Mobile nav */}
           <details className="relative md:hidden z-50">
-            <summary className="cursor-pointer list-none rounded-full border border-white/10 bg-zinc-900/50 px-3 py-2 text-sm font-medium text-foreground backdrop-blur-md [&::-webkit-details-marker]:hidden">
+            <summary className="cursor-pointer list-none rounded-full border border-white/10 bg-background/70 dark:bg-zinc-900/50 px-3 py-2 text-sm font-medium text-foreground backdrop-blur-md [&::-webkit-details-marker]:hidden">
               {nav.menu}
             </summary>
 
-            <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-white/10 bg-zinc-900/95 p-2 shadow-xl backdrop-blur-xl ring-1 ring-black/5">
+            <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-white/10 bg-background/95 dark:bg-zinc-900/95 p-2 shadow-xl backdrop-blur-xl ring-1 ring-black/5">
               <Link
                 href="/it/how-it-works"
                 className="block rounded-xl px-3 py-2 text-sm hover:bg-white/5 text-muted-foreground hover:text-foreground"
@@ -350,7 +354,7 @@ export default async function LandingPage() {
               <span className="text-gradient-brand">{t.hero.title_line2}</span>
             </h1>
 
-            <p className="text-xl text-zinc-800 leading-relaxed mb-10 max-w-lg">
+            <p className="text-xl text-muted-foreground leading-relaxed mb-10 max-w-lg">
               {t.hero.description}
             </p>
 
