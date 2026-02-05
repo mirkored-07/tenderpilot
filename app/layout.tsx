@@ -23,6 +23,10 @@ export const metadata: Metadata = {
     template: "%s | TenderPilot",
   },
   description: "The Friday 4PM solution. Upload complex tender PDFs and get instant go/no-go decision support, risk analysis, and compliance checklists.",
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/apple-icon.png",
+  },
   keywords: [
     "Tender Analysis AI",
     "RFP Review Software",
@@ -59,7 +63,12 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "TenderPilot - AI Tender Analysis",
     description: "Automated risk analysis for RFPs and Tenders.",
-    creator: "@tenderpilot", 
+    creator: "@tenderpilot",
+	images: [
+		  {
+			url: "/twitter-image.jpg",
+			alt: "TenderPilot",
+		  },	
   },
   robots: {
     index: true,
