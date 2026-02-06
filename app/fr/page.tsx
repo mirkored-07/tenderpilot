@@ -22,6 +22,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { WaitlistInline } from "@/components/marketing/WaitlistInline";
 import { ModeToggle } from "@/components/mode-toggle";
 import LanguageSwitcherSlot from "@/components/marketing/LanguageSwitcherSlot";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "TenderPilot | Analyse IA des appels d’offres",
+  description:
+    "Analysez les appels d’offres publics en quelques minutes. Exigences, risques et décision bid/no-bid avec l’IA.",
+};
 
 
 type LandingDict = {

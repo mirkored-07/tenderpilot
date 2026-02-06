@@ -1,6 +1,13 @@
 import Link from "next/link";
 import { ArrowRight, UploadCloud, ScanLine, FileCheck, Command, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Cómo funciona TenderPilot | Análisis AI de licitaciones",
+  description:
+    "Sube una licitación y obtén un análisis estructurado en pocos minutos.",
+};
 
 function StepCard({
   icon,

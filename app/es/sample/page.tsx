@@ -16,6 +16,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Ejemplo de análisis de licitación | TenderPilot",
+  description:
+    "Consulta un ejemplo real de análisis AI de una licitación pública.",
+};
 
 const WAITLIST_URL =
   (process.env.NEXT_PUBLIC_WAITLIST_URL && process.env.NEXT_PUBLIC_WAITLIST_URL.trim()) ||

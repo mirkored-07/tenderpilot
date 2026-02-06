@@ -22,6 +22,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { WaitlistInline } from "@/components/marketing/WaitlistInline";
 import { ModeToggle } from "@/components/mode-toggle";
 import LanguageSwitcherSlot from "@/components/marketing/LanguageSwitcherSlot";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "TenderPilot | Analisi AI di Bandi e Gare Pubbliche",
+  description:
+    "Analizza bandi pubblici in pochi minuti. Requisiti, rischi e decisioni bid/no-bid con l’AI.",
+};
 
 
 type LandingDict = {

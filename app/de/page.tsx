@@ -22,6 +22,14 @@ import { Card, CardContent } from "@/components/ui/card";
 import { WaitlistInline } from "@/components/marketing/WaitlistInline";
 import { ModeToggle } from "@/components/mode-toggle";
 import LanguageSwitcherSlot from "@/components/marketing/LanguageSwitcherSlot";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "TenderPilot | KI-gestützte Ausschreibungsanalyse",
+  description:
+    "Öffentliche Ausschreibungen in Minuten analysieren. Anforderungen, Risiken und Bid/No-Bid-Entscheidungen mit KI.",
+};
+
 
 
 type LandingDict = {
