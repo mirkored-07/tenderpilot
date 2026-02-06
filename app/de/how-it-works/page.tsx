@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import type { Metadata } from "next";
 
 export const metadata = {
-  title: "So funktioniert TenderPilot | KI-Ausschreibungsanalyse",
+  title: "So funktioniert TenderRay - AI Go/No-Go Decisions for Tenders & RFPs | KI-Ausschreibungsanalyse",
   description:
-    "So verwandelt TenderPilot Ausschreibungen und RFPs in Anforderungen, Risiken und eine Angebotsstruktur — in wenigen Minuten.",
+    "So verwandelt TenderRay Ausschreibungen und RFPs in Anforderungen, Risiken und eine Angebotsstruktur — in wenigen Minuten.",
   alternates: {
     canonical: "https://www.trytenderpilot.com/de/how-it-works",
     languages: {

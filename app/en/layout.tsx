@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.trytenderpilot.com"),
-  title: "TenderPilot - AI Tender Analysis & Risk Assessment",
+  title: "TenderRay - AI Tender Analysis & Risk Assessment",
   description:
     "Upload complex tender PDFs and get instant go/no-go decision support, risk analysis, and compliance checklists.",
   alternates: {
@@ -19,10 +19,10 @@ export const metadata: Metadata = {
   },
   openGraph: {
     locale: "en_US",
-    title: "TenderPilot - Stop Reading. Start Deciding.",
+    title: "TenderRay - Stop Reading. Start Deciding.",
     description: "Instant risk analysis and compliance checklists for public tenders.",
     url: "/en",
-    siteName: "TenderPilot",
+    siteName: "TenderRay",
     type: "website",
   },
 };
@@ -31,7 +31,7 @@ export default function EnglishLayout({ children }: { children: ReactNode }) {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    name: "TenderPilot",
+    name: "TenderRay",
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web",
     url: "https://www.trytenderpilot.com/en",

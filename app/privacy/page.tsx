@@ -3,7 +3,7 @@ import { ArrowLeft, Command, ShieldCheck, Lock, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export const metadata = {
-  title: "Privacy Policy | TenderPilot",
+  title: "Privacy Policy | TenderRay",
   description: "How we handle your data, our zero-training policy, and security measures.",
 };
 
@@ -19,7 +19,7 @@ export default function PrivacyPage() {
             <div className="h-8 w-8 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-lg flex items-center justify-center shadow-lg">
               <Command className="h-5 w-5" />
             </div>
-            <span>TenderPilot</span>
+            <span>TenderRay</span>
           </Link>
 
           <div className="flex items-center gap-4">
@@ -80,7 +80,7 @@ export default function PrivacyPage() {
                     <span className="text-blue-500">1.</span> Introduction
                 </h2>
                 <p>
-                    TenderPilot ("we", "our", or "us") respects your privacy. This Privacy Policy explains how we collect, use, and protect your personal information and the sensitive business data (such as Tender Documents) you upload to our platform. By using TenderPilot, you agree to the practices described in this policy.
+                    TenderRay ("we", "our", or "us") respects your privacy. This Privacy Policy explains how we collect, use, and protect your personal information and the sensitive business data (such as Tender Documents) you upload to our platform. By using TenderRay, you agree to the practices described in this policy.
                 </p>
             </section>
 
@@ -147,7 +147,7 @@ export default function PrivacyPage() {
       <footer className="border-t border-white/5 py-12 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} TenderPilot
+            © {new Date().getFullYear()} TenderRay
           </div>
           <div className="flex flex-wrap items-center gap-4 text-sm">
             <Link href="/how-it-works" className="text-muted-foreground hover:text-foreground">

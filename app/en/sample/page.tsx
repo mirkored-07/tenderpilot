@@ -19,7 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "TenderPilot Sample | AI Tender Analysis Example",
+  title: "TenderRay - AI Go/No-Go Decisions for Tenders & RFPs Sample | AI Tender Analysis Example",
   description:
     "View a real example of AI-powered tender analysis, including requirements, risks, and draft proposal sections.",
   alternates: {

@@ -4,8 +4,8 @@ import type { ReactNode } from "react";
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.trytenderpilot.com"),
   title: {
-    default: "TenderPilot — Analisi Gare & RFP con AI",
-    template: "%s | TenderPilot",
+    default: "TenderRay — Analisi Gare & RFP con AI",
+    template: "%s | TenderRay",
   },
   description:
     "Analisi di gare d’appalto e RFP con AI per supportare decisioni go/no-go e preparare l’offerta in pochi minuti.",
@@ -21,17 +21,17 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: "TenderPilot — Analisi Gare & RFP con AI",
+    title: "TenderRay — Analisi Gare & RFP con AI",
     description:
       "Carica una gara/RFP e ottieni requisiti, rischi e una struttura offerta pronta in pochi minuti.",
     url: "/it",
-    siteName: "TenderPilot",
+    siteName: "TenderRay",
     locale: "it_IT",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "TenderPilot — Analisi Gare & RFP con AI",
+    title: "TenderRay — Analisi Gare & RFP con AI",
     description:
       "Analizza gare/RFP in pochi minuti: requisiti, rischi e struttura offerta pronta.",
   },
@@ -41,7 +41,7 @@ export default function ItalianLayout({ children }: { children: ReactNode }) {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    name: "TenderPilot",
+    name: "TenderRay",
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web",
     url: "https://www.trytenderpilot.com/it",

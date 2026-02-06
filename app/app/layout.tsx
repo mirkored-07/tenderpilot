@@ -20,7 +20,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <aside className="hidden md:flex flex-col border-r border-white/5 bg-background/70 backdrop-blur-xl">
           <div className="h-16 px-6 flex items-center justify-between">
             <Link href="/app/jobs" className="font-semibold text-lg tracking-tight">
-              TenderPilot
+              TenderRay
             </Link>
           </div>
 
@@ -47,9 +47,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="flex flex-col">
           <header className="h-16 border-b border-white/5 bg-background/90 backdrop-blur-xl flex items-center justify-between px-4 md:px-8">
             <div className="flex items-center gap-3">
-              <div className="md:hidden font-semibold">TenderPilot</div>
+              <div className="md:hidden font-semibold">TenderRay</div>
               <div>
-                <p className="text-sm font-medium leading-none">TenderPilot</p>
+                <p className="text-sm font-medium leading-none">TenderRay</p>
                 <p className="text-xs text-muted-foreground">
                   Go or no go in minutes. Draft bids faster.
                 </p>

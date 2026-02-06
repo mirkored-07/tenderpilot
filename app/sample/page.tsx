@@ -127,7 +127,7 @@ export default function SamplePage() {
           {/* Text only (no logo) */}
           <div className="flex items-center gap-4">
             <Link href="/" className="font-bold text-lg tracking-tight hover:opacity-80 transition-opacity">
-              TenderPilot
+              TenderRay - AI Go/No-Go Decisions for Tenders & RFPs
             </Link>
 
             <div className="hidden items-center gap-2 md:flex border-l border-white/10 pl-4">
@@ -220,7 +220,7 @@ export default function SamplePage() {
                   <div>
                     <CardTitle className="text-lg">Your tender workspace</CardTitle>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      This is a static sample showing how TenderPilot structures a tender review. 
+                      This is a static sample showing how TenderRay structures a tender review. 
                       Always verify against the original PDF.
                     </p>
                   </div>
