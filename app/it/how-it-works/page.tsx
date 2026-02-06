@@ -1,6 +1,13 @@
 import Link from "next/link";
 import { ArrowRight, UploadCloud, ScanLine, FileCheck, Command, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Come funziona TenderPilot | Analisi AI dei bandi",
+  description:
+    "Carica un bando e ottieni requisiti, rischi e sezioni di offerta strutturate in pochi minuti.",
+};
 
 function StepCard({
   icon,

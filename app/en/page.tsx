@@ -22,7 +22,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { WaitlistInline } from "@/components/marketing/WaitlistInline";
 import { ModeToggle } from "@/components/mode-toggle";
 import LanguageSwitcherSlot from "@/components/marketing/LanguageSwitcherSlot";
+import type { Metadata } from "next";
 
+export const metadata: Metadata = {
+  title: "How TenderPilot Works | AI Tender Analysis Explained",
+  description:
+    "Analyze public tenders in minutes. Identify requirements, risks, and bid/no-bid decisions with AI. Built for consultants and SMEs.",
+};
 
 type LandingDict = {
   nav: { cta: string; theme: string };
