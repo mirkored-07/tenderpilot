@@ -36,9 +36,9 @@ function StepCard({
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "How TenderPilot Works | AI Tender Analysis Explained",
+  title: "How TenderRay - AI Go/No-Go Decisions for Tenders & RFPs Works | AI Tender Analysis Explained",
   description:
-    "See how TenderPilot turns tender/RFP PDFs into requirements, risks, and a proposal-ready outline in minutes.",
+    "See how TenderRay turns tender/RFP PDFs into requirements, risks, and a proposal-ready outline in minutes.",
   alternates: {
     canonical: "https://www.trytenderpilot.com/en/how-it-works",
     languages: {

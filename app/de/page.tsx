@@ -25,7 +25,7 @@ import LanguageSwitcherSlot from "@/components/marketing/LanguageSwitcherSlot";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "TenderPilot — KI für Ausschreibungs- & RFP-Analyse",
+  title: "TenderRay - AI Go/No-Go Decisions for Tenders & RFPs — KI für Ausschreibungs- & RFP-Analyse",
   description:
     "Ausschreibungen und RFPs in Minuten analysieren: Muss-Anforderungen, Risiken, Checklisten und Angebotsstruktur für schnellere Go/No-Go-Entscheidungen.",
   alternates: {

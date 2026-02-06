@@ -9,16 +9,16 @@ export const dynamic = "force-static";
 
 // 2. SEO METADATA
 export const metadata: Metadata = {
-  title: "Live Construction Tenders (CPV 45000000) | TenderPilot",
+  title: "Live Construction Tenders (CPV 45000000) | TenderRay",
   description: "Browse active EU construction tenders (CPV 45000000). Track opportunities for road works, building renovation, and infrastructure in Germany, Italy, and Austria.",
   alternates: {
     canonical: "https://www.trytenderpilot.com/tenders/construction",
   },
   openGraph: {
-    title: "Live Construction Tenders (EU) - TenderPilot",
+    title: "Live Construction Tenders (EU) - TenderRay",
     description: "Find your next project. View active construction and public works tenders in the EU.",
     url: "https://www.trytenderpilot.com/tenders/construction",
-    siteName: "TenderPilot",
+    siteName: "TenderRay",
     type: "website",
   },
 };
@@ -119,7 +119,7 @@ export default function ConstructionTendersPage() {
             <div className="h-8 w-8 bg-zinc-800 text-white rounded-lg flex items-center justify-center">
                <Command className="h-5 w-5" />
             </div>
-            <span>TenderPilot</span>
+            <span>TenderRay</span>
           </Link>
           <div className="hidden md:flex items-center gap-4">
             <Button asChild className="rounded-full shadow-lg shadow-orange-500/20 bg-white text-black hover:bg-gray-100 font-semibold">

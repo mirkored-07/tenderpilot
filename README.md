@@ -1,6 +1,6 @@
-﻿# TenderPilot V1
+# TenderRay V1
 
-TenderPilot is an AI-assisted tender review tool designed to help teams quickly assess bid eligibility, risks, and drafting readiness.
+TenderRay is an AI-assisted tender review tool designed to help teams quickly assess bid eligibility, risks, and drafting readiness.
 
 ## Current status
 This repository represents a stable MVP with a fully working job-processing pipeline.

@@ -18,12 +18,13 @@ function detectLocale(req: NextRequest): Locale {
 export function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
-  // Keep existing behavior: block /app/* on marketing site
-  if (pathname.startsWith("/app")) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/";
-    url.searchParams.set("from", "app");
-    return NextResponse.redirect(url);
+    // Do NOT apply locale logic to auth/app routes
+  if (
+    pathname.startsWith("/app") ||
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/auth")
+  ) {
+    return NextResponse.next();
   }
 
   // If user visits /{locale} directly, remember it
@@ -53,6 +54,5 @@ export const config = {
     "/it/:path*",
     "/es/:path*",
     "/fr/:path*",
-    "/app/:path*",
-  ],
+    ],
 };

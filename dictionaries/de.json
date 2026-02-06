@@ -1,6 +1,6 @@
 {
   "nav": {
-    "title": "TenderPilot",
+    "title": "TenderRay",
     "howItWorks": "So funktioniert es",
     "sample": "Beispielausgabe",
     "waitlist": "Frühzugang erhalten",
@@ -61,7 +61,7 @@
   "howItWorks": {
     "eyebrow": "Praktischer Ablauf. Wenig Rauschen.",
     "title": "So funktioniert es",
-    "description": "TenderPilot hilft Ihnen, eine Ausschreibung schnell zu verstehen, um eine fundierte Go/No-Go Entscheidung zu treffen. RFPs und öffentliche Ausschreibungen werden in prüffertige Ergebnisse strukturiert: zwingende Anforderungen, Bewertungskriterien, Risiken und Unklarheiten sowie eine erste Angebotsstruktur.",
+    "description": "TenderRay hilft Ihnen, eine Ausschreibung schnell zu verstehen, um eine fundierte Go/No-Go Entscheidung zu treffen. RFPs und öffentliche Ausschreibungen werden in prüffertige Ergebnisse strukturiert: zwingende Anforderungen, Bewertungskriterien, Risiken und Unklarheiten sowie eine erste Angebotsstruktur.",
     "disclaimer": "Reine Entscheidungshilfe. Keine Rechts- oder Vergabeberatung. Immer anhand des Originaldokuments prüfen.",
     "cta_sample": "Beispielausgabe ansehen",
     "cta_join": "Frühzugang erhalten",
@@ -355,7 +355,7 @@
     },
     "workspace": {
       "title": "Ihr Ausschreibungs-Workspace",
-      "desc": "Dies ist ein statisches Beispiel zur Veranschaulichung der TenderPilot-Struktur. Prüfen Sie stets das Original-PDF."
+      "desc": "Dies ist ein statisches Beispiel zur Veranschaulichung der TenderRay-Struktur. Prüfen Sie stets das Original-PDF."
     },
     "nextActions": {
       "title": "Nächste Schritte"
