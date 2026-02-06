@@ -1,6 +1,6 @@
 {
   "nav": {
-    "title": "TenderPilot",
+    "title": "TenderRay",
     "howItWorks": "Cómo funciona",
     "sample": "Ejemplo de salida",
     "waitlist": "Acceso anticipado",
@@ -61,7 +61,7 @@
   "howItWorks": {
     "eyebrow": "Flujo práctico. Poco ruido.",
     "title": "Cómo funciona",
-    "description": "TenderPilot te ayuda a entender rápidamente una licitación para tomar una decisión go/no-go con seguridad. Estructura RFP y licitaciones públicas en entregables listos para revisar: requisitos obligatorios, criterios de evaluación, riesgos y ambigüedades, y un esquema inicial de la propuesta.",
+    "description": "TenderRay te ayuda a entender rápidamente una licitación para tomar una decisión go/no-go con seguridad. Estructura RFP y licitaciones públicas en entregables listos para revisar: requisitos obligatorios, criterios de evaluación, riesgos y ambigüedades, y un esquema inicial de la propuesta.",
     "disclaimer": "Solo apoyo a la decisión. No es asesoramiento legal ni de contratación pública. Verifica siempre con el documento original.",
     "cta_sample": "Ver ejemplo de salida",
     "cta_join": "Acceso anticipado",
@@ -355,7 +355,7 @@
     },
     "workspace": {
       "title": "Tu espacio de trabajo de licitación",
-      "desc": "Este es un ejemplo estático que muestra cómo TenderPilot estructura la revisión de una licitación. Verifica siempre con el PDF fuente."
+      "desc": "Este es un ejemplo estático que muestra cómo TenderRay estructura la revisión de una licitación. Verifica siempre con el PDF fuente."
     },
     "nextActions": {
       "title": "Próximas acciones"

@@ -1,6 +1,6 @@
 {
   "nav": {
-    "title": "TenderPilot",
+    "title": "TenderRay",
     "howItWorks": "How it works",
     "sample": "Sample output",
     "waitlist": "Get early access",
@@ -61,7 +61,7 @@
   "howItWorks": {
     "eyebrow": "Practical workflow. Minimal noise.",
     "title": "How it works",
-    "description": "TenderPilot helps you understand a tender fast so you can make a go/no-go decision with confidence. It structures RFPs and public tenders into review-ready outputs: mandatory requirements, evaluation criteria, risks and ambiguities, and a proposal outline.",
+    "description": "TenderRay helps you understand a tender fast so you can make a go/no-go decision with confidence. It structures RFPs and public tenders into review-ready outputs: mandatory requirements, evaluation criteria, risks and ambiguities, and a proposal outline.",
     "disclaimer": "Decision-support only. No legal or procurement advice. Always verify against the original tender document.",
     "cta_sample": "View sample output",
     "cta_join": "Join early access",
@@ -357,7 +357,7 @@
   },
   "workspace": {
     "title": "Your tender workspace",
-    "desc": "This is a static sample showing how TenderPilot structures a tender review. Always verify against the original PDF."
+    "desc": "This is a static sample showing how TenderRay structures a tender review. Always verify against the original PDF."
   },
   "nextActions": {
     "title": "Next actions"
