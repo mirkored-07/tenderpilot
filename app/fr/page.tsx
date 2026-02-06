@@ -25,10 +25,22 @@ import LanguageSwitcherSlot from "@/components/marketing/LanguageSwitcherSlot";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "TenderPilot | Analyse IA des appels d’offres",
+  title: "TenderPilot — Analyse d’appels d’offres & RFP par IA",
   description:
-    "Analysez les appels d’offres publics en quelques minutes. Exigences, risques et décision bid/no-bid avec l’IA.",
+    "Analysez appels d’offres et RFP en minutes : exigences obligatoires, risques, checklist et structure de réponse pour des décisions go/no-go plus rapides.",
+  alternates: {
+    canonical: "https://www.trytenderpilot.com/fr",
+    languages: {
+      en: "https://www.trytenderpilot.com/en",
+      de: "https://www.trytenderpilot.com/de",
+      it: "https://www.trytenderpilot.com/it",
+      fr: "https://www.trytenderpilot.com/fr",
+      es: "https://www.trytenderpilot.com/es",
+      "x-default": "https://www.trytenderpilot.com/en",
+    },
+  },
 };
+
 
 
 type LandingDict = {

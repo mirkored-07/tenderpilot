@@ -33,6 +33,24 @@ function StepCard({
     </div>
   );
 }
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "How TenderPilot Works | AI Tender Analysis Explained",
+  description:
+    "See how TenderPilot turns tender/RFP PDFs into requirements, risks, and a proposal-ready outline in minutes.",
+  alternates: {
+    canonical: "https://www.trytenderpilot.com/en/how-it-works",
+    languages: {
+      en: "https://www.trytenderpilot.com/en/how-it-works",
+      de: "https://www.trytenderpilot.com/de/how-it-works",
+      it: "https://www.trytenderpilot.com/it/how-it-works",
+      fr: "https://www.trytenderpilot.com/fr/how-it-works",
+      es: "https://www.trytenderpilot.com/es/how-it-works",
+      "x-default": "https://www.trytenderpilot.com/en/how-it-works",
+    },
+  },
+};
 
 export default async function HowItWorks() {
   const dict = (await import("@/dictionaries/en.json")).default as any;

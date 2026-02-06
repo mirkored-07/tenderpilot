@@ -25,10 +25,22 @@ import LanguageSwitcherSlot from "@/components/marketing/LanguageSwitcherSlot";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "How TenderPilot Works | AI Tender Analysis Explained",
+  title: "TenderPilot — AI Tender & RFP Analysis",
   description:
-    "Analyze public tenders in minutes. Identify requirements, risks, and bid/no-bid decisions with AI. Built for consultants and SMEs.",
+    "Analyze tenders and RFPs in minutes: mandatory requirements, risks, checklists, and a proposal-ready outline for faster go/no-go decisions.",
+  alternates: {
+    canonical: "https://www.trytenderpilot.com/en",
+    languages: {
+      en: "https://www.trytenderpilot.com/en",
+      de: "https://www.trytenderpilot.com/de",
+      it: "https://www.trytenderpilot.com/it",
+      fr: "https://www.trytenderpilot.com/fr",
+      es: "https://www.trytenderpilot.com/es",
+      "x-default": "https://www.trytenderpilot.com/en",
+    },
+  },
 };
+
 
 type LandingDict = {
   nav: { cta: string; theme: string };

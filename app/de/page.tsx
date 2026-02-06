@@ -25,10 +25,22 @@ import LanguageSwitcherSlot from "@/components/marketing/LanguageSwitcherSlot";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "TenderPilot | KI-gestützte Ausschreibungsanalyse",
+  title: "TenderPilot — KI für Ausschreibungs- & RFP-Analyse",
   description:
-    "Öffentliche Ausschreibungen in Minuten analysieren. Anforderungen, Risiken und Bid/No-Bid-Entscheidungen mit KI.",
+    "Ausschreibungen und RFPs in Minuten analysieren: Muss-Anforderungen, Risiken, Checklisten und Angebotsstruktur für schnellere Go/No-Go-Entscheidungen.",
+  alternates: {
+    canonical: "https://www.trytenderpilot.com/de",
+    languages: {
+      en: "https://www.trytenderpilot.com/en",
+      de: "https://www.trytenderpilot.com/de",
+      it: "https://www.trytenderpilot.com/it",
+      fr: "https://www.trytenderpilot.com/fr",
+      es: "https://www.trytenderpilot.com/es",
+      "x-default": "https://www.trytenderpilot.com/en",
+    },
+  },
 };
+
 
 
 

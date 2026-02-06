@@ -19,10 +19,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Ejemplo de análisis de licitación | TenderPilot",
+  title: "Ejemplo TenderPilot | Vista previa del análisis con IA",
   description:
-    "Consulta un ejemplo real de análisis AI de una licitación pública.",
+    "Ejemplo de análisis con IA: requisitos, riesgos y una estructura de propuesta lista para empezar.",
+  alternates: {
+    canonical: "https://www.trytenderpilot.com/es/sample",
+    languages: {
+      en: "https://www.trytenderpilot.com/en/sample",
+      de: "https://www.trytenderpilot.com/de/sample",
+      it: "https://www.trytenderpilot.com/it/sample",
+      fr: "https://www.trytenderpilot.com/fr/sample",
+      es: "https://www.trytenderpilot.com/es/sample",
+      "x-default": "https://www.trytenderpilot.com/en/sample",
+    },
+  },
 };
+
 
 const WAITLIST_URL =
   (process.env.NEXT_PUBLIC_WAITLIST_URL && process.env.NEXT_PUBLIC_WAITLIST_URL.trim()) ||

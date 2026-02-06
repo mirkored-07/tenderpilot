@@ -1,26 +1,62 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "TenderPilot - Analisi Gare IA & Valutazione Rischi",
-  description: "Carica PDF di gare complesse e ottieni supporto decisionale go/no-go immediato, analisi dei rischi e liste di controllo conformità.",
+  metadataBase: new URL("https://www.trytenderpilot.com"),
+  title: {
+    default: "TenderPilot — Analisi Gare & RFP con AI",
+    template: "%s | TenderPilot",
+  },
+  description:
+    "Analisi di gare d’appalto e RFP con AI per supportare decisioni go/no-go e preparare l’offerta in pochi minuti.",
   alternates: {
-    canonical: "/it", // Points to itself (Italian)
+    canonical: "/it",
     languages: {
-      "en": "/en",
-      "de": "/de",
-      "it": "/it",
-      "fr": "/fr",
-      "es": "/es",
+      en: "/en",
+      de: "/de",
+      it: "/it",
+      fr: "/fr",
+      es: "/es",
       "x-default": "/en",
     },
   },
   openGraph: {
+    title: "TenderPilot — Analisi Gare & RFP con AI",
+    description:
+      "Carica una gara/RFP e ottieni requisiti, rischi e una struttura offerta pronta in pochi minuti.",
+    url: "/it",
+    siteName: "TenderPilot",
     locale: "it_IT",
-    title: "TenderPilot - Smetti di Leggere. Inizia a Decidere.",
-    description: "Analisi immediata dei rischi e checklist di conformità per appalti pubblici.",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "TenderPilot — Analisi Gare & RFP con AI",
+    description:
+      "Analizza gare/RFP in pochi minuti: requisiti, rischi e struttura offerta pronta.",
   },
 };
 
-export default function ItalianLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+export default function ItalianLayout({ children }: { children: ReactNode }) {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "TenderPilot",
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web",
+    url: "https://www.trytenderpilot.com/it",
+    inLanguage: "it",
+    description:
+      "Analisi di gare d’appalto e RFP con AI per supportare decisioni go/no-go e preparare l’offerta in pochi minuti.",
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      {children}
+    </>
+  );
 }

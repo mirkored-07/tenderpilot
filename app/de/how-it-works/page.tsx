@@ -3,10 +3,21 @@ import { ArrowRight, UploadCloud, ScanLine, FileCheck, Command, ChevronRight } f
 import { Button } from "@/components/ui/button";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
+export const metadata = {
   title: "So funktioniert TenderPilot | KI-Ausschreibungsanalyse",
   description:
-    "Ausschreibung hochladen und strukturierte Anforderungen, Risiken und Angebotsentwürfe in Minuten erhalten.",
+    "So verwandelt TenderPilot Ausschreibungen und RFPs in Anforderungen, Risiken und eine Angebotsstruktur — in wenigen Minuten.",
+  alternates: {
+    canonical: "https://www.trytenderpilot.com/de/how-it-works",
+    languages: {
+      en: "https://www.trytenderpilot.com/en/how-it-works",
+      de: "https://www.trytenderpilot.com/de/how-it-works",
+      it: "https://www.trytenderpilot.com/it/how-it-works",
+      fr: "https://www.trytenderpilot.com/fr/how-it-works",
+      es: "https://www.trytenderpilot.com/es/how-it-works",
+      "x-default": "https://www.trytenderpilot.com/en/how-it-works",
+    },
+  },
 };
 
 

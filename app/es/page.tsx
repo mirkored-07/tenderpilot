@@ -25,10 +25,22 @@ import LanguageSwitcherSlot from "@/components/marketing/LanguageSwitcherSlot";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "TenderPilot | Análisis AI de licitaciones públicas",
+  title: "TenderPilot — Análisis de licitaciones y RFP con IA",
   description:
-    "Analiza licitaciones públicas en minutos. Requisitos, riesgos y decisiones bid/no-bid con IA.",
+    "Analiza licitaciones y RFP en minutos: requisitos obligatorios, riesgos, checklist y estructura de propuesta para decisiones go/no-go más rápidas.",
+  alternates: {
+    canonical: "https://www.trytenderpilot.com/es",
+    languages: {
+      en: "https://www.trytenderpilot.com/en",
+      de: "https://www.trytenderpilot.com/de",
+      it: "https://www.trytenderpilot.com/it",
+      fr: "https://www.trytenderpilot.com/fr",
+      es: "https://www.trytenderpilot.com/es",
+      "x-default": "https://www.trytenderpilot.com/en",
+    },
+  },
 };
+
 
 
 type LandingDict = {

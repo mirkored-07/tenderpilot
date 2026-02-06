@@ -19,10 +19,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "How TenderPilot Works | AI Tender Analysis Explained",
+  title: "TenderPilot Sample | AI Tender Analysis Example",
   description:
     "View a real example of AI-powered tender analysis, including requirements, risks, and draft proposal sections.",
+  alternates: {
+    canonical: "https://www.trytenderpilot.com/en/sample",
+    languages: {
+      en: "https://www.trytenderpilot.com/en/sample",
+      de: "https://www.trytenderpilot.com/de/sample",
+      it: "https://www.trytenderpilot.com/it/sample",
+      fr: "https://www.trytenderpilot.com/fr/sample",
+      es: "https://www.trytenderpilot.com/es/sample",
+      "x-default": "https://www.trytenderpilot.com/en/sample",
+    },
+  },
 };
+
 
 const WAITLIST_URL =
   (process.env.NEXT_PUBLIC_WAITLIST_URL && process.env.NEXT_PUBLIC_WAITLIST_URL.trim()) ||
