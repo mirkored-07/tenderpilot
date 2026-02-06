@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ArrowRight, UploadCloud, ScanLine, FileCheck, Command, ChevronRight } from "lucide-react";
+import { ArrowRight, UploadCloud, ScanLine, FileCheck, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BrandIcon } from "@/components/brand-icon";
 
 function StepCard({ 
   icon, 
@@ -45,7 +46,7 @@ export default function HowItWorks() {
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 font-bold text-lg hover:opacity-80 transition-opacity">
             <div className="h-8 w-8 bg-zinc-800 text-white rounded-lg flex items-center justify-center">
-               <Command className="h-5 w-5" />
+               <BrandIcon size={48} className="h-8 w-8" />
             </div>
             <span>TenderRay - AI Go/No-Go Decisions for Tenders & RFPs</span>
           </Link>
