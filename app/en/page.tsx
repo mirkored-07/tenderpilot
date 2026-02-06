@@ -1,21 +1,5 @@
 import Link from "next/link";
-import {
-  ArrowRight,
-  CheckCircle2,
-  Command,
-  ShieldAlert,
-  Zap,
-  Clock,
-  Euro,
-  XCircle,
-  Check,
-  Search,
-  FileText,
-  ShieldCheck,
-  Sparkles,
-  FileSearch,
-  ListChecks,
-} from "lucide-react";
+import { ArrowRight, CheckCircle2, ShieldAlert, Zap, Clock, Euro, XCircle, Check, Search, FileText, ShieldCheck, Sparkles, FileSearch, ListChecks } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,6 +7,7 @@ import { WaitlistInline } from "@/components/marketing/WaitlistInline";
 import { ModeToggle } from "@/components/mode-toggle";
 import LanguageSwitcherSlot from "@/components/marketing/LanguageSwitcherSlot";
 import type { Metadata } from "next";
+import { BrandIcon } from "@/components/brand-icon";
 
 export const metadata: Metadata = {
   title: "TenderRay - AI Go/No-Go Decisions for Tenders & RFPs — AI Tender & RFP Analysis",
@@ -280,7 +265,7 @@ export default async function LandingPage() {
             className="flex items-center gap-2 font-bold text-lg tracking-tight hover:opacity-80 transition-opacity"
           >
             <div className="h-8 w-8 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-lg flex items-center justify-center shadow-lg">
-              <Command className="h-5 w-5" />
+              <BrandIcon size={48} className="h-8 w-8" />
             </div>
             <span>{nav.title}</span>
           </Link>

@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ArrowLeft, Command, AlertTriangle } from "lucide-react";
+import { ArrowLeft, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BrandIcon } from "@/components/brand-icon";
 
 export const metadata = {
   title: "Terms of Service | TenderRay",
@@ -17,7 +18,7 @@ export default function TermsPage() {
           {/* Logo -> Home */}
           <Link href="/" className="flex items-center gap-2 font-bold text-lg tracking-tight hover:opacity-80 transition-opacity">
             <div className="h-8 w-8 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-lg flex items-center justify-center shadow-lg">
-              <Command className="h-5 w-5" />
+              <BrandIcon size={48} className="h-8 w-8" />
             </div>
             <span>TenderRay</span>
           </Link>

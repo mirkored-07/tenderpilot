@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowRight, Command, Search, ExternalLink } from "lucide-react";
+import { ArrowRight, Search, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { BrandIcon } from "@/components/brand-icon";
 
 // 1. FORCE STATIC
 export const dynamic = "force-static";
@@ -117,7 +118,7 @@ export default function EngineeringTendersPage() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8 h-16">
           <Link href="/" className="flex items-center gap-2 font-bold text-lg tracking-tight hover:opacity-80 transition-opacity">
             <div className="h-8 w-8 bg-zinc-800 text-white rounded-lg flex items-center justify-center">
-               <Command className="h-5 w-5" />
+               <BrandIcon size={48} className="h-8 w-8" />
             </div>
             <span>TenderRay</span>
           </Link>
