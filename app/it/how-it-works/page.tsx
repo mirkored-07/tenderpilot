@@ -6,8 +6,20 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Come funziona TenderPilot | Analisi AI dei bandi",
   description:
-    "Carica un bando e ottieni requisiti, rischi e sezioni di offerta strutturate in pochi minuti.",
+    "Scopri come TenderPilot trasforma bandi e RFP in requisiti, rischi e una struttura offerta pronta in pochi minuti.",
+  alternates: {
+    canonical: "https://www.trytenderpilot.com/it/how-it-works",
+    languages: {
+      en: "https://www.trytenderpilot.com/en/how-it-works",
+      de: "https://www.trytenderpilot.com/de/how-it-works",
+      it: "https://www.trytenderpilot.com/it/how-it-works",
+      fr: "https://www.trytenderpilot.com/fr/how-it-works",
+      es: "https://www.trytenderpilot.com/es/how-it-works",
+      "x-default": "https://www.trytenderpilot.com/en/how-it-works",
+    },
+  },
 };
+
 
 function StepCard({
   icon,

@@ -3,41 +3,50 @@ import type { MetadataRoute } from "next";
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = "https://www.trytenderpilot.com";
 
-  // 1. DEFINE YOUR LANGUAGES (Matches your folder structure)
-  const languages = ["en", "de", "it", "es", "fr"];
+  // Locales that exist as folders: /en /de /it /fr /es
+  const locales = ["en", "de", "it", "fr", "es"] as const;
 
-  // 2. DEFINE YOUR ROUTES
-  // These are the paths relative to the language folder
-  const routes = [
-    "", // This represents /en, /de, /it (the homepage for that language)
-    "/how-it-works",
-    "/sample",
+  // Only the pages that truly exist under each locale folder
+  // (/en, /en/how-it-works, /en/sample, etc.)
+  const localizedRoutes = ["", "/how-it-works", "/sample"] as const;
+
+  // Global (non-localized) pages that exist once
+  const globalRoutes = [
+    "/privacy",
+    "/terms",
     "/tenders/software",
     "/tenders/construction",
     "/tenders/engineering",
-    "/privacy",
-    "/terms",
-    ];
+  ] as const;
 
   const now = new Date();
-  const sitemapEntries: MetadataRoute.Sitemap = [];
+  const entries: MetadataRoute.Sitemap = [];
 
-  // 3. GENERATE ALL COMBINATIONS
-  languages.forEach((lang) => {
-    routes.forEach((route) => {
-      // Create the full URL: https://site.com + /de + /how-it-works
-      const fullUrl = `${baseUrl}/${lang}${route}`;
-      
-      sitemapEntries.push({
-        url: fullUrl,
+  // Localized marketing pages
+  for (const locale of locales) {
+    for (const route of localizedRoutes) {
+      const url = `${baseUrl}/${locale}${route}`;
+
+      entries.push({
+        url,
         lastModified: now,
-        // Daily for industry pages, Monthly for static pages
-        changeFrequency: route.startsWith("/tenders") ? "daily" : "monthly",
-        // Homepage is 1.0, others 0.8 or 0.7
-        priority: route === "" ? 1.0 : route.startsWith("/tenders") ? 0.9 : 0.7,
+        changeFrequency: "monthly",
+        priority: route === "" ? 1.0 : 0.8,
       });
-    });
-  });
+    }
+  }
 
-  return sitemapEntries;
+  // Global pages (only once — NOT duplicated per locale)
+  for (const route of globalRoutes) {
+    const url = `${baseUrl}${route}`;
+
+    entries.push({
+      url,
+      lastModified: now,
+      changeFrequency: route.startsWith("/tenders") ? "monthly" : "yearly",
+      priority: route.startsWith("/tenders") ? 0.6 : 0.3,
+    });
+  }
+
+  return entries;
 }

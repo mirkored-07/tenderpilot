@@ -4,10 +4,22 @@ import { Button } from "@/components/ui/button";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Cómo funciona TenderPilot | Análisis AI de licitaciones",
+  title: "Cómo funciona TenderPilot | Análisis de licitaciones con IA",
   description:
-    "Sube una licitación y obtén un análisis estructurado en pocos minutos.",
+    "Descubre cómo TenderPilot convierte licitaciones y RFP en requisitos, riesgos y una estructura de propuesta lista en minutos.",
+  alternates: {
+    canonical: "https://www.trytenderpilot.com/es/how-it-works",
+    languages: {
+      en: "https://www.trytenderpilot.com/en/how-it-works",
+      de: "https://www.trytenderpilot.com/de/how-it-works",
+      it: "https://www.trytenderpilot.com/it/how-it-works",
+      fr: "https://www.trytenderpilot.com/fr/how-it-works",
+      es: "https://www.trytenderpilot.com/es/how-it-works",
+      "x-default": "https://www.trytenderpilot.com/en/how-it-works",
+    },
+  },
 };
+
 
 function StepCard({
   icon,

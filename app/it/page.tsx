@@ -25,10 +25,22 @@ import LanguageSwitcherSlot from "@/components/marketing/LanguageSwitcherSlot";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "TenderPilot | Analisi AI di Bandi e Gare Pubbliche",
+  title: "TenderPilot — Analisi Gare & RFP con AI",
   description:
-    "Analizza bandi pubblici in pochi minuti. Requisiti, rischi e decisioni bid/no-bid con l’AI.",
+    "Analizza bandi e RFP in pochi minuti: requisiti obbligatori, rischi, checklist e struttura dell’offerta per decisioni go/no-go più rapide.",
+  alternates: {
+    canonical: "https://www.trytenderpilot.com/it",
+    languages: {
+      en: "https://www.trytenderpilot.com/en",
+      de: "https://www.trytenderpilot.com/de",
+      it: "https://www.trytenderpilot.com/it",
+      fr: "https://www.trytenderpilot.com/fr",
+      es: "https://www.trytenderpilot.com/es",
+      "x-default": "https://www.trytenderpilot.com/en",
+    },
+  },
 };
+
 
 
 type LandingDict = {

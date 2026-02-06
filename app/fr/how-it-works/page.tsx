@@ -6,8 +6,20 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Comment fonctionne TenderPilot | Analyse IA des appels d’offres",
   description:
-    "Téléchargez un appel d’offres et obtenez une analyse structurée en quelques minutes.",
+    "Découvrez comment TenderPilot transforme un appel d’offres ou une RFP en exigences, risques et plan de réponse structuré en quelques minutes.",
+  alternates: {
+    canonical: "https://www.trytenderpilot.com/fr/how-it-works",
+    languages: {
+      en: "https://www.trytenderpilot.com/en/how-it-works",
+      de: "https://www.trytenderpilot.com/de/how-it-works",
+      it: "https://www.trytenderpilot.com/it/how-it-works",
+      fr: "https://www.trytenderpilot.com/fr/how-it-works",
+      es: "https://www.trytenderpilot.com/es/how-it-works",
+      "x-default": "https://www.trytenderpilot.com/en/how-it-works",
+    },
+  },
 };
+
 
 function StepCard({
   icon,

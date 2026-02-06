@@ -19,10 +19,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Exemple d’analyse d’appel d’offres | TenderPilot",
+  title: "Exemple TenderPilot | Aperçu de l’analyse IA",
   description:
-    "Découvrez un exemple réel d’analyse IA d’un appel d’offres.",
+    "Exemple d’analyse IA : exigences, risques et structure de réponse prête à l’emploi.",
+  alternates: {
+    canonical: "https://www.trytenderpilot.com/fr/sample",
+    languages: {
+      en: "https://www.trytenderpilot.com/en/sample",
+      de: "https://www.trytenderpilot.com/de/sample",
+      it: "https://www.trytenderpilot.com/it/sample",
+      fr: "https://www.trytenderpilot.com/fr/sample",
+      es: "https://www.trytenderpilot.com/es/sample",
+      "x-default": "https://www.trytenderpilot.com/en/sample",
+    },
+  },
 };
+
 
 const WAITLIST_URL =
   (process.env.NEXT_PUBLIC_WAITLIST_URL && process.env.NEXT_PUBLIC_WAITLIST_URL.trim()) ||

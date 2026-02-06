@@ -19,10 +19,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Esempio di analisi di un bando | TenderPilot",
+  title: "Esempio TenderPilot | Anteprima Analisi AI dei bandi",
   description:
-    "Visualizza un esempio reale di analisi AI di un bando pubblico.",
+    "Esempio di analisi AI: requisiti, rischi e struttura offerta pronta per partire.",
+  alternates: {
+    canonical: "https://www.trytenderpilot.com/it/sample",
+    languages: {
+      en: "https://www.trytenderpilot.com/en/sample",
+      de: "https://www.trytenderpilot.com/de/sample",
+      it: "https://www.trytenderpilot.com/it/sample",
+      fr: "https://www.trytenderpilot.com/fr/sample",
+      es: "https://www.trytenderpilot.com/es/sample",
+      "x-default": "https://www.trytenderpilot.com/en/sample",
+    },
+  },
 };
+
 
 const WAITLIST_URL =
   (process.env.NEXT_PUBLIC_WAITLIST_URL && process.env.NEXT_PUBLIC_WAITLIST_URL.trim()) ||

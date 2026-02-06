@@ -19,11 +19,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Beispiel Ausschreibungsanalyse | TenderPilot",
+export const metadata = {
+  title: "TenderPilot Beispiel | KI-Ausschreibungsanalyse Vorschau",
   description:
-    "Sehen Sie ein reales Beispiel einer KI-gestützten Ausschreibungsanalyse.",
+    "Beispielausgabe einer KI-Ausschreibungsanalyse: Anforderungen, Risiken und eine proposal-ready Angebotsstruktur.",
+  alternates: {
+    canonical: "https://www.trytenderpilot.com/de/sample",
+    languages: {
+      en: "https://www.trytenderpilot.com/en/sample",
+      de: "https://www.trytenderpilot.com/de/sample",
+      it: "https://www.trytenderpilot.com/it/sample",
+      fr: "https://www.trytenderpilot.com/fr/sample",
+      es: "https://www.trytenderpilot.com/es/sample",
+      "x-default": "https://www.trytenderpilot.com/en/sample",
+    },
+  },
 };
+
 
 
 const WAITLIST_URL =
