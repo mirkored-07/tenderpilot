@@ -36,12 +36,29 @@ type DbJobResult = {
   job_id: string;
   user_id: string;
   extracted_text: string | null;
+
+  // These columns are written by the Edge function (process-job)
+  executive_summary: any | null;
+  clarifications: any | null;
+
   checklist: any | null;
   risks: any | null;
-  proposal_draft: any | null;
+
+  // proposal_draft is a string in the Edge function output
+  proposal_draft: string | null;
+
   created_at: string;
   updated_at: string;
 };
+type DbJobEvent = {
+  job_id: string;
+  user_id: string;
+  level: "info" | "warn" | "error";
+  message: string;
+  meta: any | null;
+  created_at: string;
+};
+
 
 type VerdictState = "proceed" | "caution" | "hold";
 
@@ -249,20 +266,88 @@ function statusBadge(status: JobStatus) {
   );
 }
 
-function ProgressCard({ status }: { status: JobStatus }) {
+function ProgressCard({
+  status,
+  events,
+}: {
+  status: JobStatus;
+  events: DbJobEvent[];
+}) {
+  function pickFailure(events: DbJobEvent[]) {
+    const msgs = (events ?? []).map((e) => e.message);
+
+    if (msgs.includes("Job exceeds cost cap, reduce input or limits")) {
+      const e = events.find((x) => x.message === "Job exceeds cost cap, reduce input or limits");
+      const usdEst = e?.meta?.usdEst;
+      const maxUsd = e?.meta?.maxUsdPerJob;
+
+      return {
+        title: "File exceeds processing limits",
+        text:
+          "This file is too large for the current processing limits." +
+          (usdEst && maxUsd
+            ? ` (Estimated cost: $${Number(usdEst).toFixed(3)}, cap: $${Number(maxUsd).toFixed(3)})`
+            : "") +
+          " Upload a smaller scope (eligibility + requirements) or split the tender.",
+      };
+    }
+
+    if (msgs.includes("Unstructured extract returned empty text")) {
+      return {
+        title: "No text could be extracted",
+        text: "We could not read text from this file. If it is a scanned PDF, export it with OCR and retry.",
+      };
+    }
+
+    if (msgs.includes("Storage download failed")) {
+      return {
+        title: "File could not be accessed",
+        text: "We could not access the uploaded file. Please re-upload and try again.",
+      };
+    }
+
+    if (msgs.includes("Saving results failed")) {
+      return {
+        title: "Results could not be saved",
+        text: "We generated results but could not save them. Please retry.",
+      };
+    }
+
+    return {
+      title: "Something needs attention",
+      text: "Please try again or re-upload the file.",
+    };
+  }
+
+  const isFailed = status === "failed";
+  const failure = isFailed ? pickFailure(events) : null;
+
   const title =
-    status === "failed"
-      ? "Something needs attention"
-      : status === "queued"
+    status === "queued"
       ? "Getting started"
-      : "Working on your tender review";
+      : status === "processing"
+      ? "Working on your tender review"
+      : isFailed
+      ? failure?.title ?? "Something needs attention"
+      : "Ready";
 
   const subtitle =
     status === "queued"
       ? "Preparing your workspace…"
       : status === "processing"
-      ? "Extracting requirements, risks, clarifications, and a short draft"
-      : "Please try again or re-upload the file.";
+      ? "Extracting requirements, risks, clarifications, and a short draft…"
+      : isFailed
+      ? failure?.text ?? "Please try again."
+      : "Results are ready.";
+
+  const barClass =
+    status === "failed"
+      ? "w-full bg-red-500"
+      : status === "queued"
+      ? "w-1/3 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 animate-pulse"
+      : status === "processing"
+      ? "w-2/3 bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-500 animate-pulse"
+      : "w-full bg-green-500";
 
   return (
     <Card className="rounded-2xl">
@@ -273,32 +358,32 @@ function ProgressCard({ status }: { status: JobStatus }) {
         </div>
 
         <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
-          <div
-            className={[
-              "absolute left-0 top-0 h-full rounded-full transition-all duration-700",
-              status === "failed"
-                ? "w-full bg-red-500"
-                : status === "queued"
-                ? "w-1/3 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 animate-pulse"
-                : "w-2/3 bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-500 animate-pulse",
-            ].join(" ")}
-          />
+          <div className={`absolute left-0 top-0 h-full rounded-full transition-all duration-700 ${barClass}`} />
         </div>
 
         <p className="text-xs text-muted-foreground">{subtitle}</p>
-        <p className="text-xs text-muted-foreground">
-		  Steps: upload → extract → analyze → results. This usually takes 1–3 minutes (large files can take longer).
-		  If it takes longer, refresh this page or open{" "}
-		  <Link href="/app/jobs" className="underline underline-offset-4">
-			My jobs
-		  </Link>
-		  .
-		</p>
 
+        <p className="text-xs text-muted-foreground">
+          Steps: upload → extract → analyze → results. This usually takes 1–3 minutes (large files can take longer). If it
+          takes longer, refresh this page or open{" "}
+          <Link href="/app/jobs" className="underline underline-offset-4">
+            My jobs
+          </Link>
+          .
+        </p>
+
+        {isFailed ? (
+          <div className="pt-1">
+            <Button asChild className="rounded-full">
+              <Link href="/app/upload">Start a new review</Link>
+            </Button>
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );
 }
+
 
 function findExcerpt(text: string, query: string) {
   const t = text ?? "";
@@ -918,7 +1003,9 @@ export default function JobDetailPage() {
   const [invalidLink, setInvalidLink] = useState(false);
 
   const [job, setJob] = useState<DbJob | null>(null);
-  const [result, setResult] = useState<DbJobResult | null>(null);
+	const [result, setResult] = useState<DbJobResult | null>(null);
+	const [events, setEvents] = useState<DbJobEvent[]>([]);
+
   const [loading, setLoading] = useState(true);
   const [polling, setPolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -936,6 +1023,11 @@ export default function JobDetailPage() {
   const [showFullSourceText, setShowFullSourceText] = useState(false);
 
   const [exporting, setExporting] = useState<null | "summary">(null);
+
+  const [showAllBlockers, setShowAllBlockers] = useState(false);
+  const [showAllDrivers, setShowAllDrivers] = useState(false);
+  const [showRisksSection, setShowRisksSection] = useState(false);
+  const [showUnknownsSection, setShowUnknownsSection] = useState(false);
 
   const mountedRef = useRef(true);
   const sourceAnchorRef = useRef<HTMLSpanElement | null>(null);
@@ -1010,17 +1102,32 @@ export default function JobDetailPage() {
         setDisplayNameState(initialName);
         setRenameInput(initialName);
 
-        const { data: resultRow, error: resErr } = await supabase
-          .from("job_results")
-          .select("*")
-          .eq("job_id", jobId)
-          .maybeSingle();
+      const { data: resultRow, error: resErr } = await supabase
+		  .from("job_results")
+		  .select("*")
+		  .eq("job_id", jobId)
+		  .maybeSingle();
 
-        if (resErr) {
-          console.warn(resErr);
-        }
+		if (resErr) {
+		  console.warn(resErr);
+		}
 
-        setResult((resultRow as any) ?? null);
+		setResult((resultRow as any) ?? null);
+
+		// Read-only: fetch job events for trust + failure explanations
+		const { data: eventRows, error: evErr } = await supabase
+		  .from("job_events")
+		  .select("*")
+		  .eq("job_id", jobId)
+		  .order("created_at", { ascending: false })
+		  .limit(50);
+
+		if (evErr) {
+		  console.warn(evErr);
+		} else {
+		  setEvents((eventRows as any) ?? []);
+		}
+
 
         setLoading(false);
 
@@ -1068,6 +1175,18 @@ export default function JobDetailPage() {
         }
 
         setResult((resultRow as any) ?? null);
+		// Fetch events when terminal or when failed (keeps polling light but accurate)
+		if (isTerminal || jobRow?.status === "failed") {
+		  const { data: eventRows, error: evErr } = await supabase
+			.from("job_events")
+			.select("*")
+			.eq("job_id", jobId)
+			.order("created_at", { ascending: false })
+			.limit(50);
+
+		  if (!evErr) setEvents((eventRows as any) ?? []);
+		}
+
 		// Hard stop only applies while still processing AND results are still missing.
 		// Prevents false “taking longer” errors when the tender is already done.
 		if (!isTerminal && !resultRow && Date.now() - startedAt > MAX_POLL_MS) {
@@ -1166,12 +1285,88 @@ export default function JobDetailPage() {
   const extractedText = useMemo(() => String(result?.extracted_text ?? "").trim(), [result]);
   const checklist = useMemo(() => normalizeChecklist(result?.checklist), [result]);
   const risks = useMemo(() => normalizeRisks(result?.risks), [result]);
+	const extractedChars = extractedText.length;
+
+	const eventMessages = useMemo(() => new Set((events ?? []).map((e) => e.message)), [events]);
+
+	const hasTruncationWarning = useMemo(
+	  () => eventMessages.has("Source text truncated for AI"),
+	  [eventMessages]
+	);
+
+	const hasEmptyExtractWarning = useMemo(
+	  () => eventMessages.has("Unstructured extract returned empty text"),
+	  [eventMessages]
+	);
+
+	const hasCostCapFailure = useMemo(
+	  () => eventMessages.has("Job exceeds cost cap, reduce input or limits"),
+	  [eventMessages]
+	);
+
+	type CoverageState = "full" | "partial" | "unreliable";
+	type ConfidenceState = "high" | "medium" | "low";
+
+	const coverage: CoverageState = useMemo(() => {
+	  const status = job?.status;
+
+	  if (status === "failed") return "unreliable";
+	  if (!extractedText || hasEmptyExtractWarning) return "unreliable";
+	  if (hasTruncationWarning) return "partial";
+	  if (extractedChars < 3000) return "partial";
+	  return "full";
+	}, [job?.status, extractedText, hasEmptyExtractWarning, hasTruncationWarning, extractedChars]);
+
+	const confidence: ConfidenceState = useMemo(() => {
+	  if (coverage !== "full") return "low";
+
+	  const rawDeadline = (result as any)?.executive_summary?.submissionDeadline;
+	const missingDeadline = !String(rawDeadline ?? "").trim();
+	  const qList = normalizeQuestions((result as any)?.clarifications);
+		const manyQuestions = qList.length >= 6;
+
+		// Avoid referencing mustItems before its declaration: derive blockers from checklist directly
+	const ckItems = normalizeChecklist((result as any)?.checklist);
+	const blockerCount = ckItems.filter((i: any) =>
+	  String(i?.type ?? i?.level ?? i?.priority ?? "")
+		.toUpperCase()
+		.includes("MUST")
+	).length;
+	const hasBlockers = blockerCount > 0;
+
+
+
+	  if (missingDeadline || manyQuestions || hasBlockers) return "medium";
+	  return "high";
+			}, [
+		  coverage,
+		  (result as any)?.executive_summary?.submissionDeadline,
+		  (result as any)?.clarifications,
+		  (result as any)?.checklist,
+		]);
+
+
+	const warningChips = useMemo(() => {
+	  const chips: Array<{ label: string; detail?: string }> = [];
+
+	  if (hasTruncationWarning) {
+		const e = events.find((x) => x.message === "Source text truncated for AI");
+		const maxChars = e?.meta?.maxChars;
+		chips.push({ label: "Input truncated", detail: maxChars ? `Max chars: ${maxChars}` : undefined });
+	  }
+
+	  if (hasEmptyExtractWarning) chips.push({ label: "No text extracted" });
+	  if (hasCostCapFailure) chips.push({ label: "Cost cap exceeded" });
+
+	  // Keep it minimal
+	  return chips.slice(0, 3);
+	}, [events, hasTruncationWarning, hasEmptyExtractWarning, hasCostCapFailure]);
 
   // IMPORTANT: questions come from proposal_draft.buyer_questions (DB contract)
-  const questions = useMemo(() => {
-    const pd = (result as any)?.proposal_draft ?? null;
-    return normalizeQuestions(pd?.buyer_questions ?? pd?.clarifications ?? (result as any)?.buyer_questions ?? (result as any)?.clarifications);
-  }, [result]);
+	 const questions = useMemo(() => {
+	  return normalizeQuestions((result as any)?.clarifications);
+	}, [result]);
+
 
   const mustItems = useMemo(() => {
     return checklist
@@ -1180,16 +1375,16 @@ export default function JobDetailPage() {
       .filter(Boolean);
   }, [checklist]);
 
-  const executive = useMemo(() => {
-    const pd = (result as any)?.proposal_draft ?? {};
-    const raw = pd?.executive_summary ?? {};
-    return toExecutiveModel({ raw });
-  }, [result]);
+	const executive = useMemo(() => {
+	  const raw = (result as any)?.executive_summary ?? {};
+	  return toExecutiveModel({ raw });
+	}, [result]);
 
-  const draftForUi = useMemo(() => {
-    const pd = (result as any)?.proposal_draft ?? null;
-    return pd?.proposal_draft ?? null;
-  }, [result]);
+
+	const draftForUi = useMemo(() => {
+	  return (result as any)?.proposal_draft ?? null;
+	}, [result]);
+
 
   const draftLinesForUi = useMemo(() => renderDraftPlain(draftForUi), [draftForUi]);
 
@@ -1924,7 +2119,7 @@ export default function JobDetailPage() {
           <p className="text-sm text-muted-foreground">Your tender review will appear here.</p>
         </div>
 
-        <Card className="rounded-2xl">
+        <Card className="rounded-2xl border border-white/10 bg-background/70 dark:bg-zinc-900/50 backdrop-blur-xl">
           <CardContent className="p-6">
             <p className="text-sm text-muted-foreground">Drafting support only. Always verify against the original tender document.</p>
           </CardContent>
@@ -2000,397 +2195,393 @@ export default function JobDetailPage() {
         </Card>
       ) : null}
 
-      {showProgress ? <ProgressCard status={job?.status ?? "processing"} /> : null}
+     {showProgress ? <ProgressCard status={job?.status ?? "processing"} events={events} /> : null}
+	{showFailed ? <ProgressCard status="failed" events={events} /> : null}
 
-      {/* Go/No-Go (Iteration 1) */}
-      <Card className="rounded-2xl">
-        <CardContent className="p-6 space-y-5">
-          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-            <div className="space-y-2">
-              <p className="text-sm font-semibold">Go/No-Go</p>
 
-              {showFailed ? (
-                <>
-                  <p className="text-sm text-muted-foreground">This tender review could not be completed.</p>
-                  <p className="text-xs text-muted-foreground">Re-upload the tender document or try again.</p>
-                </>
-              ) : !showReady ? (
-                <>
-                  <p className="text-sm text-muted-foreground">Preparing decision support for this tender…</p>
-                  <p className="text-xs text-muted-foreground">This panel populates automatically when processing completes.</p>
-                </>
-              ) : finalizingResults ? (
-                <>
-                  <p className="text-sm text-muted-foreground">Finalizing results…</p>
-                  <p className="text-xs text-muted-foreground">The job is marked as done, but results are still being written. Refresh in a moment if needed.</p>
-                </>
-              ) : (
-                <>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <VerdictBadge state={verdictState} />
-                    <p className="text-sm text-muted-foreground">{verdictMicrocopy(verdictState)}</p>
-                  </div>
+      
+      {/* Decision (Go/No-Go) — decision-first layout */}
+      <Card className="rounded-2xl border border-white/10 bg-background/70 dark:bg-zinc-900/50 backdrop-blur-xl">
+        <CardContent className="p-6">
+          <div className="rounded-xl bg-background/90 dark:bg-zinc-950/70 ring-1 ring-black/5 dark:ring-white/10 p-5">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div className="min-w-0 space-y-2">
+                <p className="text-sm font-semibold">Go/No-Go</p>
 
-                  <p className="text-sm text-muted-foreground">{whyLine}</p>
-
-				<div className="mt-3 flex flex-wrap gap-2">
-				  <button
-					type="button"
-					onClick={() => openTabAndScroll("checklist")}
-					className={`${pillBase} ${pillTone("blockers")}`}
-					aria-label="Open Requirements tab"
-				  >
-					<span className="font-medium">Blockers</span>
-					<span className={`${countBase} ${countTone("blockers")}`}>{mustItems.length}</span>
-				  </button>
-
-				  <button
-					type="button"
-					onClick={() => openTabAndScroll("risks")}
-					className={`${pillBase} ${pillTone("risks")}`}
-					aria-label="Open Risks tab"
-				  >
-					<span className="font-medium">Risks</span>
-					<span className={`${countBase} ${countTone("risks")}`}>{risks.length}</span>
-				  </button>
-
-				  <button
-					type="button"
-					onClick={() => openTabAndScroll("questions")}
-					className={`${pillBase} ${pillTone("questions")}`}
-					aria-label="Open Clarifications tab (Open questions)"
-				  >
-					<span className="font-medium">Open questions</span>
-					<span className={`${countBase} ${countTone("questions")}`}>{questions.length}</span>
-				  </button>
-
-				  <button
-					type="button"
-					onClick={() => openTabAndScroll("draft")}
-					className={`${pillBase} ${pillTone("outline")}`}
-					aria-label="Open Tender outline tab"
-				  >
-					<span className="font-medium">Outline</span>
-					<span className={`${countBase} ${countTone("outline")}`}>
-					  {hasDraftForUi ? "Available" : "Not detected"}
-					</span>
-				  </button>
-				</div>
-
-                </>
-              )}
-            </div>
-
-            <div className="rounded-2xl border bg-muted/20 p-4 md:min-w-[320px]">
-              <p className="text-xs font-semibold">Submission deadline</p>
-              <p className="mt-1 text-sm">
-                {showReady && deadlineText ? <span className="font-medium">{deadlineText}</span> : <span className="text-muted-foreground">Not detected</span>}
-              </p>
-              <p className="mt-2 text-xs text-muted-foreground">Verify on the tender cover page or timeline section.</p>
-            </div>
-          </div>
-
-          {showReady && !showFailed && !finalizingResults ? (
-            <>
-              <div className="grid gap-4 md:grid-cols-2">
-                {/* Potential blockers */}
-                <div className="rounded-2xl border bg-muted/20 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold">Potential blockers</p>
-                      <p className="mt-1 text-xs text-muted-foreground">Items that could block a compliant tender response. Use Jump to verify the source.</p>
+                {showFailed ? (
+                  <>
+                    <p className="text-sm text-foreground/80">This tender review could not be completed.</p>
+                    <p className="text-xs text-muted-foreground">Re-upload the tender document or try again.</p>
+                  </>
+                ) : !showReady ? (
+                  <>
+                    <p className="text-sm text-foreground/80">Preparing decision support for this tender…</p>
+                    <p className="text-xs text-muted-foreground">This page updates automatically while processing.</p>
+                  </>
+                ) : finalizingResults ? (
+                  <>
+                    <p className="text-sm text-foreground/80">Finalizing results…</p>
+                    <p className="text-xs text-muted-foreground">Results are still being written. Refresh in a moment if needed.</p>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <VerdictBadge state={verdictState} />
+                      <p className="text-sm text-foreground/80">{verdictMicrocopy(verdictState)}</p>
                     </div>
-                    <Button variant="outline" className="rounded-full" onClick={() => openTabAndScroll("checklist")} disabled={!showReady}>
-                      Open Requirements
-                    </Button>
-                  </div>
 
-                  <Separator className="my-3" />
+                    <p className="text-sm text-foreground/80">{whyLine}</p>
 
-                  {mustItems.length ? (
-                    <>
-                      <p className="text-xs text-muted-foreground">MUST requirements detected: {mustItems.length}</p>
-                      <div className="mt-3 space-y-2">
-						  {mustItems.slice(0, 6).map((x, i) => {
-							const meta = classifyBlocker(x);
+                    {/* Trust & Coverage */}
+                    <div className="mt-3 rounded-xl border bg-muted/40 dark:bg-white/5 p-4 space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-xs font-medium text-foreground/90">
+                          Coverage:{" "}
+                          {coverage === "full" ? "Full" : coverage === "partial" ? "Partial" : "Unreliable"}
+                        </p>
 
-							return (
-							  <div key={i} className="rounded-2xl border bg-background p-3">
-								<div className="flex items-start justify-between gap-3">
-								  <div className="min-w-0">
-									<div className="flex flex-wrap items-center gap-2">
-									  <span className="inline-flex items-center rounded-full border bg-muted/20 px-2 py-0.5 text-[11px] text-muted-foreground">
-										{meta.label}
-									  </span>
-									  <span className="text-[11px] text-muted-foreground">{meta.hint}</span>
-									</div>
+                        <span className="text-xs text-muted-foreground">•</span>
 
-									<p className="mt-2 text-sm text-muted-foreground leading-relaxed">{x}</p>
-								  </div>
+                        <p className="text-xs font-medium text-foreground/90">
+                          Confidence: {confidence === "high" ? "High" : confidence === "medium" ? "Medium" : "Low"}
+                        </p>
 
-								  <Button
-									variant="outline"
-									className="rounded-full shrink-0"
-									onClick={() => onJumpToSource(x)}
-									disabled={!extractedText}
-								  >
-									Jump
-								  </Button>
-								</div>
-							  </div>
-							);
-						  })}
-						</div>
+                        <span className="text-xs text-muted-foreground">•</span>
 
-                      {mustItems.length > 6 ? (
-                        <p className="mt-2 text-xs text-muted-foreground">Showing top 6. Review all in Requirements.</p>
-                      ) : null}
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-sm text-muted-foreground">No potential blockers detected from MUST requirements.</p>
-                      <p className="mt-1 text-xs text-muted-foreground">Still review eligibility and mandatory forms in the tender.</p>
-                    </>
-                  )}
-                </div>
+                        <p className="text-xs text-muted-foreground">
+                          Extracted text: {extractedChars.toLocaleString()} characters
+                        </p>
+                      </div>
 
-                {/* Top risks */}
-                <div className="rounded-2xl border bg-muted/20 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold">Top risks</p>
-                      <p className="mt-1 text-xs text-muted-foreground">Risks that could derail delivery, cost, or compliance.</p>
-                    </div>
-                    <Button variant="outline" className="rounded-full" onClick={() => openTabAndScroll("risks")} disabled={!showReady}>
-                      Open Risks
-                    </Button>
-                  </div>
-
-                  <Separator className="my-3" />
-
-									  {topRisksForPanel.length ? (
-					  <div className="space-y-2">
-						{topRisksForPanel.map((r: any, i: number) => {
-						  const sev = String(r?.severity ?? "medium").toLowerCase();
-						  const sevLabel = sev === "high" ? "High" : sev === "low" ? "Low" : "Medium";
-
-						  // Outline-only severity chips (don’t compete with Go/No-Go badge)
-						  const sevCls =
-							sev === "high"
-							  ? "border-red-200 text-red-800"
-							  : sev === "low"
-							  ? "border-muted/60 text-muted-foreground"
-							  : "border-amber-200 text-amber-900";
-
-						  const title = String(r?.title ?? "").trim();
-						  const detail = String(r?.detail ?? "").trim();
-						  const jumpText = detail ? `${title}\n${detail}` : title;
-						  const meta = classifyRisk(`${title} ${detail}`.trim());
-
-						  return (
-							<div key={i} className="rounded-2xl border bg-background p-3">
-							  <div className="flex items-start justify-between gap-3">
-								<div className="min-w-0">
-								  <div className="flex flex-wrap items-center gap-2">
-									<span
-									  className={`inline-flex items-center rounded-full border bg-background px-2 py-0.5 text-[11px] font-medium ${sevCls}`}
-									>
-									  {sevLabel}
-									</span>
-
-									<span className="inline-flex items-center rounded-full border bg-muted/20 px-2 py-0.5 text-[11px] text-muted-foreground">
-									  {meta.label}
-									</span>
-
-									<span className="text-[11px] text-muted-foreground">{meta.hint}</span>
-								  </div>
-
-								  <p className="mt-2 text-sm font-medium">{title || "Risk"}</p>
-								  {detail ? <p className="mt-1 text-xs text-muted-foreground">{detail}</p> : null}
-								</div>
-
-								<Button
-								  variant="outline"
-								  className="rounded-full shrink-0"
-								  onClick={() => onJumpToSource(jumpText)}
-								  disabled={!extractedText}
-								>
-								  Jump
-								</Button>
-							  </div>
-							</div>
-						  );
-						})}
-					  </div>
-					) : (
-					  <>
-						<p className="text-sm text-muted-foreground">No risks detected.</p>
-						<p className="mt-1 text-xs text-muted-foreground">
-						  Scan legal terms, delivery constraints, and submission format in the tender.
-						</p>
-					  </>
-					)}
-
-
-                </div>
-              </div>
-
-              {/* Next actions + key findings */}
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="rounded-2xl border bg-muted/20 p-4">
-                  <p className="text-sm font-semibold">Next actions</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Do these before writing a full tender response.</p>
-                  <Separator className="my-3" />
-
-                  <div className="space-y-2">
-                    {nextActionsForUi.map(
-                      (
-                        a: {
-						  text: string;
-						  target: ActionTargetTab;
-						  label: string;
-						  why: string;
-						  metric: string;
-						  evidenceQuery: string;
-						  evidencePreview?: string;
-						},
-
-                        i: number
-                      ) => (
-                        <div
-						  key={`${i}-${a.target}-${a.text}`}
-						  role="button"
-						  tabIndex={0}
-						  onClick={() => openTabAndScroll(a.target)}
-						  onKeyDown={(e) => {
-							if (e.key === "Enter" || e.key === " ") {
-							  e.preventDefault();
-							  openTabAndScroll(a.target);
-							}
-						  }}
-						  className="group w-full cursor-pointer rounded-xl border bg-background/60 p-3 text-left transition hover:bg-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-						>
-
-                          <div className="flex items-start gap-3">
-                            <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold text-muted-foreground group-hover:text-foreground">
-                              {i + 1}
-                            </div>
-
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium text-foreground">{a.text}</p>
-                              <p className="mt-1 text-xs text-muted-foreground">{a.why}</p>
-
-								{a.evidencePreview ? (
-								  <p className="mt-1 text-xs text-muted-foreground">
-									<span className="font-medium text-foreground">Evidence:</span> {a.evidencePreview}
-								  </p>
-								) : null}
-
-                              <div className="mt-2 flex flex-wrap items-center gap-2">
-								  <Badge variant="secondary" className="rounded-full">
-									{a.label}
-								  </Badge>
-
-								  <Badge variant="outline" className="rounded-full text-muted-foreground">
-									{a.metric}
-								  </Badge>
-
-								  <Badge variant="outline" className="rounded-full text-muted-foreground">
-									Owner: <span className="ml-1 text-foreground font-medium">{(a as any).owner}</span>
-								  </Badge>
-
-								  <Badge variant="outline" className="rounded-full text-muted-foreground">
-									Time: <span className="ml-1 text-foreground font-medium">{(a as any).eta}</span>
-								  </Badge>
-								</div>
-
-                            </div>
-
-                            <div className="shrink-0">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="rounded-full"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  onJumpToSource(a.evidenceQuery);
-                                }}
-                                disabled={!extractedText}
-                              >
-                                Evidence
-                              </Button>
-                            </div>
-                          </div>
+                      {warningChips.length ? (
+                        <div className="flex flex-wrap gap-2">
+                          {warningChips.map((c, idx) => (
+                            <span
+                              key={idx}
+                              className="rounded-full border bg-background px-2 py-0.5 text-[11px] text-muted-foreground"
+                            >
+                              {c.label}
+                              {c.detail ? ` (${c.detail})` : ""}
+                            </span>
+                          ))}
                         </div>
-                      )
-                    )}
-                  </div>
+                      ) : null}
 
-                  <p className="mt-3 text-xs text-muted-foreground">
-                    Tip: click an action to jump to the relevant tab. “Evidence” opens Source and highlights the excerpt used.
-                  </p>
-                </div>
-
-                <div className="rounded-2xl border bg-muted/20 p-4">
-                  <p className="text-sm font-semibold">Key findings</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Useful context from the tender, not urgent for the go/no-go decision.</p>
-                  <Separator className="my-3" />
-
-                  {executive.keyFindings?.length ? (
-					  <ul className="space-y-2">
-						{executive.keyFindings.slice(0, 7).map((x: string, i: number) => {
-						  const raw = String(x ?? "").replace(/\s+/g, " ").trim();
-						  const evidenceQuery = raw.length > 240 ? raw.slice(0, 239) + "…" : raw;
-
-						  return (
-							<li key={i} className="flex items-start justify-between gap-3">
-							  <div className="min-w-0 flex-1">
-								<p className="text-sm text-muted-foreground leading-relaxed">
-								  <span className="mr-2">•</span>
-								  {x}
-								</p>
-							  </div>
-
-							  <Button
-								variant="secondary"
-								size="sm"
-								className="h-7 shrink-0 rounded-full px-3 text-xs transition hover:bg-background hover:border-foreground/20 hover:shadow-sm hover:-translate-y-[1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-								onClick={(e) => {
-								  e.preventDefault();
-								  onJumpToSource(evidenceQuery);
-								}}
-								disabled={!extractedText}
-								aria-label={`Show evidence for key finding ${i + 1}`}
-							  >
-								Evidence
-							  </Button>
-							</li>
-						  );
-						})}
-					  </ul>
-					) : (
-					  <p className="text-sm text-muted-foreground">No key findings detected.</p>
-					)}
-
-                </div>
+                      {coverage !== "full" ? (
+                        <p className="text-xs text-muted-foreground">
+                          Coverage is not full. For a reliable go/no-go, re-upload the key sections (eligibility + requirements).
+                        </p>
+                      ) : null}
+                    </div>
+                  </>
+                )}
               </div>
 
-              {String(executive.decisionLine ?? "").trim() ? (
-                <div className="rounded-2xl border bg-background p-4">
-                  <p className="text-xs font-semibold">Executive note</p>
-                  <p className="mt-1 text-sm text-muted-foreground">{String(executive.decisionLine).trim()}</p>
-                </div>
-              ) : null}
+              {/* Deadline box: kept secondary, not competing with the verdict */}
+              <div className="rounded-2xl border bg-muted/30 dark:bg-white/5 p-4 md:min-w-[320px]">
+                <p className="text-xs font-semibold">Submission deadline</p>
+                <p className="mt-1 text-sm">
+                  {showReady && deadlineText ? (
+                    <span className="font-medium">{deadlineText}</span>
+                  ) : (
+                    <span className="text-muted-foreground">Not detected</span>
+                  )}
+                </p>
+                <p className="mt-2 text-xs text-muted-foreground">Verify on the tender cover page or timeline section.</p>
+              </div>
+            </div>
 
-              <p className="text-xs text-muted-foreground">
-                Drafting support only. Always verify requirements and legal language against the original tender documents.
-              </p>
-            </>
-          ) : null}
+            {/* Decision drivers — only when ready */}
+            {showReady && !showFailed && !finalizingResults ? (
+              <>
+                {/* Executive summary — decision in 10 seconds */}
+                <div className="mt-6 rounded-2xl border bg-background/60 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold">Executive summary</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Decision, reasons, and next steps.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 space-y-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-xs font-medium text-muted-foreground">Decision:</p>
+                      <VerdictBadge state={verdictState} />
+                      <p className="text-sm text-foreground/80">{verdictMicrocopy(verdictState)}</p>
+                    </div>
+
+                    <div className="rounded-xl border bg-background p-3">
+                      <p className="text-xs font-semibold">Key reasons</p>
+                      {mustItems?.length ? (
+                        <ul className="mt-2 list-disc pl-5 space-y-1 text-sm text-foreground/80">
+                          {(mustItems ?? []).slice(0, 3).map((t, i) => (
+                            <li key={i}>{t}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-2 text-sm text-muted-foreground">No mandatory blockers detected.</p>
+                      )}
+                    </div>
+
+                    <div className="rounded-xl border bg-background p-3">
+                      <p className="text-xs font-semibold">Recommended action</p>
+                      <p className="mt-2 text-sm text-foreground/80">
+                        {verdictState === "hold"
+                          ? "Verify all mandatory requirements and submission conditions before investing in a full response."
+                          : verdictState === "caution"
+                          ? "Proceed, but validate the risks and any missing information before committing resources."
+                          : "Proceed to bid. Confirm the deadline and submission method, then start drafting."}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold">Why this decision</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      This decision is driven primarily by submission method, compliance requirements, and document completeness. Click “Evidence” to verify the source text.
+                    </p>
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    className="rounded-full"
+                    onClick={() => setShowAllDrivers((v) => !v)}
+                    disabled={!showReady}
+                  >
+                    {showAllDrivers ? "Show less" : "Show all blockers"}
+                  </Button>
+                </div>
+
+                <div className="rounded-2xl border bg-background/60 p-4">
+                  <p className="text-xs font-semibold">Mandatory blockers</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {mustItems.length ? `Showing ${Math.min(showAllDrivers ? mustItems.length : 3, mustItems.length)} of ${mustItems.length}.` : "None detected."}
+                  </p>
+
+                  <div className="mt-3 space-y-2">
+                    {(mustItems ?? [])
+                      .slice(0, showAllDrivers ? 12 : 3)
+                      .map((t, i) => (
+                        <div key={i} className="flex items-start justify-between gap-3 rounded-xl border bg-background p-3">
+                          <div className="min-w-0">
+                            <p className="text-sm text-foreground/90 leading-relaxed">{t}</p>
+                            <p className="mt-1 text-[11px] text-muted-foreground">{classifyBlocker(t).hint}</p>
+                          </div>
+                          <Button
+                            variant="outline"
+                            className="rounded-full shrink-0"
+                            onClick={() => onJumpToSource(t)}
+                            disabled={!extractedText}
+                          >
+                            Evidence
+                          </Button>
+                        </div>
+                      ))}
+                  </div>
+
+                  {!mustItems?.length ? (
+                    <p className="mt-3 text-sm text-muted-foreground">
+                      No MUST blockers detected. Still verify eligibility and submission format in the source text.
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+              </>
+            ) : null}
+          </div>
         </CardContent>
       </Card>
-      <div ref={tabsTopRef} />
+
+      {/* What blocks us right now — actions (only when ready) */}
+      {showReady && !showFailed && !finalizingResults ? (
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card className="rounded-2xl">
+            <CardContent className="p-6 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold">What to do next</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Do these before investing in a full tender response.</p>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                {nextActionsForUi.map((a, i) => (
+                  <div
+                    key={`${i}-${a.target}-${a.text}`}
+                    className="rounded-xl border bg-background/60 p-3"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold text-muted-foreground">
+                        {i + 1}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-foreground">{a.text}</p>
+
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+                          <span className="rounded-full border bg-background px-2 py-0.5">{a.label}</span>
+                          <span>•</span>
+                          <span>{a.owner}</span>
+                          <span>•</span>
+                          <span>{a.eta}</span>
+                        </div>
+
+                        <p className="mt-2 text-xs text-muted-foreground">{a.why}</p>
+
+                        {a.evidencePreview ? (
+                          <p className="mt-2 text-xs text-muted-foreground">
+                            Evidence: <span className="text-foreground/70">{a.evidencePreview}</span>
+                          </p>
+                        ) : null}
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          variant="outline"
+                          className="rounded-full"
+                          onClick={() => openTabAndScroll(a.target)}
+                        >
+                          Open
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="rounded-full"
+                          onClick={() => onJumpToSource(a.evidenceQuery)}
+                          disabled={!extractedText}
+                        >
+                          Evidence
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Tip: start with blockers and submission rules. Then validate risks and unknowns.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl">
+            <CardContent className="p-6 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold">Additional considerations</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Secondary signals that can change effort, feasibility, or risk.</p>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setShowRisksSection((v) => !v)}
+                  className="w-full rounded-xl border bg-background/60 p-3 text-left"
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">Other risks</p>
+                    <p className="text-xs text-muted-foreground">{risks.length}</p>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">Delivery, commercial, legal, or scope risks to validate.</p>
+                </button>
+
+                {showRisksSection ? (
+                  <div className="rounded-xl border bg-background p-3 space-y-2">
+                    {(topRisksForPanel.length ? topRisksForPanel : risks.slice(0, 5)).map((r: any, i: number) => {
+                      const title = String(r?.title ?? r?.risk ?? r?.text ?? "").trim();
+                      const detail = String(r?.detail ?? r?.description ?? "").trim();
+                      const jumpText = detail ? `${title}\n${detail}` : title;
+                      if (!title) return null;
+                      return (
+                        <div key={i} className="flex items-start justify-between gap-3 rounded-lg border bg-background p-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium">{title}</p>
+                            {detail ? <p className="mt-1 text-xs text-muted-foreground">{detail}</p> : null}
+                          </div>
+                          <Button
+                            variant="outline"
+                            className="rounded-full shrink-0"
+                            onClick={() => onJumpToSource(jumpText)}
+                            disabled={!extractedText}
+                          >
+                            Evidence
+                          </Button>
+                        </div>
+                      );
+                    })}
+                    <div className="flex justify-end">
+                      <Button variant="outline" className="rounded-full" onClick={() => openTabAndScroll("risks")}>
+                        Open all risks
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+
+                <button
+                  type="button"
+                  onClick={() => setShowUnknownsSection((v) => !v)}
+                  className="w-full rounded-xl border bg-background/60 p-3 text-left"
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">Missing or unclear information</p>
+                    <p className="text-xs text-muted-foreground">{questions.length}</p>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">Ambiguities and buyer questions that may affect go/no-go.</p>
+                </button>
+
+                {showUnknownsSection ? (
+                  <div className="rounded-xl border bg-background p-3 space-y-2">
+                    {(questions ?? []).slice(0, 5).map((q, i) => (
+                      <div key={i} className="flex items-start justify-between gap-3 rounded-lg border bg-background p-3">
+                        <div className="min-w-0">
+                          <p className="text-sm text-foreground/90">{q}</p>
+                          <p className="mt-1 text-[11px] text-muted-foreground">{classifyClarification(q).hint}</p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          className="rounded-full shrink-0"
+                          onClick={() => onJumpToSource(q)}
+                          disabled={!extractedText}
+                        >
+                          Evidence
+                        </Button>
+                      </div>
+                    ))}
+                    <div className="flex justify-end">
+                      <Button variant="outline" className="rounded-full" onClick={() => openTabAndScroll("questions")}>
+                        Open clarifications
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
+
+      {/* Explore — reference mode (tabs) */}
+      <div className="pt-2" ref={tabsTopRef}>
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <p className="text-sm font-semibold">Explore the tender</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Reference view. Use this to verify details, export text, and inspect all extracted items.
+            </p>
+          </div>
+          <div className="text-xs text-muted-foreground">{showReady ? "Click a section to open it." : null}</div>
+        </div>
+      </div>
+
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="space-y-4">
         <TabsList className="rounded-full">
