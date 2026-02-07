@@ -265,8 +265,9 @@ export default async function LandingPage() {
             href="/it"
             className="flex items-center gap-2 font-bold text-lg tracking-tight hover:opacity-80 transition-opacity"
           >
-            <div className="h-8 w-8 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-lg flex items-center justify-center shadow-lg">
-              <BrandIcon size={48} className="h-8 w-8" />
+            <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-transparent">
+
+              <BrandIcon size={35} className="h-8 w-8" />
             </div>
             <span>{nav.title}</span>
           </Link>

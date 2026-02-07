@@ -262,10 +262,10 @@ export default async function LandingPage() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:h-16 md:px-8 md:py-0">
           <Link
             href="/en"
-            className="flex items-center gap-2 font-bold text-lg tracking-tight hover:opacity-80 transition-opacity"
-          >
-            <div className="h-8 w-8 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-lg flex items-center justify-center shadow-lg">
-              <BrandIcon size={48} className="h-8 w-8" />
+            className="flex items-center gap-2 font-bold text-lg tracking-tight hover:opacity-80 transition-opacity">
+            <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-transparent">
+
+              <BrandIcon size={35} className="h-8 w-8" />
             </div>
             <span>{nav.title}</span>
           </Link>
@@ -358,8 +358,10 @@ export default async function LandingPage() {
             </h1>
 
             <p className="text-xl text-muted-foreground leading-relaxed mb-10 max-w-lg">
-              {t.hero.description}
-            </p>
+			  {t.hero.description}
+			</p>
+
+
 
             <div className="flex flex-col sm:flex-row gap-4 mb-10">
               <Button
@@ -499,6 +501,13 @@ export default async function LandingPage() {
             >
               {t.footer.browse}
             </Link>
+			<Link
+			  href="/en/ai-go-no-go-decisions"
+			  className="text-zinc-400 hover:text-white transition-colors"
+			>
+			  AI Go/No-Go Decisions
+			</Link>
+
             <Link href="#early-access" className="text-blue-400 hover:text-blue-300">
               {t.nav.cta}
             </Link>

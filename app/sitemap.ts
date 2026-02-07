@@ -35,6 +35,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       });
     }
   }
+		// EN-only page (intentionally not duplicated across locales)
+		entries.push({
+		  url: `${baseUrl}/en/ai-go-no-go-decisions`,
+		  lastModified: now,
+		  changeFrequency: "monthly",
+		  priority: 0.8,
+		});
 
   // Global pages (only once — NOT duplicated per locale)
   for (const route of globalRoutes) {
