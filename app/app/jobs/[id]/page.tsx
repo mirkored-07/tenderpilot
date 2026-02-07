@@ -2412,7 +2412,7 @@ export default function JobDetailPage() {
               <Separator />
 
               <div className="space-y-2">
-                {nextActionsForUi.map((a, i) => (
+                {nextActionsForUi.map((a: any, i: number) => (
                   <div
                     key={`${i}-${a.target}-${a.text}`}
                     className="rounded-xl border bg-background/60 p-3"
