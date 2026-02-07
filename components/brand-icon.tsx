@@ -1,7 +1,7 @@
 import Image from "next/image";
 
 export function BrandIcon({
-  size = 40,
+  size = 30,
   className = "",
 }: {
   size?: number;

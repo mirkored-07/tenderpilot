@@ -17,8 +17,9 @@ export default function PrivacyPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Logo -> Home */}
           <Link href="/" className="flex items-center gap-2 font-bold text-lg tracking-tight hover:opacity-80 transition-opacity">
-            <div className="h-8 w-8 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-lg flex items-center justify-center shadow-lg">
-              <BrandIcon size={48} className="h-8 w-8" />
+            <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-transparent">
+
+              <BrandIcon size={35} className="h-8 w-8" />
             </div>
             <span>TenderRay</span>
           </Link>
