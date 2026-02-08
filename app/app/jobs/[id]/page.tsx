@@ -817,6 +817,46 @@ function classifyBlocker(text: string): { label: string; hint: string } {
   return { label: "General", hint: "Check this requirement in the tender source." };
 }
 
+const EVIDENCE_STOPWORDS = new Set([
+  "the","and","for","with","from","that","this","these","those","shall","must","should","will","may","not","any",
+  "into","onto","upon","within","where","when","what","which","who","whom","their","there","here","have","has",
+  "been","being","are","is","was","were","a","an","to","of","in","on","at","by","as","or","if","it","its","your"
+]);
+
+function normalizeWhitespace(s: string) {
+  return String(s ?? "").replace(/\s+/g, " ").trim();
+}
+
+function excerptAround(haystack: string, index: number, windowSize = 180) {
+  const start = Math.max(0, index - windowSize);
+  const end = Math.min(haystack.length, index + windowSize);
+  const raw = haystack.slice(start, end);
+  return normalizeWhitespace(raw);
+}
+
+function evidenceExcerptFor(text: string, extractedText: string) {
+  const hay = String(extractedText ?? "");
+  if (!hay) return "";
+  const hayLower = hay.toLowerCase();
+
+  const tokens = normalizeWhitespace(text)
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w.length >= 5 && !EVIDENCE_STOPWORDS.has(w));
+
+  // Try longer tokens first
+  tokens.sort((a, b) => b.length - a.length);
+
+  for (const tok of tokens.slice(0, 8)) {
+    const idx = hayLower.indexOf(tok);
+    if (idx >= 0) return excerptAround(hay, idx);
+  }
+
+  return "";
+}
+
+
+
 type ActionTargetTab = "checklist" | "risks" | "questions" | "draft" | "text";
 
 function classifyNextAction(text: string): { target: ActionTargetTab; label: string; why: string } {
@@ -1375,7 +1415,21 @@ export default function JobDetailPage() {
       .filter(Boolean);
   }, [checklist]);
 
-	const executive = useMemo(() => {
+	
+
+  // Lightweight evidence snippets for top blockers (UI-only)
+  const blockerEvidence = useMemo(() => {
+    const map = new Map<string, string>();
+    if (!extractedText) return map;
+
+    (mustItems ?? []).slice(0, 2).forEach((t) => {
+      const ex = evidenceExcerptFor(String(t), extractedText);
+      if (ex) map.set(String(t), ex);
+    });
+
+    return map;
+  }, [extractedText, mustItems]);
+const executive = useMemo(() => {
 	  const raw = (result as any)?.executive_summary ?? {};
 	  return toExecutiveModel({ raw });
 	}, [result]);
@@ -2371,6 +2425,14 @@ export default function JobDetailPage() {
                           <div className="min-w-0">
                             <p className="text-sm text-foreground/90 leading-relaxed">{t}</p>
                             <p className="mt-1 text-[11px] text-muted-foreground">{classifyBlocker(t).hint}</p>
+                            {blockerEvidence.get(t) ? (
+                              <div className="mt-2 rounded-lg border bg-muted/30 dark:bg-white/5 p-2">
+                                <p className="text-[11px] font-semibold text-muted-foreground">Excerpt</p>
+                                <p className="mt-1 text-xs text-foreground/80 line-clamp-3">
+                                  {blockerEvidence.get(t)}
+                                </p>
+                              </div>
+                            ) : null}
                           </div>
                           <Button
                             variant="outline"
