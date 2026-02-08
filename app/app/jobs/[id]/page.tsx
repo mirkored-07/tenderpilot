@@ -282,14 +282,11 @@ function ProgressCard({
       const maxUsd = e?.meta?.maxUsdPerJob;
 
       return {
-        title: "File exceeds processing limits",
-        text:
-          "This file is too large for the current processing limits." +
-          (usdEst && maxUsd
-            ? ` (Estimated cost: $${Number(usdEst).toFixed(3)}, cap: $${Number(maxUsd).toFixed(3)})`
-            : "") +
-          " Upload a smaller scope (eligibility + requirements) or split the tender.",
-      };
+      title: "File exceeds processing limits",
+      text:
+        "This file is too large for the current processing limits. " +
+        "Upload a smaller scope (eligibility and requirements) or split the tender and retry.",
+    };
     }
 
     if (msgs.includes("Unstructured extract returned empty text")) {
@@ -331,13 +328,24 @@ function ProgressCard({
       ? failure?.title ?? "Something needs attention"
       : "Ready";
 
+  function processingPhaseText(events: DbJobEvent[]) {
+    const msgs = (events ?? []).map((e) => String(e.message ?? "").toLowerCase());
+
+    if (msgs.some((m) => m.includes("unstructured") && m.includes("extract"))) return "Extracting tender text…";
+    if (msgs.some((m) => m.includes("openai") && m.includes("started"))) return "Analyzing requirements and risks…";
+    if (msgs.some((m) => m.includes("openai") && m.includes("completed"))) return "Preparing executive summary…";
+    if (msgs.some((m) => m.includes("saving results"))) return "Finalizing results…";
+
+    return "Analyzing tender requirements…";
+  }
+
   const subtitle =
     status === "queued"
-      ? "Preparing your workspace…"
+      ? "Preparing analysis…"
       : status === "processing"
-      ? "Extracting requirements, risks, clarifications, and a short draft…"
+      ? processingPhaseText(events)
       : isFailed
-      ? failure?.text ?? "Please try again."
+      ? failure?.text ?? "We couldn’t fully process this document."
       : "Results are ready.";
 
   const barClass =
@@ -364,8 +372,7 @@ function ProgressCard({
         <p className="text-xs text-muted-foreground">{subtitle}</p>
 
         <p className="text-xs text-muted-foreground">
-          Steps: upload → extract → analyze → results. This usually takes 1–3 minutes (large files can take longer). If it
-          takes longer, refresh this page or open{" "}
+          Steps: upload → extract → analyze → results. You can leave this page and re-open the review anytime from{" "}
           <Link href="/app/jobs" className="underline underline-offset-4">
             My jobs
           </Link>
@@ -375,7 +382,7 @@ function ProgressCard({
         {isFailed ? (
           <div className="pt-1">
             <Button asChild className="rounded-full">
-              <Link href="/app/upload">Start a new review</Link>
+              <Link href="/app/upload">Re-upload document</Link>
             </Button>
           </div>
         ) : null}

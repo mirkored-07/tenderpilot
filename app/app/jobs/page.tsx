@@ -52,27 +52,27 @@ function statusBadge(status: JobStatus) {
   if (status === "failed") {
     return (
       <Badge variant="destructive" className="rounded-full">
-        Failed
+        Needs attention
       </Badge>
     );
   }
   if (status === "queued") {
     return (
       <Badge variant="secondary" className="rounded-full">
-        Queued
+        Getting started
       </Badge>
     );
   }
   return (
     <Badge variant="secondary" className="rounded-full">
-      Processing
+      Working
     </Badge>
   );
 }
 
 function previewText(status: JobStatus) {
   if (status === "done") return "Results ready for review";
-  if (status === "failed") return "Analysis could not be completed";
+  if (status === "failed") return "Review needs attention";
   return "Analysis in progress";
 }
 
@@ -255,7 +255,11 @@ export default function JobsPage() {
                     ? "All"
                     : f === "done"
                     ? "Ready"
-                    : f.charAt(0).toUpperCase() + f.slice(1)}
+                    : f === "queued"
+                    ? "Getting started"
+                    : f === "processing"
+                    ? "Working"
+                    : "Needs attention"}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
