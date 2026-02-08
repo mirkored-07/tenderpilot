@@ -26,10 +26,7 @@ export const metadata: Metadata = {
   description:
     "The Friday 4PM solution. Upload complex tender PDFs and get instant go/no-go decision support, risk analysis, and compliance checklists.",
 
-  icons: {
-    icon: "/favicon.ico",
-    apple: "/apple-icon.png",
-  },
+  
 
   keywords: [
     "Tender Analysis AI",

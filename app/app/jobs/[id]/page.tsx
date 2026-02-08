@@ -282,11 +282,14 @@ function ProgressCard({
       const maxUsd = e?.meta?.maxUsdPerJob;
 
       return {
-      title: "File exceeds processing limits",
-      text:
-        "This file is too large for the current processing limits. " +
-        "Upload a smaller scope (eligibility and requirements) or split the tender and retry.",
-    };
+        title: "File exceeds processing limits",
+        text:
+          "This file is too large for the current processing limits." +
+          (usdEst && maxUsd
+            ? ` (Estimated cost: $${Number(usdEst).toFixed(3)}, cap: $${Number(maxUsd).toFixed(3)})`
+            : "") +
+          " Upload a smaller scope (eligibility + requirements) or split the tender.",
+      };
     }
 
     if (msgs.includes("Unstructured extract returned empty text")) {
@@ -328,24 +331,13 @@ function ProgressCard({
       ? failure?.title ?? "Something needs attention"
       : "Ready";
 
-  function processingPhaseText(events: DbJobEvent[]) {
-    const msgs = (events ?? []).map((e) => String(e.message ?? "").toLowerCase());
-
-    if (msgs.some((m) => m.includes("unstructured") && m.includes("extract"))) return "Extracting tender text…";
-    if (msgs.some((m) => m.includes("openai") && m.includes("started"))) return "Analyzing requirements and risks…";
-    if (msgs.some((m) => m.includes("openai") && m.includes("completed"))) return "Preparing executive summary…";
-    if (msgs.some((m) => m.includes("saving results"))) return "Finalizing results…";
-
-    return "Analyzing tender requirements…";
-  }
-
   const subtitle =
     status === "queued"
-      ? "Preparing analysis…"
+      ? "Preparing your workspace…"
       : status === "processing"
-      ? processingPhaseText(events)
+      ? "Extracting requirements, risks, clarifications, and a short draft…"
       : isFailed
-      ? failure?.text ?? "We couldn’t fully process this document."
+      ? failure?.text ?? "Please try again."
       : "Results are ready.";
 
   const barClass =
@@ -372,7 +364,8 @@ function ProgressCard({
         <p className="text-xs text-muted-foreground">{subtitle}</p>
 
         <p className="text-xs text-muted-foreground">
-          Steps: upload → extract → analyze → results. You can leave this page and re-open the review anytime from{" "}
+          Steps: upload → extract → analyze → results. This usually takes 1–3 minutes (large files can take longer). If it
+          takes longer, refresh this page or open{" "}
           <Link href="/app/jobs" className="underline underline-offset-4">
             My jobs
           </Link>
@@ -382,7 +375,7 @@ function ProgressCard({
         {isFailed ? (
           <div className="pt-1">
             <Button asChild className="rounded-full">
-              <Link href="/app/upload">Re-upload document</Link>
+              <Link href="/app/upload">Start a new review</Link>
             </Button>
           </div>
         ) : null}
@@ -1761,16 +1754,16 @@ export default function JobDetailPage() {
 	  return neutral;
 	}
 		
-  const whyLine = useMemo(() => {
-    if (!showReady) return "Why: Analyzing requirements, risks, and clarifications.";
-    if (verdictState === "hold") return `Why: ${mustItems.length} blockers detected. Review blockers first.`;
-    if (verdictState === "caution") {
-      const hasHigh = topRisksForPanel.some((r: any) => String(r?.severity ?? "").toLowerCase() === "high");
-      if (hasHigh) return "Why: High-severity risk detected. Confirm feasibility before committing.";
-      return "Why: Key points need validation before committing.";
+  const verdictDriverLine = useMemo(() => {
+    if (!showReady) return "Preparing decision drivers.";
+    if (verdictState === "hold") {
+      return "Driven by mandatory submission and document compliance blockers.";
     }
-    return "Why: No potential blockers detected from MUST requirements.";
-  }, [showReady, verdictState, mustItems.length, topRisksForPanel]);
+    if (verdictState === "caution") {
+      return "Driven by risks requiring validation before committing.";
+    }
+    return "No mandatory blockers identified from eligibility and submission requirements.";
+  }, [showReady, verdictState]);
 
   async function copySection(which: "requirements" | "risks" | "clarifications" | "draft") {
     if (!canDownload) return;
@@ -2237,7 +2230,7 @@ export default function JobDetailPage() {
                       <p className="text-sm text-foreground/80">{verdictMicrocopy(verdictState)}</p>
                     </div>
 
-                    <p className="text-sm text-foreground/80">{whyLine}</p>
+                    <p className="text-sm text-foreground/80">{verdictDriverLine}</p>
 
                     {/* Trust & Coverage */}
                     <div className="mt-3 rounded-xl border bg-muted/40 dark:bg-white/5 p-4 space-y-2">
