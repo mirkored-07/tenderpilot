@@ -3026,3 +3026,9 @@ const executive = useMemo(() => {
     </div>
   );
 }
+
+
+/*
+NOTE: Recommended next step block should be inserted under the verdict hero.
+This fallback keeps the file safe if the previous artifact is unavailable.
+*/
