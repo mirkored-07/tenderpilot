@@ -3032,3 +3032,23 @@ const executive = useMemo(() => {
 NOTE: Recommended next step block should be inserted under the verdict hero.
 This fallback keeps the file safe if the previous artifact is unavailable.
 */
+
+
+
+/* ============================
+   UX POLISH — EMPTY STATES (UI COPY ONLY)
+   Insert the following copy where empty states are rendered.
+   No logic or layout changes required.
+
+   - Blockers (0):
+     "No critical blockers detected. Before proceeding, verify eligibility, deadlines, and submission method in the tender portal."
+
+   - Clarifications (0):
+     "No open clarifications. Still verify submission steps and mandatory forms before drafting."
+
+   - Evidence excerpts (none available):
+     "No excerpt available from extracted text. Verify the referenced section directly in the original document."
+
+   - Consistent phrasing to use across the page:
+     "Where to verify: tender portal • submission instructions • annexes/templates"
+   ============================ */
