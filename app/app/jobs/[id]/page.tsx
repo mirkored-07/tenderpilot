@@ -2288,44 +2288,40 @@ const executive = useMemo(() => {
 
                     {/* Trust & Coverage */}
                     <div className="mt-3 rounded-xl border bg-muted/40 dark:bg-white/5 p-4 space-y-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="text-xs font-medium text-foreground/90">
-                          Coverage:{" "}
-                          {coverage === "full" ? "Full" : coverage === "partial" ? "Partial" : "Unreliable"}
-                        </p>
 
-                        <span className="text-xs text-muted-foreground">•</span>
+                      <div className="space-y-1">
+                        <p className="text-xs font-semibold text-foreground/90">Document review</p>
 
-                        <p className="text-xs font-medium text-foreground/90">
-                          Confidence: {confidence === "high" ? "High" : confidence === "medium" ? "Medium" : "Low"}
-                        </p>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                          <span>
+                            Content read:{" "}
+                            <span className="text-foreground/90">
+                              {coverage === "full"
+                                ? "Complete"
+                                : coverage === "partial"
+                                ? "Mostly complete"
+                                : "Partial"}
+                            </span>
+                          </span>
 
-                        <span className="text-xs text-muted-foreground">•</span>
+                          <span className="text-muted-foreground">•</span>
+
+                          <span>
+                            Decision reliability:{" "}
+                            <span className="text-foreground/90">
+                              {confidence === "high"
+                                ? "High"
+                                : confidence === "medium"
+                                ? "Medium"
+                                : "Low"}
+                            </span>
+                          </span>
+                        </div>
 
                         <p className="text-xs text-muted-foreground">
-                          Extracted text: {extractedChars.toLocaleString()} characters
+                          Manual checks recommended: submission method, deadlines
                         </p>
                       </div>
-
-                      {warningChips.length ? (
-                        <div className="flex flex-wrap gap-2">
-                          {warningChips.map((c, idx) => (
-                            <span
-                              key={idx}
-                              className="rounded-full border bg-background px-2 py-0.5 text-[11px] text-muted-foreground"
-                            >
-                              {c.label}
-                              {c.detail ? ` (${c.detail})` : ""}
-                            </span>
-                          ))}
-                        </div>
-                      ) : null}
-
-                      {coverage !== "full" ? (
-                        <p className="text-xs text-muted-foreground">
-                          Coverage is not full. For a reliable go/no-go, re-upload the key sections (eligibility + requirements).
-                        </p>
-                      ) : null}
                     </div>
                   </>
                 )}
