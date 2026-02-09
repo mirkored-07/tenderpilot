@@ -603,12 +603,17 @@ function renderDraftPlain(draft: any): string[] {
 function toPlainTextSummary(args: {
   fileName?: string;
   createdAt?: string;
+  verdictLabel?: string;
+  decisionLine?: string;
+  rationaleSnapshot?: string[];
+  recommendedAction?: string;
+  whereToVerify?: string;
   checklist: any[];
   risks: any[];
   questions: string[];
   draftText: any;
 }) {
-  const { fileName, createdAt, checklist, risks, questions, draftText } = args;
+  const { fileName, createdAt, verdictLabel, decisionLine, rationaleSnapshot, recommendedAction, whereToVerify, checklist, risks, questions, draftText } = args;
 
   const must = checklist.filter((i) => String(i?.type ?? i?.level ?? i?.priority ?? "").toUpperCase().includes("MUST"));
   const should = checklist.filter((i) => String(i?.type ?? i?.level ?? i?.priority ?? "").toUpperCase().includes("SHOULD"));
@@ -619,6 +624,17 @@ function toPlainTextSummary(args: {
   lines.push("");
   if (fileName) lines.push(`File: ${fileName}`);
   if (createdAt) lines.push(`Created: ${formatDate(createdAt)}`);
+  lines.push("");
+  // Decision-first header (mirrors the UI)
+  if (verdictLabel) lines.push(`Decision: ${verdictLabel}`);
+  if (decisionLine) lines.push(`Why: ${decisionLine}`);
+  if (recommendedAction) lines.push(`Recommended action: ${recommendedAction}`);
+  if (whereToVerify) lines.push(`Where to verify: ${whereToVerify}`);
+  if (rationaleSnapshot && rationaleSnapshot.length) {
+    lines.push("");
+    lines.push("Rationale snapshot");
+    rationaleSnapshot.slice(0, 5).forEach((t, i) => lines.push(`${i + 1}. ${t}`));
+  }
   lines.push("");
 
   function render(label: string, items: string[]) {
@@ -1062,7 +1078,7 @@ export default function JobDetailPage() {
   /** UI safety state for very large extracted text */
   const [showFullSourceText, setShowFullSourceText] = useState(false);
 
-  const [exporting, setExporting] = useState<null | "summary">(null);
+  const [exporting, setExporting] = useState<null | "summary" | "brief">(null);
 
   const [showAllBlockers, setShowAllBlockers] = useState(false);
   const [showAllDrivers, setShowAllDrivers] = useState(false);
@@ -1894,6 +1910,18 @@ const executive = useMemo(() => {
     const text = toPlainTextSummary({
       fileName: displayName || job.file_name,
       createdAt: job.created_at,
+      verdictLabel:
+        verdictState === "hold" ? "Hold – potential blocker" : verdictState === "caution" ? "Proceed with caution" : "Proceed",
+      decisionLine: String(executive?.decisionLine ?? "").trim() || verdictMicrocopy(verdictState),
+      rationaleSnapshot: (mustItems ?? []).slice(0, 3).map((t) => String(t).trim()).filter(Boolean),
+      recommendedAction:
+        verdictState === "hold"
+          ? "Verify all mandatory requirements and submission conditions before investing in a full response."
+          : verdictState === "caution"
+          ? "Proceed, but validate the risks and any missing information before committing resources."
+          : "Proceed to bid. Confirm the deadline and submission method, then start drafting.",
+      whereToVerify:
+        "tender portal / e-proc platform (deadlines, submission method, mandatory forms); Instructions to Tenderers / submission instructions (format, signatures, upload steps); annexes / templates (declarations, pricing, required forms)",
       checklist,
       risks,
       questions,
@@ -1944,15 +1972,25 @@ const executive = useMemo(() => {
           .join("")}</ol>`
       : `<p class="empty">No risks detected.</p>`;
 
-    const keyFindingsLines = executive.keyFindings?.length
-      ? `<ol>${executive.keyFindings.map((t: unknown) => `<li>${escapeHtml(String(t))}</li>`).join("")}</ol>`
-      : `<p class="empty">No key findings available.</p>`;
+    // Mirror the on-screen executive summary (rationale snapshot + recommended action)
+    const rationaleLines = mustItems?.length
+      ? `<ul>${(mustItems ?? []).slice(0, 3).map((t) => `<li>${escapeHtml(String(t))}</li>`).join("")}</ul>`
+      : `<p class="empty">No MUST gate-checks detected in extracted text.</p>`;
 
-    const nextActionsLines = executive.nextActions?.length
-      ? `<ol>${executive.nextActions.map((t: unknown) => `<li>${escapeHtml(String(t))}</li>`).join("")}</ol>`
-      : `<p class="empty">No next actions available.</p>`;
+    const recommendedAction =
+      verdictState === "hold"
+        ? "Verify all mandatory requirements and submission conditions before investing in a full response."
+        : verdictState === "caution"
+        ? "Proceed, but validate the risks and any missing information before committing resources."
+        : "Proceed to bid. Confirm the deadline and submission method, then start drafting.";
 
-    const decisionLine = String(executive.decisionLine ?? "").trim();
+    const manualChecks =
+      `Where to verify: tender portal / e-proc platform (deadlines, submission method, mandatory forms); ` +
+      `“Instructions to Tenderers” / submission instructions (format, signatures, upload steps); ` +
+      `annexes / templates (declarations, pricing, required forms).`;
+
+    const decisionLineRaw = String(executive.decisionLine ?? "").trim();
+    const decisionLine = decisionLineRaw || verdictMicrocopy(verdictState);
     const deadline = executive.submissionDeadline ? escapeHtml(String(executive.submissionDeadline)) : "";
 
     const verdictLabel =
@@ -1972,7 +2010,7 @@ const executive = useMemo(() => {
         -webkit-print-color-adjust: exact; print-color-adjust: exact;
         font-size: 12px; line-height: 1.45;
       }
-      .page{ padding-bottom: 18mm; }
+      .page{ padding-bottom: 10mm; }
       .header{
         display:flex; justify-content:space-between; align-items:flex-start; gap:16px;
         padding: 0 0 12px 0; border-bottom: 1px solid var(--line);
@@ -2017,10 +2055,16 @@ const executive = useMemo(() => {
         background: #fff; color: var(--muted); font-size: 11.5px;
       }
       .footer{
-        position: fixed; left: 14mm; right: 14mm; bottom: 10mm;
-        display:flex; justify-content:space-between;
+        position: fixed; left: 0; right: 0; bottom: 0;
+        display:flex; justify-content:space-between; align-items:center;
+        gap: 12px;
         color: var(--muted); font-size: 11px;
+        padding: 6px 0 0 0;
+        border-top: 1px solid var(--line);
+        background: #fff;
       }
+      .footer .left{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .footer .right{ white-space:nowrap; }
       .footer span{ white-space: nowrap; }
     </style>
   </head>
@@ -2050,13 +2094,15 @@ const executive = useMemo(() => {
 
           <div style="margin-top:12px" class="grid2">
             <div class="card" style="background:#fff">
-              <div class="subhead">Key findings</div>
-              ${keyFindingsLines}
+              <div class="subhead">Rationale snapshot</div>
+              ${rationaleLines}
             </div>
 
             <div class="card" style="background:#fff">
-              <div class="subhead">Next actions</div>
-              ${nextActionsLines}
+              <div class="subhead">Recommended action</div>
+              <p style="margin:0;color:var(--ink)">${escapeHtml(recommendedAction)}</p>
+              <p class="note" style="margin-top:10px">${escapeHtml(manualChecks)}</p>
+              <p class="note" style="margin-top:8px">Tip: In the print dialog, choose “Save as PDF”. Disable “Headers and footers” to remove the URL/footer line.</p>
             </div>
           </div>
         </div>
@@ -2076,14 +2122,11 @@ const executive = useMemo(() => {
         </div>
       </div>
 
-      <div class="disclaimer">
-        Drafting support only. Always verify requirements against the original tender documents.
-      </div>
     </div>
 
     <div class="footer">
-      <span>TenderRay</span>
-      <span>Tender brief</span>
+      <span class="left">Drafting support only. Always verify against the original tender documents.</span>
+      <span class="right">TenderRay • Tender brief</span>
     </div>
   </body>
 </html>`;
@@ -2215,9 +2258,22 @@ const executive = useMemo(() => {
             <Link href="/app/jobs">Back to jobs</Link>
           </Button>
 
-          <Button variant="outline" className="rounded-full" onClick={exportTenderBriefPdf} disabled={!canDownload}>
-            Export tender brief PDF
-          </Button>
+          <Button
+          variant="outline"
+          className="rounded-full"
+          onClick={async () => {
+            if (!canDownload) return;
+            setExporting("brief");
+            try {
+              await exportTenderBriefPdf();
+            } finally {
+              setExporting(null);
+            }
+          }}
+          disabled={!canDownload || exporting !== null}
+        >
+          {exporting === "brief" ? "Preparing…" : "Export tender brief PDF"}
+        </Button>
 
           <Button
             className="rounded-full"
@@ -3028,27 +3084,3 @@ const executive = useMemo(() => {
 }
 
 
-/*
-NOTE: Recommended next step block should be inserted under the verdict hero.
-This fallback keeps the file safe if the previous artifact is unavailable.
-*/
-
-
-
-/* ============================
-   UX POLISH — EMPTY STATES (UI COPY ONLY)
-   Insert the following copy where empty states are rendered.
-   No logic or layout changes required.
-
-   - Blockers (0):
-     "No critical blockers detected. Before proceeding, verify eligibility, deadlines, and submission method in the tender portal."
-
-   - Clarifications (0):
-     "No open clarifications. Still verify submission steps and mandatory forms before drafting."
-
-   - Evidence excerpts (none available):
-     "No excerpt available from extracted text. Verify the referenced section directly in the original document."
-
-   - Consistent phrasing to use across the page:
-     "Where to verify: tender portal • submission instructions • annexes/templates"
-   ============================ */
