@@ -2360,13 +2360,8 @@ const executive = useMemo(() => {
                   </div>
 
                   <div className="mt-3 space-y-3">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-xs font-medium text-muted-foreground">Decision:</p>
-                      <VerdictBadge state={verdictState} />
-                      <p className="text-sm text-foreground/80">{verdictMicrocopy(verdictState)}</p>
-                    </div>
-
-                    <div className="rounded-xl border bg-background p-3">
+                    
+<div className="rounded-xl border bg-background p-3">
                       <p className="text-xs font-semibold">Key reasons</p>
                       {mustItems?.length ? (
                         <ul className="mt-2 list-disc pl-5 space-y-1 text-sm text-foreground/80">
