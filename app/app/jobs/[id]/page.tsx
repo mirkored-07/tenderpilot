@@ -2603,7 +2603,7 @@ const executive = useMemo(() => {
                     <p className="text-sm font-medium">Missing or unclear information</p>
                     <p className="text-xs text-muted-foreground">{questions.length}</p>
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">Ambiguities and buyer questions that may affect go/no-go.</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Ambiguities and buyer questions to resolve before submission. Not blockers by themselves unless a P1 gate-check fails.</p>
                 </button>
 
                 {showUnknownsSection ? (
@@ -2791,7 +2791,7 @@ const executive = useMemo(() => {
               <Card className="rounded-2xl">
                 <CardContent className="p-6">
                   <p className="text-sm font-semibold">Generating clarifications</p>
-                  <p className="mt-1 text-sm text-muted-foreground">We&apos;re listing buyer questions and ambiguities to resolve before committing to a tender response.</p>
+                  <p className="mt-1 text-sm text-muted-foreground">We&apos;re listing buyer questions and ambiguities to resolve before submission. These are not disqualifiers by themselves unless a P1 gate-check fails (eligibility/submission).</p>
                 </CardContent>
               </Card>
             ) : finalizingResults ? (
@@ -2809,7 +2809,7 @@ const executive = useMemo(() => {
 					  <div>
 						<p className="text-sm font-semibold">Ready-to-send clarifications</p>
 						<p className="mt-1 text-sm text-muted-foreground">
-						  Copy into an email or the buyer Q&amp;A portal. Prioritized as P1 (critical) and P2 (important).
+						  Copy into an email or the buyer Q&amp;A portal. Prioritized as P1 (critical gate-checks) and P2 (important). P1 items can block eligibility or submission if unmet.
                           <span className="mt-1 block text-xs text-muted-foreground">
                             P1 = critical gate-checks (eligibility/submission blockers). P2 = important items affecting risk, effort, or delivery.
                           </span>
@@ -2846,7 +2846,7 @@ const executive = useMemo(() => {
 					</div>
 
 					<p className="text-xs text-muted-foreground">
-					  Tip: Start with P1 gate-checks that could block eligibility or submission. Always verify wording against the tender source text.
+					  Tip: Use clarifications to reduce uncertainty, not to re-litigate the decision. Start with P1 gate-checks that could block eligibility or submission, then confirm exact wording in the tender source.
 					</p>
 				  </CardContent>
 				</Card>
@@ -2860,7 +2860,7 @@ const executive = useMemo(() => {
               <Card className="rounded-2xl">
                 <CardContent className="p-6">
                   <p className="text-sm font-semibold">No clarifications identified</p>
-                  <p className="mt-1 text-sm text-muted-foreground">We didn&apos;t detect explicit buyer questions or ambiguities. Double-check eligibility, scope boundaries, and submission format in the source text.</p>
+                  <p className="mt-1 text-sm text-muted-foreground">We didn&apos;t detect explicit buyer questions or ambiguities. Still verify eligibility, deadlines, and submission format in the tender source (often in annexes or the portal instructions).</p>
                 </CardContent>
               </Card>
             )}
