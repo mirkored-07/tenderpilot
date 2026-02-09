@@ -2319,8 +2319,14 @@ const executive = useMemo(() => {
                         </div>
 
                         <p className="text-xs text-muted-foreground">
-                          Manual checks recommended: submission method, deadlines
+                          Manual checks recommended: submission method, deadlines, eligibility — verify in the tender portal and “Instructions to Tenderers”.
                         </p>
+
+                        {coverage !== "full" ? (
+                          <p className="text-xs text-muted-foreground">
+                            Some content may be missing from this review. Treat this decision as provisional until you verify the key gate-checks in the original tender.
+                          </p>
+                        ) : null}
                       </div>
                     </div>
                   </>
@@ -2350,7 +2356,7 @@ const executive = useMemo(() => {
                     <div>
                       <p className="text-sm font-semibold">Executive summary</p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        Decision, reasons, and next steps.
+                        Decision rationale and immediate next step.
                       </p>
                     </div>
                   </div>
@@ -2358,7 +2364,7 @@ const executive = useMemo(() => {
                   <div className="mt-3 space-y-3">
                     
 <div className="rounded-xl border bg-background p-3">
-                      <p className="text-xs font-semibold">Key reasons</p>
+                      <p className="text-xs font-semibold">Rationale snapshot</p>
                       {mustItems?.length ? (
                         <ul className="mt-2 list-disc pl-5 space-y-1 text-sm text-foreground/80">
                           {(mustItems ?? []).slice(0, 3).map((t, i) => (
@@ -2366,7 +2372,7 @@ const executive = useMemo(() => {
                           ))}
                         </ul>
                       ) : (
-                        <p className="mt-2 text-sm text-muted-foreground">No mandatory blockers detected.</p>
+                        <p className="mt-2 text-sm text-muted-foreground">No MUST gate-checks detected in extracted text.</p>
                       )}
                     </div>
 
@@ -2388,7 +2394,7 @@ const executive = useMemo(() => {
                   <div>
                     <p className="text-sm font-semibold">Why this decision</p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      This decision is driven primarily by submission method, compliance requirements, and document completeness. Click “Evidence” to verify the source text.
+                      This decision is driven primarily by submission method, compliance requirements, and document completeness. Use “Evidence” to jump to the relevant section and confirm in the original tender (especially submission instructions and portal rules).
                     </p>
                   </div>
 
@@ -2422,6 +2428,9 @@ const executive = useMemo(() => {
                                 <p className="mt-1 text-xs text-foreground/80 line-clamp-3">
                                   {blockerEvidence.get(t)}
                                 </p>
+                                <p className="mt-1 text-[11px] text-muted-foreground">
+                                  Verify in the original tender (submission rules, MUST requirements, annexes).
+                                </p>
                               </div>
                             ) : null}
                           </div>
@@ -2439,7 +2448,7 @@ const executive = useMemo(() => {
 
                   {!mustItems?.length ? (
                     <p className="mt-3 text-sm text-muted-foreground">
-                      No MUST blockers detected. Still verify eligibility and submission format in the source text.
+                      No MUST blockers detected. Still verify eligibility and submission format in the tender portal and submission instructions.
                     </p>
                   ) : null}
                 </div>
