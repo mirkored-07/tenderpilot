@@ -2319,7 +2319,7 @@ const executive = useMemo(() => {
                         </div>
 
                         <p className="text-xs text-muted-foreground">
-                          Manual checks recommended: submission method, deadlines, eligibility — verify in the tender portal and “Instructions to Tenderers”.
+                          Where to verify (manual checks): tender portal / e-proc platform (deadlines, submission method, mandatory forms); “Instructions to Tenderers” (format, signatures, upload steps); annexes / templates (declarations, pricing, required forms).
                         </p>
 
                         {coverage !== "full" ? (
@@ -2394,7 +2394,7 @@ const executive = useMemo(() => {
                   <div>
                     <p className="text-sm font-semibold">Why this decision</p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      This decision is driven primarily by submission method, compliance requirements, and document completeness. Use “Evidence” to jump to the relevant section and confirm in the original tender (especially submission instructions and portal rules).
+                      This decision is driven primarily by submission method, compliance requirements, and document completeness. Use “Evidence” to highlight the matching passage in the Source text tab, then confirm in the original PDF (especially tender portal rules, submission instructions, and annexes/templates).
                     </p>
                   </div>
 
@@ -2429,7 +2429,7 @@ const executive = useMemo(() => {
                                   {blockerEvidence.get(t)}
                                 </p>
                                 <p className="mt-1 text-[11px] text-muted-foreground">
-                                  Verify in the original tender (submission rules, MUST requirements, annexes).
+                                  Pointer only: use this excerpt to locate the clause in the original PDF (Ctrl+F), then confirm in the portal rules, “Instructions to Tenderers”, and relevant annexes/templates.
                                 </p>
                               </div>
                             ) : null}
@@ -2909,6 +2909,9 @@ const executive = useMemo(() => {
                     <p className="text-sm font-semibold">Focused excerpt</p>
                     <p className="mt-1 text-sm text-muted-foreground">
                       Match for: <span className="font-medium text-foreground">{sourceFocus.query}</span>
+                    </p>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Evidence highlights the matching line in the Source text below. Use it as a pointer only: locate the same clause in the original PDF (search the phrase) and verify the exact wording and formatting.
                     </p>
                   </div>
                   <Button variant="outline" className="rounded-full" onClick={() => setSourceFocus(null)}>
