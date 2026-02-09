@@ -2466,8 +2466,14 @@ const executive = useMemo(() => {
             <CardContent className="p-6 space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold">What to do next</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Do these before investing in a full tender response.</p>
+                  <div className="text-sm font-semibold">What to do next</div>
+					<p className="text-sm text-muted-foreground mt-1">
+					  Items are ordered by decision priority. Start with blockers that could invalidate the bid.
+					</p>
+					<p className="mt-1 text-xs text-muted-foreground">
+					  Do these before investing in a full tender response.
+					</p>
+
                 </div>
               </div>
 
@@ -2803,7 +2809,10 @@ const executive = useMemo(() => {
 					  <div>
 						<p className="text-sm font-semibold">Ready-to-send clarifications</p>
 						<p className="mt-1 text-sm text-muted-foreground">
-						  Copy into an email or the buyer Q&amp;A portal. Prioritized as P1 (urgent) and P2 (nice-to-have).
+						  Copy into an email or the buyer Q&amp;A portal. Prioritized as P1 (critical) and P2 (important).
+                          <span className="mt-1 block text-xs text-muted-foreground">
+                            P1 = critical gate-checks (eligibility/submission blockers). P2 = important items affecting risk, effort, or delivery.
+                          </span>
 						</p>
 					  </div>
 					  <Button
@@ -2837,7 +2846,7 @@ const executive = useMemo(() => {
 					</div>
 
 					<p className="text-xs text-muted-foreground">
-					  Tip: Send P1 items first if the deadline is close. Always verify wording against the tender source text.
+					  Tip: Start with P1 gate-checks that could block eligibility or submission. Always verify wording against the tender source text.
 					</p>
 				  </CardContent>
 				</Card>
