@@ -13,6 +13,15 @@ type JobRow = {
 
 type Severity = "high" | "medium" | "low";
 
+type EvidenceCandidate = {
+  id: string; // e.g. E001
+  excerpt: string; // verbatim text from extracted content (highlightable)
+  page: number | null;
+  anchor: string | null; // SECTION/ANNEX heading if available
+  kind: "clause" | "bullet" | "table_row" | "other";
+  score: number;
+};
+
 type AiOutput = {
   executive_summary: {
     decisionBadge: string;
@@ -22,11 +31,25 @@ type AiOutput = {
     topRisks: Array<{ title: string; severity: Severity; detail: string }>;
     submissionDeadline: string;
   };
-  checklist: Array<{ type: "MUST" | "SHOULD" | "INFO"; text: string; source?: string }>;
-  risks: Array<{ title: string; severity: Severity; detail: string }>;
+  checklist: Array<{
+    type: "MUST" | "SHOULD" | "INFO";
+    text: string;
+    evidence_ids?: string[]; // MUST/RISK should cite at least one evidence id
+    // Backfilled by backend for UI compatibility
+    source?: string;
+  }>;
+  risks: Array<{
+    title: string;
+    severity: Severity;
+    detail: string;
+    evidence_ids?: string[];
+    // Backfilled by backend for UI compatibility
+    source?: string;
+  }>;
   buyer_questions: string[];
   proposal_draft: string;
 };
+
 
 function flagEnv(name: string): boolean {
   const v = String(Deno.env.get(name) ?? "").trim().toLowerCase();
@@ -51,7 +74,18 @@ function parseNumberEnv(name: string, fallback: number): number {
 function clampText(input: string, maxChars: number) {
   const txt = String(input ?? "");
   if (txt.length <= maxChars) return { text: txt, truncated: false };
-  return { text: txt.slice(0, maxChars), truncated: true };
+
+  // Keep submission instructions / annex references more often by preserving tail content.
+  const marker = "\n\n[CONTENT SKIPPED DUE TO SIZE]\n\n";
+  const budget = Math.max(0, maxChars - marker.length);
+
+  const headLen = Math.max(0, Math.floor(budget * 0.7));
+  const tailLen = Math.max(0, budget - headLen);
+
+  const head = txt.slice(0, headLen).trimEnd();
+  const tail = tailLen > 0 ? txt.slice(Math.max(0, txt.length - tailLen)).trimStart() : "";
+
+  return { text: (head + marker + tail).slice(0, maxChars), truncated: true };
 }
 
 function estimateTokensFromChars(chars: number): number {
@@ -102,9 +136,8 @@ async function logEvent(
 
 /**
  * Unstructured Hosted API extraction (Edge-compatible)
- * Returns plain text by joining the "text" fields of returned elements.
+ * Returns text derived from Unstructured elements, augmented with conservative PAGE / SECTION / ANNEX anchors.
  *
- * Docs show default endpoint: https://api.unstructuredapp.io/general/v0/general
  * Auth header: unstructured-api-key
  */
 async function extractWithUnstructured(args: {
@@ -119,7 +152,6 @@ async function extractWithUnstructured(args: {
   const form = new FormData();
   form.append("files", new Blob([args.fileBytes], { type: args.contentType }), args.fileName);
 
-  // Keep defaults simple and stable for MVP
   // include_page_breaks helps readability for long tenders
   form.append("include_page_breaks", (args.includePageBreaks ?? true) ? "true" : "false");
 
@@ -135,20 +167,140 @@ async function extractWithUnstructured(args: {
   if (!res.ok) {
     const txt = await res.text().catch(() => "");
     throw new Error(`Unstructured error ${res.status}: ${txt.slice(0, 600)}`);
-    }
+  }
 
   const json = await res.json();
   if (!Array.isArray(json)) {
     throw new Error("Unstructured response is not an array");
   }
 
+  return buildAnchoredTextFromUnstructuredElements(json);
+}
+
+function normalizeAnchorLabel(label: string): string {
+  return String(label ?? "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 140);
+}
+
+function elementPageNumber(el: any): number | null {
+  const n = el?.metadata?.page_number ?? el?.metadata?.page_num ?? el?.metadata?.page ?? null;
+  const num = Number(n);
+  return Number.isFinite(num) && num > 0 ? num : null;
+}
+
+function unstructuredCategory(el: any): string {
+  const cat = el?.type ?? el?.category ?? "";
+  return String(cat ?? "").toLowerCase();
+}
+
+function looksLikeAnnexOrAppendix(t: string): boolean {
+  const s = String(t ?? "").trim();
+  return /^(annex|appendix|schedule)\b/i.test(s);
+}
+
+function looksLikeMajorNumberHeading(t: string): { num: string; title: string } | null {
+  // "5. Tenderer's Responsibilities"
+  const m = String(t ?? "").trim().match(/^(\d+)\.\s+(.{3,})$/);
+  if (!m) return null;
+  return { num: m[1], title: m[2].trim() };
+}
+
+function looksLikeClauseNumber(t: string): { num: string; rest: string } | null {
+  // "5.4 The tenderer shall ..."
+  const m = String(t ?? "").trim().match(/^(\d+(?:\.\d+)+)\s+(.{3,})$/);
+  if (!m) return null;
+  return { num: m[1], rest: m[2].trim() };
+}
+
+function looksLikeSectionHeading(t: string): boolean {
+  const s = String(t ?? "").trim();
+  if (!s) return false;
+
+  // Common tender headings
+  if (
+    /^instructions to tenderers\b/i.test(s) ||
+    /^instructions for (tenderers|bidders)\b/i.test(s) ||
+    /^instructions to bidders\b/i.test(s) ||
+    /^evaluation( criteria)?\b/i.test(s) ||
+    /^submission( instructions)?\b/i.test(s) ||
+    /^how to submit\b/i.test(s) ||
+    /^eligibility\b/i.test(s) ||
+    /^qualification\b/i.test(s) ||
+    /^terms and conditions\b/i.test(s) ||
+    /^contract(ual)?\b/i.test(s)
+  ) return true;
+
+  // Title-like headings: short, no trailing punctuation
+  if (s.length <= 90 && !/[.!?]$/.test(s) && (s.match(/[;:]/g) ?? []).length <= 1) return true;
+
+  return false;
+}
+
+function buildAnchoredTextFromUnstructuredElements(elements: any[]): string {
   const parts: string[] = [];
-  for (const el of json) {
-    const t = typeof el?.text === "string" ? el.text.trim() : "";
-    if (t) parts.push(t);
+  let lastPage: number | null = null;
+
+  // Keep context for numeric headings (e.g., "5. Tenderer's Responsibilities" for "5.4 ...")
+  let currentMajorHeadingNum: string | null = null;
+  let currentMajorHeadingTitle: string | null = null;
+
+  for (const el of elements) {
+    const raw = typeof el?.text === "string" ? el.text.trim() : "";
+    if (!raw) continue;
+
+    const page = elementPageNumber(el);
+    if (page && page !== lastPage) {
+      parts.push(`[PAGE ${page}]`);
+      lastPage = page;
+    }
+
+    const cat = unstructuredCategory(el);
+    const isTitleish =
+      cat.includes("title") ||
+      cat.includes("header") ||
+      cat.includes("heading") ||
+      cat.includes("section") ||
+      cat.includes("subtitle");
+
+    // ANNEX / APPENDIX anchors only when explicit
+    if (looksLikeAnnexOrAppendix(raw)) {
+      parts.push(`ANNEX: ${normalizeAnchorLabel(raw)}`);
+      parts.push(raw);
+      continue;
+    }
+
+    // Numeric major heading
+    const major = looksLikeMajorNumberHeading(raw);
+    if (major) {
+      currentMajorHeadingNum = major.num;
+      currentMajorHeadingTitle = major.title;
+      parts.push(`SECTION ${major.num} – ${normalizeAnchorLabel(major.title)}`);
+      parts.push(raw);
+      continue;
+    }
+
+    // Numeric clause anchor (e.g., 5.4)
+    const clause = looksLikeClauseNumber(raw);
+    if (clause) {
+      let suffix = "";
+      if (currentMajorHeadingNum && clause.num.startsWith(currentMajorHeadingNum + ".") && currentMajorHeadingTitle) {
+        suffix = ` – ${normalizeAnchorLabel(currentMajorHeadingTitle)}`;
+      }
+      parts.push(`SECTION ${clause.num}${suffix}`);
+      parts.push(raw);
+      continue;
+    }
+
+    // Other headings
+    if (isTitleish || looksLikeSectionHeading(raw)) {
+      parts.push(`SECTION: ${normalizeAnchorLabel(raw)}`);
+    }
+
+    parts.push(raw);
   }
 
-  // Join with paragraph spacing; Unstructured may already include page breaks.
   return parts.join("\n\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
@@ -163,8 +315,8 @@ Uploaded file: ${fileName}
 
 Submission deadline: 2026-02-15 12:00 CET
 
-Scope
-The contracting authority requests proposals for Level 1 and Level 2 IT support, including incident management, end-user support, and on-site availability.
+SECTION: Submission instructions
+Bidders must submit their proposal via the portal.
 
 Mandatory requirements
 1. The bidder MUST provide 24/7 incident intake with response time of 30 minutes for critical incidents.
@@ -190,10 +342,10 @@ function mockAiFixture(extractedText: string): AiOutput {
     executive_summary: {
       decisionBadge: "Proceed with caution",
       decisionLine:
-        "This is a drafting support preview. Verify mandatory requirements and deadlines against the source tender.",
+        "Drafting support only. Verify mandatory requirements and deadlines against the source tender.",
       keyFindings: [
-        "Submission deadline detected and should be confirmed",
-        "Several mandatory requirements exist that may impact eligibility",
+        "Submission deadline appears present and should be confirmed",
+        "Several mandatory requirements exist that may affect eligibility",
         "Security controls are mentioned and need evidence",
       ],
       nextActions: [
@@ -213,9 +365,9 @@ function mockAiFixture(extractedText: string): AiOutput {
       submissionDeadline: "2026-02-15 12:00 CET",
     },
     checklist: [
-      { type: "MUST", text: "Provide 24/7 incident intake with 30 minute response time for critical incidents" },
-      { type: "MUST", text: "Provide a dedicated service manager as single point of contact" },
-      { type: "MUST", text: "Demonstrate ISO 27001 certification or equivalent controls" },
+      { type: "MUST", text: "Provide 24/7 incident intake with 30 minute response time for critical incidents", source: "Not found in extracted text" },
+      { type: "MUST", text: "Provide a dedicated service manager as single point of contact", source: "Not found in extracted text" },
+      { type: "MUST", text: "Demonstrate ISO 27001 certification or equivalent controls", source: "Not found in extracted text" },
       { type: "SHOULD", text: "Provide monthly service reporting with SLA metrics" },
       { type: "SHOULD", text: "Propose a transition plan within 30 days" },
       { type: "INFO", text: "Commercial model is fixed monthly price plus on demand rates" },
@@ -272,9 +424,10 @@ async function runOpenAi(args: {
   apiKey: string;
   model: string;
   extractedText: string;
+  evidenceCandidates: EvidenceCandidate[];
   maxOutputTokens: number;
 }): Promise<AiOutput> {
-  const { apiKey, model, extractedText, maxOutputTokens } = args;
+  const { apiKey, model, extractedText, evidenceCandidates, maxOutputTokens } = args;
 
   const schema = {
     type: "object",
@@ -314,7 +467,7 @@ async function runOpenAi(args: {
           properties: {
             type: { type: "string", enum: ["MUST", "SHOULD", "INFO"] },
             text: { type: "string" },
-            source: { type: "string" },
+            evidence_ids: { type: "array", items: { type: "string" } },
           },
           required: ["type", "text"],
         },
@@ -339,20 +492,43 @@ async function runOpenAi(args: {
   };
 
   const instructions =
-    "You are TenderPilot. Provide drafting support only. Not compliance automation. Not legal advice. " +
-    "Always generate the output in the same language as the tender source text. " +
-    "Avoid dashes in text. Use concise sentences.";
+    "You are TenderRay. Drafting support only. Not legal advice. Not procurement advice. " +
+    "Use executive, compliance grade language. No AI talk. " +
+    "Always write in the same language as the tender source text. " +
+    "Avoid false certainty. If not present, write: Not found in extracted text.";
 
-  const userPrompt =
-    "From the tender source text, produce a structured bid kit.\n\n" +
-    "Rules\n" +
-    "1. Mandatory requirements are MUST. Preferred requirements are SHOULD. Context is INFO.\n" +
-    "2. Identify key risks with severity high, medium, or low.\n" +
-    "3. Produce an executive summary with decisionBadge, decisionLine, up to 7 keyFindings, up to 3 nextActions, up to 3 topRisks, and submissionDeadline if present.\n" +
-    "4. Put ambiguities or missing info into buyer_questions.\n" +
-    "5. Provide proposal_draft as a clean draft outline followed by a short draft section.\n\n" +
-    "Tender source text follows.\n\n" +
-    extractedText;
+  const evidenceList = evidenceCandidates
+    .map((e) => {
+      const page = e.page != null ? ` [PAGE ${e.page}]` : "";
+      const anchor = e.anchor ? ` ${e.anchor}` : "";
+      return `${e.id}${page}${anchor}: ${e.excerpt}`;
+    })
+    .join("
+
+");
+
+  const userPrompt = `Task
+Review the tender source text and produce a decision-first bid kit.
+
+Strict rules
+1. Grounding. Use only the evidence snippets provided. Do not guess. If a detail is not present, write: Not found in extracted text.
+2. Decision. Choose decisionBadge exactly as one of: Proceed, Proceed with caution, Hold – potential blocker. Provide decisionLine as one clear sentence.
+3. Submission deadline. If an explicit deadline date or time is present, copy it verbatim. Otherwise set submissionDeadline to: Not found in extracted text.
+4. Checklist. MUST means mandatory or disqualifying if missed. SHOULD means preferred or scoring. INFO is context.
+5. Evidence (STRICT). You MUST cite evidence_ids:
+   - For each MUST checklist item: include at least one evidence id that directly proves it.
+   - For each risk: include at least one evidence id that supports it.
+   - Do not invent clause numbers or cross-references (e.g., ITT 24.1). Cite only evidence ids.
+   - If you cannot support a MUST or a risk with evidence, downgrade it to INFO and add a buyer question for manual verification.
+6. Deduplication. Do not repeat checklist items verbatim inside the executive summary.
+7. Missing info. Put ambiguities or missing info into buyer_questions.
+
+Evidence snippets (use ONLY these; cite their ids in evidence_ids):
+${evidenceList}
+
+Tender source text (context only; do not cite directly):
+${extractedText}`;
+
 
   const body = {
     model,
@@ -364,7 +540,7 @@ async function runOpenAi(args: {
       format: {
         type: "json_schema",
         strict: true,
-        name: "tenderpilot_review",
+        name: "tenderray_review",
         schema,
       },
     },
@@ -387,6 +563,146 @@ async function runOpenAi(args: {
   const json = await res.json();
   return parseOpenAiJsonFromResponse(json) as AiOutput;
 }
+
+
+function buildEvidenceCandidates(extractedText: string): EvidenceCandidate[] {
+  const raw = String(extractedText ?? "");
+  const lines = raw
+    .split(/\r?\n/)
+    .map((l) => l.replace(/\s+/g, " ").trim())
+    .filter((l) => l.length > 0);
+
+  // Heuristic: skip an initial title block until we hit TABLE OF CONTENTS or a clear section header.
+  const titleSkipUntil = (() => {
+    const maxScan = Math.min(lines.length, 80);
+    for (let i = 0; i < maxScan; i++) {
+      const t = lines[i].toLowerCase();
+      if (t.includes("table of contents")) return i + 1;
+      if (/^section\s+\w+/i.test(lines[i])) return i;
+      if (/^invitation to tender/i.test(lines[i])) return i;
+    }
+    return 0;
+  })();
+
+  const normativeRe =
+    /\b(shall not|shall|must not|must|required|is required|are required|will be rejected|disqualified|rejection)\b/i;
+
+  const moneyRe = /\b(kshs?|kes|eur|usd|gbp)\b|\b\d{1,3}(?:,\d{3})+(?:\.\d+)?\b/i;
+  const deadlineRe =
+    /\b(deadline|closing|submit|delivered|on or before|no later than)\b/i;
+  const dateRe =
+    /\b(\d{1,2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+\d{4}|\d{4}-\d{2}-\d{2})\b/i;
+  const timeRe = /\b(\d{1,2}[:.]\d{2}\s*(am|pm)?|\d{1,2}\s*(am|pm))\b/i;
+  const submissionRe = /\b(sealed envelope|envelope|copies|original|physically|electronic|online portal|upload|address|p\.o\. box|po box)\b/i;
+  const securityRe = /\b(tender security|bid security|tender-secure|guarantee|security)\b/i;
+
+  const isTocLike = (s: string): boolean => /\.\.{4,}/.test(s) || s.toLowerCase().includes("table of contents");
+  const isTitleLike = (s: string): boolean => {
+    const t = s.trim();
+    if (!t) return false;
+    const low = t.toLowerCase();
+    if (
+      low.startsWith("standard tender document") ||
+      low.startsWith("tender document for") ||
+      low.startsWith("request for") ||
+      low.startsWith("invitation to tender")
+    ) return true;
+
+    const hasVerb = normativeRe.test(t);
+    if (!hasVerb && t === t.toUpperCase() && t.length < 140) return true;
+
+    return false;
+  };
+
+  const candidates: EvidenceCandidate[] = [];
+  const seen = new Set<string>();
+
+  const getAnchor = (i: number): string | null => {
+    for (let j = i; j >= 0 && j >= i - 8; j--) {
+      const l = lines[j];
+      if (/^\[page\s+\d+\]/i.test(l)) continue;
+      if (/^(section|annex|appendix|part)\b/i.test(l)) return l;
+      // all-caps headings (but avoid TOC lines)
+      if (l === l.toUpperCase() && l.length >= 12 && l.length <= 120 && !isTocLike(l)) return l;
+    }
+    return null;
+  };
+
+  const getPage = (i: number): number | null => {
+    for (let j = i; j >= 0 && j >= i - 30; j--) {
+      const m = lines[j].match(/^\[page\s+(\d+)\]/i);
+      if (m) return Number(m[1]);
+    }
+    return null;
+  };
+
+  const scoreLine = (l: string): number => {
+    let score = 0;
+    if (normativeRe.test(l)) score += 6;
+    if (deadlineRe.test(l)) score += 3;
+    if (dateRe.test(l) || timeRe.test(l)) score += 3;
+    if (submissionRe.test(l)) score += 2;
+    if (securityRe.test(l)) score += 2;
+    if (moneyRe.test(l)) score += 1;
+    if (/\bnot permitted\b/i.test(l)) score += 2;
+    return score;
+  };
+
+  const makeExcerpt = (i: number): string => {
+    // window of up to 3 lines (current + neighbors) to keep it highlightable
+    const parts: string[] = [];
+    const anchor = getAnchor(i);
+    if (anchor && !isTitleLike(anchor) && !isTocLike(anchor)) parts.push(anchor);
+
+    for (const k of [i - 1, i, i + 1]) {
+      if (k >= 0 && k < lines.length) {
+        const v = lines[k];
+        if (!isTocLike(v) && !isTitleLike(v)) parts.push(v);
+      }
+    }
+
+    let excerpt = parts.join(" ").replace(/\s+/g, " ").trim();
+    if (excerpt.length > 480) excerpt = excerpt.slice(0, 480).trim();
+    return excerpt;
+  };
+
+  let idCounter = 1;
+  for (let i = titleSkipUntil; i < lines.length; i++) {
+    const l = lines[i];
+    if (isTocLike(l) || isTitleLike(l)) continue;
+
+    const score = scoreLine(l);
+    if (score < 5) continue; // keep precision high
+
+    const excerpt = makeExcerpt(i);
+    if (!excerpt || excerpt.length < 30) continue;
+    if (isTocLike(excerpt) || isTitleLike(excerpt)) continue;
+
+    const key = excerpt.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const kind: EvidenceCandidate["kind"] =
+      /^[•\-]\s+/.test(l) ? "bullet" : /\btable\b/i.test(l) ? "table_row" : "clause";
+
+    candidates.push({
+      id: `E${String(idCounter++).padStart(3, "0")}`,
+      excerpt,
+      page: getPage(i),
+      anchor: getAnchor(i),
+      kind,
+      score,
+    });
+
+    if (candidates.length >= 240) break; // cap for prompt size
+  }
+
+  // Sort by score desc, then shorter excerpts first (better highlightability)
+  return candidates
+    .sort((a, b) => (b.score - a.score) || (a.excerpt.length - b.excerpt.length))
+    .slice(0, 220);
+}
+
 
 Deno.serve(async (req) => {
   try {
@@ -430,12 +746,13 @@ Deno.serve(async (req) => {
     const useMockExtract = flagEnv("TP_MOCK_EXTRACT");
     const useMockAi = flagEnv("TP_MOCK_AI");
 
-    // Extract text (mock runs first and can bypass storage)
     let extractedText = "";
+    let evidenceCandidates: EvidenceCandidate[] = [];
 
     if (useMockExtract) {
       extractedText = mockExtractFixture({ sourceType: job.source_type, fileName: job.file_name });
-      await logEvent(supabaseAdmin, job, "info", "Mock extract enabled", { chars: extractedText.length });
+      evidenceCandidates = buildEvidenceCandidates(extractedText);
+      await logEvent(supabaseAdmin, job, "info", "Mock extract enabled", { chars: extractedText.length, evidenceCandidates: evidenceCandidates.length });
     } else {
       const { data: fileData, error: dlErr } = await supabaseAdmin.storage.from("uploads").download(job.file_path);
 
@@ -445,8 +762,7 @@ Deno.serve(async (req) => {
         return new Response("Download failed", { status: 500 });
       }
 
-      const arrayBuffer = await fileData.arrayBuffer();
-      const bytes = new Uint8Array(arrayBuffer);
+      const bytes = new Uint8Array(await fileData.arrayBuffer());
 
       const contentType =
         job.source_type === "pdf"
@@ -466,9 +782,15 @@ Deno.serve(async (req) => {
         includePageBreaks: true,
       });
 
-      await logEvent(supabaseAdmin, job, extractedText ? "info" : "warn", extractedText ? "Unstructured extract completed" : "Unstructured extract returned empty text", {
-        chars: extractedText.length,
-      });
+      evidenceCandidates = buildEvidenceCandidates(extractedText);
+
+      await logEvent(
+        supabaseAdmin,
+        job,
+        extractedText ? "info" : "warn",
+        extractedText ? "Unstructured extract completed" : "Unstructured extract returned empty text",
+        { chars: extractedText.length, evidenceCandidates: evidenceCandidates.length },
+      );
     }
 
     // AI analysis
@@ -508,11 +830,65 @@ Deno.serve(async (req) => {
       }
 
       await logEvent(supabaseAdmin, job, "info", "OpenAI started", { model, maxOutputTokens });
-      aiOut = await runOpenAi({ apiKey, model, extractedText: clipped, maxOutputTokens });
+      aiOut = await runOpenAi({ apiKey, model, extractedText: clipped, evidenceCandidates, maxOutputTokens });
       await logEvent(supabaseAdmin, job, "info", "OpenAI completed", { model, maxOutputTokens });
     }
 
-    // Persist results
+
+    // Evidence-first normalization (product-grade):
+    // - AI must cite evidence_ids for MUST checklist items and for risks.
+    // - Backend backfills `source` (UI compatibility) from the referenced evidence excerpt(s).
+    // - MUST without valid evidence => downgrade to INFO + manual check.
+    // - Risks without valid evidence => move to buyer_questions (manual check) and remove from risks list.
+    {
+      const evidenceById = new Map<string, EvidenceCandidate>();
+      for (const e of evidenceCandidates) evidenceById.set(e.id, e);
+
+      const resolveSource = (ids?: string[]): { ids: string[]; source: string } => {
+        const valid = (ids ?? []).filter((id) => evidenceById.has(id));
+        if (valid.length === 0) return { ids: [], source: "Not found in extracted text." };
+        // For highlighting, keep a single contiguous excerpt (best = first id)
+        const first = evidenceById.get(valid[0])!;
+        return { ids: valid, source: first.excerpt };
+      };
+
+      const newBuyerQuestions: string[] = Array.isArray(aiOut.buyer_questions) ? [...aiOut.buyer_questions] : [];
+
+      const checklist = (Array.isArray(aiOut.checklist) ? aiOut.checklist : []).map((it) => {
+        const { ids, source } = resolveSource(it.evidence_ids);
+
+        if (it.type === "MUST") {
+          if (ids.length === 0) {
+            return {
+              ...it,
+              type: "INFO",
+              text: `Manual check: ${String(it.text ?? "").trim()}`,
+              evidence_ids: [],
+              source: "Not found in extracted text.",
+            };
+          }
+          return { ...it, evidence_ids: ids, source };
+        }
+
+        // SHOULD / INFO: source optional; keep if evidence exists, else omit.
+        if (ids.length > 0) return { ...it, evidence_ids: ids, source };
+        return { ...it, evidence_ids: [], source: "Not found in extracted text." };
+      });
+
+      const risks: AiOutput["risks"] = [];
+      for (const r of Array.isArray(aiOut.risks) ? aiOut.risks : []) {
+        const { ids, source } = resolveSource(r.evidence_ids);
+        if (ids.length === 0) {
+          newBuyerQuestions.push(`Manual check (risk): ${String(r.title ?? "").trim()} — ${String(r.detail ?? "").trim()}`);
+          continue;
+        }
+        risks.push({ ...r, evidence_ids: ids, source });
+      }
+
+      aiOut = { ...aiOut, checklist, risks, buyer_questions: newBuyerQuestions };
+    }
+
+
     const { error: upsertErr } = await supabaseAdmin.from("job_results").upsert({
       job_id: job.id,
       user_id: job.user_id,

@@ -387,65 +387,95 @@ function ProgressCard({
 
 function findExcerpt(text: string, query: string) {
   const t = text ?? "";
-  const q = (query ?? "").trim();
-  if (!t || !q) return null;
+  const qRaw = (query ?? "").trim();
+  if (!t || !qRaw) return null;
 
   const hay = t.toLowerCase();
+  // SECTION_REF mode: jump to a section heading with 100% precision (highlight the heading line only).
+  // Format: "SECTION_REF: <exact section heading text>"
+  if (/^SECTION_REF\s*:/i.test(qRaw)) {
+    const anchor = qRaw.replace(/^SECTION_REF\s*:/i, "").trim();
+    if (!anchor) return null;
+    const idx = hay.indexOf(anchor.toLowerCase());
+    if (idx < 0) return null;
 
-  function makeSnippet(centerIdx: number, needleLen: number) {
-    const start = Math.max(0, centerIdx - 220);
-    const end = Math.min(t.length, centerIdx + Math.max(needleLen, 40) + 260);
-    const snippet = t.slice(start, end).replace(/\s+/g, " ").trim();
-    return { idx: centerIdx, snippet };
+    // Highlight only the heading line (up to line break or paragraph break)
+    const lineStart = t.lastIndexOf("\n", Math.max(0, idx)) + 1;
+    let lineEnd = t.indexOf("\n", idx);
+    if (lineEnd < 0) lineEnd = t.length;
+
+    // If the heading is followed by a blank line, prefer ending at the paragraph break
+    const paraEnd = t.indexOf("\n\n", idx);
+    if (paraEnd >= 0 && paraEnd < lineEnd + 2) {
+      lineEnd = paraEnd;
+    }
+
+    const line = t.slice(lineStart, lineEnd).replace(/\s+/g, " ").trim();
+    return {
+      idx: lineStart,
+      snippet: line || anchor,
+      highlightStart: lineStart,
+      highlightEnd: lineEnd,
+    };
   }
 
-  // 1) Try exact match first (fast path)
-  const exactIdx = hay.indexOf(q.toLowerCase());
-  if (exactIdx >= 0) return makeSnippet(exactIdx, q.length);
 
-  // 2) Try short contiguous needles (first 12 / 8 words)
-  const wordsAll = q.split(/\s+/).filter(Boolean);
-  const needles = [wordsAll.slice(0, 12).join(" "), wordsAll.slice(0, 8).join(" ")].filter(Boolean);
+  const q = qRaw.toLowerCase();
+
+  function paragraphBounds(centerIdx: number) {
+    // Prefer paragraph boundaries (blank lines) because tenders are clause-based
+    const left = t.lastIndexOf("\n\n", Math.max(0, centerIdx));
+    const right = t.indexOf("\n\n", Math.max(0, centerIdx));
+    const start = left >= 0 ? left + 2 : 0;
+    const end = right >= 0 ? right : t.length;
+    return { start, end };
+  }
+
+  function makeResult(matchStart: number, matchLen: number) {
+    const center = matchStart + Math.floor(Math.max(1, matchLen) / 2);
+    const { start, end } = paragraphBounds(center);
+
+    // Human-readable snippet (single-line)
+    const snippet = t.slice(start, end).replace(/\s+/g, " ").trim();
+
+    return {
+      idx: start,
+      snippet,
+      highlightStart: start,
+      highlightEnd: end,
+    };
+  }
+
+  // 0) If query contains explicit anchors, try those first (SECTION / ANNEX / PAGE)
+  const anchorCandidates = qRaw
+    .split("\n")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .filter((s) => /^SECTION\b|^ANNEX\b|^\[PAGE\b/i.test(s))
+    .slice(0, 3);
+
+  for (const a of anchorCandidates) {
+    const aIdx = hay.indexOf(a.toLowerCase());
+    if (aIdx >= 0) return makeResult(aIdx, a.length);
+  }
+
+  // 1) Exact match
+  const exactIdx = hay.indexOf(q);
+  if (exactIdx >= 0) return makeResult(exactIdx, qRaw.length);
+
+  // 2) Contiguous needles (first N words)
+  const wordsAll = qRaw.split(/\s+/).filter(Boolean);
+  const needles = [wordsAll.slice(0, 14).join(" "), wordsAll.slice(0, 10).join(" "), wordsAll.slice(0, 7).join(" ")].filter(Boolean);
 
   for (const n of needles) {
     const idx = hay.indexOf(n.toLowerCase());
-    if (idx >= 0) return makeSnippet(idx, n.length);
+    if (idx >= 0) return makeResult(idx, n.length);
   }
 
-  // 3) Fuzzy keyword match
+  // 3) Fuzzy: score windows by unique keyword hits, but require stronger evidence
   const STOP = new Set([
-    "the",
-    "a",
-    "an",
-    "and",
-    "or",
-    "to",
-    "of",
-    "in",
-    "on",
-    "for",
-    "with",
-    "by",
-    "via",
-    "is",
-    "are",
-    "be",
-    "as",
-    "at",
-    "from",
-    "that",
-    "this",
-    "these",
-    "those",
-    "must",
-    "should",
-    "shall",
-    "will",
-    "may",
-    "can",
-    "not",
-    "only",
-    "all",
+    "the","a","an","and","or","to","of","in","on","for","with","by","via","is","are","be","as","at","from",
+    "that","this","these","those","must","should","shall","will","may","can","not","only","all",
   ]);
 
   const tokens = wordsAll
@@ -454,12 +484,11 @@ function findExcerpt(text: string, query: string) {
 
   if (!tokens.length) return null;
 
-  const uniq = Array.from(new Set(tokens)).slice(0, 12);
-
-  const MAX_OCC_PER_TOKEN = 25;
+  const uniq = Array.from(new Set(tokens)).slice(0, 14);
 
   type Occ = { idx: number; token: string };
   const occs: Occ[] = [];
+  const MAX_OCC_PER_TOKEN = 30;
 
   for (const tok of uniq) {
     let start = 0;
@@ -475,9 +504,9 @@ function findExcerpt(text: string, query: string) {
 
   if (!occs.length) return null;
 
-  const WINDOW = 700;
-
+  const WINDOW = 900;
   let best = { score: 0, center: occs[0].idx, tokenLen: occs[0].token.length };
+
   for (const o of occs) {
     const wStart = o.idx - WINDOW / 2;
     const wEnd = o.idx + WINDOW / 2;
@@ -490,14 +519,24 @@ function findExcerpt(text: string, query: string) {
     const score = tokensInWindow.size;
     if (score > best.score) {
       best = { score, center: o.idx, tokenLen: o.token.length };
-      if (best.score >= Math.min(6, uniq.length)) break;
     }
   }
 
-  if (best.score < 2) return null;
+  // Stronger threshold to reduce “wrong highlight” cases.
+  // If we can’t find enough keyword overlap, we prefer “no match” over misleading highlights.
+  if (best.score < 3) return null;
 
-  return makeSnippet(best.center, best.tokenLen);
+  const { start, end } = paragraphBounds(best.center);
+  const snippet = t.slice(start, end).replace(/\s+/g, " ").trim();
+
+  return {
+    idx: start,
+    snippet,
+    highlightStart: start,
+    highlightEnd: end,
+  };
 }
+
 
 function escapeHtml(input: string) {
   return String(input ?? "")
@@ -1073,7 +1112,7 @@ export default function JobDetailPage() {
   const [renaming, setRenaming] = useState(false);
   const [renameInput, setRenameInput] = useState("");
 
-  const [sourceFocus, setSourceFocus] = useState<{ query: string; snippet: string; idx: number | null } | null>(null);
+  const [sourceFocus, setSourceFocus] = useState<{ query: string; snippet: string; idx: number | null; highlightStart: number | null; highlightEnd: number | null } | null>(null);
 
   /** UI safety state for very large extracted text */
   const [showFullSourceText, setShowFullSourceText] = useState(false);
@@ -1199,8 +1238,35 @@ export default function JobDetailPage() {
       }
     }
 
+    // Trigger backend processing (Edge Function) while the job is queued/processing.
+    // This is the "tick" that makes the pipeline resumable and avoids long-running edge invocations.
+    const lastInvokeAtRef = { current: 0 };
+    const invokingRef = { current: false };
+    const INVOKE_MIN_INTERVAL_MS = 5000;
+
+    async function invokeProcessJobIfNeeded(status: JobStatus | undefined) {
+      if (!status) return;
+      if (status !== "queued" && status !== "processing") return;
+
+      const now = Date.now();
+      if (invokingRef.current) return;
+      if (now - lastInvokeAtRef.current < INVOKE_MIN_INTERVAL_MS) return;
+
+      invokingRef.current = true;
+      lastInvokeAtRef.current = now;
+
+      try {
+        const supabase = supabaseBrowser();
+        await supabase.functions.invoke("process-job", { body: { job_id: jobId } });
+      } catch (_) {
+        // Intentionally ignore invocation errors here.
+        // The UI polling will keep running; backend logs (job_events) are the source of truth.
+      } finally {
+        invokingRef.current = false;
+      }
+    }
+
     async function poll() {
-     
       try {
         const { data: jobRow, error: jobErr } = await supabase.from("jobs").select("*").eq("id", jobId).maybeSingle();
         if (!mountedRef.current) return;
@@ -1214,6 +1280,9 @@ export default function JobDetailPage() {
 
         const status = String((jobRow as any)?.status ?? "queued") as JobStatus;
         const isTerminal = status === "done" || status === "failed";
+
+        // Kick the backend pipeline forward (bounded async ticks)
+        await invokeProcessJobIfNeeded(status);
 
         const { data: resultRow, error: resErr } = await supabase
           .from("job_results")
@@ -1431,20 +1500,46 @@ export default function JobDetailPage() {
       .filter(Boolean);
   }, [checklist]);
 
+  // Evidence map (MUST text -> verbatim source excerpt).
+  // This enables "100% precision": we only highlight when we can locate the exact excerpt in Source text.
+  // If no verbatim excerpt exists, we must NOT highlight a different clause.
+  const mustEvidenceByText = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const item of checklist ?? []) {
+      const isMust = String(item?.type ?? item?.level ?? item?.priority ?? "").toUpperCase().includes("MUST");
+      if (!isMust) continue;
+      const text = String((item as any)?.text ?? (item as any)?.requirement ?? "").trim();
+      const src = String((item as any)?.source ?? "").trim();
+      if (!text || !src) continue;
+      if (/^not found in extracted text\.?$/i.test(src)) continue;
+      // Keep it as-is (verbatim). UI matching relies on exact substring presence.
+      map.set(text, src);
+    }
+    return map;
+  }, [checklist]);
+
 	
 
   // Lightweight evidence snippets for top blockers (UI-only)
   const blockerEvidence = useMemo(() => {
     const map = new Map<string, string>();
-    if (!extractedText) return map;
 
+    // Prefer the stored, verbatim evidence from the checklist (100% rule).
+    // Fall back to the older heuristic only if there is no stored evidence at all.
     (mustItems ?? []).slice(0, 2).forEach((t) => {
+      const fromModel = mustEvidenceByText.get(String(t));
+      if (fromModel) {
+        map.set(String(t), fromModel);
+        return;
+      }
+
+      if (!extractedText) return;
       const ex = evidenceExcerptFor(String(t), extractedText);
       if (ex) map.set(String(t), ex);
     });
 
     return map;
-  }, [extractedText, mustItems]);
+  }, [extractedText, mustItems, mustEvidenceByText]);
 const executive = useMemo(() => {
 	  const raw = (result as any)?.executive_summary ?? {};
 	  return toExecutiveModel({ raw });
@@ -1876,10 +1971,63 @@ const executive = useMemo(() => {
 
 
   function onJumpToSource(query: string) {
-    const match = findExcerpt(extractedText, query);
+    // 100% precision rule:
+    // - If the caller passes an evidence payload (verbatim excerpt or SECTION_REF), we use it directly.
+    // - We NEVER "guess" or reuse a previous match (that causes wrong highlights).
+    const rawQuery = String(query ?? "").trim();
+
+    const looksLikeEvidencePayload =
+      rawQuery.includes("\n") ||
+      rawQuery.includes("|") ||
+      /^SECTION_REF\s*:/i.test(rawQuery) ||
+      rawQuery.length > 220;
+
+    // Only try MUST evidence override when the caller passed the human-visible item text (not the evidence itself).
+    const evidenceOverride = !looksLikeEvidencePayload
+      ? mustEvidenceByText.get(rawQuery)
+      : null;
+
+    const effectiveQuery = evidenceOverride || rawQuery;
+    const displayQuery = /^SECTION_REF\s*:/i.test(String(effectiveQuery))
+      ? String(effectiveQuery).replace(/^SECTION_REF\s*:/i, "").trim()
+      : effectiveQuery;
+
+
+    // If we have a verbatim excerpt from the model but it is NOT present in the extracted text,
+    // we must NOT fall back to fuzzy matching (that is how wrong highlights happen).
+    if (evidenceOverride) {
+      const hay = String(extractedText ?? "").toLowerCase();
+      const rawEvidence = String(evidenceOverride).trim();
+      const needleText = /^SECTION_REF\s*:/i.test(rawEvidence)
+        ? rawEvidence.replace(/^SECTION_REF\s*:/i, "").trim()
+        : rawEvidence;
+      const needle = needleText.toLowerCase();
+      const hasNeedle = needle ? hay.includes(needle) : false;
+      const hasAnchorLine = rawEvidence
+        .split("\n")
+        .some((l) => /^SECTION_REF\s*:|^SECTION\b|^ANNEX\b|^\[PAGE\b/i.test(l.trim()));
+      if (!hasNeedle && !hasAnchorLine) {
+        setSourceFocus({
+          query: displayQuery,
+          snippet:
+            "No exact supporting clause found for this item in the extracted text. Verify manually in the original PDF.",
+          idx: null,
+          highlightStart: null,
+          highlightEnd: null,
+        });
+        openTabAndScroll("text");
+        return;
+      }
+    }
+
+    const match = findExcerpt(extractedText, effectiveQuery);
 
     if (!match) {
-      setSourceFocus({ query, snippet: "No matching excerpt found in the source text.", idx: null });
+      // Never highlight the wrong clause. If we can't find an exact match, show an explicit message.
+      const msg = evidenceOverride
+        ? "No exact supporting clause found for this item in the extracted text. Verify manually in the original PDF."
+        : "No matching excerpt found in the source text.";
+      setSourceFocus({ query: displayQuery, snippet: msg, idx: null, highlightStart: null, highlightEnd: null });
       openTabAndScroll("text");
       return;
     }
@@ -1888,7 +2036,14 @@ const executive = useMemo(() => {
       setShowFullSourceText(true);
     }
 
-    setSourceFocus({ query, snippet: match.snippet, idx: match.idx });
+    setSourceFocus({
+      query: displayQuery,
+      snippet: match.snippet,
+      idx: match.idx,
+      highlightStart: match.highlightStart,
+      highlightEnd: match.highlightEnd,
+    });
+
     openTabAndScroll("text");
   }
 
@@ -2493,7 +2648,7 @@ const executive = useMemo(() => {
                           <Button
                             variant="outline"
                             className="rounded-full shrink-0"
-                            onClick={() => onJumpToSource(t)}
+                            onClick={() => onJumpToSource(blockerEvidence.get(t) ?? t)}
                             disabled={!extractedText}
                           >
                             Evidence
@@ -2996,39 +3151,41 @@ const executive = useMemo(() => {
 					  className="min-w-max whitespace-pre p-4 text-xs leading-relaxed"
 					  style={{ scrollbarGutter: "stable both-edges" }}
 					>
-					  {(() => {
-						if (!sourceFocus?.idx && sourceFocus?.idx !== 0) {
-						  return visibleText || "No source text yet.";
-						}
+						  {(() => {
+							const raw = visibleText || "";
+							if (!raw) return "No source text yet.";
 
-						const idx = sourceFocus.idx ?? 0;
-						if (idx < 0 || idx >= visibleText.length) {
-						  return visibleText || "No source text yet.";
-						}
+							const hs = sourceFocus?.highlightStart;
+							const he = sourceFocus?.highlightEnd;
 
-						const lineStartIdx = visibleText.lastIndexOf("\n", idx);
-						const start = lineStartIdx === -1 ? 0 : lineStartIdx + 1;
+							// If we do not have reliable highlight bounds, always render the raw source text.
+							if (hs === null || hs === undefined || he === null || he === undefined) {
+							  return raw;
+							}
 
-						const lineEndIdx = visibleText.indexOf("\n", idx);
-						const end = lineEndIdx === -1 ? visibleText.length : lineEndIdx;
+							const start = Math.max(0, Math.min(hs, raw.length));
+							const end = Math.max(start, Math.min(he, raw.length));
 
-						const before = visibleText.slice(0, start);
-						const mid = visibleText.slice(start, end);
-						const after = visibleText.slice(end);
+							// Degenerate bounds: fall back to raw text.
+							if (end <= start) return raw;
 
-						return (
-						  <>
-							{before}
-							<span
-							  ref={sourceAnchorRef}
-							  className="block whitespace-pre rounded-md bg-yellow-200/50 px-2 py-1 border-l-4 border-yellow-500"
-							>
-							  {mid}
-							</span>
-							{after}
-						  </>
-						);
-					  })()}
+							const before = raw.slice(0, start);
+							const mid = raw.slice(start, end);
+							const after = raw.slice(end);
+
+							return (
+							  <>
+								{before}
+								<span
+								  ref={sourceAnchorRef}
+								  className="bg-yellow-200/50 border-l-4 border-yellow-500 px-2 py-1 rounded-md"
+								>
+								  {mid}
+								</span>
+								{after}
+							  </>
+							);
+						  })()}
 					</pre>
 				  </div>
 				</ScrollArea>
