@@ -1095,6 +1095,20 @@ export default function JobDetailPage() {
   const rawId = String((params as any)?.id ?? "").trim();
   const jobId = rawId;
 
+
+  async function triggerProcessingOnce() {
+    try {
+      await fetch("/api/tick", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ job_id: jobId }),
+      });
+    } catch (e) {
+      console.warn("Manual trigger failed", e);
+    }
+  }
+
+
   const [invalidLink, setInvalidLink] = useState(false);
 
   const [job, setJob] = useState<DbJob | null>(null);
@@ -1238,34 +1252,6 @@ export default function JobDetailPage() {
       }
     }
 
-    // Trigger backend processing (Edge Function) while the job is queued/processing.
-    // This is the "tick" that makes the pipeline resumable and avoids long-running edge invocations.
-    const lastInvokeAtRef = { current: 0 };
-    const invokingRef = { current: false };
-    const INVOKE_MIN_INTERVAL_MS = 5000;
-
-    async function invokeProcessJobIfNeeded(status: JobStatus | undefined) {
-      if (!status) return;
-      if (status !== "queued" && status !== "processing") return;
-
-      const now = Date.now();
-      if (invokingRef.current) return;
-      if (now - lastInvokeAtRef.current < INVOKE_MIN_INTERVAL_MS) return;
-
-      invokingRef.current = true;
-      lastInvokeAtRef.current = now;
-
-      try {
-        const supabase = supabaseBrowser();
-        await supabase.functions.invoke("process-job", { body: { job_id: jobId } });
-      } catch (_) {
-        // Intentionally ignore invocation errors here.
-        // The UI polling will keep running; backend logs (job_events) are the source of truth.
-      } finally {
-        invokingRef.current = false;
-      }
-    }
-
     async function poll() {
       try {
         const { data: jobRow, error: jobErr } = await supabase.from("jobs").select("*").eq("id", jobId).maybeSingle();
@@ -1281,8 +1267,7 @@ export default function JobDetailPage() {
         const status = String((jobRow as any)?.status ?? "queued") as JobStatus;
         const isTerminal = status === "done" || status === "failed";
 
-        // Kick the backend pipeline forward (bounded async ticks)
-        await invokeProcessJobIfNeeded(status);
+  
 
         const { data: resultRow, error: resErr } = await supabase
           .from("job_results")
@@ -2394,6 +2379,12 @@ const executive = useMemo(() => {
               Rename
             </Button>
 
+            {(job?.status === "queued" || job?.status === "processing") && (
+              <Button variant="secondary" className="rounded-full" onClick={triggerProcessingOnce} disabled={!job}>
+                Retry processing
+              </Button>
+            )}
+
             {statusBadge(job?.status ?? "queued")}
           </div>
 
@@ -3239,5 +3230,4 @@ const executive = useMemo(() => {
     </div>
   );
 }
-
 

@@ -746,10 +746,24 @@ Deno.serve(async (req) => {
     const useMockExtract = flagEnv("TP_MOCK_EXTRACT");
     const useMockAi = flagEnv("TP_MOCK_AI");
 
-    let extractedText = "";
+    
+    // If the client already provided a fast-path extracted_text (PDF.js), reuse it.
+    // This avoids slow/unreliable large-doc extraction on the Edge function.
+    const { data: existingResult } = await supabaseAdmin
+      .from("job_results")
+      .select("extracted_text")
+      .eq("job_id", job.id)
+      .maybeSingle();
+
+    const existingExtracted = String(existingResult?.extracted_text ?? "").trim();
+let extractedText = "";
     let evidenceCandidates: EvidenceCandidate[] = [];
 
-    if (useMockExtract) {
+    if (existingExtracted) {
+      extractedText = existingExtracted;
+      evidenceCandidates = buildEvidenceCandidates(extractedText);
+      await logEvent(supabaseAdmin, job, "info", "Using pre-extracted text (fast path)", { chars: extractedText.length, evidenceCandidates: evidenceCandidates.length });
+    } else if (useMockExtract) {
       extractedText = mockExtractFixture({ sourceType: job.source_type, fileName: job.file_name });
       evidenceCandidates = buildEvidenceCandidates(extractedText);
       await logEvent(supabaseAdmin, job, "info", "Mock extract enabled", { chars: extractedText.length, evidenceCandidates: evidenceCandidates.length });

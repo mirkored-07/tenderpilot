@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { createJobAction } from "./actions";
+import { createJobAction, saveExtractedTextAction } from "./actions";
+import { extractPdfTextFast, fastExtractPasses } from "@/lib/pdf/extract-pdf-text";
 import { track } from "@/lib/telemetry";
 
 type SourceType = "pdf" | "docx";
@@ -35,7 +37,7 @@ function isSupportedExt(ext: string): ext is SourceType {
   return ext === "pdf" || ext === "docx";
 }
 
-type UploadPhase = "idle" | "checking_session" | "uploading" | "creating_job" | "redirecting";
+type UploadPhase = "idle" | "checking_session" | "uploading" | "creating_job" | "extracting_text" | "redirecting";
 
 export default function UploadForm() {
   const [file, setFile] = useState<File | null>(null);
@@ -48,6 +50,8 @@ export default function UploadForm() {
   const [needsSignIn, setNeedsSignIn] = useState(false);
 
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  const router = useRouter();
 
   const supabase = useMemo(() => {
     return createBrowserClient(
@@ -106,6 +110,7 @@ export default function UploadForm() {
     if (p === "checking_session") return "Checking your session…";
     if (p === "uploading") return "Uploading your file…";
     if (p === "creating_job") return "Creating your tender review…";
+    if (p === "extracting_text") return "Extracting text (fast)…";
     if (p === "redirecting") return "Redirecting to your tender kit…";
     return "";
   }
@@ -150,17 +155,45 @@ export default function UploadForm() {
 
       track("upload_storage_completed", { sourceType });
 
-      // Server action will create job + redirect to the new job page
+      // Server action will create job (we handle redirect client-side to allow fast extraction)
       setPhase("creating_job");
-      await createJobAction({
+      const { jobId } = await createJobAction({
         fileName: file.name,
         filePath,
         sourceType,
       });
 
-      // In normal flow the server action redirects. If it does not, show a safe state.
+      // FAST PATH (PDF): client-side PDF.js extraction for text-native tenders
+      if (sourceType === "pdf") {
+        try {
+          setPhase("extracting_text");
+          const { text, meta } = await extractPdfTextFast(file);
+
+          track("upload_fast_extract_completed", {
+            pageCount: meta.pageCount,
+            pagesWithText: meta.pagesWithText,
+            ratioPagesWithText: meta.ratioPagesWithText,
+            totalChars: meta.totalChars,
+          });
+
+          if (fastExtractPasses(meta) && text.trim().length > 0) {
+            await saveExtractedTextAction({ jobId, extractedText: text });
+            track("upload_fast_extract_saved", { jobId });
+          } else {
+            // Let backend fallback extraction run (OCR / provider) if needed
+            track("upload_fast_extract_failed_gate", { jobId, ...meta });
+          }
+        } catch (e: any) {
+          // Never block UX on extraction; backend fallback will handle it
+          track("upload_fast_extract_error", { jobId, message: String(e?.message ?? e) });
+		  console.error("FAST_EXTRACT_SAVE_FAILED", e);
+        }
+      }
+
       setPhase("redirecting");
       track("job_created", { sourceType });
+
+      router.push(`/app/jobs/${jobId}`);
     } catch (err: any) {
       const message = String(err?.message ?? "Upload failed");
       setError(message);

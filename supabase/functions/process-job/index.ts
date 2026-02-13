@@ -9,14 +9,18 @@ type JobRow = {
   file_path: string;
   source_type: "pdf" | "docx";
   status: string;
-  pipeline?: any;
 };
 
 type Severity = "high" | "medium" | "low";
 
-type AiChecklistItem = { type: "MUST" | "SHOULD" | "INFO"; text: string; source?: string };
-
-type AiRisk = { title: string; severity: Severity; detail: string };
+type EvidenceCandidate = {
+  id: string; // e.g. E001
+  excerpt: string; // verbatim text from extracted content (highlightable)
+  page: number | null;
+  anchor: string | null; // SECTION/ANNEX heading if available
+  kind: "clause" | "bullet" | "table_row" | "other";
+  score: number;
+};
 
 type AiOutput = {
   executive_summary: {
@@ -27,26 +31,25 @@ type AiOutput = {
     topRisks: Array<{ title: string; severity: Severity; detail: string }>;
     submissionDeadline: string;
   };
-  checklist: AiChecklistItem[];
-  risks: AiRisk[];
+  checklist: Array<{
+    type: "MUST" | "SHOULD" | "INFO";
+    text: string;
+    evidence_ids?: string[]; // MUST/RISK should cite at least one evidence id
+    // Backfilled by backend for UI compatibility
+    source?: string;
+  }>;
+  risks: Array<{
+    title: string;
+    severity: Severity;
+    detail: string;
+    evidence_ids?: string[];
+    // Backfilled by backend for UI compatibility
+    source?: string;
+  }>;
   buyer_questions: string[];
   proposal_draft: string;
 };
 
-type AiRawOutput = {
-  executive_summary: {
-    decisionBadge: string;
-    decisionLine: string;
-    keyFindings: string[];
-    nextActions: string[];
-    topRisks: Array<{ title: string; severity: Severity; detail: string; evidence_ids: string[] }>;
-    submissionDeadline: string;
-  };
-  checklist: Array<{ type: "MUST" | "SHOULD" | "INFO"; text: string; evidence_ids: string[] }>;
-  risks: Array<{ title: string; severity: Severity; detail: string; evidence_ids: string[] }>;
-  buyer_questions: string[];
-  proposal_draft: string;
-};
 
 function flagEnv(name: string): boolean {
   const v = String(Deno.env.get(name) ?? "").trim().toLowerCase();
@@ -66,6 +69,93 @@ function parseNumberEnv(name: string, fallback: number): number {
   if (!raw) return fallback;
   const n = Number(raw);
   return Number.isFinite(n) && n > 0 ? n : fallback;
+}
+
+
+// ---- Lease / heartbeat / runtime guards (Stage 2 stabilization) ----
+const JOB_LEASE_MS = parseNumberEnv("TP_JOB_LEASE_MS", 5 * 60 * 1000); // default 5 min
+const HEARTBEAT_MS = parseNumberEnv("TP_JOB_HEARTBEAT_MS", 15 * 1000); // default 15s
+const MAX_RUNTIME_MS = parseNumberEnv("TP_MAX_RUNTIME_MS", 23 * 1000); // keep < 25s
+const RUNTIME_BUFFER_MS = parseNumberEnv("TP_RUNTIME_BUFFER_MS", 2_000); // safety buffer
+const RUNTIME_SAFETY_MS = parseNumberEnv("TP_RUNTIME_SAFETY_MS", 2 * 1000); // buffer
+
+function leaseCutoffISO(): string {
+  return new Date(Date.now() - JOB_LEASE_MS).toISOString();
+}
+
+// Best-effort: make a stuck "processing" job reclaimable on the next tick without changing lifecycle.
+async function makeJobReclaimableNow(supabaseAdmin: any, jobId: string) {
+  const staleISO = new Date(Date.now() - JOB_LEASE_MS - 10_000).toISOString();
+  try {
+    await supabaseAdmin.from("jobs").update({ updated_at: staleISO }).eq("id", jobId);
+  } catch {
+    // swallow (best-effort)
+  }
+}
+
+async function tryClaimWithLease(
+  supabaseAdmin: any,
+  jobId: string,
+): Promise<boolean> {
+  const nowIso = new Date().toISOString();
+  const cutoff = leaseCutoffISO();
+
+  // 1) Try to claim queued
+  {
+    const { data, error } = await supabaseAdmin
+      .from("jobs")
+      .update({ status: "processing", updated_at: nowIso })
+      .eq("id", jobId)
+      .eq("status", "queued")
+      .select("id");
+
+    if (error) throw error;
+    if (Array.isArray(data) && data.length > 0) return true;
+  }
+
+  // 2) Try to reclaim stale processing (lease expired)
+  {
+    const { data, error } = await supabaseAdmin
+      .from("jobs")
+      .update({ status: "processing", updated_at: nowIso })
+      .eq("id", jobId)
+      .eq("status", "processing")
+      .lt("updated_at", cutoff)
+      .select("id");
+
+    if (error) throw error;
+    return Array.isArray(data) && data.length > 0;
+  }
+}
+
+
+function startHeartbeat(supabaseAdmin: any, jobId: string, maxMs = 90_000) {
+  const startedAt = Date.now();
+
+  const timer = setInterval(() => {
+    // DO NOT make this callback `async` (can surface unhandled rejections in edge runtime).
+    void (async () => {
+      try {
+        if (Date.now() - startedAt > maxMs) {
+          clearInterval(timer);
+          return;
+        }
+        await supabaseAdmin
+          .from("jobs")
+          .update({ updated_at: new Date().toISOString() })
+          .eq("id", jobId)
+          .eq("status", "processing");
+      } catch {
+        // never throw from heartbeat
+      }
+    })();
+  }, HEARTBEAT_MS);
+
+  return () => clearInterval(timer);
+}
+
+function remainingRuntimeMs(startMs: number): number {
+  return MAX_RUNTIME_MS - (Date.now() - startMs);
 }
 
 function clampText(input: string, maxChars: number) {
@@ -116,7 +206,7 @@ function estimateUsd(args: { model: string; inputTokens: number; outputTokens: n
 }
 
 async function logEvent(
-  supabaseAdmin: ReturnType<typeof createClient>,
+  supabaseAdmin: any,
   job: JobRow,
   level: "info" | "warn" | "error",
   message: string,
@@ -137,21 +227,23 @@ async function logEvent(
  *
  * Auth header: unstructured-api-key
  */
-async function submitUnstructuredOnDemandJob(args: {
+async function extractWithUnstructured(args: {
   fileBytes: Uint8Array;
   fileName: string;
   contentType: string;
-}): Promise<{ jobId: string; fileId: string | null }> {
+  includePageBreaks?: boolean;
+}): Promise<string> {
   const apiKey = firstEnv(["UNSTRUCTURED_API_KEY", "TP_UNSTRUCTURED_API_KEY"], "UNSTRUCTURED_API_KEY");
-  const baseUrl = String(Deno.env.get("UNSTRUCTURED_WORKFLOW_URL") ?? "https://platform.unstructuredapp.io").replace(/\/+$/, "");
-  const templateId = String(Deno.env.get("UNSTRUCTURED_JOB_TEMPLATE_ID") ?? "hi_res_and_enrichment");
+  const apiUrl = String(Deno.env.get("UNSTRUCTURED_API_URL") ?? "https://api.unstructuredapp.io/general/v0/general");
 
   const form = new FormData();
-  // request_data must be a stringified JSON object. See Unstructured on-demand jobs quickstart.
-  form.append("request_data", JSON.stringify({ template_id: templateId }));
-  form.append("input_files", new Blob([args.fileBytes], { type: args.contentType }), args.fileName);
+  const safeBytes = Uint8Array.from(args.fileBytes);
+  form.append("files", new Blob([safeBytes], { type: args.contentType }), args.fileName);
 
-  const res = await fetch(`${baseUrl}/api/v1/jobs/`, {
+  // include_page_breaks helps readability for long tenders
+  form.append("include_page_breaks", (args.includePageBreaks ?? true) ? "true" : "false");
+
+  const res = await fetch(apiUrl, {
     method: "POST",
     headers: {
       accept: "application/json",
@@ -162,165 +254,15 @@ async function submitUnstructuredOnDemandJob(args: {
 
   if (!res.ok) {
     const txt = await res.text().catch(() => "");
-    throw new Error(`Unstructured create job error ${res.status}: ${txt.slice(0, 600)}`);
+    throw new Error(`Unstructured error ${res.status}: ${txt.slice(0, 600)}`);
   }
 
   const json = await res.json();
-  const jobId = String(json?.id ?? "");
-  const fileIds: unknown = json?.input_file_ids;
-  const fileId =
-    Array.isArray(fileIds) && typeof fileIds[0] === "string"
-      ? String(fileIds[0])
-      : null;
-
-  if (!jobId) throw new Error("Unstructured create job response missing id");
-  return { jobId, fileId };
-}
-
-async function getUnstructuredJob(jobId: string): Promise<any> {
-  const apiKey = firstEnv(["UNSTRUCTURED_API_KEY", "TP_UNSTRUCTURED_API_KEY"], "UNSTRUCTURED_API_KEY");
-  const baseUrl = String(Deno.env.get("UNSTRUCTURED_WORKFLOW_URL") ?? "https://platform.unstructuredapp.io").replace(/\/+$/, "");
-
-  const res = await fetch(`${baseUrl}/api/v1/jobs/${encodeURIComponent(jobId)}`, {
-    method: "GET",
-    headers: {
-      accept: "application/json",
-      "unstructured-api-key": apiKey,
-    },
-  });
-
-  if (!res.ok) {
-    const txt = await res.text().catch(() => "");
-    throw new Error(`Unstructured get job error ${res.status}: ${txt.slice(0, 600)}`);
-  }
-  return await res.json();
-}
-
-async function downloadUnstructuredJobOutput(args: {
-  jobId: string;
-  fileId: string;
-}): Promise<any> {
-  const apiKey = firstEnv(["UNSTRUCTURED_API_KEY", "TP_UNSTRUCTURED_API_KEY"], "UNSTRUCTURED_API_KEY");
-  const baseUrl = String(Deno.env.get("UNSTRUCTURED_WORKFLOW_URL") ?? "https://platform.unstructuredapp.io").replace(/\/+$/, "");
-
-  const url = new URL(`${baseUrl}/api/v1/jobs/${encodeURIComponent(args.jobId)}/download`);
-  url.searchParams.set("file_id", args.fileId);
-
-  const res = await fetch(url.toString(), {
-    method: "GET",
-    headers: {
-      accept: "application/json",
-      "unstructured-api-key": apiKey,
-    },
-  });
-
-  if (!res.ok) {
-    const txt = await res.text().catch(() => "");
-    throw new Error(`Unstructured download output error ${res.status}: ${txt.slice(0, 600)}`);
-  }
-  return await res.json();
-}
-
-const UNSTRUCTURED_MARKER_PREFIX = "__UNSTRUCTURED_JOB__:";
-
-function makeUnstructuredMarker(args: { jobId: string; fileId: string | null; pollCount?: number; submittedAtMs?: number | null }): string {
-  const n = Number.isFinite(args.pollCount) ? Math.max(0, Number(args.pollCount)) : 0;
-  const submittedAtMs = Number.isFinite(args.submittedAtMs) ? Math.max(0, Number(args.submittedAtMs)) : 0;
-  // Format: __UNSTRUCTURED_JOB__:<jobId>:<fileId>:<pollCount>:<submittedAtMs>
-  return `${UNSTRUCTURED_MARKER_PREFIX}${args.jobId}:${args.fileId ?? ""}:${n}:${submittedAtMs}`;
-}
-
-function parseUnstructuredMarker(s: string): { jobId: string; fileId: string | null; pollCount: number } | null {
-  const str = String(s ?? "");
-  if (!str.startsWith(UNSTRUCTURED_MARKER_PREFIX)) return null;
-  const rest = str.slice(UNSTRUCTURED_MARKER_PREFIX.length);
-  const parts = rest.split(":");
-  const jobId = parts[0] ?? "";
-  const fileId = (parts[1] ?? "").trim() || null;
-  const pollCount = Number(parts[2] ?? "0");
-  return jobId ? { jobId, fileId, pollCount: Number.isFinite(pollCount) ? pollCount : 0 } : null;
-}
-
-/**
- * Unstructured extraction via on-demand jobs (workflow operations).
- *
- * IMPORTANT:
- * - This function does NOT wait for completion; it either:
- *   A) submits a job and returns a marker to persist, or
- *   B) if given a marker, performs a single poll attempt and returns:
- *      - null (not ready yet), or
- *      - the final extracted text.
- */
-async function extractWithUnstructuredJobs(args: {
-  fileBytes?: Uint8Array; // required for first submission
-  fileName?: string;
-  contentType?: string;
-  marker?: string;
-}): Promise<{
-  extractedText: string | null;
-  markerToSave: string | null;
-  status: "submitted" | "polling" | "ready" | "failed";
-  jobStatus?: string;
-  jobPayload?: any;
-}> {
-  // Poll existing job
-  if (args.marker) {
-    const parsed = parseUnstructuredMarker(args.marker);
-    if (!parsed || !parsed.jobId) throw new Error("Invalid Unstructured marker");
-
-    const job = await getUnstructuredJob(parsed.jobId);
-
-    const rawStatus = String(job?.status ?? job?.state ?? job?.job_status ?? "").trim();
-    const statusLc = rawStatus.toLowerCase();
-
-    const isDone = ["completed", "complete", "succeeded", "success", "done", "finished"].some((k) =>
-      statusLc.includes(k)
-    );
-    const isFailed = ["failed", "error", "cancel", "canceled"].some((k) => statusLc.includes(k));
-
-    if (isFailed) {
-      return { extractedText: null, markerToSave: null, status: "failed", jobStatus: rawStatus || statusLc, jobPayload: job };
-    }
-
-    if (!isDone) {
-      // not ready yet → bump poll count in the marker
-      const nextMarker = makeUnstructuredMarker({
-        jobId: parsed.jobId,
-        fileId: parsed.fileId,
-        pollCount: parsed.pollCount + 1,
-        submittedAtMs: parsed.submittedAtMs,
-      });
-      return { extractedText: null, markerToSave: nextMarker, status: "polling", jobStatus: rawStatus || statusLc, jobPayload: job };
-    }
-
-    const fileId =
-      parsed.fileId ??
-      (Array.isArray(job?.input_file_ids) && typeof job.input_file_ids[0] === "string" ? String(job.input_file_ids[0]) : null);
-
-    if (!fileId) throw new Error("Unstructured job completed but file_id is missing");
-
-    const elements = await downloadUnstructuredJobOutput({ jobId: parsed.jobId, fileId });
-    if (!Array.isArray(elements)) {
-      throw new Error("Unstructured download output is not an array");
-    }
-
-    const extractedText = buildAnchoredTextFromUnstructuredElements(elements);
-    return { extractedText, markerToSave: null, status: "ready", jobStatus: rawStatus || statusLc };
+  if (!Array.isArray(json)) {
+    throw new Error("Unstructured response is not an array");
   }
 
-  // Submit a new on-demand job
-  if (!args.fileBytes || !args.fileName || !args.contentType) {
-    throw new Error("Missing file inputs for Unstructured job submission");
-  }
-
-  const { jobId, fileId } = await submitUnstructuredOnDemandJob({
-    fileBytes: args.fileBytes,
-    fileName: args.fileName,
-    contentType: args.contentType,
-  });
-
-  const marker = makeUnstructuredMarker({ jobId, fileId, pollCount: 0, submittedAtMs: Date.now() });
-  return { extractedText: null, markerToSave: marker, status: "submitted" };
+  return buildAnchoredTextFromUnstructuredElements(json);
 }
 
 function normalizeAnchorLabel(label: string): string {
@@ -566,99 +508,15 @@ function parseOpenAiJsonFromResponse(resp: any): any {
   throw new Error("OpenAI response did not include parsable JSON output");
 }
 
-type EvidenceCandidate = {
-  id: string;
-  excerpt: string;
-  page: number | null;
-  anchor: string | null;
-  kind: "clause" | "bullet" | "line";
-  score: number;
-};
-
-function buildEvidenceCandidates(extractedText: string, maxCandidates: number): EvidenceCandidate[] {
-  const text = String(extractedText ?? "");
-  const lines = text
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0);
-
-  // Heuristic: skip the very first "title block" lines (often non-normative titles)
-  const startIdx = Math.min(lines.length, 25);
-  const bodyLines = lines.slice(startIdx);
-
-  const kwMust = [" shall ", " must ", " shall not ", " required", " will be rejected", " disqualified", " rejection"];
-  const kwSubmit = ["submit", "submission", "deliver", "deadline", "closing", "return", "envelope", "sealed", "electronic"];
-  const kwMoney = ["tender security", "bid security", "bank guarantee", "ksh", "kes", "eur", "€", "$", "usd", "gbp"];
-
-  const isLikelyToc = (l: string) => /\.\.{4,}/.test(l) || /table\s+of\s+contents/i.test(l);
-
-  const candidates: EvidenceCandidate[] = [];
-  const seen = new Set<string>();
-
-  const scoreLine = (l: string): number => {
-    const low = ` ${l.toLowerCase()} `;
-    let s = 0;
-    if (kwMust.some((k) => low.includes(k))) s += 10;
-    if (kwSubmit.some((k) => low.includes(k))) s += 4;
-    if (kwMoney.some((k) => low.includes(k))) s += 4;
-    if (/\b\d{1,2}[\.\/]\d{1,2}[\.\/]\d{2,4}\b/.test(l) || /\b\d{4}-\d{2}-\d{2}\b/.test(l)) s += 4;
-    if (/\b\d{1,2}[:\.]\d{2}\b/.test(l) || /\b\d{1,2}\s*(am|pm)\b/i.test(l)) s += 3;
-    if (/\b(shall|must|required|rejected|disqualified)\b/i.test(l)) s += 3;
-    return s;
-  };
-
-  for (let i = 0; i < bodyLines.length; i++) {
-    const line = bodyLines[i];
-    if (line.length < 25) continue;
-    if (isLikelyToc(line)) continue;
-
-    const s = scoreLine(line);
-    if (s < 6) continue;
-
-    const prev = bodyLines[i - 1] ?? "";
-    const next = bodyLines[i + 1] ?? "";
-    const excerptRaw = [prev, line, next].filter(Boolean).join(" ").replace(/\s+/g, " ").trim();
-
-    const excerpt = excerptRaw.length > 520 ? excerptRaw.slice(0, 520).trim() + "…" : excerptRaw;
-    const key = excerpt.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-
-    candidates.push({
-      id: `E${String(candidates.length + 1).padStart(3, "0")}`,
-      excerpt,
-      page: null,
-      anchor: null,
-      kind: /^(•|-|\d+\.)\s/.test(line) ? "bullet" : "line",
-      score: s,
-    });
-
-    if (candidates.length >= maxCandidates * 2) break; // collect enough then sort
-  }
-
-  candidates.sort((a, b) => b.score - a.score);
-  return candidates.slice(0, maxCandidates);
-}
-
-function formatEvidenceList(evidence: EvidenceCandidate[], maxChars: number): string {
-  const chunks: string[] = [];
-  let used = 0;
-  for (const e of evidence) {
-    const line = `${e.id}: ${e.excerpt}`;
-    if (used + line.length + 2 > maxChars) break;
-    chunks.push(line);
-    used += line.length + 2;
-  }
-  return chunks.join("\n\n");
-}
-
-async function runOpenAiEvidenceFirst(args: {
+async function runOpenAi(args: {
   apiKey: string;
   model: string;
-  evidenceList: string;
+  extractedText: string;
+  evidenceCandidates: EvidenceCandidate[];
   maxOutputTokens: number;
-}): Promise<AiRawOutput> {
-  const { apiKey, model, evidenceList, maxOutputTokens } = args;
+  timeoutMs?: number;
+}): Promise<AiOutput> {
+  const { apiKey, model, extractedText, evidenceCandidates, maxOutputTokens, timeoutMs } = args;
 
   const schema = {
     type: "object",
@@ -682,9 +540,8 @@ async function runOpenAiEvidenceFirst(args: {
                 title: { type: "string" },
                 severity: { type: "string", enum: ["high", "medium", "low"] },
                 detail: { type: "string" },
-                evidence_ids: { type: "array", items: { type: "string" }, maxItems: 3 },
               },
-              required: ["title", "severity", "detail", "evidence_ids"],
+              required: ["title", "severity", "detail"],
             },
           },
           submissionDeadline: { type: "string" },
@@ -699,7 +556,7 @@ async function runOpenAiEvidenceFirst(args: {
           properties: {
             type: { type: "string", enum: ["MUST", "SHOULD", "INFO"] },
             text: { type: "string" },
-            evidence_ids: { type: "array", items: { type: "string" }, maxItems: 3 },
+            evidence_ids: { type: "array", items: { type: "string" } },
           },
           required: ["type", "text", "evidence_ids"],
         },
@@ -713,12 +570,12 @@ async function runOpenAiEvidenceFirst(args: {
             title: { type: "string" },
             severity: { type: "string", enum: ["high", "medium", "low"] },
             detail: { type: "string" },
-            evidence_ids: { type: "array", items: { type: "string" }, maxItems: 3 },
+            evidence_ids: { type: "array", items: { type: "string" } },
           },
           required: ["title", "severity", "detail", "evidence_ids"],
         },
       },
-      buyer_questions: { type: "array", items: { type: "string" }, maxItems: 10 },
+      buyer_questions: { type: "array", items: { type: "string" } },
       proposal_draft: { type: "string" },
     },
     required: ["executive_summary", "checklist", "risks", "buyer_questions", "proposal_draft"],
@@ -726,22 +583,41 @@ async function runOpenAiEvidenceFirst(args: {
 
   const instructions =
     "You are TenderRay. Drafting support only. Not legal advice. Not procurement advice. " +
-    "Use executive, compliance-grade language. No AI talk. " +
-    "Always write in the same language as the evidence snippets. " +
-    "Avoid false certainty.";
+    "Use executive, compliance grade language. No AI talk. " +
+    "Always write in the same language as the tender source text. " +
+    "Avoid false certainty. If not present, write: Not found in extracted text.";
 
-  const userPrompt =
-    "Task\n" +
-    "You will receive evidence snippets extracted from a tender/RFP.\n" +
-    "Your job is to produce a decision-first bid kit grounded ONLY in these snippets.\n\n" +
-    "STRICT RULES\n" +
-    "1) You may ONLY cite evidence by evidence_ids that exist in the provided list.\n" +
-    "2) MUST = mandatory / disqualifying if missed. SHOULD = preferred/scoring. INFO = contextual.\n" +
-    "3) MUST and risks MUST have at least one evidence_id. If you cannot support it, output it as INFO (manual check).\n" +
-    "4) Do not invent cross-references like ITT 24.1 as evidence. Use evidence_ids only.\n" +
-    "5) Keep checklist items atomic; do not merge method + address + deadline into one item unless a single snippet clearly states it.\n\n" +
-    "Evidence snippets (verbatim) follow.\n\n" +
-    evidenceList;
+  const evidenceList = evidenceCandidates
+    .map((e) => {
+      const page = e.page != null ? ` [PAGE ${e.page}]` : "";
+      const anchor = e.anchor ? ` ${e.anchor}` : "";
+      return `${e.id}${page}${anchor}: ${e.excerpt}`;
+    })
+    .join("\n\n");
+
+
+  const userPrompt = `Task
+Review the tender source text and produce a decision-first bid kit.
+
+Strict rules
+1. Grounding. Use only the evidence snippets provided. Do not guess. If a detail is not present, write: Not found in extracted text.
+2. Decision. Choose decisionBadge exactly as one of: Proceed, Proceed with caution, Hold – potential blocker. Provide decisionLine as one clear sentence.
+3. Submission deadline. If an explicit deadline date or time is present, copy it verbatim. Otherwise set submissionDeadline to: Not found in extracted text.
+4. Checklist. MUST means mandatory or disqualifying if missed. SHOULD means preferred or scoring. INFO is context.
+5. Evidence (STRICT). You MUST cite evidence_ids:
+   - For each MUST checklist item: include at least one evidence id that directly proves it.
+   - For each risk: include at least one evidence id that supports it.
+   - Do not invent clause numbers or cross-references (e.g., ITT 24.1). Cite only evidence ids.
+   - If you cannot support a MUST or a risk with evidence, downgrade it to INFO and add a buyer question for manual verification.
+6. Deduplication. Do not repeat checklist items verbatim inside the executive summary.
+7. Missing info. Put ambiguities or missing info into buyer_questions.
+
+Evidence snippets (use ONLY these; cite their ids in evidence_ids):
+${evidenceList}
+
+Tender source text (context only; do not cite directly):
+${extractedText}`;
+
 
   const body = {
     model,
@@ -753,616 +629,637 @@ async function runOpenAiEvidenceFirst(args: {
       format: {
         type: "json_schema",
         strict: true,
-        name: "tenderray_review_evidence_first",
+        name: "tenderray_review",
         schema,
       },
     },
   };
 
-  const res = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${apiKey}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  const reqTimeoutMs = Math.max(3_000, Math.min(timeoutMs ?? 18_000, 20_000));
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), reqTimeoutMs);
 
-  // Always read as text first so we can log meaningful errors (res.json() often throws "Unexpected end of JSON input")
-  const rawBody = await res.text().catch(() => "");
+  let res: Response;
+  try {
+    res = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(body),
+      signal: ctrl.signal,
+    });
+  } catch (e) {
+    if (String(e).toLowerCase().includes("abort")) {
+      throw new Error(`OpenAI request timed out after ${reqTimeoutMs}ms`);
+    }
+    throw e;
+  } finally {
+    clearTimeout(t);
+  }
 
   if (!res.ok) {
-    throw new Error(`OpenAI error ${res.status}: ${rawBody.slice(0, 900)}`);
+    const text = await res.text().catch(() => "");
+    throw new Error(`OpenAI error ${res.status}: ${text.slice(0, 500)}`);
   }
 
-  let json: any;
-  try {
-    json = rawBody ? JSON.parse(rawBody) : null;
-  } catch (e: any) {
-    throw new Error(`OpenAI response JSON parse failed: ${String(e?.message ?? e)} | body: ${rawBody.slice(0, 900)}`);
-  }
+  const json = await res.json();
+  return parseOpenAiJsonFromResponse(json) as AiOutput;
+}
 
-  // Responses API may not always populate output_text. Extract text from output[] as fallback.
-  const getOutputText = (resp: any): string => {
-    if (typeof resp?.output_text === "string" && resp.output_text.trim()) return resp.output_text;
-    const out = Array.isArray(resp?.output) ? resp.output : [];
-    for (const item of out) {
-      const content = Array.isArray(item?.content) ? item.content : [];
-      for (const c of content) {
-        // common shapes: { type: "output_text", text: "..." } or { type: "text", text: "..." }
-        const t = (typeof c?.text === "string" ? c.text : "") || (typeof c?.value === "string" ? c.value : "");
-        if (t && String(t).trim()) return String(t);
-      }
+
+function buildEvidenceCandidates(extractedText: string): EvidenceCandidate[] {
+  const raw = String(extractedText ?? "");
+  const lines = raw
+    .split(/\r?\n/)
+    .map((l) => l.replace(/\s+/g, " ").trim())
+    .filter((l) => l.length > 0);
+
+  // Heuristic: skip an initial title block until we hit TABLE OF CONTENTS or a clear section header.
+  const titleSkipUntil = (() => {
+    const maxScan = Math.min(lines.length, 80);
+    for (let i = 0; i < maxScan; i++) {
+      const t = lines[i].toLowerCase();
+      if (t.includes("table of contents")) return i + 1;
+      if (/^section\s+\w+/i.test(lines[i])) return i;
+      if (/^invitation to tender/i.test(lines[i])) return i;
     }
-    return "";
+    return 0;
+  })();
+
+  const normativeRe =
+    /\b(shall not|shall|must not|must|required|is required|are required|will be rejected|disqualified|rejection)\b/i;
+
+  const moneyRe = /\b(kshs?|kes|eur|usd|gbp)\b|\b\d{1,3}(?:,\d{3})+(?:\.\d+)?\b/i;
+  const deadlineRe =
+    /\b(deadline|closing|submit|delivered|on or before|no later than)\b/i;
+  const dateRe =
+    /\b(\d{1,2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+\d{4}|\d{4}-\d{2}-\d{2})\b/i;
+  const timeRe = /\b(\d{1,2}[:.]\d{2}\s*(am|pm)?|\d{1,2}\s*(am|pm))\b/i;
+  const submissionRe = /\b(sealed envelope|envelope|copies|original|physically|electronic|online portal|upload|address|p\.o\. box|po box)\b/i;
+  const securityRe = /\b(tender security|bid security|tender-secure|guarantee|security)\b/i;
+
+  const isTocLike = (s: string): boolean => /\.\.{4,}/.test(s) || s.toLowerCase().includes("table of contents");
+  const isTitleLike = (s: string): boolean => {
+    const t = s.trim();
+    if (!t) return false;
+    const low = t.toLowerCase();
+    if (
+      low.startsWith("standard tender document") ||
+      low.startsWith("tender document for") ||
+      low.startsWith("request for") ||
+      low.startsWith("invitation to tender")
+    ) return true;
+
+    const hasVerb = normativeRe.test(t);
+    if (!hasVerb && t === t.toUpperCase() && t.length < 140) return true;
+
+    return false;
   };
 
-  const outText = getOutputText(json);
+  const candidates: EvidenceCandidate[] = [];
+  const seen = new Set<string>();
 
-  if (!outText.trim()) {
-    const keys = json ? Object.keys(json).slice(0, 25).join(",") : "null";
-    throw new Error(`OpenAI returned no output text (keys: ${keys})`);
+  const getAnchor = (i: number): string | null => {
+    for (let j = i; j >= 0 && j >= i - 8; j--) {
+      const l = lines[j];
+      if (/^\[page\s+\d+\]/i.test(l)) continue;
+      if (/^(section|annex|appendix|part)\b/i.test(l)) return l;
+      // all-caps headings (but avoid TOC lines)
+      if (l === l.toUpperCase() && l.length >= 12 && l.length <= 120 && !isTocLike(l)) return l;
+    }
+    return null;
+  };
+
+  const getPage = (i: number): number | null => {
+    for (let j = i; j >= 0 && j >= i - 30; j--) {
+      const m = lines[j].match(/^\[page\s+(\d+)\]/i);
+      if (m) return Number(m[1]);
+    }
+    return null;
+  };
+
+  const scoreLine = (l: string): number => {
+    let score = 0;
+    if (normativeRe.test(l)) score += 6;
+    if (deadlineRe.test(l)) score += 3;
+    if (dateRe.test(l) || timeRe.test(l)) score += 3;
+    if (submissionRe.test(l)) score += 2;
+    if (securityRe.test(l)) score += 2;
+    if (moneyRe.test(l)) score += 1;
+    if (/\bnot permitted\b/i.test(l)) score += 2;
+    return score;
+  };
+
+  const makeExcerpt = (i: number): string => {
+    // window of up to 3 lines (current + neighbors) to keep it highlightable
+    const parts: string[] = [];
+    const anchor = getAnchor(i);
+    if (anchor && !isTitleLike(anchor) && !isTocLike(anchor)) parts.push(anchor);
+
+    for (const k of [i - 1, i, i + 1]) {
+      if (k >= 0 && k < lines.length) {
+        const v = lines[k];
+        if (!isTocLike(v) && !isTitleLike(v)) parts.push(v);
+      }
+    }
+
+    let excerpt = parts.join(" ").replace(/\s+/g, " ").trim();
+    if (excerpt.length > 480) excerpt = excerpt.slice(0, 480).trim();
+    return excerpt;
+  };
+
+  let idCounter = 1;
+  for (let i = titleSkipUntil; i < lines.length; i++) {
+    const l = lines[i];
+    if (isTocLike(l) || isTitleLike(l)) continue;
+
+    const score = scoreLine(l);
+    if (score < 5) continue; // keep precision high
+
+    const excerpt = makeExcerpt(i);
+    if (!excerpt || excerpt.length < 30) continue;
+    if (isTocLike(excerpt) || isTitleLike(excerpt)) continue;
+
+    const key = excerpt.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    const kind: EvidenceCandidate["kind"] =
+      /^[•\-]\s+/.test(l) ? "bullet" : /\btable\b/i.test(l) ? "table_row" : "clause";
+
+    candidates.push({
+      id: `E${String(idCounter++).padStart(3, "0")}`,
+      excerpt,
+      page: getPage(i),
+      anchor: getAnchor(i),
+      kind,
+      score,
+    });
+
+    if (candidates.length >= 240) break; // cap for prompt size
   }
 
-  let parsed: any;
-  try {
-    parsed = JSON.parse(outText);
-  } catch (e: any) {
-    throw new Error(`Model output JSON parse failed: ${String(e?.message ?? e)} | output: ${outText.slice(0, 900)}`);
-  }
-
-  return parsed as AiRawOutput;
+  // Sort by score desc, then shorter excerpts first (better highlightability)
+  return candidates
+    .sort((a, b) => (b.score - a.score) || (a.excerpt.length - b.excerpt.length))
+    .slice(0, 220);
 }
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+	const corsHeaders = {
+	  "Access-Control-Allow-Origin": "*",
+	  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+	  "Access-Control-Allow-Methods": "POST, OPTIONS",
+	};
 
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, "content-type": "application/json" },
-  });
-}
+	// Helper so every response includes CORS headers
+	function corsResponse(body: BodyInit | null, init: ResponseInit = {}) {
+	  return new Response(body, {
+		...init,
+		headers: {
+		  ...corsHeaders,
+		  ...(init.headers ?? {}),
+		},
+	  });
+	}
 
-function textResponse(body: string, status = 200) {
-  return new Response(body, {
-    status,
-    headers: { ...corsHeaders, "content-type": "text/plain; charset=utf-8" },
-  });
-}
+
+	function corsJson(payload: unknown, init: ResponseInit = {}) {
+	  return corsResponse(JSON.stringify(payload), {
+		...init,
+		headers: {
+		  "content-type": "application/json",
+		  ...(init.headers ?? {}),
+		},
+	  });
+	}
+
+	function normalizeThrownError(e: unknown) {
+	  if (e instanceof Error) {
+		return { name: e.name, message: e.message, stack: e.stack };
+	  }
+	  try {
+		return { name: "NonErrorThrown", message: JSON.stringify(e) };
+	  } catch {
+		return { name: "NonErrorThrown", message: String(e) };
+	  }
+	}
+
+	// Prevent edge runtime from turning unhandled promise rejections into text/plain 500s.
+	// We still return JSON from the request handler.
+	addEventListener("unhandledrejection", (ev: PromiseRejectionEvent) => {
+	  try { ev.preventDefault(); } catch {}
+	  console.error("unhandledrejection:", ev.reason);
+	});
+	addEventListener("error", (ev: ErrorEvent) => {
+	  try { ev.preventDefault(); } catch {}
+	  console.error("error:", ev.message);
+	});
 
 Deno.serve(async (req) => {
+  // CORS preflight
+  if (req.method === "OPTIONS") return corsResponse("ok");
+
   try {
-    if (req.method === "OPTIONS") return new Response(null, { status: 200, headers: corsHeaders });
-    if (req.method !== "POST") return textResponse("Method Not Allowed", 405);
+    const url = new URL(req.url);
 
-    const { job_id } = await req.json().catch(() => ({}));
-    if (!job_id || typeof job_id !== "string") return textResponse("Missing job_id", 400);
+    // Optional shared-secret gate (recommended for pg_net/cron callers)
+    const expectedSecret = String(Deno.env.get("TP_SECRET") ?? "").trim();
+    if (expectedSecret) {
+      const provided = String(url.searchParams.get("tp_secret") ?? "").trim();
+      if (!provided || provided !== expectedSecret) {
+        return corsResponse(JSON.stringify({ ok: false, error: "unauthorized" }), {
+          status: 401,
+          headers: { "content-type": "application/json" },
+        });
+      }
+    }
 
-    const SUPABASE_URL = firstEnv(["TP_SUPABASE_URL", "SUPABASE_URL"], "TP_SUPABASE_URL");
-    const SERVICE_ROLE = firstEnv(["TP_SERVICE_ROLE_KEY", "SUPABASE_SERVICE_ROLE_KEY"], "TP_SERVICE_ROLE_KEY");
+    // pg_net often calls with GET, so allow GET + POST
+    if (req.method !== "POST" && req.method !== "GET") {
+      return corsResponse("Method Not Allowed", { status: 405 });
+    }
+
+    const SUPABASE_URL = firstEnv(["SUPABASE_URL"], "SUPABASE_URL");
+    const SERVICE_ROLE = firstEnv(["SUPABASE_SERVICE_ROLE_KEY"], "SUPABASE_SERVICE_ROLE_KEY");
 
     const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE, {
       auth: { persistSession: false },
     });
 
+    // DEBUG: prove which Supabase project/DB this function is using
+    try {
+      const u = String(SUPABASE_URL || "");
+      const host = (() => { try { return new URL(u).host; } catch { return ""; } })();
+      const projectRef = host ? host.split(".")[0] : "";
+      console.log("process-job DEBUG env:", {
+        SUPABASE_URL: u,
+        projectRef,
+        has_TP_SUPABASE_URL: !!Deno.env.get("TP_SUPABASE_URL"),
+        has_TP_SERVICE_ROLE_KEY: !!Deno.env.get("TP_SERVICE_ROLE_KEY"),
+        has_SERVICE_ROLE_KEY: !!Deno.env.get("SERVICE_ROLE_KEY"),
+        has_SUPABASE_DB_URL: !!Deno.env.get("SUPABASE_DB_URL"),
+      });
+    } catch (e) {
+      console.log("process-job DEBUG env log failed:", e);
+    }
+
+    // ---- Robust job id extraction (supports pg_net tick calls with no body) ----
+    const qpJobId =
+      url.searchParams.get("job_id") ||
+      url.searchParams.get("jobId") ||
+      url.searchParams.get("id") ||
+      "";
+
+    let parsed: any = {};
+    let rawBody = "";
+
+    // Only attempt body parsing for POST; never throw if empty/invalid
+    if (req.method === "POST") {
+      try {
+        rawBody = await req.text();
+      } catch {
+        rawBody = "";
+      }
+      if (rawBody && rawBody.trim().length > 0) {
+        try {
+          parsed = JSON.parse(rawBody);
+        } catch {
+          parsed = {};
+        }
+      }
+    }
+
+    let jobId =
+      (typeof qpJobId === "string" && qpJobId) ||
+      (typeof parsed?.job_id === "string" && parsed.job_id) ||
+      (typeof parsed?.jobId === "string" && parsed.jobId) ||
+      (typeof parsed?.id === "string" && parsed.id) ||
+      (typeof parsed?.record?.id === "string" && parsed.record.id) ||
+      "";
+
+    // Helper: find the next claimable job id (queued OR stale processing)
+    async function findNextClaimableJobId(): Promise<string | null> {
+      const cutoff = leaseCutoffISO();
+      const { data, error } = await supabaseAdmin
+        .from("jobs")
+        .select("id")
+        .or(`status.eq.queued,and(status.eq.processing,updated_at.lt.${cutoff})`)
+        .order("created_at", { ascending: true })
+        .limit(1)
+        .maybeSingle<{ id: string }>();
+
+      if (error) throw error;
+      return data?.id ?? null;
+    }
+
+    // If caller didn't supply jobId (pg_net tick style), claim-next
+    if (!jobId) {
+      let claimedJobId: string | null = null;
+
+      // Try a few times to avoid races when multiple ticks fire
+      for (let i = 0; i < 3; i++) {
+        const candidate = await findNextClaimableJobId();
+        if (!candidate) break;
+        const ok = await tryClaimWithLease(supabaseAdmin, candidate);
+        if (ok) {
+          claimedJobId = candidate;
+          break;
+        }
+      }
+
+      if (!claimedJobId) {
+        return corsResponse(JSON.stringify({ ok: true, status: "idle" }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+
+      jobId = claimedJobId;
+    } else {
+      // Caller supplied a jobId: claim it with lease rules
+      const claimed = await tryClaimWithLease(supabaseAdmin, jobId);
+      if (!claimed) {
+        return corsResponse(JSON.stringify({ ok: true, status: "already_claimed" }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+    }
+
+    // Fetch job after claim
     const { data: job, error: jobErr } = await supabaseAdmin
       .from("jobs")
-      .select("id,user_id,file_name,file_path,source_type,status,pipeline")
-      .eq("id", job_id)
+      .select("id,user_id,file_name,file_path,source_type,status")
+      .eq("id", jobId)
       .single<JobRow>();
 
-    if (jobErr || !job) return textResponse("Job not found", 404);
-
-    // If already finalized, exit fast.
-    if (job.status === "done") {
-      return jsonResponse({ ok: true, status: "done" });
-    }
-    if (job.status === "failed") {
-      return jsonResponse({ ok: true, status: "failed" });
+    if (jobErr || !job) {
+      return corsResponse(JSON.stringify({ ok: true, status: "not_found" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
     }
 
-    // Claim if queued; if already processing, continue (stage 2 self-invocation).
-    if (job.status === "queued") {
-      const { data: claimed, error: claimErr } = await supabaseAdmin
-        .from("jobs")
-        .update({ status: "processing" })
-        .eq("id", job.id)
-        .in("status", ["queued"])
-        .select("id")
-        .maybeSingle();
+    const startMs = Date.now();
+    let stopHeartbeat: null | (() => void) = null;
 
-      if (claimErr) return textResponse("Failed to claim job", 500);
-      if (!claimed) {
-        return jsonResponse({ ok: true, status: "already_claimed" });
+    // Heartbeat to keep lease fresh
+    stopHeartbeat = startHeartbeat(supabaseAdmin, job.id);
+
+    const remainingMs = () => MAX_RUNTIME_MS - (Date.now() - startMs);
+
+    const yieldIfLowTime = async () => {
+      if (remainingMs() <= RUNTIME_BUFFER_MS) {
+        if (stopHeartbeat) stopHeartbeat();
+        await makeJobReclaimableNow(supabaseAdmin, job.id);
+        return corsResponse(JSON.stringify({ ok: true, status: "yield" }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
       }
-      await logEvent(supabaseAdmin, job, "info", "Job claimed and processing started");
-    }
+      return null;
+    };
+
+    const earlyYield = await yieldIfLowTime();
+    if (earlyYield) return earlyYield;
+
+    await logEvent(supabaseAdmin, job, "info", "Job claimed and processing started", {
+      lease_ms: JOB_LEASE_MS,
+      heartbeat_ms: HEARTBEAT_MS,
+    });
+
+    try {
 
     const useMockExtract = flagEnv("TP_MOCK_EXTRACT");
     const useMockAi = flagEnv("TP_MOCK_AI");
 
-    // Stage detection: if we already saved extracted_text but no checklist, we are in stage 2.
-    const { data: prevResults } = await supabaseAdmin
+    
+    // If the client already provided a fast-path extracted_text (PDF.js), reuse it.
+    // This avoids slow/unreliable large-doc extraction on the Edge function.
+    const { data: existingResult } = await supabaseAdmin
       .from("job_results")
-      .select("extracted_text,checklist,risks,proposal_draft,executive_summary,clarifications")
+      .select("extracted_text")
       .eq("job_id", job.id)
       .maybeSingle();
 
-    const prevExtracted = (prevResults as any)?.extracted_text;
-    const prevChecklist = (prevResults as any)?.checklist;
-    const prevRisks = (prevResults as any)?.risks;
-    const prevProposalDraft = (prevResults as any)?.proposal_draft;
+    const existingExtracted = String(existingResult?.extracted_text ?? "").trim();
+let extractedText = "";
+    let evidenceCandidates: EvidenceCandidate[] = [];
 
-    const unstructuredMarker = typeof prevExtracted === "string" ? parseUnstructuredMarker(prevExtracted) : null;
+    if (existingExtracted) {
+      extractedText = existingExtracted;
+      evidenceCandidates = buildEvidenceCandidates(extractedText);
+      await logEvent(supabaseAdmin, job, "info", "Using pre-extracted text (fast path)", { chars: extractedText.length, evidenceCandidates: evidenceCandidates.length });
+    } else if (useMockExtract) {
+      extractedText = mockExtractFixture({ sourceType: job.source_type, fileName: job.file_name });
+      evidenceCandidates = buildEvidenceCandidates(extractedText);
+      await logEvent(supabaseAdmin, job, "info", "Mock extract enabled", { chars: extractedText.length, evidenceCandidates: evidenceCandidates.length });
+    } else {
+      const { data: fileData, error: dlErr } = await supabaseAdmin.storage.from("uploads").download(job.file_path);
 
-    const hasExtracted =
-      typeof prevExtracted === "string" && prevExtracted.trim().length > 0 && unstructuredMarker === null;
-
-    const hasFinal = Array.isArray(prevChecklist) && prevChecklist.length > 0 && Array.isArray(prevRisks) && typeof prevProposalDraft === "string" && prevProposalDraft.trim().length > 0;
-
-    // -------------------------
-    // STAGE 1: Extraction only (Unstructured on-demand jobs)
-    // -------------------------
-    if (!hasExtracted) {
-      // If we previously stored an Unstructured job marker, do a single poll attempt.
-      if (unstructuredMarker) {
-        await logEvent(supabaseAdmin, job, "info", "Unstructured job poll attempt", {
-          jobId: unstructuredMarker.jobId,
-          pollCount: unstructuredMarker.pollCount,
-        });
-
-        const maxPolls = parseNumberEnv("TP_UNSTRUCTURED_MAX_POLLS", 600);
-const maxMinutes = parseNumberEnv("TP_UNSTRUCTURED_MAX_MINUTES", 60);
-
-// Big documents can take minutes. "Not ready yet" is not an error.
-// We only fail on a real Unstructured failure status (handled inside extractWithUnstructuredJobs),
-// or if we've been waiting longer than maxMinutes since submission.
-const submittedAtMs = (unstructuredMarker as any).submittedAtMs as number | null;
-if (submittedAtMs) {
-  const elapsedMs = Date.now() - submittedAtMs;
-  const elapsedMinutes = elapsedMs / 60000;
-  if (elapsedMinutes > maxMinutes) {
-    await logEvent(supabaseAdmin, job, "error", "Unstructured job timeout exceeded", {
-      jobId: unstructuredMarker.jobId,
-      elapsedMinutes: Number(elapsedMinutes.toFixed(2)),
-      maxMinutes,
-      pollCount: unstructuredMarker.pollCount,
-    });
-    await supabaseAdmin.from("jobs").update({ status: "failed" }).eq("id", job.id);
-    // Return quickly; UI may show failed state without retry storm.
-    return textResponse("Unstructured job timeout exceeded", 200);
-  }
-}
-
-if (unstructuredMarker.pollCount >= maxPolls) {
-  await logEvent(supabaseAdmin, job, "warn", "Unstructured job still processing (high poll count)", {
-    jobId: unstructuredMarker.jobId,
-    pollCount: unstructuredMarker.pollCount,
-    maxPolls,
-  });
-  // Continue; next tick can keep polling.
-}
-
-        const polled = await extractWithUnstructuredJobs({ marker: String(prevExtracted ?? "") });
-
-        // If Unstructured reports failure, stop and mark the job failed (do NOT poll forever).
-        if (polled.status === "failed") {
-          await logEvent(supabaseAdmin, job, "error", "Unstructured job failed", {
-            jobId: unstructuredMarker.jobId,
-            pollCount: unstructuredMarker.pollCount,
-            jobStatus: polled.jobStatus ?? null,
-            jobPayload: polled.jobPayload ?? null,
-          });
-          await supabaseAdmin.from("jobs").update({ status: "failed" }).eq("id", job.id);
-          return textResponse("Unstructured job failed", 500);
-        }
-
-        // Log the current provider-reported status occasionally (helps diagnose stuck jobs).
-        if (unstructuredMarker.pollCount % 5 === 0) {
-          await logEvent(supabaseAdmin, job, "info", "Unstructured job status", {
-            jobId: unstructuredMarker.jobId,
-            pollCount: unstructuredMarker.pollCount,
-            jobStatus: polled.jobStatus ?? null,
-          });
-        }
-
-        if (polled.status === "polling") {
-          // Persist updated marker (pollCount increments) and re-invoke self with a small delay.
-          const nextMarker = polled.markerToSave ?? String(prevExtracted ?? "");
-          const { error: updErr } = await supabaseAdmin.from("job_results").upsert({
-            job_id: job.id,
-            user_id: job.user_id,
-            extracted_text: nextMarker,
-          });
-
-          if (updErr) {
-            await logEvent(supabaseAdmin, job, "error", "Updating Unstructured marker failed", { error: updErr.message });
-            await supabaseAdmin.from("jobs").update({ status: "failed" }).eq("id", job.id);
-            return textResponse("Marker update failed", 500);
-          }
-          // NOTE: Do not self-invoke. The frontend "tick" loop will trigger the next poll.
-          return jsonResponse({ ok: true, status: "unstructured_polling" });
-        }
-
-        // Ready: we have extracted text now.
-        const extractedText = String(polled.extractedText ?? "");
-
-        await logEvent(
-          supabaseAdmin,
-          job,
-          extractedText ? "info" : "warn",
-          extractedText ? "Unstructured job output downloaded" : "Unstructured job output empty",
-          { chars: extractedText.length },
-        );
-
-        const { error: saveExtractErr } = await supabaseAdmin.from("job_results").upsert({
-          job_id: job.id,
-          user_id: job.user_id,
-          extracted_text: extractedText,
-        });
-
-        if (saveExtractErr) {
-          await logEvent(supabaseAdmin, job, "error", "Saving extracted text failed", { error: saveExtractErr.message });
-          await supabaseAdmin.from("jobs").update({ status: "failed" }).eq("id", job.id);
-          return textResponse("Extract save failed", 500);
-        }
-
-        await logEvent(supabaseAdmin, job, "info", "Stage 1 completed: extracted_text saved");
-      } else {
-        // First time: submit an on-demand job to Unstructured, persist marker, and return quickly.
-        if (useMockExtract) {
-          const extractedText = mockExtractFixture({ sourceType: job.source_type, fileName: job.file_name });
-          await logEvent(supabaseAdmin, job, "info", "Mock extract enabled", { chars: extractedText.length });
-
-          const { error: saveExtractErr } = await supabaseAdmin.from("job_results").upsert({
-            job_id: job.id,
-            user_id: job.user_id,
-            extracted_text: extractedText,
-          });
-
-          if (saveExtractErr) {
-            await logEvent(supabaseAdmin, job, "error", "Saving extracted text failed", { error: saveExtractErr.message });
-            await supabaseAdmin.from("jobs").update({ status: "failed" }).eq("id", job.id);
-            return textResponse("Extract save failed", 500);
-          }
-
-          await logEvent(supabaseAdmin, job, "info", "Stage 1 completed: extracted_text saved");
-        } else {
-          const { data: fileData, error: dlErr } = await supabaseAdmin.storage.from("uploads").download(job.file_path);
-
-          if (dlErr || !fileData) {
-            await logEvent(supabaseAdmin, job, "error", "Storage download failed", { error: dlErr?.message });
-            await supabaseAdmin.from("jobs").update({ status: "failed" }).eq("id", job.id);
-            return textResponse("Download failed", 500);
-          }
-
-          const bytes = new Uint8Array(await fileData.arrayBuffer());
-          const contentType =
-            job.source_type === "pdf"
-              ? "application/pdf"
-              : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-
-          await logEvent(supabaseAdmin, job, "info", "Submitting Unstructured on-demand job", {
-            fileName: job.file_name,
-            sourceType: job.source_type,
-            bytes: bytes.byteLength,
-          });
-
-          const submitted = await extractWithUnstructuredJobs({
-            fileBytes: bytes,
-            fileName: job.file_name,
-            contentType,
-          });
-
-          const marker = submitted.markerToSave ?? "";
-          if (!marker) throw new Error("Unstructured submission did not return a marker");
-
-          const { error: saveMarkerErr } = await supabaseAdmin.from("job_results").upsert({
-            job_id: job.id,
-            user_id: job.user_id,
-            extracted_text: marker,
-          });
-
-          if (saveMarkerErr) {
-            await logEvent(supabaseAdmin, job, "error", "Saving Unstructured marker failed", { error: saveMarkerErr.message });
-            await supabaseAdmin.from("jobs").update({ status: "failed" }).eq("id", job.id);
-            return textResponse("Marker save failed", 500);
-          }
-
-          await logEvent(supabaseAdmin, job, "info", "Unstructured job submitted (marker saved)");
-
-          // Re-invoke self after a short delay to poll.
-          const pollDelayMs = parseNumberEnv("TP_UNSTRUCTURED_POLL_DELAY_MS", 8_000);
-          try {
-            const selfUrl = new URL(req.url);
-            const p = (async () => {
-              try {
-                await new Promise((r) => setTimeout(r, pollDelayMs));
-                await fetch(selfUrl.toString(), {
-                  method: "POST",
-                  headers: { "content-type": "application/json" },
-                  body: JSON.stringify({ job_id }),
-                });
-              } catch (_) {
-                // ignore
-              }
-            })();
-
-            // @ts-ignore
-            if (typeof EdgeRuntime !== "undefined" && typeof EdgeRuntime.waitUntil === "function") {
-              // @ts-ignore
-              EdgeRuntime.waitUntil(p);
-            } else {
-              void p;
-            }
-          } catch (_) {
-            // no-op
-          }
-
-          return jsonResponse({ ok: true, status: "unstructured_submitted" });
-        }
+      if (dlErr || !fileData) {
+        await logEvent(supabaseAdmin, job, "error", "Storage download failed", { error: dlErr?.message });
+        await supabaseAdmin.from("jobs").update({ status: "failed" }).eq("id", job.id);
+        return new Response("Download failed", { status: 500 });
       }
 
-      // If we reach here, extracted_text is now saved. Schedule stage 2 as a separate invocation.
-      try {
-        const selfUrl = new URL(req.url); // preserves tp_secret query param
-        const p = fetch(selfUrl.toString(), {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ job_id }),
-        });
+      const bytes = new Uint8Array(await fileData.arrayBuffer());
 
-        // @ts-ignore
-        if (typeof EdgeRuntime !== "undefined" && typeof EdgeRuntime.waitUntil === "function") {
-          // @ts-ignore
-          EdgeRuntime.waitUntil(p);
-        } else {
-          void p;
-        }
-      } catch (_) {
-        // no-op
-      }
+      const contentType =
+        job.source_type === "pdf"
+          ? "application/pdf"
+          : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
-      return jsonResponse({ ok: true, status: "extracted_scheduled" });
+      await logEvent(supabaseAdmin, job, "info", "Unstructured extract started", {
+        fileName: job.file_name,
+        sourceType: job.source_type,
+        bytes: bytes.byteLength,
+      });
+
+      extractedText = await extractWithUnstructured({
+        fileBytes: bytes,
+        fileName: job.file_name,
+        contentType,
+        includePageBreaks: true,
+      });
+
+      evidenceCandidates = buildEvidenceCandidates(extractedText);
+
+      await logEvent(
+        supabaseAdmin,
+        job,
+        extractedText ? "info" : "warn",
+        extractedText ? "Unstructured extract completed" : "Unstructured extract returned empty text",
+        { chars: extractedText.length, evidenceCandidates: evidenceCandidates.length },
+      );
     }
 
-
-// If already finalized, exit fast (idempotency).
-if (hasFinal) {
-  await logEvent(supabaseAdmin, job, "info", "Reasoning skipped (results already exist)");
-  await supabaseAdmin.from("jobs").update({ status: "done" }).eq("id", job.id);
-  await logEvent(supabaseAdmin, job, "info", "Job marked done (idempotent)");
-  return jsonResponse({ ok: true, status: "done" });
-}
-
-    // -------------------------
-    // STAGE 2: Evidence-first AI
-    // -------------------------
-    
-// -------------------------
-// Stage 2 guards (idempotency + anti-burn)
-// -------------------------
-const existingPipeline = (job as any)?.pipeline && typeof (job as any).pipeline === "object" ? (job as any).pipeline : {};
-const existingReasoning = existingPipeline?.reasoning && typeof existingPipeline.reasoning === "object"
-  ? existingPipeline.reasoning
-  : {};
-
-const nowMs = Date.now();
-const maxAttempts = parseNumberEnv("TP_REASONING_MAX_ATTEMPTS", 3);
-const cooldownSec = parseNumberEnv("TP_REASONING_COOLDOWN_SEC", 90);
-const lockTtlSec = parseNumberEnv("TP_REASONING_LOCK_TTL_SEC", 300);
-
-const attempts = Number(existingReasoning.attempts ?? 0);
-
-const parseIsoMs = (v: unknown): number | null => {
-  if (typeof v !== "string" || !v) return null;
-  const t = Date.parse(v);
-  return Number.isFinite(t) ? t : null;
-};
-
-const startedAtMs = parseIsoMs(existingReasoning.started_at);
-if (existingReasoning.in_progress === true && startedAtMs && nowMs - startedAtMs < lockTtlSec * 1000) {
-  await logEvent(supabaseAdmin, job, "info", "Reasoning already in progress (lock)", {
-    attempts,
-    started_at: existingReasoning.started_at,
-    lockTtlSec,
-  });
-  return jsonResponse({ ok: true, status: "reasoning_in_progress" });
-}
-
-const lastAttemptMs = parseIsoMs(existingReasoning.last_attempt_at);
-if (lastAttemptMs && nowMs - lastAttemptMs < cooldownSec * 1000) {
-  await logEvent(supabaseAdmin, job, "info", "Reasoning cooldown active", {
-    attempts,
-    last_attempt_at: existingReasoning.last_attempt_at,
-    cooldownSec,
-  });
-  return jsonResponse({ ok: true, status: "cooldown" });
-}
-
-if (attempts >= maxAttempts) {
-  await logEvent(supabaseAdmin, job, "error", "Reasoning attempts exceeded", { attempts, maxAttempts });
-  await supabaseAdmin.from("jobs").update({ status: "failed" }).eq("id", job.id);
-  return textResponse("Reasoning attempts exceeded", 500);
-}
-
-// Acquire lock + bump attempt counter (best-effort; do not fail job if pipeline column is missing)
-try {
-  const nextPipeline = {
-    ...existingPipeline,
-    stage: "reasoning",
-    reasoning: {
-      ...existingReasoning,
-      attempts: attempts + 1,
-      in_progress: true,
-      started_at: new Date().toISOString(),
-      last_attempt_at: new Date().toISOString(),
-    },
-  };
-  const { error: pipeErr } = await supabaseAdmin.from("jobs").update({ pipeline: nextPipeline }).eq("id", job.id);
-  if (pipeErr) {
-    await logEvent(supabaseAdmin, job, "warn", "Failed to update pipeline (continuing)", { error: pipeErr.message });
-  }
-} catch (_) {
-  // ignore
-}
-
-const extractedText = String(prevExtracted ?? "");
-
+    // AI analysis
     const model = String(Deno.env.get("TP_OPENAI_MODEL") ?? "gpt-4.1-mini");
+    const maxInputChars = parseNumberEnv("TP_MAX_INPUT_CHARS", 120_000);
     const maxOutputTokens = parseNumberEnv("TP_MAX_OUTPUT_TOKENS", 1800);
     const maxUsdPerJob = parseNumberEnv("TP_MAX_USD_PER_JOB", 0.05);
 
-    // Evidence list caps (critical for wall clock + cost)
-    const maxCandidates = parseNumberEnv("TP_EVIDENCE_MAX_CANDIDATES", 180);
-    const maxEvidenceChars = parseNumberEnv("TP_EVIDENCE_MAX_CHARS", 40_000);
-
-    let aiOutFinal: AiOutput;
+    let aiOut: AiOutput;
 
     if (useMockAi) {
-      aiOutFinal = mockAiFixture(extractedText);
+      aiOut = mockAiFixture(extractedText);
       await logEvent(supabaseAdmin, job, "info", "Mock AI enabled");
     } else {
       const apiKey = firstEnv(["TP_OPENAI_API_KEY", "OPENAI_API_KEY"], "TP_OPENAI_API_KEY");
 
-      const candidates = buildEvidenceCandidates(extractedText, maxCandidates);
-      const evidenceList = formatEvidenceList(candidates, maxEvidenceChars);
+      const { text: clipped, truncated } = clampText(extractedText, maxInputChars);
+      if (truncated) {
+        await logEvent(supabaseAdmin, job, "warn", "Source text truncated for AI", { maxChars: maxInputChars });
+      }
 
-      const inputTokensEst = estimateTokensFromChars(evidenceList.length);
+      const inputTokensEst = estimateTokensFromChars(clipped.length);
       const usdEst = estimateUsd({ model, inputTokens: inputTokensEst, outputTokens: maxOutputTokens });
 
       if (usdEst > maxUsdPerJob) {
-        await logEvent(supabaseAdmin, job, "warn", "Job exceeds cost cap (evidence list), reduce limits", {
+        await logEvent(supabaseAdmin, job, "warn", "Job exceeds cost cap, reduce input or limits", {
           model,
           maxUsdPerJob,
           usdEst,
-          evidenceChars: evidenceList.length,
+          inputChars: clipped.length,
           inputTokensEst,
           maxOutputTokens,
         });
 
         await supabaseAdmin.from("jobs").update({ status: "failed" }).eq("id", job.id);
-        return textResponse("Job exceeds cost cap", 413);
+        return new Response("Job exceeds cost cap", { status: 413 });
       }
 
-      await logEvent(supabaseAdmin, job, "info", "OpenAI started (evidence-first)", {
-        model,
-        maxOutputTokens,
-        candidates: candidates.length,
-        evidenceChars: evidenceList.length,
-      });
+      const remaining = remainingRuntimeMs(startMs);
 
-      let raw: AiRawOutput;
-const t0 = Date.now();
-try {
-  raw = await runOpenAiEvidenceFirst({ apiKey, model, evidenceList, maxOutputTokens });
-} catch (err) {
-  const emsg = err instanceof Error ? err.message : String(err);
-  await logEvent(supabaseAdmin, job, "error", "OpenAI failed (evidence-first)", { error: emsg });
-  // release lock best-effort
-  try {
-    const cur = (job as any)?.pipeline && typeof (job as any).pipeline === "object" ? (job as any).pipeline : {};
-    const curR = cur?.reasoning && typeof cur.reasoning === "object" ? cur.reasoning : {};
-    const next = { ...cur, stage: "reasoning", reasoning: { ...curR, in_progress: false } };
-    await supabaseAdmin.from("jobs").update({ pipeline: next }).eq("id", job.id);
-  } catch (_) {}
-  await supabaseAdmin.from("jobs").update({ status: "failed" }).eq("id", job.id);
-  return textResponse("OpenAI failed", 500);
-}
-await logEvent(supabaseAdmin, job, "info", "OpenAI finished (evidence-first)", {
-  model,
-  maxOutputTokens,
-  durationMs: Date.now() - t0,
-});
+      // If we are too close to runtime limit, yield and make the job reclaimable immediately.
+      if (remaining <= 7_000) {
+        await logEvent(supabaseAdmin, job, "warn", "Yielding due to runtime budget", { remaining_ms: remaining });
+        await makeJobReclaimableNow(supabaseAdmin, job.id);
 
+        return corsResponse(JSON.stringify({ ok: true, status: "yield" }), {
+          headers: { "content-type": "application/json" },
+        });
+      }
 
-      // Map evidence_ids -> excerpts and enforce MUST/RISK proof.
-      const byId = new Map<string, EvidenceCandidate>();
-      for (const c of candidates) byId.set(c.id, c);
+      await logEvent(supabaseAdmin, job, "info", "OpenAI started", { model, maxOutputTokens, remaining_ms: remaining });
 
-      const normalizeEvidence = (ids: string[]): { ids: string[]; excerpt: string } => {
-        const uniq = Array.from(new Set((ids ?? []).filter((x) => typeof x === "string" && x.trim().length > 0)));
-        const found = uniq.map((id) => byId.get(id)).filter(Boolean) as EvidenceCandidate[];
-        const excerpt = found.map((e) => e.excerpt).join("\n\n").trim();
-        return { ids: found.map((e) => e.id), excerpt };
-      };
+      // Give OpenAI only the remaining budget minus a safety buffer
+      const timeoutMs = Math.max(3_000, remaining - RUNTIME_SAFETY_MS);
 
-      // Build final AiOutput expected by the app/UI (uses `source` strings).
-      aiOutFinal = {
-        executive_summary: {
-          ...raw.executive_summary,
-          topRisks: raw.executive_summary.topRisks.map((r: any) => {
-            const ev = normalizeEvidence(r.evidence_ids ?? []);
-            return { title: r.title, severity: r.severity, detail: r.detail + (ev.excerpt ? `\n\nEvidence:\n${ev.excerpt}` : "") };
-          }),
-        },
-        checklist: raw.checklist.map((it: any) => {
-          const ev = normalizeEvidence(it.evidence_ids ?? []);
-          if (it.type === "MUST" && ev.ids.length === 0) {
-            return { type: "INFO", text: `Manual check: ${String(it.text ?? "").trim()}`, source: "Not found in extracted text." };
-          }
-          return { type: it.type, text: String(it.text ?? "").trim(), source: ev.excerpt || "Not found in extracted text." };
-        }),
-        risks: raw.risks
-          .map((r: any) => {
-            const ev = normalizeEvidence(r.evidence_ids ?? []);
-            if (ev.ids.length === 0) return null;
-            return { title: r.title, severity: r.severity, detail: r.detail + (ev.excerpt ? `\n\nEvidence:\n${ev.excerpt}` : "") };
-          })
-          .filter(Boolean) as any,
-        buyer_questions: raw.buyer_questions,
-        proposal_draft: raw.proposal_draft,
-      };
-
-      await logEvent(supabaseAdmin, job, "info", "OpenAI completed (evidence-first)", { model, maxOutputTokens });
+      aiOut = await runOpenAi({ apiKey, model, extractedText: clipped, evidenceCandidates, maxOutputTokens, timeoutMs });
+      await logEvent(supabaseAdmin, job, "info", "OpenAI completed", { model, maxOutputTokens });
     }
 
-    await logEvent(supabaseAdmin, job, "info", "Saving results started");
+
+    // Evidence-first normalization (product-grade):
+    // - AI must cite evidence_ids for MUST checklist items and for risks.
+    // - Backend backfills `source` (UI compatibility) from the referenced evidence excerpt(s).
+    // - MUST without valid evidence => downgrade to INFO + manual check.
+    // - Risks without valid evidence => move to buyer_questions (manual check) and remove from risks list.
+    {
+      const evidenceById = new Map<string, EvidenceCandidate>();
+      for (const e of evidenceCandidates) evidenceById.set(e.id, e);
+
+      const resolveSource = (ids?: string[]): { ids: string[]; source: string } => {
+        const valid = (ids ?? []).filter((id) => evidenceById.has(id));
+        if (valid.length === 0) return { ids: [], source: "Not found in extracted text." };
+        // For highlighting, keep a single contiguous excerpt (best = first id)
+        const first = evidenceById.get(valid[0])!;
+        return { ids: valid, source: first.excerpt };
+      };
+
+      const newBuyerQuestions: string[] = Array.isArray(aiOut.buyer_questions) ? [...aiOut.buyer_questions] : [];
+
+      const checklist: AiOutput["checklist"] = (Array.isArray(aiOut.checklist) ? aiOut.checklist : []).map((it) => {
+        const t = (it as any).type as "MUST" | "SHOULD" | "INFO";
+        const { ids, source } = resolveSource(it.evidence_ids);
+
+        if (t === "MUST") {
+          if (ids.length === 0) {
+            return {
+              ...it,
+              type: "INFO" as const,
+              text: `Manual check: ${String((it as any).text ?? "").trim()}`,
+              evidence_ids: [] as string[],
+              source: "Not found in extracted text.",
+            };
+          }
+          return { ...(it as any), type: "MUST" as const, evidence_ids: ids, source };
+        }
+
+        // SHOULD / INFO: source optional; keep if evidence exists, else omit.
+        if (ids.length > 0) return { ...(it as any), type: t, evidence_ids: ids, source };
+        return { ...(it as any), type: t, evidence_ids: [] as string[], source: "Not found in extracted text." };
+      });
+
+      const risks: AiOutput["risks"] = [];
+      for (const r of Array.isArray(aiOut.risks) ? aiOut.risks : []) {
+        const { ids, source } = resolveSource(r.evidence_ids);
+        if (ids.length === 0) {
+          newBuyerQuestions.push(`Manual check (risk): ${String(r.title ?? "").trim()} — ${String(r.detail ?? "").trim()}`);
+          continue;
+        }
+        risks.push({ ...r, evidence_ids: ids, source });
+      }
+
+      aiOut = { ...aiOut, checklist, risks, buyer_questions: newBuyerQuestions };
+    }
+
 
     const { error: upsertErr } = await supabaseAdmin.from("job_results").upsert({
       job_id: job.id,
       user_id: job.user_id,
       extracted_text: extractedText,
-      executive_summary: aiOutFinal.executive_summary,
-      checklist: aiOutFinal.checklist,
-      risks: aiOutFinal.risks,
-      clarifications: aiOutFinal.buyer_questions,
-      proposal_draft: aiOutFinal.proposal_draft,
+      executive_summary: aiOut.executive_summary,
+      checklist: aiOut.checklist,
+      risks: aiOut.risks,
+      clarifications: aiOut.buyer_questions,
+      proposal_draft: aiOut.proposal_draft,
     });
 
     if (upsertErr) {
-        await logEvent(supabaseAdmin, job, "error", "Saving results failed", { error: upsertErr.message });
-  // release lock best-effort
-  try {
-    const cur = (job as any)?.pipeline && typeof (job as any).pipeline === "object" ? (job as any).pipeline : {};
-    const curR = cur?.reasoning && typeof cur.reasoning === "object" ? cur.reasoning : {};
-    const next = { ...cur, stage: "reasoning", reasoning: { ...curR, in_progress: false } };
-    await supabaseAdmin.from("jobs").update({ pipeline: next }).eq("id", job.id);
-  } catch (_) {}
-  await supabaseAdmin.from("jobs").update({ status: "failed" }).eq("id", job.id);
-  return textResponse("Result save failed", 500);
-}
+      await logEvent(supabaseAdmin, job, "error", "Saving results failed", { error: upsertErr.message });
+      await supabaseAdmin.from("jobs").update({ status: "failed" }).eq("id", job.id);
+      return new Response("Result save failed", { status: 500 });
+    }
 
-    await logEvent(supabaseAdmin, job, "info", "Results saved successfully");
-// mark pipeline done + release lock best-effort
-try {
-  const cur = (job as any)?.pipeline && typeof (job as any).pipeline === "object" ? (job as any).pipeline : {};
-  const curR = cur?.reasoning && typeof cur.reasoning === "object" ? cur.reasoning : {};
-  const next = { ...cur, stage: "done", reasoning: { ...curR, in_progress: false, finished_at: new Date().toISOString() } };
-  await supabaseAdmin.from("jobs").update({ pipeline: next }).eq("id", job.id);
-} catch (_) {}
+    await supabaseAdmin.from("jobs").update({ status: "done" }).eq("id", job.id);
+    await logEvent(supabaseAdmin, job, "info", "Job completed");
 
-await supabaseAdmin.from("jobs").update({ status: "done" }).eq("id", job.id);
-await logEvent(supabaseAdmin, job, "info", "Job marked done");
+    return new Response(JSON.stringify({ ok: true, status: "done" }), {
+      headers: { "content-type": "application/json" },
+    });
+    } finally {
+      try {
+        stopHeartbeat?.();
+      } catch {
+        // ignore
+      }
+    }
 
-
-    return jsonResponse({ ok: true, status: "done" });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    return textResponse(`Error: ${msg}`, 500);
-  }
+
+    // Never brick a job: make it reclaimable on next tick (best-effort).
+    try {
+      const { job_id } = await req.clone().json().catch(() => ({} as any));
+      if (typeof job_id === "string" && job_id.length > 0) {
+        const SUPABASE_URL = firstEnv(["SUPABASE_URL"], "SUPABASE_URL");
+        const SERVICE_ROLE = firstEnv(["SUPABASE_SERVICE_ROLE_KEY"], "SUPABASE_SERVICE_ROLE_KEY");
+
+        const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE, {
+          auth: { persistSession: false },
+        });
+
+        await makeJobReclaimableNow(supabaseAdmin, job_id);
+      }
+    } catch {
+      // ignore
+    }
+
+    return corsJson({ ok: false, error: normalizeThrownError(e) }, { status: 500 });
+    }
 });
