@@ -16,13 +16,13 @@ export type PdfExtractMeta = {
 export async function extractPdfTextFast(file: File): Promise<{ text: string; meta: PdfExtractMeta }> {
   // Dynamic import keeps this out of the server bundle
   // eslint-disable-next-line @typescript-eslint/consistent-type-imports
-  const pdfjsLib: any = await import("pdfjs-dist/build/pdf");
+  const pdfjsLib: any = await import("pdfjs-dist/legacy/build/pdf.mjs");
   // Worker for modern bundlers (Next + ESM)
   try {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-      "pdfjs-dist/build/pdf.worker.min.mjs",
-      import.meta.url
-    ).toString();
+	  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+	  "pdfjs-dist/legacy/build/pdf.worker.mjs",
+	  import.meta.url
+	).toString();
   } catch {
     // If this fails in some build configs, PDF.js will try fallback mechanisms.
   }

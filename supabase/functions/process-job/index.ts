@@ -75,7 +75,7 @@ function parseNumberEnv(name: string, fallback: number): number {
 // ---- Lease / heartbeat / runtime guards (Stage 2 stabilization) ----
 const JOB_LEASE_MS = parseNumberEnv("TP_JOB_LEASE_MS", 5 * 60 * 1000); // default 5 min
 const HEARTBEAT_MS = parseNumberEnv("TP_JOB_HEARTBEAT_MS", 15 * 1000); // default 15s
-const MAX_RUNTIME_MS = parseNumberEnv("TP_MAX_RUNTIME_MS", 23 * 1000); // keep < 25s
+const MAX_RUNTIME_MS = parseNumberEnv("TP_MAX_RUNTIME_MS", 55 * 1000); // default 55s; set env to tune (keep <= platform limit)
 const RUNTIME_BUFFER_MS = parseNumberEnv("TP_RUNTIME_BUFFER_MS", 2_000); // safety buffer
 const RUNTIME_SAFETY_MS = parseNumberEnv("TP_RUNTIME_SAFETY_MS", 2 * 1000); // buffer
 
@@ -635,7 +635,7 @@ ${extractedText}`;
     },
   };
 
-  const reqTimeoutMs = Math.max(3_000, Math.min(timeoutMs ?? 18_000, 20_000));
+  const reqTimeoutMs = Math.max(3_000, Math.min(timeoutMs ?? 60_000, 90_000));
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), reqTimeoutMs);
 
@@ -858,6 +858,7 @@ function buildEvidenceCandidates(extractedText: string): EvidenceCandidate[] {
 	});
 
 Deno.serve(async (req) => {
+  let activeJobId: string | null = null;
   // CORS preflight
   if (req.method === "OPTIONS") return corsResponse("ok");
 
@@ -987,6 +988,9 @@ Deno.serve(async (req) => {
         });
       }
     }
+
+    // Track claimed job id for cleanup on unexpected failure
+    activeJobId = jobId;
 
     // Fetch job after claim
     const { data: job, error: jobErr } = await supabaseAdmin
@@ -1146,8 +1150,17 @@ let extractedText = "";
 
       await logEvent(supabaseAdmin, job, "info", "OpenAI started", { model, maxOutputTokens, remaining_ms: remaining });
 
-      // Give OpenAI only the remaining budget minus a safety buffer
-      const timeoutMs = Math.max(3_000, remaining - RUNTIME_SAFETY_MS);
+      // Configurable OpenAI timeout cap (default 35s)
+      const openAiTimeoutCap = parseNumberEnv("OPENAI_TIMEOUT_MS", 35_000);
+
+      // Give OpenAI only the remaining budget minus a safety buffer, but cap by OPENAI_TIMEOUT_MS
+      const timeoutMs = Math.max(
+        3_000,
+        Math.min(
+          remaining - RUNTIME_SAFETY_MS,
+          Math.max(5_000, openAiTimeoutCap),
+        ),
+      );
 
       aiOut = await runOpenAi({ apiKey, model, extractedText: clipped, evidenceCandidates, maxOutputTokens, timeoutMs });
       await logEvent(supabaseAdmin, job, "info", "OpenAI completed", { model, maxOutputTokens });
@@ -1241,12 +1254,20 @@ let extractedText = "";
     }
 
   } catch (e) {
+	  console.error("process-job fatal error:", e);
     const msg = e instanceof Error ? e.message : String(e);
 
     // Never brick a job: make it reclaimable on next tick (best-effort).
+    // Prefer the job claimed in this invocation; fall back to request payload if provided.
     try {
-      const { job_id } = await req.clone().json().catch(() => ({} as any));
-      if (typeof job_id === "string" && job_id.length > 0) {
+      let jobIdForCleanup: string | null = activeJobId;
+
+      if (!jobIdForCleanup) {
+        const { job_id } = await req.clone().json().catch(() => ({} as any));
+        if (typeof job_id === "string" && job_id.length > 0) jobIdForCleanup = job_id;
+      }
+
+      if (jobIdForCleanup) {
         const SUPABASE_URL = firstEnv(["SUPABASE_URL"], "SUPABASE_URL");
         const SERVICE_ROLE = firstEnv(["SUPABASE_SERVICE_ROLE_KEY"], "SUPABASE_SERVICE_ROLE_KEY");
 
@@ -1254,10 +1275,19 @@ let extractedText = "";
           auth: { persistSession: false },
         });
 
-        await makeJobReclaimableNow(supabaseAdmin, job_id);
+        await makeJobReclaimableNow(supabaseAdmin, jobIdForCleanup);
       }
     } catch {
       // ignore
+    }
+
+    const isOpenAiTimeout =
+      typeof msg === "string" &&
+      msg.toLowerCase().includes("openai request timed out");
+
+    if (isOpenAiTimeout) {
+      // Job was made reclaimable above; treat timeout as transient to avoid repeated 500s in pg_net.
+      return corsJson({ ok: true, status: "transient_openai_timeout_retryable" }, { status: 200 });
     }
 
     return corsJson({ ok: false, error: normalizeThrownError(e) }, { status: 500 });
