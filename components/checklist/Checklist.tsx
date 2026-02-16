@@ -11,12 +11,15 @@ type Props = {
   checklist: any[];
   extractedText: string;
   onJumpToSource: (query: string) => void;
+  onShowEvidence?: (evidenceIds: string[] | undefined, fallbackQuery: string) => void; // NEW (optional for backward compatibility)
 };
+
 
 type NormalizedReq = {
   id: string;
   type: "MUST" | "SHOULD" | "INFO";
   text: string;
+  evidenceIds: string[];
 };
 
 function pickFirstString(obj: any, keys: string[]) {
@@ -148,7 +151,7 @@ function findExcerpt(text: string, query: string) {
   return makeSnippet(best.center, best.tokenLen);
 }
 
-export default function Checklist({ checklist, extractedText, onJumpToSource }: Props) {
+export default function Checklist({ checklist, extractedText, onJumpToSource, onShowEvidence }: Props) {
   const [filter, setFilter] = useState<"ALL" | "MUST" | "SHOULD" | "INFO">("ALL");
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<string | null>(null);
@@ -165,10 +168,17 @@ export default function Checklist({ checklist, extractedText, onJumpToSource }: 
           pickFirstString(it, ["text", "statement", "requirement", "item", "title", "summary", "description"]) ||
           (typeof it === "string" ? it : "");
 
+        const idsRaw = (it as any)?.evidence_ids ?? (it as any)?.evidenceIds ?? (it as any)?.evidence ?? null;
+
+        const evidenceIds = Array.isArray(idsRaw)
+          ? idsRaw.map((x: any) => String(x ?? "").trim()).filter(Boolean)
+          : [];
+
         return {
           id: String(it?.id ?? it?.key ?? idx),
           type: normalizeType(typeRaw),
           text: String(textRaw ?? "").trim(),
+          evidenceIds,
         };
       })
       .filter((x) => x.text.length > 0);
@@ -333,7 +343,7 @@ export default function Checklist({ checklist, extractedText, onJumpToSource }: 
                     <div className="mt-4 space-y-3">
                       <Separator />
                       <div className="flex flex-wrap items-center gap-2">
-                        <Button type="button" variant="outline" className="rounded-full" onClick={() => onJumpToSource(it.text)}>
+                        <Button type="button" variant="outline" className="rounded-full" onClick={() => (it.evidenceIds?.length && onShowEvidence ? onShowEvidence(it.evidenceIds, it.text) : onJumpToSource(it.text))}>
                           Jump to source
                         </Button>
                       </div>

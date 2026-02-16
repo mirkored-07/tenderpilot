@@ -11,6 +11,7 @@ type Props = {
   risks: any[];
   extractedText: string;
   onJumpToSource: (query: string) => void;
+  onShowEvidence?: (evidenceIds: string[] | undefined, fallbackQuery: string) => void; // optional
 };
 
 type RiskSeverity = "high" | "medium" | "low";
@@ -20,6 +21,7 @@ type NormalizedRisk = {
   severity: RiskSeverity;
   title: string;
   detail: string;
+  evidenceIds: string[];
 };
 
 function pickFirstString(obj: any, keys: string[]) {
@@ -136,7 +138,7 @@ function findExcerpt(text: string, query: string) {
   return makeSnippet(best.center, best.tokenLen);
 }
 
-export default function Risks({ risks, extractedText, onJumpToSource }: Props) {
+export default function Risks({ risks, extractedText, onJumpToSource, onShowEvidence }: Props) {
   const [filter, setFilter] = useState<RiskSeverity | "ALL">("ALL");
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<string | null>(null);
@@ -152,11 +154,18 @@ export default function Risks({ risks, extractedText, onJumpToSource }: Props) {
           (typeof r === "string" ? r : "");
         const detailRaw = pickFirstString(r, ["detail", "description", "why", "impact", "mitigation", "recommendation"]);
 
+        const idsRaw = (r as any)?.evidence_ids ?? (r as any)?.evidenceIds ?? (r as any)?.evidence ?? null;
+
+        const evidenceIds = Array.isArray(idsRaw)
+          ? idsRaw.map((x: any) => String(x ?? "").trim()).filter(Boolean)
+          : [];
+
         return {
           id: String(r?.id ?? r?.key ?? idx),
           severity: normalizeSeverity(sevRaw),
           title: String(titleRaw ?? "").trim(),
           detail: String(detailRaw ?? "").trim(),
+          evidenceIds,
         };
       })
       .filter((x) => x.title.length > 0);
@@ -307,7 +316,7 @@ export default function Risks({ risks, extractedText, onJumpToSource }: Props) {
                           type="button"
                           variant="outline"
                           className="rounded-full"
-                          onClick={() => onJumpToSource(r.title)}
+                          onClick={() => (r.evidenceIds?.length  && onShowEvidence ? onShowEvidence(r.evidenceIds, r.title) : onJumpToSource(r.title))}
                         >
                           Jump to source
                         </Button>
