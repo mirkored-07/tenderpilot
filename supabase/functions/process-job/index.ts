@@ -264,6 +264,90 @@ async function extractWithUnstructured(args: {
 
   return buildAnchoredTextFromUnstructuredElements(json);
 }
+/**
+ * Mistral Document AI OCR extraction (Edge-compatible)
+ * Uses a public/signed URL so we don't need to upload bytes.
+ *
+ * Endpoint: POST https://api.mistral.ai/v1/ocr
+ * Model default: mistral-ocr-latest
+ */
+async function extractWithMistralOcr(args: {
+  documentUrl: string;
+  model?: string;
+  tableFormat?: "markdown" | "html";
+  extractHeader?: boolean;
+  extractFooter?: boolean;
+}): Promise<{ text: string; model: string; pages: number }> {
+  const apiKey = firstEnv(["MISTRAL_API_KEY", "TP_MISTRAL_API_KEY"], "MISTRAL_API_KEY");
+  const apiUrl = String(Deno.env.get("MISTRAL_OCR_URL") ?? "https://api.mistral.ai/v1/ocr");
+  const model = String(args.model ?? Deno.env.get("MISTRAL_OCR_MODEL") ?? "mistral-ocr-latest");
+
+  const timeoutMs = parseNumberEnv("MISTRAL_TIMEOUT_MS", 120_000);
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const body: Record<string, unknown> = {
+      model,
+      document: {
+        type: "document_url",
+        document_url: args.documentUrl,
+      },
+    };
+
+    // Prefer inline markdown tables unless you explicitly want separate html/markdown tables.
+    // If you set table_format, Mistral may return placeholders like [tbl-x.html] and tables in a separate field.
+    if (args.tableFormat) body.table_format = args.tableFormat;
+
+    if (typeof args.extractHeader === "boolean") body.extract_header = args.extractHeader;
+    if (typeof args.extractFooter === "boolean") body.extract_footer = args.extractFooter;
+
+    const res = await fetch(apiUrl, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${apiKey}`,
+        accept: "application/json",
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const txt = await res.text().catch(() => "");
+      throw new Error(`Mistral OCR error ${res.status}: ${txt.slice(0, 600)}`);
+    }
+
+    const json = await res.json();
+
+    const pages = Array.isArray(json?.pages) ? json.pages : [];
+    const usedModel = String(json?.model ?? model);
+
+    const parts: string[] = [];
+    for (const p of pages) {
+      const idx = Number(p?.index);
+      const pageNum = Number.isFinite(idx) ? idx + 1 : null;
+      if (pageNum) parts.push(`[PAGE ${pageNum}]`);
+
+      // If you enable extract_header/extract_footer, you can optionally surface them like this:
+      // const header = typeof p?.header === "string" ? p.header.trim() : "";
+      // if (header) parts.push(`HEADER: ${header}`);
+
+      const md = typeof p?.markdown === "string" ? p.markdown.trim() : "";
+      if (md) parts.push(md);
+
+      // const footer = typeof p?.footer === "string" ? p.footer.trim() : "";
+      // if (footer) parts.push(`FOOTER: ${footer}`);
+    }
+
+    const text = parts.join("\n\n").trim();
+
+    return { text, model: usedModel, pages: pages.length };
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 
 function normalizeAnchorLabel(label: string): string {
   return String(label ?? "")
@@ -1034,8 +1118,6 @@ Deno.serve(async (req) => {
       heartbeat_ms: HEARTBEAT_MS,
     });
 
-    try {
-
     const useMockExtract = flagEnv("TP_MOCK_EXTRACT");
     const useMockAi = flagEnv("TP_MOCK_AI");
 
@@ -1061,43 +1143,167 @@ let extractedText = "";
       evidenceCandidates = buildEvidenceCandidates(extractedText);
       await logEvent(supabaseAdmin, job, "info", "Mock extract enabled", { chars: extractedText.length, evidenceCandidates: evidenceCandidates.length });
     } else {
-      const { data: fileData, error: dlErr } = await supabaseAdmin.storage.from("uploads").download(job.file_path);
+      // Prefer server-side signed URL for extractor providers (no byte upload, supports pdf/docx).
+      const signedExpirySeconds = parseNumberEnv("TP_EXTRACT_SIGNED_URL_TTL_S", 600);
 
-      if (dlErr || !fileData) {
-        await logEvent(supabaseAdmin, job, "error", "Storage download failed", { error: dlErr?.message });
-        await supabaseAdmin.from("jobs").update({ status: "failed" }).eq("id", job.id);
-        return new Response("Download failed", { status: 500 });
-      }
+      const { data: signed, error: signedErr } = await supabaseAdmin
+        .storage
+        .from("uploads")
+        .createSignedUrl(job.file_path, signedExpirySeconds);
 
-      const bytes = new Uint8Array(await fileData.arrayBuffer());
+      const signedUrl = String(signed?.signedUrl ?? "").trim();
+
+      // Provider switch: keep Unstructured during test, switch to Mistral by env.
+      const provider = String(Deno.env.get("TP_EXTRACT_PROVIDER") ?? "unstructured").trim().toLowerCase();
+      const allowFallbackToUnstructured = flagEnv("TP_MISTRAL_FALLBACK_UNSTRUCTURED") || provider !== "mistral";
 
       const contentType =
         job.source_type === "pdf"
           ? "application/pdf"
           : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
-      await logEvent(supabaseAdmin, job, "info", "Unstructured extract started", {
-        fileName: job.file_name,
-        sourceType: job.source_type,
-        bytes: bytes.byteLength,
-      });
+      // If we cannot create a signed URL, fall back to storage download (needed for Unstructured).
+      if (!signedUrl) {
+        await logEvent(supabaseAdmin, job, "warn", "Signed URL creation failed; falling back to storage download", {
+          error: signedErr?.message ?? null,
+          provider,
+        });
 
-      extractedText = await extractWithUnstructured({
-        fileBytes: bytes,
-        fileName: job.file_name,
-        contentType,
-        includePageBreaks: true,
-      });
+        const { data: fileData, error: dlErr } = await supabaseAdmin.storage.from("uploads").download(job.file_path);
 
-      evidenceCandidates = buildEvidenceCandidates(extractedText);
+        if (dlErr || !fileData) {
+          await logEvent(supabaseAdmin, job, "error", "Storage download failed", { error: dlErr?.message });
+          await supabaseAdmin.from("jobs").update({ status: "failed" }).eq("id", job.id);
+          return new Response("Download failed", { status: 500 });
+        }
 
-      await logEvent(
-        supabaseAdmin,
-        job,
-        extractedText ? "info" : "warn",
-        extractedText ? "Unstructured extract completed" : "Unstructured extract returned empty text",
-        { chars: extractedText.length, evidenceCandidates: evidenceCandidates.length },
-      );
+        const bytes = new Uint8Array(await fileData.arrayBuffer());
+
+        await logEvent(supabaseAdmin, job, "info", "Unstructured extract started", {
+          fileName: job.file_name,
+          sourceType: job.source_type,
+          bytes: bytes.byteLength,
+        });
+
+        extractedText = await extractWithUnstructured({
+          fileBytes: bytes,
+          fileName: job.file_name,
+          contentType,
+          includePageBreaks: true,
+        });
+
+        evidenceCandidates = buildEvidenceCandidates(extractedText);
+
+        await logEvent(
+          supabaseAdmin,
+          job,
+          extractedText ? "info" : "warn",
+          extractedText ? "Unstructured extract completed" : "Unstructured extract returned empty text",
+          { chars: extractedText.length, evidenceCandidates: evidenceCandidates.length },
+        );
+      } else {
+        // Signed URL available: use provider selected (Mistral or Unstructured).
+        if (provider === "mistral") {
+          await logEvent(supabaseAdmin, job, "info", "Mistral OCR extract started", {
+            fileName: job.file_name,
+            sourceType: job.source_type,
+            signedUrl: "[redacted]",
+          });
+
+          try {
+            const res = await extractWithMistralOcr({
+              documentUrl: signedUrl,
+              // You can set tableFormat="html" if you want table placeholders + separate html tables.
+              // Leaving it undefined keeps tables inline in markdown.
+            });
+
+            extractedText = res.text;
+
+            await logEvent(
+              supabaseAdmin,
+              job,
+              extractedText ? "info" : "warn",
+              extractedText ? "Mistral OCR extract completed" : "Mistral OCR extract returned empty text",
+              { chars: extractedText.length, pages: res.pages, model: res.model },
+            );
+          } catch (e) {
+            await logEvent(supabaseAdmin, job, "warn", "Mistral OCR extract failed", {
+              error: (e as Error)?.message ?? String(e),
+              allowFallbackToUnstructured,
+            });
+
+            if (!allowFallbackToUnstructured) throw e;
+
+            // Fallback to Unstructured (test phase safety net)
+            const { data: fileData, error: dlErr } = await supabaseAdmin.storage.from("uploads").download(job.file_path);
+
+            if (dlErr || !fileData) {
+              await logEvent(supabaseAdmin, job, "error", "Storage download failed after Mistral failure", { error: dlErr?.message });
+              await supabaseAdmin.from("jobs").update({ status: "failed" }).eq("id", job.id);
+              return new Response("Download failed", { status: 500 });
+            }
+
+            const bytes = new Uint8Array(await fileData.arrayBuffer());
+
+            await logEvent(supabaseAdmin, job, "info", "Unstructured extract started (fallback)", {
+              fileName: job.file_name,
+              sourceType: job.source_type,
+              bytes: bytes.byteLength,
+            });
+
+            extractedText = await extractWithUnstructured({
+              fileBytes: bytes,
+              fileName: job.file_name,
+              contentType,
+              includePageBreaks: true,
+            });
+
+            await logEvent(
+              supabaseAdmin,
+              job,
+              extractedText ? "info" : "warn",
+              extractedText ? "Unstructured extract completed (fallback)" : "Unstructured extract returned empty text (fallback)",
+              { chars: extractedText.length },
+            );
+          }
+
+          evidenceCandidates = buildEvidenceCandidates(extractedText);
+        } else {
+          // Keep your current behavior: Unstructured is the fallback provider
+          const { data: fileData, error: dlErr } = await supabaseAdmin.storage.from("uploads").download(job.file_path);
+
+          if (dlErr || !fileData) {
+            await logEvent(supabaseAdmin, job, "error", "Storage download failed", { error: dlErr?.message });
+            await supabaseAdmin.from("jobs").update({ status: "failed" }).eq("id", job.id);
+            return new Response("Download failed", { status: 500 });
+          }
+
+          const bytes = new Uint8Array(await fileData.arrayBuffer());
+
+          await logEvent(supabaseAdmin, job, "info", "Unstructured extract started", {
+            fileName: job.file_name,
+            sourceType: job.source_type,
+            bytes: bytes.byteLength,
+          });
+
+          extractedText = await extractWithUnstructured({
+            fileBytes: bytes,
+            fileName: job.file_name,
+            contentType,
+            includePageBreaks: true,
+          });
+
+          evidenceCandidates = buildEvidenceCandidates(extractedText);
+
+          await logEvent(
+            supabaseAdmin,
+            job,
+            extractedText ? "info" : "warn",
+            extractedText ? "Unstructured extract completed" : "Unstructured extract returned empty text",
+            { chars: extractedText.length, evidenceCandidates: evidenceCandidates.length },
+          );
+        }
+      }
     }
 
     // AI analysis
@@ -1245,13 +1451,6 @@ let extractedText = "";
     return new Response(JSON.stringify({ ok: true, status: "done" }), {
       headers: { "content-type": "application/json" },
     });
-    } finally {
-      try {
-        stopHeartbeat?.();
-      } catch {
-        // ignore
-      }
-    }
 
   } catch (e) {
 	  console.error("process-job fatal error:", e);
@@ -1291,5 +1490,11 @@ let extractedText = "";
     }
 
     return corsJson({ ok: false, error: normalizeThrownError(e) }, { status: 500 });
+  } finally {
+    try {
+      stopHeartbeat?.();
+    } catch {
+      // ignore
     }
+  }
 });
