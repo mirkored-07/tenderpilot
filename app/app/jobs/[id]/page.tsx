@@ -1139,6 +1139,14 @@ export default function JobDetailPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [tab, setTab] = useState<"checklist" | "risks" | "questions" | "draft" | "text">("checklist");
+
+  function openRequirementsForVerification() {
+    setTab("checklist");
+    // Defer one tick so the tab state + DOM are ready before scrolling
+    window.setTimeout(() => {
+      tabsTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
+  }
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
 
   const [displayName, setDisplayNameState] = useState<string>("");
@@ -2132,7 +2140,7 @@ const executive = useMemo(() => {
         setSourceFocus({
           query: displayQuery,
           snippet:
-            "Couldn't auto-highlight this evidence in the extracted text. The evidence snippet shown in the Evidence panel remains the authoritative support. Verify in the original PDF if needed.",
+            "No exact supporting clause found for this item in the extracted text. Verify manually in the original PDF.",
           idx: null,
           highlightStart: null,
           highlightEnd: null,
@@ -2145,27 +2153,9 @@ const executive = useMemo(() => {
     const match = findExcerpt(extractedText, effectiveQuery);
 
     if (!match) {
-      // Evidence-first rule: when the caller passed a verbatim evidence payload (excerpt/anchor),
-      // highlight is best-effort only. We must not undermine trust with "not found" messaging.
-      if (looksLikeEvidencePayload) {
-        const snippet = String(displayQuery).trim();
-        const clipped = snippet.length > 1200 ? snippet.slice(0, 1200).trimEnd() + "…" : snippet;
-        setSourceFocus({
-          query: "Evidence snippet",
-          snippet:
-            "Couldn't auto-highlight this excerpt in the extracted text. Showing the evidence snippet below (authoritative). Verify in the original PDF if needed.\n\n" +
-            clipped,
-          idx: null,
-          highlightStart: null,
-          highlightEnd: null,
-        });
-        openTabAndScroll("text");
-        return;
-      }
-
-      // Never highlight the wrong clause. If we can't find an exact match for a non-evidence query, be explicit.
+      // Never highlight the wrong clause. If we can't find an exact match, show an explicit message.
       const msg = evidenceOverride
-        ? "Couldn't auto-highlight this evidence in the extracted text. Verify manually in the original PDF."
+        ? "No exact supporting clause found for this item in the extracted text. Verify manually in the original PDF."
         : "No matching excerpt found in the source text.";
       setSourceFocus({ query: displayQuery, snippet: msg, idx: null, highlightStart: null, highlightEnd: null });
       openTabAndScroll("text");
@@ -2685,6 +2675,22 @@ const executive = useMemo(() => {
                           </p>
                         ) : null}
                       </div>
+
+                      {evidenceCoverage.mustTotal > 0 && evidenceCoverage.mustCovered < evidenceCoverage.mustTotal ? (
+                        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                            <div className="space-y-1">
+                              <p className="text-xs font-semibold text-amber-900">Some MUST requirements need verification</p>
+                              <p className="text-xs text-amber-900/80">
+                                MUST evidence coverage is {evidenceCoverage.mustCovered}/{evidenceCoverage.mustTotal}. Review the MUST items marked “Needs verification” before committing.
+                              </p>
+                            </div>
+                            <Button className="rounded-full" onClick={openRequirementsForVerification}>
+                              Review MUST items
+                            </Button>
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
                   </>
                 )}
@@ -3147,13 +3153,12 @@ const executive = useMemo(() => {
               </Card>
             ) : risks.length ? (
               <Risks
-			  risks={risks}
-			  extractedText={extractedText}
-			  onJumpToSource={onJumpToSource}
-			  onShowEvidence={showEvidenceByIds}
-			  knownEvidenceIds={knownEvidenceIds}
-			/>
-
+                risks={risks}
+                extractedText={extractedText}
+                onJumpToSource={onJumpToSource}
+                onShowEvidence={showEvidenceByIds}
+                knownEvidenceIds={knownEvidenceIds}
+              />
             ) : (
               <Card className="rounded-2xl">
                 <CardContent className="p-6">
