@@ -90,7 +90,7 @@ function VerdictBadge({ state }: { state: VerdictState }) {
     return <span className={`${base} border-green-200 bg-green-50 text-green-800`}>Proceed</span>;
   }
   if (state === "hold") {
-    return <span className={`${base} border-red-200 bg-red-50 text-red-800`}>Hold – potential blocker</span>;
+    return <span className={`${base} border-red-200 bg-red-50 text-red-800`}>Hold — compliance blockers</span>;
   }
   return <span className={`${base} border-amber-200 bg-amber-50 text-amber-900`}>Proceed with caution</span>;
 }
@@ -2083,12 +2083,14 @@ const executive = useMemo(() => {
     if (!newName) {
       clearJobDisplayName(jobId);
       setDisplayNameState(String(job.file_name ?? "").trim());
+      window.dispatchEvent(new CustomEvent("tp_job_rename", { detail: { jobId, name: "" } }));
       setRenaming(false);
       return;
     }
 
     setJobDisplayName(jobId, newName);
     setDisplayNameState(newName);
+    window.dispatchEvent(new CustomEvent("tp_job_rename", { detail: { jobId, name: newName } }));
     setRenaming(false);
   }
 
@@ -2098,6 +2100,42 @@ const executive = useMemo(() => {
     tabsTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 }
+
+
+
+  function jumpToPageMarker(page: number, reason?: string) {
+    const full = String(extractedText ?? "");
+    const marker = `[PAGE ${page}]`;
+    const idx = full.indexOf(marker);
+
+    if (idx < 0) {
+      setSourceFocus({
+        query: `Page ${page}`,
+        snippet:
+          reason ||
+          `Exact clause not found. Page marker ${marker} was not found in extracted text. Verify in the original PDF.`,
+        idx: null,
+        highlightStart: null,
+        highlightEnd: null,
+      });
+      openTabAndScroll("text");
+      return;
+    }
+
+    if (idx > SOURCE_TEXT_PREVIEW_LIMIT) setShowFullSourceText(true);
+
+    setSourceFocus({
+      query: `Page ${page}`,
+      snippet:
+        reason ||
+        `Exact clause not found in extracted text. Jumped to ${marker} as a reliable anchor. Verify the clause in the original PDF.`,
+      idx,
+      highlightStart: idx,
+      highlightEnd: idx + marker.length,
+    });
+
+    openTabAndScroll("text");
+  }
 
 
   function onJumpToSource(query: string) {
@@ -2156,7 +2194,7 @@ const executive = useMemo(() => {
       // Never highlight the wrong clause. If we can't find an exact match, show an explicit message.
       const msg = evidenceOverride
         ? "No exact supporting clause found for this item in the extracted text. Verify manually in the original PDF."
-        : "No matching excerpt found in the source text.";
+        : "Exact match not found in extracted text (OCR/layout differences are common). Use the evidence snippet above and search the phrase in the original PDF.";
       setSourceFocus({ query: displayQuery, snippet: msg, idx: null, highlightStart: null, highlightEnd: null });
       openTabAndScroll("text");
       return;
@@ -2196,7 +2234,7 @@ const executive = useMemo(() => {
       fileName: displayName || job.file_name,
       createdAt: job.created_at,
       verdictLabel:
-        verdictState === "hold" ? "Hold – potential blocker" : verdictState === "caution" ? "Proceed with caution" : "Proceed",
+        verdictState === "hold" ? "Hold — compliance blockers" : verdictState === "caution" ? "Proceed with caution" : "Proceed",
       decisionLine: String(executive?.decisionLine ?? "").trim() || verdictMicrocopy(verdictState),
       rationaleSnapshot: (mustItems ?? []).slice(0, 3).map((t) => String(t).trim()).filter(Boolean),
       recommendedAction:
@@ -2279,7 +2317,7 @@ const executive = useMemo(() => {
     const deadline = executive.submissionDeadline ? escapeHtml(String(executive.submissionDeadline)) : "";
 
     const verdictLabel =
-      verdictState === "hold" ? "Hold – potential blocker" : verdictState === "caution" ? "Proceed with caution" : "Proceed";
+      verdictState === "hold" ? "Hold — compliance blockers" : verdictState === "caution" ? "Proceed with caution" : "Proceed";
 
     const html = `<!doctype html>
 <html>
@@ -2641,7 +2679,7 @@ const executive = useMemo(() => {
 
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                           <span>
-                            Content read:{" "}
+                            Source text processed:{" "}
                             <span className="text-foreground/90">
                               {coverage === "full"
                                 ? "Complete"
@@ -2653,8 +2691,8 @@ const executive = useMemo(() => {
 
                           <span className="text-muted-foreground">•</span>
 
-                          <span>
-                            Decision reliability:{" "}
+                          <span title={confidence === "high" ? "Strong evidence coverage" : confidence === "medium" ? "Some items need verification" : "Evidence coverage is limited"}>
+                            Confidence:{" "}
                             <span className="text-foreground/90">
                               {confidence === "high"
                                 ? "High"
@@ -3056,7 +3094,7 @@ const executive = useMemo(() => {
 				}}
 				disabled={!canDownload || !questions.length}
 			  >
-				{copiedSection === "clarifications_ready" ? "Copied" : "Copy ready-to-send"}
+				{copiedSection === "clarifications_ready" ? "Copied" : "Copy ready-to-send email"}
 			  </Button>
 
 			  <Button variant="outline" className="rounded-full" onClick={() => copySection("clarifications")} disabled={!canDownload}>
@@ -3226,7 +3264,7 @@ const executive = useMemo(() => {
 						}}
 						disabled={!questions.length}
 					  >
-						{copiedSection === "clarifications_ready" ? "Copied" : "Copy ready-to-send"}
+						{copiedSection === "clarifications_ready" ? "Copied" : "Copy ready-to-send email"}
 					  </Button>
 					</div>
 
@@ -3404,10 +3442,34 @@ const executive = useMemo(() => {
                       <Button
                         variant="outline"
                         className="rounded-full"
-                        onClick={() => onJumpToSource(evidenceFocus.excerpt)}
+                        onClick={() => {
+                          const ex = String(evidenceFocus.excerpt ?? "").trim();
+                          const hay = String(extractedText ?? "");
+                          const hasExact = ex ? hay.toLowerCase().includes(ex.toLowerCase()) : false;
+
+                          if (hasExact) {
+                            onJumpToSource(ex);
+                            return;
+                          }
+
+                          const p = evidenceFocus.page;
+                          if (p !== null && p !== undefined) {
+                            const pageNum = Number(p);
+                            if (!Number.isNaN(pageNum)) {
+                              jumpToPageMarker(
+                                pageNum,
+                                "Exact clause not found in extracted text. Jumped to the page marker as a reliable anchor. Verify in the original PDF."
+                              );
+                              return;
+                            }
+                          }
+
+                          // fallback (keeps safe behavior)
+                          onJumpToSource(ex);
+                        }}
                         disabled={!extractedText}
                       >
-                        Jump in source
+                        Locate in source
                       </Button>
                     ) : null}
 
@@ -3439,9 +3501,25 @@ const executive = useMemo(() => {
                       Evidence highlights the matching line in the Source text below. Use it as a pointer only: locate the same clause in the original PDF (search the phrase) and verify the exact wording and formatting.
                     </p>
                   </div>
-                  <Button variant="outline" className="rounded-full" onClick={() => setSourceFocus(null)}>
-                    Clear
-                  </Button>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      variant="outline"
+                      className="rounded-full"
+                      onClick={async () => {
+                        const ok = await safeCopy(sourceFocus.query);
+                        if (ok) {
+                          setCopiedSection("sourcePhrase");
+                          window.setTimeout(() => setCopiedSection(null), 1200);
+                        }
+                      }}
+                    >
+                      {copiedSection === "sourcePhrase" ? "Copied" : "Copy phrase"}
+                    </Button>
+
+                    <Button variant="outline" className="rounded-full" onClick={() => setSourceFocus(null)}>
+                      Clear
+                    </Button>
+                  </div>
                 </div>
 
                 <div className="mt-4 rounded-2xl border bg-muted/20 p-4">

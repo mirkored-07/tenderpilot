@@ -158,7 +158,7 @@ export default function BuyerQuestions({
                     className="rounded-full"
                     onClick={() => onJumpToSource(q.anchor)}
                   >
-                    Jump to source
+                    Locate in source
                   </Button>
                 </div>
               </CardContent>

@@ -384,10 +384,10 @@ export default function Checklist({ checklist, extractedText, onJumpToSource, on
                                 : onJumpToSource(it.text)
                           }
                         >
-                          Evidence
+                          Open evidence
                         </Button>
                         <Button type="button" variant="ghost" className="rounded-full" onClick={() => onJumpToSource(it.text)}>
-                          Search in source
+                          Locate in source
                         </Button>
                       </div>
 

@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import { supabaseBrowser } from "@/lib/supabase/browser";
+import { getJobDisplayName } from "@/lib/pilot-job-names";
 import { track } from "@/lib/telemetry";
 
 type JobStatus = "queued" | "processing" | "done" | "failed";
@@ -79,6 +80,7 @@ function previewText(status: JobStatus) {
 export default function JobsPage() {
   const [filter, setFilter] = useState<"all" | JobStatus>("all");
   const [jobs, setJobs] = useState<DbJob[]>([]);
+  const [listTick, setListTick] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
 
@@ -162,9 +164,30 @@ export default function JobsPage() {
     };
   }, [hasActiveJobs]);
 
+
+  useEffect(() => {
+    const bump = () => setListTick((v) => v + 1);
+
+    const onRename = () => bump();
+    const onStorage = (e: StorageEvent) => {
+      if (typeof e.key === "string" && e.key.startsWith("tp_job_display_name:")) bump();
+    };
+    const onFocus = () => bump();
+
+    window.addEventListener("tp_job_rename", onRename as EventListener);
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      window.removeEventListener("tp_job_rename", onRename as EventListener);
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, []);
+
   async function handleDelete(job: DbJob) {
     const ok = window.confirm(
-      `Delete "${job.file_name}"?\n\nThis will remove the tender review and its results. This cannot be undone.`
+      `Delete "${getJobDisplayName(job.id) || job.file_name}"?\n\nThis will remove the tender review and its results. This cannot be undone.`
     );
     if (!ok) return;
 
@@ -200,6 +223,7 @@ export default function JobsPage() {
   }
 
   const filtered = useMemo(() => {
+    void listTick;
     if (filter === "all") return jobs;
     return jobs.filter((j) => j.status === filter);
   }, [jobs, filter]);
@@ -322,7 +346,7 @@ export default function JobsPage() {
                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div className="min-w-0">
                       <div className="truncate text-base font-semibold">
-                        {job.file_name}
+                        {getJobDisplayName(job.id) || job.file_name}
                       </div>
                       <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                         {statusBadge(job.status)}
