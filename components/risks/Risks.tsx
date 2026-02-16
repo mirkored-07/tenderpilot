@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,8 @@ type Props = {
   risks: any[];
   extractedText: string;
   onJumpToSource: (query: string) => void;
-  onShowEvidence?: (evidenceIds: string[] | undefined, fallbackQuery: string) => void; // optional
+  onShowEvidence?: (evidenceIds: string[] | undefined, fallbackQuery: string) => void;
+  knownEvidenceIds?: string[]; // evidence candidates IDs from jobs.pipeline.evidence.candidates[].id
 };
 
 type RiskSeverity = "high" | "medium" | "low";
@@ -138,10 +139,24 @@ function findExcerpt(text: string, query: string) {
   return makeSnippet(best.center, best.tokenLen);
 }
 
-export default function Risks({ risks, extractedText, onJumpToSource, onShowEvidence }: Props) {
+export default function Risks({
+  risks,
+  extractedText,
+  onJumpToSource,
+  onShowEvidence,
+  knownEvidenceIds,
+}: Props) {
   const [filter, setFilter] = useState<RiskSeverity | "ALL">("ALL");
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<string | null>(null);
+
+  // Per-risk selected evidence id (for multi-evidence switching)
+  const [selectedEvidence, setSelectedEvidence] = useState<Record<string, string>>({});
+
+  const knownSet = useMemo(() => {
+    const ids = Array.isArray(knownEvidenceIds) ? knownEvidenceIds : [];
+    return new Set(ids.map((x) => String(x ?? "").trim()).filter(Boolean));
+  }, [knownEvidenceIds]);
 
   const normalized: NormalizedRisk[] = useMemo(() => {
     const arr = Array.isArray(risks) ? risks : [];
@@ -189,6 +204,47 @@ export default function Risks({ risks, extractedText, onJumpToSource, onShowEvid
 
   const showEmpty = filtered.length === 0;
 
+  // When opening a risk, set default selected evidence if possible
+  useEffect(() => {
+    if (!open) return;
+    const r = normalized.find((x) => x.id === open);
+    if (!r) return;
+
+    const resolvable = r.evidenceIds.filter((id) => knownSet.has(id));
+    const defaultId = resolvable[0] ?? r.evidenceIds[0] ?? "";
+    if (defaultId && !selectedEvidence[open]) {
+      setSelectedEvidence((prev) => ({ ...prev, [open]: defaultId }));
+    }
+  }, [open, normalized, knownSet, selectedEvidence]);
+
+  function resolvableEvidenceIds(r: NormalizedRisk) {
+    // If knownEvidenceIds not provided, we still allow IDs through (best-effort).
+    if (!knownEvidenceIds?.length) return r.evidenceIds ?? [];
+    return (r.evidenceIds ?? []).filter((id) => knownSet.has(id));
+  }
+
+  function needsVerification(r: NormalizedRisk) {
+    // If we have a known set, treat "no resolvable evidence" as needs verification.
+    if (knownEvidenceIds?.length) return resolvableEvidenceIds(r).length === 0;
+    // If we don't have known IDs, fall back to "no evidence ids provided".
+    return (r.evidenceIds ?? []).length === 0;
+  }
+
+  function handleEvidence(r: NormalizedRisk) {
+    const resolvable = resolvableEvidenceIds(r);
+    const selected = selectedEvidence[r.id];
+    const chosen = selected && resolvable.includes(selected) ? selected : (resolvable[0] ?? "");
+
+    // Evidence-first path when available
+    if (onShowEvidence && (chosen || resolvable.length > 0)) {
+      onShowEvidence([chosen || resolvable[0]], r.title);
+      return;
+    }
+
+    // Fallback: best-effort search/jump
+    onJumpToSource(r.title);
+  }
+
   return (
     <div className="space-y-4">
       <Card className="rounded-2xl">
@@ -197,7 +253,7 @@ export default function Risks({ risks, extractedText, onJumpToSource, onShowEvid
             <div>
               <p className="text-sm font-semibold">Risks</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Start with High risks. Use excerpts to verify wording.
+                Start with High risks. Evidence snippets are authoritative when available; source highlighting is best-effort.
               </p>
             </div>
 
@@ -285,6 +341,16 @@ export default function Risks({ risks, extractedText, onJumpToSource, onShowEvid
             const isOpen = open === r.id;
             const excerpt = isOpen ? findExcerpt(extractedText, r.title) : null;
 
+            const resolvable = resolvableEvidenceIds(r);
+            const hasEvidence = resolvable.length > 0;
+            const needsVer = needsVerification(r);
+
+            const selectedId = selectedEvidence[r.id];
+            const activeId =
+              (selectedId && resolvable.includes(selectedId) && selectedId) ||
+              resolvable[0] ||
+              "";
+
             return (
               <Card key={r.id} className="rounded-2xl">
                 <CardContent className="p-5">
@@ -295,8 +361,13 @@ export default function Risks({ risks, extractedText, onJumpToSource, onShowEvid
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 space-y-2">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           {severityBadge(r.severity)}
+                          {needsVer ? (
+                            <Badge variant="outline" className="rounded-full">
+                              Needs verification
+                            </Badge>
+                          ) : null}
                           <span className="text-sm font-medium text-foreground">{r.title}</span>
                         </div>
                         {r.detail ? (
@@ -311,21 +382,63 @@ export default function Risks({ risks, extractedText, onJumpToSource, onShowEvid
                     <div className="mt-4 space-y-3">
                       <Separator />
 
+                      {/* Multi-evidence chips (resolvable only) */}
+                      {hasEvidence && resolvable.length > 1 ? (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs text-muted-foreground mr-1">Evidence</span>
+                          {resolvable.slice(0, 12).map((eid) => {
+                            const isActive = eid === activeId;
+                            return (
+                              <button
+                                key={eid}
+                                type="button"
+                                className={[
+                                  "px-2.5 py-1 rounded-full text-xs border transition",
+                                  isActive
+                                    ? "bg-foreground text-background border-foreground"
+                                    : "bg-background text-foreground border-border hover:bg-muted/40",
+                                ].join(" ")}
+                                onClick={() => setSelectedEvidence((prev) => ({ ...prev, [r.id]: eid }))}
+                                title={`Use ${eid}`}
+                              >
+                                {eid}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+
                       <div className="flex flex-wrap items-center gap-2">
                         <Button
                           type="button"
                           variant="outline"
                           className="rounded-full"
-                          onClick={() => (r.evidenceIds?.length  && onShowEvidence ? onShowEvidence(r.evidenceIds, r.title) : onJumpToSource(r.title))}
+                          onClick={() => handleEvidence(r)}
                         >
-                          Jump to source
+                          {onShowEvidence && (hasEvidence || !!activeId) ? "View evidence" : "Jump to source"}
                         </Button>
+
+                        {/* Optional: keep a manual jump path even when evidence exists */}
+                        {hasEvidence ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            className="rounded-full"
+                            onClick={() => onJumpToSource(r.title)}
+                          >
+                            Try highlight
+                          </Button>
+                        ) : null}
                       </div>
 
                       <div className="rounded-2xl border bg-muted/20 p-4">
-                        <p className="text-xs text-muted-foreground">Source excerpt</p>
+                        <p className="text-xs text-muted-foreground">Source excerpt (best-effort)</p>
                         <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                          {excerpt ?? "No matching excerpt found in the source text."}
+                          {excerpt
+                            ? excerpt
+                            : hasEvidence
+                              ? "Couldn’t auto-extract an excerpt here. Use the evidence snippet (authoritative); highlighting is best-effort."
+                              : "No excerpt found. Review the source text to verify."}
                         </p>
                       </div>
                     </div>

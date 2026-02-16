@@ -3146,7 +3146,14 @@ const executive = useMemo(() => {
                 </CardContent>
               </Card>
             ) : risks.length ? (
-              <Risks risks={risks} extractedText={extractedText} onJumpToSource={onJumpToSource} onShowEvidence={showEvidenceByIds} />
+              <Risks
+			  risks={risks}
+			  extractedText={extractedText}
+			  onJumpToSource={onJumpToSource}
+			  onShowEvidence={showEvidenceByIds}
+			  knownEvidenceIds={knownEvidenceIds}
+			/>
+
             ) : (
               <Card className="rounded-2xl">
                 <CardContent className="p-6">
