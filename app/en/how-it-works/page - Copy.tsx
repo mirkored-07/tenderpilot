@@ -37,9 +37,9 @@ import type { Metadata } from "next";
 import { BrandIcon } from "@/components/brand-icon";
 
 export const metadata: Metadata = {
-  title: "How TenderRay - AI Go/No-Go Decisions for Tenders & RFPs Works | AI Tender Analysis Explained",
+  title: "How TenderPilot - AI Go/No-Go Decisions for Tenders & RFPs Works | AI Tender Analysis Explained",
   description:
-    "See how TenderRay turns tender/RFP PDFs into requirements, risks, and a proposal-ready outline in minutes.",
+    "See how TenderPilot turns tender/RFP PDFs into requirements, risks, and a proposal-ready outline in minutes.",
   alternates: {
     canonical: "https://www.trytenderpilot.com/en/how-it-works",
     languages: {

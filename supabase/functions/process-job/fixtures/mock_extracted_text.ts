@@ -17,7 +17,7 @@ INFO: Payment terms preferred Net 30.
 
 SECTION 4 — Compliance & Security
 MUST: GDPR compliance for any personal data.
-SHOULD: Provide ISO 27001 certification evidence (if available).
+SHOULD: Provide ISO 27001 certification evidence (if TenderPilot).
 
 SECTION 5 — Risks / Notes
 Risk: Tight timeline and strict submission format.

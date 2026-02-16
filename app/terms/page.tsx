@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { BrandIcon } from "@/components/brand-icon";
 
 export const metadata = {
-  title: "Terms of Service | TenderRay",
-  description: "Terms and conditions for using the TenderRay B2B SaaS platform.",
+  title: "Terms of Service | TenderPilot",
+  description: "Terms and conditions for using the TenderPilot B2B SaaS platform.",
 };
 
 export default function TermsPage() {
@@ -21,7 +21,7 @@ export default function TermsPage() {
 
               <BrandIcon size={35} className="h-8 w-8" />
             </div>
-            <span>TenderRay</span>
+            <span>TenderPilot</span>
           </Link>
 
           <div className="flex items-center gap-4">
@@ -56,7 +56,7 @@ export default function TermsPage() {
                     <span className="text-blue-500">1.</span> Acceptance of Terms
                 </h2>
                 <p>
-                    By accessing or using TenderRay ("the Service"), you agree to be bound by these Terms. If you are using the Service on behalf of a company or organization, you represent that you have the authority to bind that entity to these Terms.
+                    By accessing or using TenderPilot ("the Service"), you agree to be bound by these Terms. If you are using the Service on behalf of a company or organization, you represent that you have the authority to bind that entity to these Terms.
                 </p>
             </section>
 
@@ -65,12 +65,12 @@ export default function TermsPage() {
                     <span className="text-blue-500">2.</span> Service Description & Disclaimer
                 </h2>
                 <p className="mb-4">
-                    TenderRay is an AI-powered decision support tool for tender analysis. 
+                    TenderPilot is an AI-powered decision support tool for tender analysis. 
                 </p>
                 <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-200 flex gap-3 items-start">
                     <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
                     <div>
-                        <strong>Important Disclaimer:</strong> The Service provides analysis based on Large Language Models, which may occasionally produce incorrect or incomplete information ("hallucinations"). You acknowledge that TenderRay is a support tool, not a substitute for professional legal or bid management advice. You are responsible for verifying all outputs against the original documents.
+                        <strong>Important Disclaimer:</strong> The Service provides analysis based on Large Language Models, which may occasionally produce incorrect or incomplete information ("hallucinations"). You acknowledge that TenderPilot is a support tool, not a substitute for professional legal or bid management advice. You are responsible for verifying all outputs against the original documents.
                     </div>
                 </div>
             </section>
@@ -94,7 +94,7 @@ export default function TermsPage() {
                     <strong>Your Data:</strong> You retain all rights to the documents you upload.
                 </p>
                 <p className="mt-2">
-                    <strong>Our IP:</strong> TenderRay retains all rights to the interface, code, and proprietary prompting methodologies used to generate the analysis.
+                    <strong>Our IP:</strong> TenderPilot retains all rights to the interface, code, and proprietary prompting methodologies used to generate the analysis.
                 </p>
             </section>
 
@@ -103,7 +103,7 @@ export default function TermsPage() {
                     <span className="text-blue-500">5.</span> Limitation of Liability
                 </h2>
                 <p>
-                    To the maximum extent permitted by law, TenderRay shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including loss of profits or revenue, arising from your use of the Service or reliance on its outputs.
+                    To the maximum extent permitted by law, TenderPilot shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including loss of profits or revenue, arising from your use of the Service or reliance on its outputs.
                 </p>
             </section>
 
@@ -129,7 +129,7 @@ export default function TermsPage() {
       <footer className="border-t border-white/5 py-12 bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} TenderRay
+            © {new Date().getFullYear()} TenderPilot
           </div>
           <div className="flex flex-wrap items-center gap-4 text-sm">
             <Link href="/how-it-works" className="text-muted-foreground hover:text-foreground">

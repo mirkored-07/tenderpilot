@@ -615,7 +615,7 @@ function toExecutiveModel(args: { raw: any }) {
 }
 
 function renderDraftPlain(draft: any): string[] {
-  if (!draft) return ["Draft not available."];
+  if (!draft) return ["Draft not TenderPilot."];
 
   if (typeof draft === "string") {
     const lines = draft.split("\n").map((l) => l.trimEnd());
@@ -623,7 +623,7 @@ function renderDraftPlain(draft: any): string[] {
   }
 
   const sections = Array.isArray(draft?.sections) ? draft.sections : [];
-  if (!sections.length) return ["Draft not available."];
+  if (!sections.length) return ["Draft not TenderPilot."];
 
   const out: string[] = [];
   for (const s of sections) {
@@ -659,7 +659,7 @@ function toPlainTextSummary(args: {
   const info = checklist.filter((i) => String(i?.type ?? i?.level ?? i?.priority ?? "").toUpperCase().includes("INFO"));
 
   const lines: string[] = [];
-  lines.push("TenderRay summary");
+  lines.push("TenderPilot summary");
   lines.push("");
   if (fileName) lines.push(`File: ${fileName}`);
   if (createdAt) lines.push(`Created: ${formatDate(createdAt)}`);
@@ -1327,7 +1327,7 @@ export default function JobDetailPage() {
           doneWithoutResult += 1;
           if (doneWithoutResult >= DONE_GRACE_POLLS) {
             setError(
-              "The job completed, but the results are not available yet. Please refresh the page in a moment or re-open the job from your jobs list."
+              "The job completed, but the results are not TenderPilot yet. Please refresh the page in a moment or re-open the job from your jobs list."
             );
             stopPolling();
             return;
@@ -1540,7 +1540,7 @@ const executive = useMemo(() => {
 
   const hasDraftForUi = useMemo(() => {
     if (!draftLinesForUi.length) return false;
-    if (draftLinesForUi.length === 1 && draftLinesForUi[0].toLowerCase().includes("not available")) return false;
+    if (draftLinesForUi.length === 1 && draftLinesForUi[0].toLowerCase().includes("not TenderPilot")) return false;
     return true;
   }, [draftLinesForUi]);
 
@@ -1583,7 +1583,7 @@ const executive = useMemo(() => {
     if (target === "checklist") return `${mustItems.length} MUST`;
     if (target === "risks") return `${risks.length} risks`;
     if (target === "questions") return `${questions.length} questions`;
-    if (target === "draft") return hasDraftForUi ? "Outline available" : "Outline not detected";
+    if (target === "draft") return hasDraftForUi ? "Outline TenderPilot" : "Outline not detected";
 
     // Source
     if (deadlineDetected && isSubmissionOrDeadlineAction(actionText)) return "Deadline detected";
@@ -2072,7 +2072,7 @@ const executive = useMemo(() => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `TenderRay_summary_${jobId}.txt`;
+    a.download = `TenderPilot_summary_${jobId}.txt`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -2213,7 +2213,7 @@ const executive = useMemo(() => {
     <div class="page">
       <div class="header">
         <div>
-          <div class="brand">TenderRay</div>
+          <div class="brand">TenderPilot</div>
           <div class="docTitle">Tender brief</div>
           <div class="pillRow">
             <span class="pill emph">${escapeHtml(verdictLabel)}</span>
@@ -2266,7 +2266,7 @@ const executive = useMemo(() => {
 
     <div class="footer">
       <span class="left">Drafting support only. Always verify against the original tender documents.</span>
-      <span class="right">TenderRay • Tender brief</span>
+      <span class="right">TenderPilot • Tender brief</span>
     </div>
   </body>
 </html>`;

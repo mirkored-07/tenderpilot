@@ -42,7 +42,7 @@ export const MOCK_AI_OUTPUT = {
     },
     {
       type: "SHOULD",
-      text: "Provide ISO 27001 certification evidence (if available).",
+      text: "Provide ISO 27001 certification evidence (if TenderPilot).",
       source: "SECTION 4 — Compliance & Security",
     },
     {
@@ -65,7 +65,7 @@ export const MOCK_AI_OUTPUT = {
     {
       severity: "Low",
       text: "ISO 27001 evidence is requested but optional.",
-      mitigation: "Attach certification if available; otherwise provide security controls summary.",
+      mitigation: "Attach certification if TenderPilot; otherwise provide security controls summary.",
     },
   ],
   proposal_draft: {

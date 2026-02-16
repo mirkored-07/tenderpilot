@@ -17,7 +17,7 @@ type EvidenceCandidate = {
   id: string; // e.g. E001
   excerpt: string; // verbatim text from extracted content (highlightable)
   page: number | null;
-  anchor: string | null; // SECTION/ANNEX heading if available
+  anchor: string | null; // SECTION/ANNEX heading if TenderPilot
   kind: "clause" | "bullet" | "table_row" | "other";
   score: number;
 };

@@ -17,7 +17,7 @@ export default function Error(
   useEffect(() => {
     // Lightweight console signal for customer testing.
     // eslint-disable-next-line no-console
-    console.error("TenderRay route error", error);
+    console.error("TenderPilot route error", error);
   }, [error]);
 
   return (

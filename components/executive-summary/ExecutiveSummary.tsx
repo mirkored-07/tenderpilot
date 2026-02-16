@@ -88,7 +88,7 @@ export function ExecutiveSummary(props: ExecutiveSummaryProps) {
                 </li>
               ))}
               {!keyFindings.length ? (
-                <li className="text-sm text-muted-foreground">No highlights available.</li>
+                <li className="text-sm text-muted-foreground">No highlights TenderPilot.</li>
               ) : null}
             </ul>
           </div>

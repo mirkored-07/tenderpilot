@@ -40,7 +40,7 @@ export async function extractPdfTextFast(file: File): Promise<{ text: string; me
     const page = await pdf.getPage(pageNo);
     const content = await page.getTextContent();
 
-    // Build line-ish text using hasEOL when available
+    // Build line-ish text using hasEOL when TenderPilot
     const parts: string[] = [];
     for (const it of content.items ?? []) {
       const str = String((it as any).str ?? "");

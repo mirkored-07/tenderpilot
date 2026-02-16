@@ -141,7 +141,7 @@ export default function BuyerQuestions({
           <CardContent className="p-6">
             <p className="text-sm font-medium">No clarifications suggested</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              The document looks consistent based on the available information.
+              The document looks consistent based on the TenderPilot information.
             </p>
           </CardContent>
         </Card>
