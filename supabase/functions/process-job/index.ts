@@ -36,6 +36,9 @@ type AiOutput = {
     type: "MUST" | "SHOULD" | "INFO";
     text: string;
     evidence_ids?: string[]; // MUST/RISK should cite at least one evidence id
+    // Evidence-first reliability flags (stored in JSON; schema unchanged)
+    needs_verification?: boolean;
+    verification_reason?: string;
     // Backfilled by backend for UI compatibility
     source?: string;
   }>;
@@ -44,6 +47,8 @@ type AiOutput = {
     severity: Severity;
     detail: string;
     evidence_ids?: string[];
+    needs_verification?: boolean;
+    verification_reason?: string;
     // Backfilled by backend for UI compatibility
     source?: string;
   }>;
@@ -1418,57 +1423,57 @@ let extractedText = "";
 
 
     // Evidence-first normalization (product-grade):
-    // - AI must cite evidence_ids for MUST checklist items and for risks.
+    // - AI should cite evidence_ids for MUST checklist items and for risks.
     // - Backend backfills `source` (UI compatibility) from the referenced evidence excerpt(s).
-    // - MUST without valid evidence => downgrade to INFO + manual check.
-    // - Risks without valid evidence => move to buyer_questions (manual check) and remove from risks list.
+    // - If evidence_ids are missing/unresolvable, we DO NOT reshape semantics (no downgrades / no moving risks).
+    //   Instead we flag `needs_verification` so the UI can surface "Decision-grade" reliability.
     {
       const evidenceById = new Map<string, EvidenceCandidate>();
       for (const e of evidenceCandidates) evidenceById.set(e.id, e);
 
-      const resolveSource = (ids?: string[]): { ids: string[]; source: string } => {
+      const resolveSource = (ids?: string[]): { ids: string[]; source: string | null } => {
         const valid = (ids ?? []).filter((id) => evidenceById.has(id));
-        if (valid.length === 0) return { ids: [], source: "Not found in extracted text." };
+        if (valid.length === 0) return { ids: [], source: null };
         // For highlighting, keep a single contiguous excerpt (best = first id)
         const first = evidenceById.get(valid[0])!;
         return { ids: valid, source: first.excerpt };
       };
 
-      const newBuyerQuestions: string[] = Array.isArray(aiOut.buyer_questions) ? [...aiOut.buyer_questions] : [];
+      const missingEvidenceReason = "No resolvable evidence_id (candidate not present / trimmed).";
 
       const checklist: AiOutput["checklist"] = (Array.isArray(aiOut.checklist) ? aiOut.checklist : []).map((it) => {
         const t = (it as any).type as "MUST" | "SHOULD" | "INFO";
         const { ids, source } = resolveSource(it.evidence_ids);
 
-        if (t === "MUST") {
-          if (ids.length === 0) {
-            return {
-              ...it,
-              type: "INFO" as const,
-              text: `Manual check: ${String((it as any).text ?? "").trim()}`,
-              evidence_ids: [] as string[],
-              source: "Not found in extracted text.",
-            };
-          }
-          return { ...(it as any), type: "MUST" as const, evidence_ids: ids, source };
+        const base: any = {
+          ...(it as any),
+          type: t,
+          evidence_ids: ids,
+        };
+
+        if (source) base.source = source;
+
+        // Decision-grade reliability: MUST must remain MUST; missing evidence becomes a flag.
+        if (t === "MUST" && ids.length === 0) {
+          base.needs_verification = true;
+          base.verification_reason = missingEvidenceReason;
         }
 
-        // SHOULD / INFO: source optional; keep if evidence exists, else omit.
-        if (ids.length > 0) return { ...(it as any), type: t, evidence_ids: ids, source };
-        return { ...(it as any), type: t, evidence_ids: [] as string[], source: "Not found in extracted text." };
+        return base;
       });
 
-      const risks: AiOutput["risks"] = [];
-      for (const r of Array.isArray(aiOut.risks) ? aiOut.risks : []) {
+      const risks: AiOutput["risks"] = (Array.isArray(aiOut.risks) ? aiOut.risks : []).map((r) => {
         const { ids, source } = resolveSource(r.evidence_ids);
+        const out: any = { ...r, evidence_ids: ids };
+        if (source) out.source = source;
         if (ids.length === 0) {
-          newBuyerQuestions.push(`Manual check (risk): ${String(r.title ?? "").trim()} — ${String(r.detail ?? "").trim()}`);
-          continue;
+          out.needs_verification = true;
+          out.verification_reason = missingEvidenceReason;
         }
-        risks.push({ ...r, evidence_ids: ids, source });
-      }
+        return out;
+      });
 
-      aiOut = { ...aiOut, checklist, risks, buyer_questions: newBuyerQuestions };
+      aiOut = { ...aiOut, checklist, risks };
     }
 
 

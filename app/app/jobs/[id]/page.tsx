@@ -2132,7 +2132,7 @@ const executive = useMemo(() => {
         setSourceFocus({
           query: displayQuery,
           snippet:
-            "No exact supporting clause found for this item in the extracted text. Verify manually in the original PDF.",
+            "Couldn't auto-highlight this evidence in the extracted text. The evidence snippet shown in the Evidence panel remains the authoritative support. Verify in the original PDF if needed.",
           idx: null,
           highlightStart: null,
           highlightEnd: null,
@@ -2145,9 +2145,27 @@ const executive = useMemo(() => {
     const match = findExcerpt(extractedText, effectiveQuery);
 
     if (!match) {
-      // Never highlight the wrong clause. If we can't find an exact match, show an explicit message.
+      // Evidence-first rule: when the caller passed a verbatim evidence payload (excerpt/anchor),
+      // highlight is best-effort only. We must not undermine trust with "not found" messaging.
+      if (looksLikeEvidencePayload) {
+        const snippet = String(displayQuery).trim();
+        const clipped = snippet.length > 1200 ? snippet.slice(0, 1200).trimEnd() + "…" : snippet;
+        setSourceFocus({
+          query: "Evidence snippet",
+          snippet:
+            "Couldn't auto-highlight this excerpt in the extracted text. Showing the evidence snippet below (authoritative). Verify in the original PDF if needed.\n\n" +
+            clipped,
+          idx: null,
+          highlightStart: null,
+          highlightEnd: null,
+        });
+        openTabAndScroll("text");
+        return;
+      }
+
+      // Never highlight the wrong clause. If we can't find an exact match for a non-evidence query, be explicit.
       const msg = evidenceOverride
-        ? "No exact supporting clause found for this item in the extracted text. Verify manually in the original PDF."
+        ? "Couldn't auto-highlight this evidence in the extracted text. Verify manually in the original PDF."
         : "No matching excerpt found in the source text.";
       setSourceFocus({ query: displayQuery, snippet: msg, idx: null, highlightStart: null, highlightEnd: null });
       openTabAndScroll("text");
