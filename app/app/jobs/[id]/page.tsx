@@ -59,6 +59,24 @@ type DbJobEvent = {
   created_at: string;
 };
 
+type EvidenceCandidateUi = {
+  id: string; // E001
+  excerpt: string;
+  page: number | null;
+  anchor: string | null;
+  kind?: string | null;
+  score?: number | null;
+};
+
+type EvidenceFocus = {
+  id: string;
+  excerpt: string;
+  page?: number | null;
+  anchor?: string | null;
+  note?: string | null;
+};
+
+
 
 type VerdictState = "proceed" | "caution" | "hold";
 
@@ -615,7 +633,7 @@ function toExecutiveModel(args: { raw: any }) {
 }
 
 function renderDraftPlain(draft: any): string[] {
-  if (!draft) return ["Draft not TenderPilot."];
+  if (!draft) return ["Draft not available."];
 
   if (typeof draft === "string") {
     const lines = draft.split("\n").map((l) => l.trimEnd());
@@ -623,7 +641,7 @@ function renderDraftPlain(draft: any): string[] {
   }
 
   const sections = Array.isArray(draft?.sections) ? draft.sections : [];
-  if (!sections.length) return ["Draft not TenderPilot."];
+  if (!sections.length) return ["Draft not available."];
 
   const out: string[] = [];
   for (const s of sections) {
@@ -1128,6 +1146,8 @@ export default function JobDetailPage() {
 
   const [sourceFocus, setSourceFocus] = useState<{ query: string; snippet: string; idx: number | null; highlightStart: number | null; highlightEnd: number | null } | null>(null);
 
+  const [evidenceFocus, setEvidenceFocus] = useState<EvidenceFocus | null>(null);
+
   /** UI safety state for very large extracted text */
   const [showFullSourceText, setShowFullSourceText] = useState(false);
 
@@ -1327,7 +1347,7 @@ export default function JobDetailPage() {
           doneWithoutResult += 1;
           if (doneWithoutResult >= DONE_GRACE_POLLS) {
             setError(
-              "The job completed, but the results are not TenderPilot yet. Please refresh the page in a moment or re-open the job from your jobs list."
+              "The job completed, but the results are not available yet. Please refresh the page in a moment or re-open the job from your jobs list."
             );
             stopPolling();
             return;
@@ -1393,6 +1413,22 @@ export default function JobDetailPage() {
   const canDelete = Boolean(job) && !showProgress;
 
   const extractedText = useMemo(() => String(result?.extracted_text ?? "").trim(), [result]);
+
+  const pipelineEvidenceCandidates: EvidenceCandidateUi[] = useMemo(() => {
+    const c = (job as any)?.pipeline?.evidence?.candidates;
+    return Array.isArray(c) ? (c as EvidenceCandidateUi[]) : [];
+  }, [job]);
+
+  const evidenceById = useMemo(() => {
+    const map = new Map<string, EvidenceCandidateUi>();
+    for (const e of pipelineEvidenceCandidates) {
+      const id = String((e as any)?.id ?? "").trim();
+      if (!id) continue;
+      map.set(id, e);
+    }
+    return map;
+  }, [pipelineEvidenceCandidates]);
+
   const checklist = useMemo(() => normalizeChecklist(result?.checklist), [result]);
   const risks = useMemo(() => normalizeRisks(result?.risks), [result]);
 	const extractedChars = extractedText.length;
@@ -1503,6 +1539,73 @@ export default function JobDetailPage() {
     return map;
   }, [checklist]);
 
+  const mustEvidenceIdsByText = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const item of checklist ?? []) {
+      const isMust = String(item?.type ?? item?.level ?? item?.priority ?? "").toUpperCase().includes("MUST");
+      if (!isMust) continue;
+      const text = String((item as any)?.text ?? (item as any)?.requirement ?? "").trim();
+      const idsRaw = (item as any)?.evidence_ids ?? (item as any)?.evidenceIds ?? (item as any)?.evidence ?? null;
+      const ids = Array.isArray(idsRaw) ? idsRaw.map((x: any) => String(x ?? "").trim()).filter(Boolean) : [];
+      if (!text || !ids.length) continue;
+      map.set(text, ids);
+    }
+    return map;
+  }, [checklist]);
+
+function showEvidenceByIds(evidenceIds: string[] | undefined, fallbackQuery: string) {
+  const ids = Array.isArray(evidenceIds) ? evidenceIds.map((x) => String(x ?? "").trim()).filter(Boolean) : [];
+  const primary = ids[0] || "";
+  const candidate = primary ? evidenceById.get(primary) : null;
+
+  if (candidate) {
+    const excerpt = String(candidate.excerpt ?? "").trim();
+
+    setEvidenceFocus({
+      id: String(candidate.id),
+      excerpt,
+      page: (candidate as any).page ?? null,
+      anchor: (candidate as any).anchor ?? null,
+      note: null,
+    });
+
+    // Evidence-first UX:
+    // Open Source text AND immediately jump/highlight using the candidate excerpt (deterministic).
+    openTabAndScroll("text");
+
+    if (excerpt) {
+      // Defer one tick so the tab state + DOM are ready before scrolling
+      window.setTimeout(() => onJumpToSource(excerpt), 0);
+    }
+
+    return;
+  }
+
+  if (primary) {
+    setEvidenceFocus({
+      id: primary,
+      excerpt: "",
+      page: null,
+      anchor: null,
+      note: "Evidence id not found in the pipeline evidence map. This can happen if the pipeline evidence was generated with a different version or was trimmed. Verify in the original PDF.",
+    });
+  } else {
+    setEvidenceFocus({
+      id: "",
+      excerpt: "",
+      page: null,
+      anchor: null,
+      note: "No evidence id available for this item. Use Source text search and verify in the original PDF.",
+    });
+  }
+
+  // No candidate excerpt to jump to → still open Source text so the user can search manually.
+  openTabAndScroll("text");
+}
+
+
+
+
 	
 
   // Lightweight evidence snippets for top blockers (UI-only)
@@ -1540,7 +1643,7 @@ const executive = useMemo(() => {
 
   const hasDraftForUi = useMemo(() => {
     if (!draftLinesForUi.length) return false;
-    if (draftLinesForUi.length === 1 && draftLinesForUi[0].toLowerCase().includes("not TenderPilot")) return false;
+    if (draftLinesForUi.length === 1 && draftLinesForUi[0].toLowerCase().includes("not available")) return false;
     return true;
   }, [draftLinesForUi]);
 
@@ -1583,7 +1686,7 @@ const executive = useMemo(() => {
     if (target === "checklist") return `${mustItems.length} MUST`;
     if (target === "risks") return `${risks.length} risks`;
     if (target === "questions") return `${questions.length} questions`;
-    if (target === "draft") return hasDraftForUi ? "Outline TenderPilot" : "Outline not detected";
+    if (target === "draft") return hasDraftForUi ? "Outline available" : "Outline not detected";
 
     // Source
     if (deadlineDetected && isSubmissionOrDeadlineAction(actionText)) return "Deadline detected";
@@ -2639,8 +2742,8 @@ const executive = useMemo(() => {
                           <Button
                             variant="outline"
                             className="rounded-full shrink-0"
-                            onClick={() => onJumpToSource(blockerEvidence.get(t) ?? t)}
-                            disabled={!extractedText}
+                            onClick={() => showEvidenceByIds(mustEvidenceIdsByText.get(t) ?? undefined, t)}
+                            disabled={((mustEvidenceIdsByText.get(t)?.length ?? 0) === 0) && !extractedText}
                           >
                             Evidence
                           </Button>
@@ -2780,8 +2883,15 @@ const executive = useMemo(() => {
                           <Button
                             variant="outline"
                             className="rounded-full shrink-0"
-                            onClick={() => onJumpToSource(jumpText)}
-                            disabled={!extractedText}
+                            onClick={() => {
+                              const ids = (r as any)?.evidence_ids;
+                              if (Array.isArray(ids) && ids.length) return showEvidenceByIds(ids, jumpText);
+                              return onJumpToSource(jumpText);
+                            }}
+                            disabled={(() => {
+                              const ids = (r as any)?.evidence_ids;
+                              return !extractedText && !(Array.isArray(ids) && ids.length);
+                            })()}
                           >
                             Evidence
                           </Button>
@@ -2920,7 +3030,7 @@ const executive = useMemo(() => {
                 </CardContent>
               </Card>
             ) : checklist.length ? (
-              <Checklist checklist={checklist} extractedText={extractedText} onJumpToSource={onJumpToSource} />
+              <Checklist checklist={checklist} extractedText={extractedText} onJumpToSource={onJumpToSource} onShowEvidence={showEvidenceByIds} />
             ) : (
               <Card className="rounded-2xl">
                 <CardContent className="p-6">
@@ -2962,7 +3072,7 @@ const executive = useMemo(() => {
                 </CardContent>
               </Card>
             ) : risks.length ? (
-              <Risks risks={risks} extractedText={extractedText} onJumpToSource={onJumpToSource} />
+              <Risks risks={risks} extractedText={extractedText} onJumpToSource={onJumpToSource} onShowEvidence={showEvidenceByIds} />
             ) : (
               <Card className="rounded-2xl">
                 <CardContent className="p-6">
@@ -3103,6 +3213,76 @@ const executive = useMemo(() => {
         </TabsContent>
 
         <TabsContent value="text">
+          {evidenceFocus ? (
+            <Card className="rounded-2xl">
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold">Evidence snippet</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {evidenceFocus.id ? (
+                        <>ID: <span className="font-medium text-foreground">{evidenceFocus.id}</span></>
+                      ) : (
+                        <>Evidence</>
+                      )}
+                      {typeof evidenceFocus.page === "number" ? (
+                        <> • Page {evidenceFocus.page}</>
+                      ) : null}
+                      {evidenceFocus.anchor ? (
+                        <> • <span className="text-foreground/70">{evidenceFocus.anchor}</span></>
+                      ) : null}
+                    </p>
+                    {evidenceFocus.note ? (
+                      <p className="mt-2 text-xs text-muted-foreground">{evidenceFocus.note}</p>
+                    ) : (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Deterministic evidence-first view: this snippet is shown directly from the pipeline evidence map. Verify it in the original PDF.
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {evidenceFocus.excerpt ? (
+                      <Button
+                        variant="outline"
+                        className="rounded-full"
+                        onClick={async () => {
+                          const ok = await safeCopy(evidenceFocus.excerpt);
+                          if (ok) {
+                            setCopiedSection("evidence");
+                            window.setTimeout(() => setCopiedSection(null), 1200);
+                          }
+                        }}
+                      >
+                        {copiedSection === "evidence" ? "Copied" : "Copy"}
+                      </Button>
+                    ) : null}
+
+                    {evidenceFocus.excerpt ? (
+                      <Button
+                        variant="outline"
+                        className="rounded-full"
+                        onClick={() => onJumpToSource(evidenceFocus.excerpt)}
+                        disabled={!extractedText}
+                      >
+                        Jump in source
+                      </Button>
+                    ) : null}
+
+                    <Button variant="outline" className="rounded-full" onClick={() => setEvidenceFocus(null)}>
+                      Clear
+                    </Button>
+                  </div>
+                </div>
+
+                {evidenceFocus.excerpt ? (
+                  <div className="mt-4 rounded-2xl border bg-muted/20 p-4">
+                    <p className="text-sm text-muted-foreground leading-relaxed">{evidenceFocus.excerpt}</p>
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
+          ) : null}
+
           {sourceFocus ? (
             <Card className="rounded-2xl">
               <CardContent className="p-5">
