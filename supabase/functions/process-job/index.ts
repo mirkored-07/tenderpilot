@@ -9,6 +9,7 @@ type JobRow = {
   file_path: string;
   source_type: "pdf" | "docx";
   status: string;
+  pipeline?: any | null; // JSONB (optional in typings)
 };
 
 type Severity = "high" | "medium" | "low";
@@ -17,7 +18,7 @@ type EvidenceCandidate = {
   id: string; // e.g. E001
   excerpt: string; // verbatim text from extracted content (highlightable)
   page: number | null;
-  anchor: string | null; // SECTION/ANNEX heading if TenderPilot
+  anchor: string | null; // SECTION/ANNEX heading if available
   kind: "clause" | "bullet" | "table_row" | "other";
   score: number;
 };
@@ -666,7 +667,7 @@ async function runOpenAi(args: {
   };
 
   const instructions =
-    "You are TenderRay. Drafting support only. Not legal advice. Not procurement advice. " +
+    "You are TenderPilot. Drafting support only. Not legal advice. Not procurement advice. " +
     "Use executive, compliance grade language. No AI talk. " +
     "Always write in the same language as the tender source text. " +
     "Avoid false certainty. If not present, write: Not found in extracted text.";
@@ -713,7 +714,7 @@ ${extractedText}`;
       format: {
         type: "json_schema",
         strict: true,
-        name: "tenderray_review",
+        name: "TenderPilot_review",
         schema,
       },
     },
@@ -1079,7 +1080,7 @@ Deno.serve(async (req) => {
     // Fetch job after claim
     const { data: job, error: jobErr } = await supabaseAdmin
       .from("jobs")
-      .select("id,user_id,file_name,file_path,source_type,status")
+      .select("id,user_id,file_name,file_path,source_type,status,pipeline")
       .eq("id", jobId)
       .single<JobRow>();
 
@@ -1202,7 +1203,7 @@ let extractedText = "";
           { chars: extractedText.length, evidenceCandidates: evidenceCandidates.length },
         );
       } else {
-        // Signed URL TenderPilot: use provider selected (Mistral or Unstructured).
+        // Signed URL available: use provider selected (Mistral or Unstructured).
         if (provider === "mistral") {
           await logEvent(supabaseAdmin, job, "info", "Mistral OCR extract started", {
             fileName: job.file_name,
@@ -1305,6 +1306,49 @@ let extractedText = "";
         }
       }
     }
+
+    // Persist evidence candidates for evidence-first UI (Option A).
+    // We store a bounded evidence map in jobs.pipeline.evidence so the UI can render deterministic
+    // excerpts by evidence_id without searching/parsing extracted_text.
+    try {
+      const existingPipeline = (job as any)?.pipeline && typeof (job as any).pipeline === "object"
+        ? (job as any).pipeline
+        : {};
+
+      const bounded = (evidenceCandidates ?? [])
+        .slice(0, parseNumberEnv("TP_PIPELINE_EVIDENCE_MAX", 160))
+        .map((e) => ({
+          id: e.id,
+          excerpt: e.excerpt,
+          page: e.page,
+          anchor: e.anchor,
+          kind: e.kind,
+          score: e.score,
+        }));
+
+      const nextPipeline = {
+        ...existingPipeline,
+        evidence: {
+          version: 1,
+          generated_at: new Date().toISOString(),
+          candidates: bounded,
+        },
+      };
+
+      const { error: pipeErr } = await supabaseAdmin
+        .from("jobs")
+        .update({ pipeline: nextPipeline })
+        .eq("id", job.id);
+
+      if (pipeErr) {
+        await logEvent(supabaseAdmin, job, "warn", "Pipeline evidence save failed", { error: pipeErr.message });
+      } else {
+        await logEvent(supabaseAdmin, job, "info", "Pipeline evidence saved", { candidates: bounded.length });
+      }
+    } catch (e) {
+      await logEvent(supabaseAdmin, job, "warn", "Pipeline evidence save threw", { error: (e as Error)?.message ?? String(e) });
+    }
+
 
     // AI analysis
     const model = String(Deno.env.get("TP_OPENAI_MODEL") ?? "gpt-4.1-mini");
