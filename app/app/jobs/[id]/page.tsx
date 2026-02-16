@@ -74,6 +74,7 @@ type EvidenceFocus = {
   page?: number | null;
   anchor?: string | null;
   note?: string | null;
+  allIds?: string[] | null;
 };
 
 
@@ -1553,9 +1554,39 @@ export default function JobDetailPage() {
     return map;
   }, [checklist]);
 
+  const knownEvidenceIds = useMemo(() => Array.from(evidenceById.keys()), [evidenceById]);
+
+  const evidenceCoverage = useMemo(() => {
+    const items = Array.isArray(checklist) ? checklist : [];
+    const idSet = new Set(knownEvidenceIds);
+
+    let mustTotal = 0;
+    let mustCovered = 0;
+    let overallTotal = 0;
+    let overallCovered = 0;
+
+    for (const it of items) {
+      const typeRaw = String((it as any)?.type ?? (it as any)?.level ?? (it as any)?.priority ?? "");
+      const isMust = typeRaw.toUpperCase().includes("MUST");
+      const idsRaw = (it as any)?.evidence_ids ?? (it as any)?.evidenceIds ?? (it as any)?.evidence ?? null;
+      const ids = Array.isArray(idsRaw) ? idsRaw.map((x: any) => String(x ?? "").trim()).filter(Boolean) : [];
+      const resolved = ids.some((id: string) => idSet.has(id));
+
+      overallTotal += 1;
+      if (resolved) overallCovered += 1;
+
+      if (isMust) {
+        mustTotal += 1;
+        if (resolved) mustCovered += 1;
+      }
+    }
+
+    return { mustTotal, mustCovered, overallTotal, overallCovered };
+  }, [checklist, knownEvidenceIds]);
+
 function showEvidenceByIds(evidenceIds: string[] | undefined, fallbackQuery: string) {
   const ids = Array.isArray(evidenceIds) ? evidenceIds.map((x) => String(x ?? "").trim()).filter(Boolean) : [];
-  const primary = ids[0] || "";
+  const primary = ids.find((id) => evidenceById.has(id)) || ids[0] || "";
   const candidate = primary ? evidenceById.get(primary) : null;
 
   if (candidate) {
@@ -1567,6 +1598,7 @@ function showEvidenceByIds(evidenceIds: string[] | undefined, fallbackQuery: str
       page: (candidate as any).page ?? null,
       anchor: (candidate as any).anchor ?? null,
       note: null,
+      allIds: ids.length ? ids : null,
     });
 
     // Evidence-first UX:
@@ -1588,6 +1620,7 @@ function showEvidenceByIds(evidenceIds: string[] | undefined, fallbackQuery: str
       page: null,
       anchor: null,
       note: "Evidence id not found in the pipeline evidence map. This can happen if the pipeline evidence was generated with a different version or was trimmed. Verify in the original PDF.",
+      allIds: ids.length ? ids : null,
     });
   } else {
     setEvidenceFocus({
@@ -1596,6 +1629,7 @@ function showEvidenceByIds(evidenceIds: string[] | undefined, fallbackQuery: str
       page: null,
       anchor: null,
       note: "No evidence id available for this item. Use Source text search and verify in the original PDF.",
+      allIds: null,
     });
   }
 
@@ -3006,6 +3040,22 @@ const executive = useMemo(() => {
 			  </Button>
 			</div>
 
+		  {showReady && !finalizingResults ? (
+			<div className="mt-3 flex flex-wrap items-center gap-2">
+			  <Badge variant="outline" className="rounded-full">
+				MUST evidence coverage: {evidenceCoverage.mustCovered}/{evidenceCoverage.mustTotal}
+			  </Badge>
+			  <Badge variant="outline" className="rounded-full">
+				Overall evidence coverage: {evidenceCoverage.overallCovered}/{evidenceCoverage.overallTotal}
+			  </Badge>
+			  {evidenceCoverage.mustTotal > 0 && evidenceCoverage.mustCovered < evidenceCoverage.mustTotal ? (
+				<Badge variant="secondary" className="rounded-full">
+				  Some MUST items need verification
+				</Badge>
+			  ) : null}
+			</div>
+		  ) : null}
+
 
           <div className="mt-3">
             {showFailed ? (
@@ -3030,7 +3080,13 @@ const executive = useMemo(() => {
                 </CardContent>
               </Card>
             ) : checklist.length ? (
-              <Checklist checklist={checklist} extractedText={extractedText} onJumpToSource={onJumpToSource} onShowEvidence={showEvidenceByIds} />
+              <Checklist
+                checklist={checklist}
+                extractedText={extractedText}
+                onJumpToSource={onJumpToSource}
+                onShowEvidence={showEvidenceByIds}
+                knownEvidenceIds={knownEvidenceIds}
+              />
             ) : (
               <Card className="rounded-2xl">
                 <CardContent className="p-6">
@@ -3232,6 +3288,63 @@ const executive = useMemo(() => {
                         <> • <span className="text-foreground/70">{evidenceFocus.anchor}</span></>
                       ) : null}
                     </p>
+
+                    {Array.isArray(evidenceFocus.allIds) && evidenceFocus.allIds.length > 1 ? (
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Switch evidence:</span>
+                        {evidenceFocus.allIds.slice(0, 12).map((eid) => {
+                          const active = String(eid) === String(evidenceFocus.id);
+                          return (
+                            <Button
+                              key={eid}
+                              type="button"
+                              size="sm"
+                              variant={active ? "default" : "outline"}
+                              className="rounded-full"
+                              onClick={() => {
+                                const cand = evidenceById.get(String(eid));
+                                if (!cand) {
+                                  setEvidenceFocus((prev) =>
+                                    prev
+                                      ? {
+                                          ...prev,
+                                          id: String(eid),
+                                          excerpt: "",
+                                          page: null,
+                                          anchor: null,
+                                          note:
+                                            "Evidence id not found in the pipeline evidence map. It may have been trimmed or generated with a different version. Verify in the original PDF.",
+                                        }
+                                      : prev
+                                  );
+                                  return;
+                                }
+
+                                const ex = String((cand as any)?.excerpt ?? "").trim();
+                                setEvidenceFocus((prev) =>
+                                  prev
+                                    ? {
+                                        ...prev,
+                                        id: String((cand as any)?.id ?? eid),
+                                        excerpt: ex,
+                                        page: (cand as any)?.page ?? null,
+                                        anchor: (cand as any)?.anchor ?? null,
+                                        note: null,
+                                      }
+                                    : prev
+                                );
+
+                                openTabAndScroll("text");
+                                if (ex) window.setTimeout(() => onJumpToSource(ex), 0);
+                              }}
+                            >
+                              {eid}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+
                     {evidenceFocus.note ? (
                       <p className="mt-2 text-xs text-muted-foreground">{evidenceFocus.note}</p>
                     ) : (

@@ -12,6 +12,8 @@ type Props = {
   extractedText: string;
   onJumpToSource: (query: string) => void;
   onShowEvidence?: (evidenceIds: string[] | undefined, fallbackQuery: string) => void; // NEW (optional for backward compatibility)
+  /** Optional list of evidence ids that are actually available in jobs.pipeline.evidence.candidates */
+  knownEvidenceIds?: string[];
 };
 
 
@@ -151,10 +153,16 @@ function findExcerpt(text: string, query: string) {
   return makeSnippet(best.center, best.tokenLen);
 }
 
-export default function Checklist({ checklist, extractedText, onJumpToSource, onShowEvidence }: Props) {
+export default function Checklist({ checklist, extractedText, onJumpToSource, onShowEvidence, knownEvidenceIds }: Props) {
   const [filter, setFilter] = useState<"ALL" | "MUST" | "SHOULD" | "INFO">("ALL");
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<string | null>(null);
+  const [selectedEvidenceByItem, setSelectedEvidenceByItem] = useState<Record<string, string>>({});
+
+  const knownEvidenceIdSet = useMemo(() => {
+    const arr = Array.isArray(knownEvidenceIds) ? knownEvidenceIds : [];
+    return new Set(arr.map((x) => String(x ?? "").trim()).filter(Boolean));
+  }, [knownEvidenceIds]);
 
   const normalized: NormalizedReq[] = useMemo(() => {
     const arr = Array.isArray(checklist) ? checklist : [];
@@ -183,6 +191,14 @@ export default function Checklist({ checklist, extractedText, onJumpToSource, on
       })
       .filter((x) => x.text.length > 0);
   }, [checklist]);
+
+  function hasResolvedEvidence(ids: string[]) {
+    if (!ids?.length) return false;
+    for (const id of ids) {
+      if (knownEvidenceIdSet.has(String(id ?? "").trim())) return true;
+    }
+    return false;
+  }
 
   const counts = useMemo(() => {
     const must = normalized.filter((i) => i.type === "MUST").length;
@@ -323,6 +339,14 @@ export default function Checklist({ checklist, extractedText, onJumpToSource, on
             const isOpen = open === it.id;
             const excerpt = isOpen ? findExcerpt(extractedText, it.text) : null;
 
+            const resolved = hasResolvedEvidence(it.evidenceIds);
+            const needsVerification = it.type === "MUST" && !resolved;
+            const selectedEvidence = selectedEvidenceByItem[it.id] || it.evidenceIds?.[0] || "";
+
+            const selectableEvidenceIds = Array.isArray(it.evidenceIds)
+              ? it.evidenceIds.filter((id) => knownEvidenceIdSet.has(String(id ?? "").trim()))
+              : [];
+
             return (
               <Card key={it.id} className="rounded-2xl">
                 <CardContent className="p-5">
@@ -332,6 +356,11 @@ export default function Checklist({ checklist, extractedText, onJumpToSource, on
                         <div className="flex items-center gap-2">
                           {typeBadge(it.type)}
                           <span className="text-sm font-medium text-foreground">{it.type}</span>
+                          {needsVerification ? (
+                            <Badge variant="secondary" className="rounded-full">
+                              Needs verification
+                            </Badge>
+                          ) : null}
                         </div>
                         <p className="text-sm text-foreground leading-relaxed">{it.text}</p>
                       </div>
@@ -343,10 +372,45 @@ export default function Checklist({ checklist, extractedText, onJumpToSource, on
                     <div className="mt-4 space-y-3">
                       <Separator />
                       <div className="flex flex-wrap items-center gap-2">
-                        <Button type="button" variant="outline" className="rounded-full" onClick={() => (it.evidenceIds?.length && onShowEvidence ? onShowEvidence(it.evidenceIds, it.text) : onJumpToSource(it.text))}>
-                          Jump to source
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="rounded-full"
+                          onClick={() =>
+                            selectedEvidence && onShowEvidence
+                              ? onShowEvidence([selectedEvidence], it.text)
+                              : it.evidenceIds?.length && onShowEvidence
+                                ? onShowEvidence(it.evidenceIds, it.text)
+                                : onJumpToSource(it.text)
+                          }
+                        >
+                          Evidence
+                        </Button>
+                        <Button type="button" variant="ghost" className="rounded-full" onClick={() => onJumpToSource(it.text)}>
+                          Search in source
                         </Button>
                       </div>
+
+                      {selectableEvidenceIds.length > 1 ? (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-xs text-muted-foreground">Evidence IDs:</span>
+                          {selectableEvidenceIds.slice(0, 10).map((eid) => {
+                            const active = String(selectedEvidence) === String(eid);
+                            return (
+                              <Button
+                                key={eid}
+                                type="button"
+                                size="sm"
+                                variant={active ? "default" : "outline"}
+                                className="rounded-full"
+                                onClick={() => setSelectedEvidenceByItem((prev) => ({ ...prev, [it.id]: eid }))}
+                              >
+                                {eid}
+                              </Button>
+                            );
+                          })}
+                        </div>
+                      ) : null}
 
                       <div className="rounded-2xl border bg-muted/20 p-4">
                         <p className="text-xs text-muted-foreground">Source excerpt</p>
