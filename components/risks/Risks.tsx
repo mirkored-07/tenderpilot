@@ -149,6 +149,7 @@ export default function Risks({
   const [filter, setFilter] = useState<RiskSeverity | "ALL">("ALL");
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<string | null>(null);
+  const [needsVerOnly, setNeedsVerOnly] = useState(false);
 
   // Per-risk selected evidence id (for multi-evidence switching)
   const [selectedEvidence, setSelectedEvidence] = useState<Record<string, string>>({});
@@ -193,14 +194,27 @@ export default function Risks({
     return { high, medium, low };
   }, [normalized]);
 
+
+  const needsVerCount = useMemo(() => {
+    return normalized.filter((r) => {
+      if (knownEvidenceIds?.length) return resolvableEvidenceIds(r).length === 0;
+      return (r.evidenceIds ?? []).length === 0;
+    }).length;
+  }, [normalized, knownEvidenceIds, knownSet]);
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
     return normalized.filter((r) => {
       if (filter !== "ALL" && r.severity !== filter) return false;
+      if (needsVerOnly) {
+        const isNeedsVer = knownEvidenceIds?.length
+          ? resolvableEvidenceIds(r).length === 0
+          : (r.evidenceIds ?? []).length === 0;
+        if (!isNeedsVer) return false;
+      }
       if (!query) return true;
       return r.title.toLowerCase().includes(query) || r.detail.toLowerCase().includes(query);
     });
-  }, [normalized, filter, q]);
+  }, [normalized, filter, q, needsVerOnly, knownEvidenceIds, knownSet]);
 
   const showEmpty = filtered.length === 0;
 
@@ -293,6 +307,20 @@ export default function Risks({
                 onClick={() => setFilter("low")}
               >
                 Low <span className="ml-2 text-xs opacity-70">{counts.low}</span>
+              </Button>
+              <Button
+                type="button"
+                variant={needsVerOnly ? "default" : "outline"}
+                className="rounded-full"
+                onClick={() => {
+                  setNeedsVerOnly((prev) => {
+                    const next = !prev;
+                    if (next) setFilter("ALL");
+                    return next;
+                  });
+                }}
+              >
+                Needs verification <span className="ml-2 text-xs opacity-70">{needsVerCount}</span>
               </Button>
             </div>
 
