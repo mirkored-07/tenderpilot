@@ -2004,7 +2004,8 @@ const executive = useMemo(() => {
 		evidencePreview?: string;
 		owner: string;
 		eta: string;
-			doneWhen?: string;
+		doneWhen?: string;
+		dueMoment?: string;
 	  }> = [];
 
 
