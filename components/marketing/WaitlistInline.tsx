@@ -1,46 +1,22 @@
 "use client";
 
 import * as React from "react";
+import { Loader2, CheckCircle2 } from "lucide-react"; // Make sure you have lucide-react, or use plain text
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { joinWaitlistAction } from "@/app/actions/waitlist"; // Import your new action
 
 type Props = {
   className?: string;
   source?: string;
 };
 
-const DEFAULT_WAITLIST_URL = "https://tally.so/r/gD9bkM";
-
-function normalizeWaitlistUrl(raw: string) {
-  const v = (raw || "").trim();
-  if (!v) return DEFAULT_WAITLIST_URL;
-  
-  const doubled = "https://tally.so/r/https://tally.so/r/";
-  if (v.startsWith(doubled)) {
-    return "https://tally.so/r/" + v.slice(doubled.length);
-  }
-
-  if (!v.startsWith("http")) {
-    return `https://tally.so/r/${v.replace(/^\/+/, "")}`;
-  }
-
-  return v;
-}
-
-function safeBuildUrl(base: string, email: string, source: string) {
-  const url = new URL(base);
-  url.searchParams.set("email", email);
-  url.searchParams.set("source", source);
-  return url.toString();
-}
-
 export function WaitlistInline({ className, source = "landing" }: Props) {
   const [email, setEmail] = React.useState("");
+  const [status, setStatus] = React.useState<"idle" | "loading" | "success">("idle");
   const [error, setError] = React.useState<string | null>(null);
 
-  const base = normalizeWaitlistUrl(process.env.NEXT_PUBLIC_WAITLIST_URL || "");
-
-  function onSubmit(e: React.FormEvent) {
+  async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
 
@@ -50,7 +26,27 @@ export function WaitlistInline({ className, source = "landing" }: Props) {
     const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed);
     if (!ok) return setError("Please enter a valid email.");
 
-    window.location.href = safeBuildUrl(base, trimmed, source);
+    setStatus("loading");
+
+    // Call the Server Action
+    const result = await joinWaitlistAction(trimmed, source);
+
+    if (result.success) {
+      setStatus("success");
+      // Optional: Track in analytics here if you use Umami/PostHog
+    } else {
+      setStatus("idle");
+      setError(result.message);
+    }
+  }
+
+  if (status === "success") {
+    return (
+      <div className={`flex items-center gap-2 rounded-2xl border bg-green-50/50 p-4 text-green-700 ${className}`}>
+        <CheckCircle2 className="h-5 w-5" />
+        <span className="text-sm font-medium">You’re on the list! We’ll be in touch.</span>
+      </div>
+    );
   }
 
   return (
@@ -59,24 +55,27 @@ export function WaitlistInline({ className, source = "landing" }: Props) {
         <Input
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="work@consultancy.com"
+          placeholder="you@company.com"
           type="email"
-          className="h-11 rounded-full border-muted-foreground/20 bg-background/50 backdrop-blur"
+          className="h-11 rounded-full"
           aria-label="Email address"
           autoComplete="email"
+          disabled={status === "loading"}
         />
         <Button
           type="submit"
-          className="h-11 rounded-full px-6 font-medium shadow-lg hover:shadow-xl transition-all"
-          data-umami-event="early_access_submit"
-          data-umami-event-source={source}
+          className="h-11 rounded-full min-w-[140px]"
+          disabled={status === "loading"}
         >
-          Get Audit Engine Access
+          {status === "loading" ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            "Get early access"
+          )}
         </Button>
       </div>
-      <div className="mt-3 flex items-center gap-2 text-[10px] uppercase tracking-wider text-muted-foreground/70">
-        <span className="h-1.5 w-1.5 rounded-full bg-green-500/80 animate-pulse" />
-        <span>Accepting early users</span>
+      <div className="mt-2 text-xs text-muted-foreground">
+        No spam. One email when access opens.
       </div>
       {error ? <div className="mt-2 text-xs text-destructive">{error}</div> : null}
     </form>

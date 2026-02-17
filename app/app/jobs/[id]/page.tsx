@@ -1850,6 +1850,60 @@ const executive = useMemo(() => {
   const deadlineText = String(executive?.submissionDeadline ?? "").trim();
   const deadlineDetected = Boolean(deadlineText);
 
+  // UI-only "due moment" mapping (deterministic; no new data)
+  function parseDeadlineToDateLocal(input: string): Date | null {
+    const s = String(input ?? "").trim();
+    if (!s) return null;
+
+    // Common format seen in the UI: "15:00 28/05/2014"
+    const m = s.match(/(\d{1,2}:\d{2})\s+(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (m) {
+      const [hh, mm] = m[1].split(":").map((x) => parseInt(x, 10));
+      const dd = parseInt(m[2], 10);
+      const mo = parseInt(m[3], 10) - 1;
+      const yyyy = parseInt(m[4], 10);
+      const d = new Date(yyyy, mo, dd, hh, mm, 0, 0);
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+
+    const d2 = new Date(s);
+    return Number.isNaN(d2.getTime()) ? null : d2;
+  }
+
+  const deadlineDate = deadlineDetected ? parseDeadlineToDateLocal(deadlineText) : null;
+
+  function isCommercialAction(actionText: string) {
+    const t = String(actionText ?? "").toLowerCase();
+    return (
+      t.includes("price") ||
+      t.includes("pricing") ||
+      t.includes("cost") ||
+      t.includes("budget") ||
+      t.includes("payment") ||
+      t.includes("invoice") ||
+      t.includes("commercial")
+    );
+  }
+
+  function dueMomentForAction(args: { actionText: string; label: string; target: ActionTargetTab }): string {
+    const { actionText } = args;
+
+    const hasDeadline = Boolean(deadlineDate);
+    if (hasDeadline) {
+      const now = new Date();
+      const diffMs = (deadlineDate as Date).getTime() - now.getTime();
+      const diffMin = Math.round(diffMs / 60000);
+
+      // When we're within 24h, everything is effectively "today" for bid desk execution.
+      if (diffMin > 0 && diffMin <= 24 * 60) return "Due: Today";
+      // If already passed, still show the most actionable label.
+      if (diffMin <= 0) return "Due: Today";
+    }
+
+    if (isCommercialAction(actionText)) return "Due: Before pricing sign-off";
+    return "Due: Before submission";
+  }
+
   const firstMust = mustItems[0] ?? "";
   const firstQuestion = questions[0] ?? "";
   const firstRisk = executive?.topRisks?.[0]?.title
@@ -1935,6 +1989,7 @@ const executive = useMemo(() => {
 		  owner: meta.owner,
 		  eta: meta.eta,
           doneWhen,
+          dueMoment: dueMomentForAction({ actionText, label: cls.label, target: cls.target }),
 		};
     });
   }
@@ -1970,6 +2025,7 @@ const executive = useMemo(() => {
 	  owner: meta.owner,
       eta: meta.eta,
       doneWhen,
+      dueMoment: dueMomentForAction({ actionText: text, label: "Requirements", target: "checklist" }),
 
     });
   } else if (executive?.topRisks?.length) {
@@ -1989,6 +2045,7 @@ const executive = useMemo(() => {
       owner: meta.owner,
       eta: meta.eta,
       doneWhen,
+      dueMoment: dueMomentForAction({ actionText: text, label: "Risks", target: "risks" }),
     });
 
   } else {
@@ -2008,6 +2065,7 @@ const executive = useMemo(() => {
       owner: meta.owner,
       eta: meta.eta,
       doneWhen,
+      dueMoment: dueMomentForAction({ actionText: text, label: "Source", target: "text" }),
     });
   }
 
@@ -2029,6 +2087,7 @@ const executive = useMemo(() => {
       owner: meta.owner,
       eta: meta.eta,
       doneWhen,
+      dueMoment: dueMomentForAction({ actionText: text, label: "Source", target: "text" }),
     });
 
   }
@@ -2051,6 +2110,7 @@ const executive = useMemo(() => {
       owner: meta.owner,
       eta: meta.eta,
       doneWhen,
+      dueMoment: dueMomentForAction({ actionText: text, label: "Clarifications", target: "questions" }),
     });
 
   } else if (hasDraftForUi) {
@@ -2070,6 +2130,7 @@ const executive = useMemo(() => {
       owner: meta.owner,
       eta: meta.eta,
       doneWhen,
+      dueMoment: dueMomentForAction({ actionText: text, label: "Tender outline", target: "draft" }),
     });
 
     } else {
@@ -2089,6 +2150,7 @@ const executive = useMemo(() => {
       owner: meta.owner,
       eta: meta.eta,
       doneWhen,
+      dueMoment: dueMomentForAction({ actionText: text, label: "Source", target: "text" }),
     });
 
   }
@@ -2991,8 +3053,9 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
       <Card className="rounded-2xl border border-white/10 bg-background/70 dark:bg-zinc-900/50 backdrop-blur-xl">
         <CardContent className="p-6">
           <div className="rounded-xl bg-background/90 dark:bg-zinc-950/70 ring-1 ring-black/5 dark:ring-white/10 p-5">
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-              <div className="min-w-0 space-y-2">
+            <div className="flex flex-col gap-4 md:flex-row md:items-stretch md:justify-between md:gap-6">
+              {/* Left column should fill available space and keep breathing room from the deadline card */}
+              <div className="min-w-0 flex-1 space-y-2 md:pr-4">
                 <p className="text-sm font-semibold">Go/No-Go</p>
 
                 {showFailed ? (
@@ -3018,91 +3081,13 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
                     </div>
 
                     <p className="text-sm text-foreground/80">{verdictDriverLine}</p>
-
-                    {verdictState === "hold" ? (
-                      <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-4 space-y-2">
-                        <p className="text-xs font-semibold text-red-900">Blockers to resolve before bidding</p>
-                        <p className="text-xs text-red-900/80">
-                          Bid is possible only if these MUST gate-checks are satisfied or formally waived. Verify in the tender portal and original PDF.
-                        </p>
-                        <ul className="list-disc pl-5 text-xs text-red-900/80 space-y-1">
-                          {(mustItems ?? []).slice(0, 3).map((t, i) => (
-                            <li key={i}>{t}</li>
-                          ))}
-                        </ul>
-                        <div className="pt-1">
-                          <Button className="rounded-full" onClick={openRequirementsForVerification}>
-                            Review MUST items
-                          </Button>
-                        </div>
-                      </div>
-                    ) : null}
-
-                    {/* Trust & Coverage */}
-                    <div className="mt-3 rounded-xl border bg-muted/40 dark:bg-white/5 p-4 space-y-2">
-
-                      <div className="space-y-1">
-                        <p className="text-xs font-semibold text-foreground/90">Document review</p>
-
-                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                          <span>
-                            Source text processed:{" "}
-                            <span className="text-foreground/90">
-                              {coverage === "full"
-                                ? "Complete"
-                                : coverage === "partial"
-                                ? "Mostly complete"
-                                : "Partial"}
-                            </span>
-                          </span>
-
-                          <span className="text-muted-foreground">•</span>
-
-                          <span title={confidence === "high" ? "Strong evidence coverage" : confidence === "medium" ? "Some items need verification" : "Evidence coverage is limited"}>
-                            Confidence:{" "}
-                            <span className="text-foreground/90">
-                              {confidence === "high"
-                                ? "High"
-                                : confidence === "medium"
-                                ? "Medium"
-                                : "Low"}
-                            </span>
-                          </span>
-                        </div>
-
-                        <p className="text-xs text-muted-foreground">
-                          Where to verify (manual checks): tender portal / e-proc platform (deadlines, submission method, mandatory forms); “Instructions to Tenderers” (format, signatures, upload steps); annexes / templates (declarations, pricing, required forms).
-                        </p>
-
-                        {coverage !== "full" ? (
-                          <p className="text-xs text-muted-foreground">
-                            Some content may be missing from this review. Treat this decision as provisional until you verify the key gate-checks in the original tender.
-                          </p>
-                        ) : null}
-                      </div>
-
-                      {evidenceCoverage.mustTotal > 0 && evidenceCoverage.mustCovered < evidenceCoverage.mustTotal ? (
-                        <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
-                          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                            <div className="space-y-1">
-                              <p className="text-xs font-semibold text-amber-900">Some MUST requirements need verification</p>
-                              <p className="text-xs text-amber-900/80">
-                                MUST evidence coverage is {evidenceCoverage.mustCovered}/{evidenceCoverage.mustTotal}. Review the MUST items marked “Needs verification” before committing.
-                              </p>
-                            </div>
-                            <Button className="rounded-full" onClick={openRequirementsForVerification}>
-                              Review MUST items
-                            </Button>
-                          </div>
-                        </div>
-                      ) : null}
-                    </div>
+                    
                   </>
                 )}
               </div>
 
               {/* Deadline box: kept secondary, not competing with the verdict */}
-              <div className="rounded-2xl border bg-muted/30 dark:bg-white/5 p-4 md:min-w-[320px]">
+              <div className="rounded-2xl border bg-muted/30 dark:bg-white/5 p-3 w-full md:w-[360px] lg:w-[400px] h-full flex flex-col">
                 <p className="text-xs font-semibold">Submission deadline</p>
                 <p className="mt-1 text-sm">
                   {showReady && deadlineText ? (
@@ -3118,139 +3103,114 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
                 {showReady && todayFocus ? (
                   <p className="mt-2 text-xs text-muted-foreground">{todayFocus}</p>
                 ) : null}
+
+                {/* keep the card visually aligned with the decision column height on desktop */}
+                <div className="flex-1" />
               </div>
             </div>
 
-            {/* Decision drivers — only when ready */}
-            {showReady && !showFailed && !finalizingResults ? (
-              <>
-                {/* Executive summary — decision in 10 seconds */}
-                <div className="mt-6 rounded-2xl border bg-background/60 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold">Executive summary</p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Decision rationale and immediate next step.
-                      </p>
-                    </div>
-                  </div>
 
-                  <div className="mt-3 space-y-3">
-                    
-<div className="rounded-xl border bg-background p-3">
-                      <p className="text-xs font-semibold">Rationale snapshot</p>
-                      {rationaleDrivers?.length ? (
-                        <ul className="mt-2 list-disc pl-5 space-y-1 text-sm text-foreground/80">
-                          {rationaleDrivers.map((t, i) => (
-                            <li key={i}>{t}</li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="mt-2 text-sm text-muted-foreground">No decision drivers detected.</p>
-                      )}
-                    </div>
 
-                    <div className="rounded-xl border bg-background p-3">
-                      <p className="text-xs font-semibold">Recommended action</p>
-                      <p className="mt-2 text-sm text-foreground/80">
-                        {verdictState === "hold"
-                          ? "Verify all mandatory requirements and submission conditions before investing in a full response."
-                          : verdictState === "caution"
-                          ? "Proceed, but validate the risks and any missing information before committing resources."
-                          : "Proceed to bid. Confirm the deadline and submission method, then start drafting."}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-6 space-y-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold">Why this decision</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      This decision is driven primarily by submission method, compliance requirements, and document completeness. Use “Evidence” to highlight the matching passage in the Source text tab, then confirm in the original PDF (especially tender portal rules, submission instructions, and annexes/templates).
-                    </p>
-                  </div>
-
-                  <Button
-                    variant="outline"
-                    className="rounded-full"
-                    onClick={() => setShowAllDrivers((v) => !v)}
-                    disabled={!showReady}
-                  >
-                    {showAllDrivers ? "Show less" : "Show all blockers"}
-                  </Button>
-                </div>
-
-                <div className="rounded-2xl border bg-background/60 p-4">
-                  <p className="text-xs font-semibold">Mandatory blockers</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {mustItems.length ? `Showing ${Math.min(showAllDrivers ? mustItems.length : 3, mustItems.length)} of ${mustItems.length}.` : "None detected."}
-                  </p>
-
-                  <div className="mt-3 space-y-2">
-                    {(mustItems ?? [])
-                      .slice(0, showAllDrivers ? 12 : 3)
-                      .map((t, i) => (
-                        <div key={i} className="flex items-start justify-between gap-3 rounded-xl border bg-background p-3">
-                          <div className="min-w-0">
-                            <p className="text-sm text-foreground/90 leading-relaxed">{t}</p>
-                            <p className="mt-1 text-[11px] text-muted-foreground">{classifyBlocker(t).hint}</p>
-                            {blockerEvidence.get(t) ? (
-                              <div className="mt-2 rounded-lg border bg-muted/30 dark:bg-white/5 p-2">
-                                <p className="text-[11px] font-semibold text-muted-foreground">Excerpt</p>
-                                <p className="mt-1 text-xs text-foreground/80 line-clamp-3">
-                                  {blockerEvidence.get(t)}
-                                </p>
-                                <p className="mt-1 text-[11px] text-muted-foreground">
-                                  Pointer only: use this excerpt to locate the clause in the original PDF (Ctrl+F), then confirm in the portal rules, “Instructions to Tenderers”, and relevant annexes/templates.
-                                </p>
-                              </div>
-                            ) : null}
-                          </div>
-                          <Button
-                            variant="outline"
-                            className="rounded-full shrink-0"
-                            onClick={() => showEvidenceByIds(mustEvidenceIdsByText.get(t) ?? undefined, t)}
-                            disabled={((mustEvidenceIdsByText.get(t)?.length ?? 0) === 0) && !extractedText}
-                          >
-                            Evidence
-                          </Button>
-                        </div>
-                      ))}
-                  </div>
-
-                  {!mustItems?.length ? (
-                    <p className="mt-3 text-sm text-muted-foreground">
-                      No MUST blockers detected. Still verify eligibility and submission format in the tender portal and submission instructions.
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-              </>
-            ) : null}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* What blocks us right now — actions (only when ready) */}
+      {/* Blockers + Document review (kept in the same workspace grid dimensions as Action plan / Secondary risks) */}
       {showReady && !showFailed && !finalizingResults ? (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="mt-4 space-y-4">
+          {verdictState === "hold" && (mustItems ?? []).length > 0 ? (
+            <Card className="rounded-2xl">
+              <CardContent className="p-5">
+                <div className="rounded-xl border border-red-200 bg-red-50 p-4 space-y-2">
+                  <p className="text-xs font-semibold text-red-900">Blockers to resolve before bidding</p>
+                                          <p className="text-xs text-red-900/80">
+                                            Bid is possible only if these MUST gate-checks are satisfied or formally waived. Verify in the tender portal and original PDF.
+                                          </p>
+                                          <ul className="list-disc pl-5 text-xs text-red-900/80 space-y-1">
+                                            {(mustItems ?? []).slice(0, 3).map((t, i) => (
+                                              <li key={i}>{t}</li>
+                                            ))}
+                                          </ul>
+                                          <div className="pt-1">
+                                            <Button className="rounded-full" onClick={openRequirementsForVerification}>
+                                              Review MUST items
+                                            </Button>
+                                          </div>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="hidden md:block" />
+          )}
+
           <Card className="rounded-2xl">
-            <CardContent className="p-6 space-y-3">
+            <CardContent className="p-5 space-y-3">
+              <div className="space-y-1">
+                                      <p className="text-xs font-semibold text-foreground/90">Document review</p>
+
+                                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                                        <span>
+                                          Source text processed:{" "}
+                                          <span className="text-foreground/90">
+                                            {coverage === "full"
+                                              ? "Complete"
+                                              : coverage === "partial"
+                                              ? "Mostly complete"
+                                              : "Partial"}
+                                          </span>
+                                        </span>
+
+                                        <span className="text-muted-foreground">•</span>
+
+                                        <span title={confidence === "high" ? "Strong evidence coverage" : confidence === "medium" ? "Some items need verification" : "Evidence coverage is limited"}>
+                                          Confidence:{" "}
+                                          <span className="text-foreground/90">
+                                            {confidence === "high"
+                                              ? "High"
+                                              : confidence === "medium"
+                                              ? "Medium"
+                                              : "Low"}
+                                          </span>
+                                        </span>
+                                      </div>
+
+                                      <p className="text-xs text-muted-foreground">
+                                        Where to verify (manual checks): tender portal / e-proc platform (deadlines, submission method, mandatory forms); “Instructions to Tenderers” (format, signatures, upload steps); annexes / templates (declarations, pricing, required forms).
+                                      </p>
+
+                                      {coverage !== "full" ? (
+                                        <p className="text-xs text-muted-foreground">
+                                          Some content may be missing from this review. Treat this decision as provisional until you verify the key gate-checks in the original tender.
+                                        </p>
+                                      ) : null}
+                                    </div>
+
+                                    {evidenceCoverage.mustTotal > 0 && evidenceCoverage.mustCovered < evidenceCoverage.mustTotal ? (
+                                      <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                                          <div className="space-y-1">
+                                            <p className="text-xs font-semibold text-amber-900">Some MUST requirements need verification</p>
+                                            <p className="text-xs text-amber-900/80">
+                                              MUST evidence coverage is {evidenceCoverage.mustCovered}/{evidenceCoverage.mustTotal}. Review the MUST items marked “Needs verification” before committing.
+                                            </p>
+                                          </div>
+                                          <Button className="rounded-full" onClick={openRequirementsForVerification}>
+                                            Review MUST items
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    ) : null}
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
+{/* What blocks us right now — actions (only when ready) */}
+      {showReady && !showFailed && !finalizingResults ? (
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <Card className="rounded-2xl">
+            <CardContent className="p-5 space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-sm font-semibold">Action plan (next steps)</div>
-					<p className="text-sm text-muted-foreground mt-1">
-					  Items are ordered by decision priority. Start with blockers that could invalidate the bid.
-					</p>
-					<p className="mt-1 text-xs text-muted-foreground">
-					  Do these before investing in a full tender response.
-					</p>
-					<p className="mt-2 text-xs text-muted-foreground">
-					  Evidence snippets are authoritative. “Locate in source” is a best-effort pointer only.
-					</p>
-
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Ordered by priority. Start with blockers that could invalidate the bid. Evidence snippets are authoritative; “Locate in source” is a best-effort pointer only.
+                  </p>
                 </div>
               </div>
 
@@ -3277,6 +3237,10 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
                           <span>•</span>
                           <span>{a.eta}</span>
                         </div>
+
+                        {a.dueMoment ? (
+                          <p className="mt-1 text-[11px] text-muted-foreground">{a.dueMoment}</p>
+                        ) : null}
 
                         <p className="mt-2 text-xs text-muted-foreground">{a.why}</p>
                         {a.doneWhen ? (
@@ -3319,7 +3283,7 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
           </Card>
 
           <Card className="rounded-2xl">
-            <CardContent className="p-6 space-y-3">
+            <CardContent className="p-5 space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold">Secondary risks to validate</p>
@@ -3448,6 +3412,118 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
           </Card>
         </div>
       ) : null}
+
+            {/* Decision drivers — only when ready */}
+            {showReady && !showFailed && !finalizingResults ? (
+              <>
+                {/* Executive summary — decision in 10 seconds */}
+                <div className="mt-6 rounded-2xl border bg-background/60 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold">Executive summary</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Decision rationale and immediate next step.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 space-y-3">
+                    
+<div className="rounded-xl border bg-background p-3">
+                      <p className="text-xs font-semibold">Rationale snapshot</p>
+                      {rationaleDrivers?.length ? (
+                        <ul className="mt-2 list-disc pl-5 space-y-1 text-sm text-foreground/80">
+                          {rationaleDrivers.map((t, i) => (
+                            <li key={i}>{t}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-2 text-sm text-muted-foreground">No decision drivers detected.</p>
+                      )}
+                    </div>
+
+                    <div className="rounded-xl border bg-background p-3">
+                      <p className="text-xs font-semibold">Recommended action</p>
+                      <p className="mt-2 text-sm text-foreground/80">
+                        {verdictState === "hold"
+                          ? "Verify all mandatory requirements and submission conditions before investing in a full response."
+                          : verdictState === "caution"
+                          ? "Proceed, but validate the risks and any missing information before committing resources."
+                          : "Proceed to bid. Confirm the deadline and submission method, then start drafting."}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 space-y-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold">Why this decision</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      This decision is driven primarily by submission method, compliance requirements, and document completeness. Use “Evidence” to highlight the matching passage in the Source text tab, then confirm in the original PDF (especially tender portal rules, submission instructions, and annexes/templates).
+                    </p>
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    className="rounded-full"
+                    onClick={() => setShowAllDrivers((v) => !v)}
+                    disabled={!showReady}
+                  >
+                    {showAllDrivers ? "Show less" : "Show all blockers"}
+                  </Button>
+                </div>
+
+                <div className="rounded-2xl border bg-background/60 p-4">
+                  <p className="text-xs font-semibold">Mandatory blockers</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {mustItems.length ? `Showing ${Math.min(showAllDrivers ? mustItems.length : 3, mustItems.length)} of ${mustItems.length}.` : "None detected."}
+                  </p>
+
+                  <div className="mt-3 space-y-2">
+                    {(mustItems ?? [])
+                      .slice(0, showAllDrivers ? 12 : 3)
+                      .map((t, i) => (
+                        <div key={i} className="flex items-start justify-between gap-3 rounded-xl border bg-background p-3">
+                          <div className="min-w-0">
+                            <p className="text-sm text-foreground/90 leading-relaxed">{t}</p>
+                            <p className="mt-1 text-[11px] text-muted-foreground">{classifyBlocker(t).hint}</p>
+                            {blockerEvidence.get(t) ? (
+                              <div className="mt-2 rounded-lg border bg-muted/30 dark:bg-white/5 p-2">
+                                <p className="text-[11px] font-semibold text-muted-foreground">Excerpt</p>
+                                <p className="mt-1 text-xs text-foreground/80 line-clamp-3">
+                                  {blockerEvidence.get(t)}
+                                </p>
+                                <p className="mt-1 text-[11px] text-muted-foreground">
+                                  Pointer only: use this excerpt to locate the clause in the original PDF (Ctrl+F), then confirm in the portal rules, “Instructions to Tenderers”, and relevant annexes/templates.
+                                </p>
+                              </div>
+                            ) : null}
+                          </div>
+                          <Button
+                            variant="outline"
+                            className="rounded-full shrink-0"
+                            onClick={() => showEvidenceByIds(mustEvidenceIdsByText.get(t) ?? undefined, t)}
+                            disabled={((mustEvidenceIdsByText.get(t)?.length ?? 0) === 0) && !extractedText}
+                          >
+                            Evidence
+                          </Button>
+                        </div>
+                      ))}
+                  </div>
+
+                  {!mustItems?.length ? (
+                    <p className="mt-3 text-sm text-muted-foreground">
+                      No MUST blockers detected. Still verify eligibility and submission format in the tender portal and submission instructions.
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+              </>
+            ) : null}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Explore — reference mode (tabs) */}
       <div className="pt-2" ref={tabsTopRef}>
@@ -3668,7 +3744,77 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
               ) : finalizingResults ? (
                 <p className="text-sm text-muted-foreground">Finalizing results… this should take only a few seconds. If it doesn&apos;t, refresh the page.</p>
               ) : hasDraftForUi ? (
-                <pre className="text-sm whitespace-pre-wrap">{draftLinesForUi.join("\n")}</pre>
+                (() => {
+                  const sections =
+                    typeof draftForUi === "object" &&
+                    draftForUi &&
+                    Array.isArray((draftForUi as any).sections)
+                      ? (((draftForUi as any).sections as any[]) ?? [])
+                      : null;
+
+                  if (sections && sections.length) {
+                    return (
+                      <div className="space-y-4">
+                        {sections.map((s: any, idx: number) => {
+                          const title = String(s?.title ?? "").trim();
+                          const bullets = Array.isArray(s?.bullets) ? s.bullets : [];
+                          const payloadLines = [
+                            title || `Section ${idx + 1}`,
+                            ...bullets
+                              .map((b: any) => String(b ?? "").trim())
+                              .filter(Boolean)
+                              .map((b: string) => `- ${b}`),
+                          ].filter(Boolean);
+
+                          const payload = payloadLines.join("\n").trim();
+                          if (!payload) return null;
+
+                          return (
+                            <div key={idx} className="rounded-xl border bg-background/60 p-4">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="text-sm font-semibold">{title || `Section ${idx + 1}`}</p>
+                                  <p className="mt-1 text-xs text-muted-foreground">
+                                    Copy a section brief to assign writing work. Tailor and verify against the tender source.
+                                  </p>
+                                </div>
+
+                                <Button
+                                  variant="outline"
+                                  className="rounded-full shrink-0"
+                                  onClick={async () => {
+                                    const ok = await safeCopy(payload);
+                                    if (ok) {
+                                      setCopiedSection(`draftbrief_${idx}`);
+                                      window.setTimeout(() => setCopiedSection(null), 1200);
+                                    }
+                                  }}
+                                >
+                                  {copiedSection === `draftbrief_${idx}` ? "Copied" : "Copy section brief"}
+                                </Button>
+                              </div>
+
+                              {bullets.length ? (
+                                <ul className="mt-3 list-disc pl-5 space-y-1 text-sm text-foreground/80">
+                                  {bullets
+                                    .map((b: any) => String(b ?? "").trim())
+                                    .filter(Boolean)
+                                    .map((b: string, i2: number) => (
+                                      <li key={i2}>{b}</li>
+                                    ))}
+                                </ul>
+                              ) : (
+                                <p className="mt-3 text-sm text-muted-foreground">No bullet points detected for this section.</p>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  }
+
+                  return <pre className="text-sm whitespace-pre-wrap">{draftLinesForUi.join("\n")}</pre>;
+                })()
               ) : (
                 <p className="text-sm text-muted-foreground">No draft outline was generated. Try re-uploading the PDF or verify the source text tab.</p>
               )}
@@ -3971,4 +4117,3 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
     </div>
   );
 }
-
