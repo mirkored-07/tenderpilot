@@ -90,14 +90,14 @@ function VerdictBadge({ state }: { state: VerdictState }) {
     return <span className={`${base} border-green-200 bg-green-50 text-green-800`}>Proceed</span>;
   }
   if (state === "hold") {
-    return <span className={`${base} border-red-200 bg-red-50 text-red-800`}>Hold — compliance blockers</span>;
+    return <span className={`${base} border-red-200 bg-red-50 text-red-800`}>Hold — resolve blockers to bid</span>;
   }
   return <span className={`${base} border-amber-200 bg-amber-50 text-amber-900`}>Proceed with caution</span>;
 }
 
 function verdictMicrocopy(state: VerdictState) {
   if (state === "proceed") return "No major blockers detected. You can start tender response work.";
-  if (state === "hold") return "A potential blocker was detected. Verify compliance or waiver before continuing.";
+  if (state === "hold") return "Bid is possible only if these blockers are resolved. Start with MUST items needing verification and submission rules.";
   return "Tender looks feasible, but validate key points before committing.";
 }
 
@@ -670,8 +670,9 @@ function toPlainTextSummary(args: {
   risks: any[];
   questions: string[];
   draftText: any;
+  evidenceById?: Map<string, EvidenceCandidateUi>;
 }) {
-  const { fileName, createdAt, verdictLabel, decisionLine, rationaleSnapshot, recommendedAction, whereToVerify, checklist, risks, questions, draftText } = args;
+  const { fileName, createdAt, verdictLabel, decisionLine, rationaleSnapshot, recommendedAction, whereToVerify, checklist, risks, questions, draftText, evidenceById } = args;
 
   const must = checklist.filter((i) => String(i?.type ?? i?.level ?? i?.priority ?? "").toUpperCase().includes("MUST"));
   const should = checklist.filter((i) => String(i?.type ?? i?.level ?? i?.priority ?? "").toUpperCase().includes("SHOULD"));
@@ -702,10 +703,55 @@ function toPlainTextSummary(args: {
     lines.push("");
   }
 
-  render(
-    "MUST requirements",
-    must.map((x) => String(x?.text ?? x?.requirement ?? "").trim()).filter(Boolean)
-  );
+  function renderEvidenceLines(ids: any): string[] {
+    const out: string[] = [];
+    if (!evidenceById) return out;
+    const arr = Array.isArray(ids) ? ids : [];
+    for (const rawId of arr) {
+      const id = String(rawId ?? "").trim();
+      if (!id) continue;
+      const ev = evidenceById.get(id);
+      if (!ev) {
+        out.push(`  - Evidence ${id}: (missing in evidence candidates)`);
+        continue;
+      }
+      const pageLabel = ev.page === null || ev.page === undefined ? "Page ?" : `Page ${ev.page}`;
+      const excerpt = String(ev.excerpt ?? "").trim();
+      const head = `Evidence ${id} (${pageLabel})`;
+      out.push(excerpt ? `  - ${head}: ${excerpt}` : `  - ${head}`);
+    }
+    return out;
+  }
+
+  function buildBuyerEmail(items: string[], tenderName?: string): string[] {
+    const name = String(tenderName ?? "").trim() || "Tender";
+    const subject = `Clarification questions — ${name}`;
+
+    const lines: string[] = [];
+    lines.push(`Subject: ${subject}`);
+    lines.push("");
+    lines.push("Hello,");
+    lines.push("");
+    lines.push("We are preparing our tender response and would appreciate clarification on the points below.");
+    lines.push("Thank you.");
+    lines.push("");
+    items.forEach((q, i) => lines.push(`${i + 1}. ${q}`));
+    return lines;
+  }
+
+
+  lines.push("MUST blockers (with evidence)");
+  if (!must.length) lines.push("None detected.");
+  else {
+    must.forEach((x, i) => {
+      const t = String(x?.text ?? x?.requirement ?? "").trim();
+      if (!t) return;
+      lines.push(`${i + 1}. ${t}`);
+      renderEvidenceLines((x as any)?.evidence_ids).forEach((l) => lines.push(l));
+    });
+  }
+  lines.push("");
+
   render(
     "SHOULD items",
     should.map((x) => String(x?.text ?? x?.requirement ?? "").trim()).filter(Boolean)
@@ -715,22 +761,37 @@ function toPlainTextSummary(args: {
     info.map((x) => String(x?.text ?? x?.requirement ?? "").trim()).filter(Boolean)
   );
 
-  lines.push("Risks");
+  
+  lines.push("Risks (with evidence)");
   if (!risks.length) lines.push("No risks detected.");
   else {
     risks.slice(0, 20).forEach((r, i) => {
       const sev = String(r?.severity ?? r?.level ?? "medium").toUpperCase();
       const title = String(r?.title ?? r?.risk ?? r?.text ?? "").trim();
       const detail = String(r?.detail ?? r?.description ?? "").trim();
-      lines.push(`${i + 1}. [${sev}] ${title}${detail ? ` — ${detail}` : ""}`);
+      const head = `${i + 1}. [${sev}] ${title}${detail ? ` — ${detail}` : ""}`;
+      lines.push(head);
+      renderEvidenceLines((r as any)?.evidence_ids).forEach((l) => lines.push(l));
     });
   }
   lines.push("");
 
+
+  
   lines.push("Clarifications");
-  if (!questions.length) lines.push("No clarifications suggested.");
-  else questions.slice(0, 20).forEach((q, i) => lines.push(`${i + 1}. ${q}`));
-  lines.push("");
+  if (!questions.length) {
+    lines.push("No clarifications suggested.");
+    lines.push("");
+  } else {
+    const tender = fileName || "Tender";
+    lines.push("Ready-to-send email");
+    buildBuyerEmail(questions, tender).slice(0, 120).forEach((l) => lines.push(l));
+    lines.push("");
+
+    lines.push("Raw list");
+    questions.slice(0, 40).forEach((q, i) => lines.push(`${i + 1}. ${q}`));
+    lines.push("");
+  }
 
   lines.push("Draft (outline)");
   const draftLines = renderDraftPlain(draftText);
@@ -888,7 +949,71 @@ function classifyBlocker(text: string): { label: string; hint: string } {
     return { label: "Commercial", hint: "Pricing/currency/financial requirements." };
   }
 
-  return { label: "General", hint: "Check this requirement in the tender source." };
+
+  return { label: "General", hint: "Verify details in the tender source text." };
+}
+
+  function buildRationaleDrivers(args: {
+  verdict: VerdictState;
+  mustItems: string[];
+  risksCount: number;
+  clarificationsCount: number;
+  coverage: "full" | "partial" | "none";
+  confidence: "high" | "medium" | "low";
+}): string[] {
+  const { verdict, mustItems, risksCount, clarificationsCount, coverage, confidence } = args;
+
+  // HOLD: summarize gate categories, not the exact MUST bullets (avoid duplication)
+  if (verdict === "hold") {
+    const counts = new Map<string, number>();
+    for (const t of mustItems ?? []) {
+      const k = classifyBlocker(t).label;
+      counts.set(k, (counts.get(k) ?? 0) + 1);
+    }
+    const top = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([k]) => k).slice(0, 3);
+
+    const lines: string[] = [];
+    for (const k of top) {
+      if (k === "Submission") {
+        lines.push("Submission/portal rules are strict. Verify format, language, completeness, and portal steps to avoid disqualification.");
+      } else if (k === "Commercial") {
+        lines.push("Commercial and pricing constraints must be validated (rates, categories/levels, thresholds) before pricing is submitted.");
+      } else if (k === "Documents") {
+        lines.push("Mandatory documents and declarations must be completed exactly as requested (forms, pricing sheets, declarations, certificates).");
+      } else if (k === "Compliance") {
+        lines.push("Eligibility and compliance gates can invalidate the bid. Confirm any disqualification triggers and required attestations.");
+      } else {
+        lines.push("Mandatory gate-checks require verification in the portal and original tender documents.");
+      }
+    }
+
+    if (!lines.length) {
+      lines.push("Mandatory gate-checks require verification in the portal and original tender documents.");
+    }
+
+    // Add one meta driver that is not a repeated MUST item
+    if (coverage !== "full") {
+      lines.push("Document extraction may be incomplete. Treat this as provisional until the key gate-checks are verified in the original sources.");
+    }
+    return lines.slice(0, 4);
+  }
+
+  // CAUTION / PROCEED: keep it short and operational
+  const lines: string[] = [];
+  if (verdict === "caution") {
+    lines.push("Bid appears feasible, but validate key risks and ambiguities before committing resources.");
+    if (risksCount > 0) lines.push(`There ${risksCount === 1 ? "is" : "are"} ${risksCount} risk${risksCount === 1 ? "" : "s"} to review (commercial, delivery, legal, scope).`);
+    if (clarificationsCount > 0) lines.push(`${clarificationsCount} buyer clarification${clarificationsCount === 1 ? "" : "s"} may be needed to remove ambiguity before submission.`);
+  } else {
+    lines.push("No major blockers detected in extracted text. You can start drafting, but confirm portal steps and mandatory forms.");
+    lines.push("Confirm the deadline, submission method, and required upload format in the tender portal/PDF before investing heavily.");
+  }
+
+  if (confidence === "low" || coverage !== "full") {
+    lines.push("Evidence coverage is limited. Verify critical sections in the original documents before relying on this review.");
+  }
+
+  return lines.slice(0, 4);
 }
 
 const EVIDENCE_STOPWORDS = new Set([
@@ -1105,6 +1230,33 @@ function classifyOwnerAndEta(args: { text: string; target: ActionTargetTab; labe
 
   return { owner, eta };
 }
+
+function classifyDoneWhen(args: { text: string; target: ActionTargetTab; label: string }) {
+  const t = String(args.text ?? "").toLowerCase();
+
+  // Keep it operational and verifiable (no AI claims).
+  if (args.target === "checklist") {
+    return "Done when: requirement wording is verified in portal/PDF and any mandatory form/template is identified.";
+  }
+  if (args.target === "questions") {
+    return "Done when: buyer question is drafted and either answered in the tender or queued to send.";
+  }
+  if (args.target === "risks") {
+    return "Done when: risk impact/mitigation is agreed (accept, mitigate, or escalate) and evidence is noted.";
+  }
+  if (args.target === "draft") {
+    return "Done when: outline is reviewed and owners are assigned to each major section.";
+  }
+
+  // Source (submission/deadline/format)
+  if (t.includes("deadline") || t.includes("submission") || t.includes("submit") || t.includes("portal") || t.includes("format") || t.includes("upload")) {
+    return "Done when: submission method, deadline, and required upload format are confirmed in portal/PDF.";
+  }
+
+  return "Done when: the clause is located in portal/PDF and confirmed against the authoritative wording.";
+}
+
+
 
 
 export default function JobDetailPage() {
@@ -1472,6 +1624,11 @@ export default function JobDetailPage() {
 	  return "full";
 	}, [job?.status, extractedText, hasEmptyExtractWarning, hasTruncationWarning, extractedChars]);
 
+		// Downstream summaries/exports accept only none/partial/full.
+		// Normalize "unreliable" to "partial" so the UI can still warn while types remain compatible.
+		const coverageNormalized: "none" | "partial" | "full" =
+		  coverage === "unreliable" ? "partial" : coverage;
+
 	const confidence: ConfidenceState = useMemo(() => {
 	  if (coverage !== "full") return "low";
 
@@ -1765,6 +1922,7 @@ const executive = useMemo(() => {
       const evidencePreview = evidencePreviewForQuery(evidenceQuery);
 
       const meta = classifyOwnerAndEta({ text: actionText, target: cls.target, label: cls.label });
+      const doneWhen = classifyDoneWhen({ text: actionText, target: cls.target, label: cls.label });
 
 		return {
 		  text: actionText,
@@ -1776,6 +1934,7 @@ const executive = useMemo(() => {
 		  evidencePreview,
 		  owner: meta.owner,
 		  eta: meta.eta,
+          doneWhen,
 		};
     });
   }
@@ -1790,6 +1949,7 @@ const executive = useMemo(() => {
 		evidencePreview?: string;
 		owner: string;
 		eta: string;
+			doneWhen?: string;
 	  }> = [];
 
 
@@ -1798,6 +1958,7 @@ const executive = useMemo(() => {
     const text = "Verify potential blockers (MUST requirements)";
     const evidenceQuery = evidenceForAction("checklist", text);
 	const meta = classifyOwnerAndEta({ text, target: "checklist", label: "Compliance" });
+    const doneWhen = classifyDoneWhen({ text, target: "checklist", label: "Compliance" });
     out.push({
       text,
       target: "checklist",
@@ -1808,12 +1969,14 @@ const executive = useMemo(() => {
       evidencePreview: evidencePreviewForQuery(evidenceQuery),
 	  owner: meta.owner,
       eta: meta.eta,
+      doneWhen,
 
     });
   } else if (executive?.topRisks?.length) {
     const text = "Validate the top risks and mitigations";
     const evidenceQuery = evidenceForAction("risks", text);
     const meta = classifyOwnerAndEta({ text, target: "risks", label: "Risks" });
+    const doneWhen = classifyDoneWhen({ text, target: "risks", label: "Risks" });
 
     out.push({
       text,
@@ -1825,12 +1988,14 @@ const executive = useMemo(() => {
       evidencePreview: evidencePreviewForQuery(evidenceQuery),
       owner: meta.owner,
       eta: meta.eta,
+      doneWhen,
     });
 
   } else {
     const text = "Confirm mandatory submission requirements";
     const evidenceQuery = evidenceForAction("text", text);
     const meta = classifyOwnerAndEta({ text, target: "text", label: "Source" });
+    const doneWhen = classifyDoneWhen({ text, target: "text", label: "Source" });
 
     out.push({
       text,
@@ -1842,6 +2007,7 @@ const executive = useMemo(() => {
       evidencePreview: evidencePreviewForQuery(evidenceQuery),
       owner: meta.owner,
       eta: meta.eta,
+      doneWhen,
     });
   }
 
@@ -1850,6 +2016,7 @@ const executive = useMemo(() => {
     const text = "Confirm deadline and submission method";
     const evidenceQuery = evidenceForAction("text", text);
     const meta = classifyOwnerAndEta({ text, target: "text", label: "Source" });
+    const doneWhen = classifyDoneWhen({ text, target: "text", label: "Source" });
 
     out.push({
       text,
@@ -1861,6 +2028,7 @@ const executive = useMemo(() => {
       evidencePreview: evidencePreviewForQuery(evidenceQuery),
       owner: meta.owner,
       eta: meta.eta,
+      doneWhen,
     });
 
   }
@@ -1870,6 +2038,7 @@ const executive = useMemo(() => {
     const text = "Draft clarifications to the buyer";
     const evidenceQuery = evidenceForAction("questions", text);
     const meta = classifyOwnerAndEta({ text, target: "questions", label: "Clarifications" });
+    const doneWhen = classifyDoneWhen({ text, target: "questions", label: "Clarifications" });
 
     out.push({
       text,
@@ -1881,12 +2050,14 @@ const executive = useMemo(() => {
       evidencePreview: evidencePreviewForQuery(evidenceQuery),
       owner: meta.owner,
       eta: meta.eta,
+      doneWhen,
     });
 
   } else if (hasDraftForUi) {
     const text = "Review the tender outline and estimate effort";
     const evidenceQuery = evidenceForAction("draft", text);
     const meta = classifyOwnerAndEta({ text, target: "draft", label: "Tender outline" });
+    const doneWhen = classifyDoneWhen({ text, target: "draft", label: "Tender outline" });
 
     out.push({
       text,
@@ -1898,12 +2069,14 @@ const executive = useMemo(() => {
       evidencePreview: evidencePreviewForQuery(evidenceQuery),
       owner: meta.owner,
       eta: meta.eta,
+      doneWhen,
     });
 
     } else {
     const text = "Scan the tender for mandatory forms and formatting";
     const evidenceQuery = evidenceForAction("text", text);
     const meta = classifyOwnerAndEta({ text, target: "text", label: "Source" });
+    const doneWhen = classifyDoneWhen({ text, target: "text", label: "Source" });
 
     out.push({
       text,
@@ -1915,6 +2088,7 @@ const executive = useMemo(() => {
       evidencePreview: evidencePreviewForQuery(evidenceQuery),
       owner: meta.owner,
       eta: meta.eta,
+      doneWhen,
     });
 
   }
@@ -1954,6 +2128,20 @@ const executive = useMemo(() => {
   }, [showReady, mustItems.length, executive.topRisks]);
 
   const topRisksForPanel = useMemo(() => (executive.topRisks ?? []).slice(0, 3), [executive.topRisks]);
+
+  const rationaleDrivers = useMemo(
+    () =>
+      buildRationaleDrivers({
+        verdict: verdictState,
+        mustItems,
+        risksCount: risks.length,
+        clarificationsCount: questions.length,
+		  coverage: coverageNormalized,
+        confidence,
+      }),
+	  [verdictState, mustItems, risks.length, questions.length, coverageNormalized, confidence]
+  );
+
 
 	  // --- Go/No-Go pills: consistent tones (no new badges) ---
 	const pillBase =
@@ -2052,10 +2240,10 @@ const executive = useMemo(() => {
   const verdictDriverLine = useMemo(() => {
     if (!showReady) return "Preparing decision drivers.";
     if (verdictState === "hold") {
-      return "Driven by mandatory submission and document compliance blockers.";
+      return "Decision drivers: MUST compliance gates and submission rules that can invalidate the bid.";
     }
     if (verdictState === "caution") {
-      return "Driven by risks requiring validation before committing.";
+      return "Decision drivers: risks requiring validation before committing.";
     }
     return "No mandatory blockers identified from eligibility and submission requirements.";
   }, [showReady, verdictState]);
@@ -2178,7 +2366,7 @@ const executive = useMemo(() => {
         setSourceFocus({
           query: displayQuery,
           snippet:
-            "No exact supporting clause found for this item in the extracted text. Verify manually in the original PDF.",
+            "No exact supporting clause found for this item in the extracted text. Verify in the original PDF / tender portal.",
           idx: null,
           highlightStart: null,
           highlightEnd: null,
@@ -2193,7 +2381,7 @@ const executive = useMemo(() => {
     if (!match) {
       // Never highlight the wrong clause. If we can't find an exact match, show an explicit message.
       const msg = evidenceOverride
-        ? "No exact supporting clause found for this item in the extracted text. Verify manually in the original PDF."
+        ? "No exact supporting clause found for this item in the extracted text. Verify in the original PDF / tender portal."
         : "Exact match not found in extracted text (OCR/layout differences are common). Use the evidence snippet above and search the phrase in the original PDF.";
       setSourceFocus({ query: displayQuery, snippet: msg, idx: null, highlightStart: null, highlightEnd: null });
       openTabAndScroll("text");
@@ -2234,7 +2422,7 @@ const executive = useMemo(() => {
       fileName: displayName || job.file_name,
       createdAt: job.created_at,
       verdictLabel:
-        verdictState === "hold" ? "Hold — compliance blockers" : verdictState === "caution" ? "Proceed with caution" : "Proceed",
+        verdictState === "hold" ? "Hold — resolve blockers to bid" : verdictState === "caution" ? "Proceed with caution" : "Proceed",
       decisionLine: String(executive?.decisionLine ?? "").trim() || verdictMicrocopy(verdictState),
       rationaleSnapshot: (mustItems ?? []).slice(0, 3).map((t) => String(t).trim()).filter(Boolean),
       recommendedAction:
@@ -2249,6 +2437,7 @@ const executive = useMemo(() => {
       risks,
       questions,
       draftText: draftForUi,
+      evidenceById,
     });
 
     const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
@@ -2270,9 +2459,51 @@ const executive = useMemo(() => {
     const title = String(displayName || job.file_name || "Tender brief").trim() || "Tender brief";
     const created = formatDate(job.created_at);
 
-    const mustLines = mustItems.length
-      ? `<ol>${mustItems.map((t) => `<li>${escapeHtml(t)}</li>`).join("")}</ol>`
-      : `<p class="empty">No MUST requirements detected.</p>`;
+
+    function evidenceBlocksHtml(ids: any) {
+      const arrAll = Array.isArray(ids) ? ids.map((x: any) => String(x ?? "").trim()).filter(Boolean) : [];
+      if (!arrAll.length) return "";
+
+      const MAX_BLOCKS = 3;
+      const arr = arrAll.slice(0, MAX_BLOCKS);
+      const overflow = arrAll.length - arr.length;
+
+      const blocks = arr
+        .map((id: string) => {
+          const ev = evidenceById.get(id);
+          if (!ev) {
+            return `<div class="ev"><div class="ev-head">Evidence ${escapeHtml(id)} • Page ?</div><div class="ev-body">Missing evidence snippet. Verify in the PDF / portal.</div></div>`;
+          }
+          const pageLabel = ev.page === null || ev.page === undefined ? "Page ?" : `Page ${ev.page}`;
+          const excerpt = escapeHtml(String(ev.excerpt ?? "").trim());
+          return `<div class="ev"><div class="ev-head">Evidence ${escapeHtml(ev.id)} • ${escapeHtml(pageLabel)}</div><div class="ev-body">${excerpt || "(empty excerpt)"}</div></div>`;
+        })
+        .filter(Boolean)
+        .join("\n");
+
+      const overflowLine =
+        overflow > 0
+          ? `<div class="ev"><div class="ev-head">More evidence IDs</div><div class="ev-body">+${overflow} more: ${escapeHtml(
+              arrAll.slice(MAX_BLOCKS).join(", ")
+            )}</div></div>`
+          : "";
+
+      const out = [blocks, overflowLine].filter(Boolean).join("\n");
+      return out ? `<div class="ev-wrap">${out}</div>` : "";
+    }
+
+    const mustBlockers = checklist.filter((i: any) => String(i?.type ?? i?.level ?? i?.priority ?? "").toUpperCase().includes("MUST"));
+
+    const mustLines = mustBlockers.length
+      ? `<ol>${mustBlockers
+          .slice(0, 40)
+          .map((x: any) => {
+            const t = escapeHtml(String(x?.text ?? x?.requirement ?? "").trim());
+            const ev = evidenceBlocksHtml((x as any)?.evidence_ids);
+            return `<li><span class="li-title">${t}</span>${ev}</li>`;
+          })
+          .join("")}</ol>`
+      : `<p class="empty">No MUST blockers detected.</p>`;
 
     const riskLines = risks.length
       ? `<ol>${risks
@@ -2282,13 +2513,15 @@ const executive = useMemo(() => {
             const sev = sevRaw === "high" || sevRaw === "medium" || sevRaw === "low" ? sevRaw : "medium";
             const riskTitle = escapeHtml(pickText(r));
             const detail = escapeHtml(String(r?.detail ?? r?.description ?? r?.why ?? r?.impact ?? "").trim());
-
             const sevLabel = sev === "high" ? "High" : sev === "low" ? "Low" : "Medium";
+            const ev = evidenceBlocksHtml((r as any)?.evidence_ids);
+
             return `
               <li>
                 <span class="sev sev-${sev}">${sevLabel}</span>
                 <span class="li-title">${riskTitle}</span>
                 ${detail ? `<div class="li-detail">${detail}</div>` : ""}
+                ${ev}
               </li>
             `;
           })
@@ -2296,9 +2529,19 @@ const executive = useMemo(() => {
       : `<p class="empty">No risks detected.</p>`;
 
     // Mirror the on-screen executive summary (rationale snapshot + recommended action)
-    const rationaleLines = mustItems?.length
-      ? `<ul>${(mustItems ?? []).slice(0, 3).map((t) => `<li>${escapeHtml(String(t))}</li>`).join("")}</ul>`
-      : `<p class="empty">No MUST gate-checks detected in extracted text.</p>`;
+    
+const rationaleDrivers = buildRationaleDrivers({
+  verdict: verdictState,
+  mustItems,
+  risksCount: risks.length,
+  clarificationsCount: questions.length,
+	  coverage: coverageNormalized,
+  confidence,
+});
+
+const rationaleLines = rationaleDrivers.length
+  ? `<ul>${rationaleDrivers.map((t) => `<li>${escapeHtml(String(t))}</li>`).join("")}</ul>`
+  : `<p class="empty">No decision drivers detected.</p>`;
 
     const recommendedAction =
       verdictState === "hold"
@@ -2314,10 +2557,44 @@ const executive = useMemo(() => {
 
     const decisionLineRaw = String(executive.decisionLine ?? "").trim();
     const decisionLine = decisionLineRaw || verdictMicrocopy(verdictState);
-    const deadline = executive.submissionDeadline ? escapeHtml(String(executive.submissionDeadline)) : "";
+    
+
+    const buyerEmailText = (() => {
+      const name = title;
+      const subject = `Clarification questions — ${name}`;
+      const lines: string[] = [];
+      lines.push(`Subject: ${subject}`);
+      lines.push("");
+      lines.push("Hello,");
+      lines.push("");
+      lines.push("We are preparing our tender response and would appreciate clarification on the points below.");
+      lines.push("Thank you.");
+      lines.push("");
+      questions.slice(0, 40).forEach((q: any, i: number) => lines.push(`${i + 1}. ${String(q)}`));
+      return lines.join("\n");
+    })();
+
+    const draftOutlineLines = (() => {
+      const draftLines = renderDraftPlain(draftForUi);
+      if (!draftLines.length) return `<p class="empty">No outline available.</p>`;
+      const body = draftLines.slice(0, 220).map((l) => escapeHtml(String(l))).join("\n");
+      return `<pre style="white-space:pre-wrap;margin:0">${body}</pre>`;
+    })();
+const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDeadline) : "";
+    const deadlinePill = (() => {
+      const raw = deadlineRaw.trim();
+      if (!raw) return "";
+      // Try to detect a plausible year in common tender formats (dd/mm/yyyy, dd.mm.yyyy, yyyy-mm-dd, etc.)
+      const yearMatch = raw.match(/\b(19\d{2}|20\d{2}|21\d{2})\b/);
+      const year = yearMatch ? Number(yearMatch[1]) : NaN;
+      if (!Number.isFinite(year)) return "Deadline present — verify in portal/PDF";
+      // Guard against obviously stale / test dates
+      if (year < 2020 || year > 2100) return "Deadline present — verify in portal/PDF";
+      return `Submission deadline ${raw}`;
+    })();
 
     const verdictLabel =
-      verdictState === "hold" ? "Hold — compliance blockers" : verdictState === "caution" ? "Proceed with caution" : "Proceed";
+      verdictState === "hold" ? "Hold — resolve blockers to bid" : verdictState === "caution" ? "Proceed with caution" : "Proceed";
 
     const html = `<!doctype html>
 <html>
@@ -2372,6 +2649,10 @@ const executive = useMemo(() => {
       .sev-low{ border-color:#e2e2e2; background:#fafafa; }
       .li-title{ font-weight: 650; }
       .li-detail{ margin-top: 4px; color: var(--muted); font-size: 12px; }
+      .ev-wrap{ margin-top: 8px; }
+      .ev{ border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; margin-top: 8px; background:#fff; }
+      .ev-head{ font-size: 11px; font-weight: 700; color: var(--muted); }
+      .ev-body{ margin-top: 6px; font-size: 12px; color: var(--ink); white-space: pre-wrap; }
       .disclaimer{
         margin-top: 14px; border: 1px solid var(--line);
         border-radius: 14px; padding: 10px 12px;
@@ -2400,7 +2681,7 @@ const executive = useMemo(() => {
           <div class="docTitle">Tender brief</div>
           <div class="pillRow">
             <span class="pill emph">${escapeHtml(verdictLabel)}</span>
-            ${deadline ? `<span class="pill">Submission deadline ${deadline}</span>` : ""}
+            ${deadlinePill ? `<span class="pill">${escapeHtml(deadlinePill)}</span>` : ""}
           </div>
         </div>
 
@@ -2427,13 +2708,15 @@ const executive = useMemo(() => {
               <p class="note" style="margin-top:10px">${escapeHtml(manualChecks)}</p>
               <p class="note" style="margin-top:8px">Tip: In the print dialog, choose “Save as PDF”. Disable “Headers and footers” to remove the URL/footer line.</p>
             </div>
+          <div class="disclaimer" style="margin-top:12px">Coverage: ${escapeHtml(String(coverageNormalized).toUpperCase())} • Confidence: ${escapeHtml(String(confidence).toUpperCase())}<br/>Evidence snippets are authoritative. Locate in source is a pointer only.</div>
           </div>
         </div>
       </div>
 
       <div class="section">
         <div class="card">
-          <h2>MUST requirements</h2>
+          <h2>MUST blockers</h2>
+          <p class="note">Each blocker includes deterministic evidence snippets. Locate-in-source highlights are not authoritative.</p>
           ${mustLines}
         </div>
       </div>
@@ -2442,6 +2725,26 @@ const executive = useMemo(() => {
         <div class="card">
           <h2>Risks</h2>
           ${riskLines}
+        </div>
+      </div>
+
+
+      <div class="section">
+        <div class="card">
+          <h2>Clarifications</h2>
+          ${questions && questions.length
+            ? `<div class="subhead">Ready-to-send email</div><pre style="white-space:pre-wrap;margin:0">${escapeHtml(buyerEmailText)}</pre><div style="height:10px"></div><div class="subhead">Raw list</div><ol>${questions
+                .slice(0, 40)
+                .map((q: any) => `<li>${escapeHtml(String(q))}</li>`)
+                .join("")}</ol>`
+            : `<p class="empty">No clarifications suggested.</p>`}
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="card">
+          <h2>Tender outline</h2>
+          ${draftOutlineLines}
         </div>
       </div>
 
@@ -2549,6 +2852,51 @@ const executive = useMemo(() => {
   }
 
   const deadlineText = executive.submissionDeadline ? String(executive.submissionDeadline).trim() : "";
+
+  function parseDeadlineToDate(input: string): Date | null {
+    const s = String(input ?? "").trim();
+    if (!s) return null;
+
+    // Common format seen in the UI: "15:00 28/05/2014"
+    const m = s.match(/(\d{1,2}:\d{2})\s+(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    if (m) {
+      const [hh, mm] = m[1].split(":").map((x) => parseInt(x, 10));
+      const dd = parseInt(m[2], 10);
+      const mo = parseInt(m[3], 10) - 1;
+      const yyyy = parseInt(m[4], 10);
+      const d = new Date(yyyy, mo, dd, hh, mm, 0, 0);
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+
+    // ISO-like fallback
+    const d2 = new Date(s);
+    return Number.isNaN(d2.getTime()) ? null : d2;
+  }
+
+  const deadlineDate = useMemo(() => parseDeadlineToDate(deadlineText), [deadlineText]);
+  const timeToDeadline = useMemo(() => {
+    if (!deadlineDate) return "";
+    const now = new Date();
+    const diffMs = deadlineDate.getTime() - now.getTime();
+    const diffMin = Math.round(diffMs / 60000);
+    if (diffMin <= 0) return "Deadline passed";
+
+    const diffHours = Math.floor(diffMin / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffDays >= 2) return `In ${diffDays} days`;
+    if (diffDays === 1) return "In 1 day";
+    if (diffHours >= 2) return `In ${diffHours} hours`;
+    if (diffHours === 1) return "In 1 hour";
+    return `In ${diffMin} min`;
+  }, [deadlineDate]);
+
+  const todayFocus = useMemo(() => {
+    if (!showReady) return "";
+    if (verdictState === "hold") return "Today focus: verify blockers and submission rules.";
+    if (verdictState === "caution") return "Today focus: validate top risks and missing information.";
+    return "Today focus: confirm submission basics, then start drafting.";
+  }, [showReady, verdictState]);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -2671,6 +3019,25 @@ const executive = useMemo(() => {
 
                     <p className="text-sm text-foreground/80">{verdictDriverLine}</p>
 
+                    {verdictState === "hold" ? (
+                      <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-4 space-y-2">
+                        <p className="text-xs font-semibold text-red-900">Blockers to resolve before bidding</p>
+                        <p className="text-xs text-red-900/80">
+                          Bid is possible only if these MUST gate-checks are satisfied or formally waived. Verify in the tender portal and original PDF.
+                        </p>
+                        <ul className="list-disc pl-5 text-xs text-red-900/80 space-y-1">
+                          {(mustItems ?? []).slice(0, 3).map((t, i) => (
+                            <li key={i}>{t}</li>
+                          ))}
+                        </ul>
+                        <div className="pt-1">
+                          <Button className="rounded-full" onClick={openRequirementsForVerification}>
+                            Review MUST items
+                          </Button>
+                        </div>
+                      </div>
+                    ) : null}
+
                     {/* Trust & Coverage */}
                     <div className="mt-3 rounded-xl border bg-muted/40 dark:bg-white/5 p-4 space-y-2">
 
@@ -2745,6 +3112,12 @@ const executive = useMemo(() => {
                   )}
                 </p>
                 <p className="mt-2 text-xs text-muted-foreground">Verify on the tender cover page or timeline section.</p>
+                {showReady && timeToDeadline ? (
+                  <p className="mt-2 text-xs text-muted-foreground">{timeToDeadline}</p>
+                ) : null}
+                {showReady && todayFocus ? (
+                  <p className="mt-2 text-xs text-muted-foreground">{todayFocus}</p>
+                ) : null}
               </div>
             </div>
 
@@ -2766,14 +3139,14 @@ const executive = useMemo(() => {
                     
 <div className="rounded-xl border bg-background p-3">
                       <p className="text-xs font-semibold">Rationale snapshot</p>
-                      {mustItems?.length ? (
+                      {rationaleDrivers?.length ? (
                         <ul className="mt-2 list-disc pl-5 space-y-1 text-sm text-foreground/80">
-                          {(mustItems ?? []).slice(0, 3).map((t, i) => (
+                          {rationaleDrivers.map((t, i) => (
                             <li key={i}>{t}</li>
                           ))}
                         </ul>
                       ) : (
-                        <p className="mt-2 text-sm text-muted-foreground">No MUST gate-checks detected in extracted text.</p>
+                        <p className="mt-2 text-sm text-muted-foreground">No decision drivers detected.</p>
                       )}
                     </div>
 
@@ -2867,12 +3240,15 @@ const executive = useMemo(() => {
             <CardContent className="p-6 space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <div className="text-sm font-semibold">What to do next</div>
+                  <div className="text-sm font-semibold">Action plan (next steps)</div>
 					<p className="text-sm text-muted-foreground mt-1">
 					  Items are ordered by decision priority. Start with blockers that could invalidate the bid.
 					</p>
 					<p className="mt-1 text-xs text-muted-foreground">
 					  Do these before investing in a full tender response.
+					</p>
+					<p className="mt-2 text-xs text-muted-foreground">
+					  Evidence snippets are authoritative. “Locate in source” is a best-effort pointer only.
 					</p>
 
                 </div>
@@ -2903,6 +3279,9 @@ const executive = useMemo(() => {
                         </div>
 
                         <p className="mt-2 text-xs text-muted-foreground">{a.why}</p>
+                        {a.doneWhen ? (
+                          <p className="mt-2 text-xs text-muted-foreground">{a.doneWhen}</p>
+                        ) : null}
 
                         {a.evidencePreview ? (
                           <p className="mt-2 text-xs text-muted-foreground">
@@ -2917,7 +3296,7 @@ const executive = useMemo(() => {
                           className="rounded-full"
                           onClick={() => openTabAndScroll(a.target)}
                         >
-                          Open
+                          Open section
                         </Button>
                         <Button
                           variant="outline"
@@ -2925,7 +3304,7 @@ const executive = useMemo(() => {
                           onClick={() => onJumpToSource(a.evidenceQuery)}
                           disabled={!extractedText}
                         >
-                          Evidence
+                          Locate in source
                         </Button>
                       </div>
                     </div>
@@ -2943,8 +3322,8 @@ const executive = useMemo(() => {
             <CardContent className="p-6 space-y-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm font-semibold">Additional considerations</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Secondary signals that can change effort, feasibility, or risk.</p>
+                  <p className="text-sm font-semibold">Secondary risks to validate</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Items that can change effort, feasibility, or risk.</p>
                 </div>
               </div>
 
@@ -2976,21 +3355,31 @@ const executive = useMemo(() => {
                             <p className="text-sm font-medium">{title}</p>
                             {detail ? <p className="mt-1 text-xs text-muted-foreground">{detail}</p> : null}
                           </div>
+                          <div className="flex flex-col gap-2 shrink-0">
+                          {(() => {
+                            const ids = (r as any)?.evidence_ids;
+                            if (Array.isArray(ids) && ids.length) {
+                              return (
+                                <Button
+                                  variant="outline"
+                                  className="rounded-full"
+                                  onClick={() => showEvidenceByIds(ids, jumpText)}
+                                >
+                                  Open evidence
+                                </Button>
+                              );
+                            }
+                            return null;
+                          })()}
                           <Button
                             variant="outline"
-                            className="rounded-full shrink-0"
-                            onClick={() => {
-                              const ids = (r as any)?.evidence_ids;
-                              if (Array.isArray(ids) && ids.length) return showEvidenceByIds(ids, jumpText);
-                              return onJumpToSource(jumpText);
-                            }}
-                            disabled={(() => {
-                              const ids = (r as any)?.evidence_ids;
-                              return !extractedText && !(Array.isArray(ids) && ids.length);
-                            })()}
+                            className="rounded-full"
+                            onClick={() => onJumpToSource(jumpText)}
+                            disabled={!extractedText}
                           >
-                            Evidence
+                            Locate in source
                           </Button>
+                        </div>
                         </div>
                       );
                     })}
@@ -3022,14 +3411,29 @@ const executive = useMemo(() => {
                           <p className="text-sm text-foreground/90">{q}</p>
                           <p className="mt-1 text-[11px] text-muted-foreground">{classifyClarification(q).hint}</p>
                         </div>
+                        <div className="flex flex-col gap-2 shrink-0">
                         <Button
                           variant="outline"
-                          className="rounded-full shrink-0"
+                          className="rounded-full"
+                          onClick={async () => {
+                            const ok = await safeCopy(`- ${q}`);
+                            if (ok) {
+                              setCopiedSection(`qemail_${i}`);
+                              window.setTimeout(() => setCopiedSection(null), 1200);
+                            }
+                          }}
+                        >
+                          {copiedSection === `qemail_${i}` ? "Copied" : "Add to buyer email"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="rounded-full"
                           onClick={() => onJumpToSource(q)}
                           disabled={!extractedText}
                         >
-                          Evidence
+                          Locate in source
                         </Button>
+                      </div>
                       </div>
                     ))}
                     <div className="flex justify-end">
@@ -3078,30 +3482,7 @@ const executive = useMemo(() => {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="checklist">
-          <div className="flex items-center justify-end gap-2">
-			  <Button
-				variant="outline"
-				className="rounded-full"
-				onClick={async () => {
-				  if (!canDownload) return;
-				  const text = `${clarificationsPack.subject}\n\n${clarificationsPack.intro}${clarificationsPack.body}\n`;
-				  const ok = await safeCopy(text);
-				  if (ok) {
-					setCopiedSection("clarifications_ready");
-					window.setTimeout(() => setCopiedSection(null), 1200);
-				  }
-				}}
-				disabled={!canDownload || !questions.length}
-			  >
-				{copiedSection === "clarifications_ready" ? "Copied" : "Copy ready-to-send email"}
-			  </Button>
-
-			  <Button variant="outline" className="rounded-full" onClick={() => copySection("clarifications")} disabled={!canDownload}>
-				{copiedSection === "clarifications" ? "Copied" : "Copy raw list"}
-			  </Button>
-			</div>
-
+        
 		  {showReady && !finalizingResults ? (
 			<div className="mt-3 flex flex-wrap items-center gap-2">
 			  <Badge variant="outline" className="rounded-full">
@@ -3118,7 +3499,7 @@ const executive = useMemo(() => {
 			</div>
 		  ) : null}
 
-
+			<TabsContent value="checklist">
           <div className="mt-3">
             {showFailed ? (
               <Card className="rounded-2xl">
@@ -3208,100 +3589,59 @@ const executive = useMemo(() => {
           </div>
         </TabsContent>
 
-        <TabsContent value="questions">
-          <div className="flex items-center justify-end">
-            <Button variant="outline" className="rounded-full" onClick={() => copySection("clarifications")} disabled={!canDownload}>
-              {copiedSection === "clarifications" ? "Copied" : "Copy section"}
-            </Button>
-          </div>
-
-          <div className="mt-3">
-            {showFailed ? (
-              <Card className="rounded-2xl">
-                <CardContent className="p-6">
-                  <p className="text-sm font-semibold">Analysis failed</p>
-                  <p className="mt-1 text-sm text-muted-foreground">This tender review could not be completed. Please re-upload the document or try again.</p>
-                </CardContent>
-              </Card>
-            ) : !showReady ? (
-              <Card className="rounded-2xl">
-                <CardContent className="p-6">
-                  <p className="text-sm font-semibold">Generating clarifications</p>
-                  <p className="mt-1 text-sm text-muted-foreground">We&apos;re listing buyer questions and ambiguities to resolve before submission. These are not disqualifiers by themselves unless a P1 gate-check fails (eligibility/submission).</p>
-                </CardContent>
-              </Card>
-            ) : finalizingResults ? (
-              <Card className="rounded-2xl">
-                <CardContent className="p-6">
-                  <p className="text-sm font-semibold">Finalizing results…</p>
-                  <p className="mt-1 text-sm text-muted-foreground">The job is marked as done, but results are still being written. Please wait a few seconds or refresh.</p>
-                </CardContent>
-              </Card>
-            ) : questions.length ? (
-			  <>
-				<Card className="rounded-2xl">
-				  <CardContent className="p-6 space-y-3">
-					<div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
-					  <div>
-						<p className="text-sm font-semibold">Ready-to-send clarifications</p>
-						<p className="mt-1 text-sm text-muted-foreground">
-						  Copy into an email or the buyer Q&amp;A portal. Prioritized as P1 (critical gate-checks) and P2 (important). P1 items can block eligibility or submission if unmet.
-                          <span className="mt-1 block text-xs text-muted-foreground">
-                            P1 = critical gate-checks (eligibility/submission blockers). P2 = important items affecting risk, effort, or delivery.
-                          </span>
-						</p>
-					  </div>
-					  <Button
-						variant="outline"
-						className="rounded-full"
-						onClick={async () => {
-						  const text = `${clarificationsPack.subject}\n\n${clarificationsPack.intro}${clarificationsPack.body}\n`;
-						  const ok = await safeCopy(text);
-						  if (ok) {
-							setCopiedSection("clarifications_ready");
-							window.setTimeout(() => setCopiedSection(null), 1200);
-						  }
-						}}
-						disabled={!questions.length}
-					  >
-						{copiedSection === "clarifications_ready" ? "Copied" : "Copy ready-to-send email"}
-					  </Button>
-					</div>
-
-					<Separator />
-
-					<div className="rounded-2xl border bg-muted/20 p-4">
-					  <p className="text-xs font-semibold">Subject</p>
-					  <p className="mt-1 text-sm">{clarificationsPack.subject}</p>
-
-					  <p className="mt-4 text-xs font-semibold">Body</p>
-					  <pre className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">
-						{clarificationsPack.intro}
-						{clarificationsPack.body}
-					  </pre>
-					</div>
-
-					<p className="text-xs text-muted-foreground">
-					  Tip: Use clarifications to reduce uncertainty, not to re-litigate the decision. Start with P1 gate-checks that could block eligibility or submission, then confirm exact wording in the tender source.
-					</p>
-				  </CardContent>
-				</Card>
-
-				<div className="mt-4">
-				  <BuyerQuestions checklist={checklist} risks={risks} extractedText={extractedText} onJumpToSource={onJumpToSource} questions={questions} />
-				</div>
-			  </>
+       <TabsContent value="questions">
+		  <div className="mt-3">
+			{showFailed ? (
+			  <Card className="rounded-2xl">
+				<CardContent className="p-6">
+				  <p className="text-sm font-semibold">Analysis failed</p>
+				  <p className="mt-1 text-sm text-muted-foreground">
+					This tender review could not be completed. Please re-upload the document or try again.
+				  </p>
+				</CardContent>
+			  </Card>
+			) : !showReady ? (
+			  <Card className="rounded-2xl">
+				<CardContent className="p-6">
+				  <p className="text-sm font-semibold">Generating clarifications</p>
+				  <p className="mt-1 text-sm text-muted-foreground">
+					We&apos;re listing buyer questions and ambiguities to resolve before submission. These are not disqualifiers
+					by themselves unless a P1 gate-check fails (eligibility/submission).
+				  </p>
+				</CardContent>
+			  </Card>
+			) : finalizingResults ? (
+			  <Card className="rounded-2xl">
+				<CardContent className="p-6">
+				  <p className="text-sm font-semibold">Finalizing results…</p>
+				  <p className="mt-1 text-sm text-muted-foreground">
+					The job is marked as done, but results are still being written. Please wait a few seconds or refresh.
+				  </p>
+				</CardContent>
+			  </Card>
+			) : questions.length ? (
+			  <BuyerQuestions
+				checklist={checklist}
+				risks={risks}
+				extractedText={extractedText}
+				onJumpToSource={onJumpToSource}
+				questions={questions}
+				tenderName={String(displayName || job?.file_name || "Tender").trim()}
+			  />
 			) : (
+			  <Card className="rounded-2xl">
+				<CardContent className="p-6">
+				  <p className="text-sm font-semibold">No clarifications identified</p>
+				  <p className="mt-1 text-sm text-muted-foreground">
+					We didn&apos;t detect explicit buyer questions or ambiguities. Still verify eligibility, deadlines, and
+					submission format in the tender source (often in annexes or the portal instructions).
+				  </p>
+				</CardContent>
+			  </Card>
+			)}
+		  </div>
+		</TabsContent>
 
-              <Card className="rounded-2xl">
-                <CardContent className="p-6">
-                  <p className="text-sm font-semibold">No clarifications identified</p>
-                  <p className="mt-1 text-sm text-muted-foreground">We didn&apos;t detect explicit buyer questions or ambiguities. Still verify eligibility, deadlines, and submission format in the tender source (often in annexes or the portal instructions).</p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </TabsContent>
 
         <TabsContent value="draft">
           <Card className="rounded-2xl">
@@ -3474,7 +3814,7 @@ const executive = useMemo(() => {
                     ) : null}
 
                     <Button variant="outline" className="rounded-full" onClick={() => setEvidenceFocus(null)}>
-                      Clear
+                      Close excerpt
                     </Button>
                   </div>
                 </div>
@@ -3517,7 +3857,7 @@ const executive = useMemo(() => {
                     </Button>
 
                     <Button variant="outline" className="rounded-full" onClick={() => setSourceFocus(null)}>
-                      Clear
+                      Close excerpt
                     </Button>
                   </div>
                 </div>
