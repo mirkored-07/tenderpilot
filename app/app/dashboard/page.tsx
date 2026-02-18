@@ -15,8 +15,17 @@ type JobStatus = "queued" | "processing" | "done" | "failed";
 
 type DbJob = {
   id: string;
-  file_name: string;
+  user_id: string;
   status: JobStatus;
+  file_name: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type DbJobResult = {
+  job_id: string;
+  executive_summary: any;
+  pipeline: any;
   created_at: string;
   updated_at: string;
 };
@@ -32,6 +41,7 @@ type DbWorkItem = {
   notes: string | null;
   updated_at: string;
 };
+
 type DbJobMetadata = {
   job_id: string;
   deadline_override: string | null;
@@ -42,79 +52,8 @@ type DbJobMetadata = {
   updated_at: string;
 };
 
-function formatDate(iso: string) {
-  try {
-    return new Intl.DateTimeFormat(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(new Date(iso));
-  } catch {
-    return iso;
-  }
-}
-
-/**
- * Robust-ish parsing for the formats we have seen in job_results.executive_summary.submissionDeadline:
- * - "15:00 28/05/2014"
- * - "28/05/2014"
- * - ISO dates
- * - "30 April 2025 at 12:00 CET" (best-effort via Date())
- *
- * Returns null when the string is a narrative (e.g. "Not found in extracted text" / "Refer to tender documents").
- */
-function parseDeadlineToDateLocal(input: string): Date | null {
-  const s = String(input ?? "").trim();
-  if (!s) return null;
-
-  // Narrative / non-date hints we saw in UI
-  const lowered = s.toLowerCase();
-  if (
-    lowered.includes("not found") ||
-    lowered.includes("refer to") ||
-    lowered.includes("see tender") ||
-    lowered.includes("verify") ||
-    lowered.includes("exact deadline") ||
-    lowered.includes("unknown")
-  ) {
-    return null;
-  }
-
-  // Common EU format: "15:00 28/05/2014" or "28/05/2014"
-  const m = s.match(/(?:(\d{1,2}):(\d{2})\s+)?(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-  if (m) {
-    const hh = m[1] ? parseInt(m[1], 10) : 0;
-    const mm = m[2] ? parseInt(m[2], 10) : 0;
-    const dd = parseInt(m[3], 10);
-    const mo = parseInt(m[4], 10) - 1;
-    const yyyy = parseInt(m[5], 10);
-    const d = new Date(yyyy, mo, dd, hh, mm, 0, 0);
-    return Number.isFinite(d.getTime()) ? d : null;
-  }
-
-  // Fallback: rely on JS Date parsing (ISO, long-form English, etc.)
-  const d2 = new Date(s);
-  return Number.isFinite(d2.getTime()) ? d2 : null;
-}
-
-function daysUntil(d: Date, now = new Date()) {
-  return Math.ceil((d.getTime() - now.getTime()) / (24 * 3600 * 1000));
-}
-
-function daysAgo(iso: string, now = new Date()) {
-  const t = new Date(iso).getTime();
-  if (!Number.isFinite(t)) return null;
-  return Math.floor((now.getTime() - t) / (24 * 3600 * 1000));
-}
-
-function clamp(n: number, a: number, b: number) {
-  return Math.max(a, Math.min(b, n));
-}
-
-function verdictBadge(label: string) {
-  const t = String(label ?? "").toLowerCase();
+function DecisionBadge({ raw }: { raw: string }) {
+  const t = String(raw ?? "").toLowerCase();
   if (t.includes("no") || t.includes("do not") || t.includes("reject")) {
     return (
       <Badge variant="destructive" className="rounded-full">
@@ -129,10 +68,16 @@ function verdictBadge(label: string) {
       </Badge>
     );
   }
-  if (t.includes("go") || t.includes("proceed")) return <Badge className="rounded-full">Go</Badge>;
+  if (t.includes("go") || t.includes("proceed")) {
+    return (
+      <Badge variant="default" className="rounded-full">
+        Go
+      </Badge>
+    );
+  }
   return (
     <Badge variant="outline" className="rounded-full">
-      —
+      Unknown
     </Badge>
   );
 }
@@ -145,118 +90,208 @@ function decisionBucket(raw: string): "go" | "hold" | "no-go" | "unknown" {
   return "unknown";
 }
 
+function isDoneStatus(s?: string | null) {
+  const v = String(s ?? "").toLowerCase().trim();
+  return v === "done" || v === "completed" || v === "closed";
+}
+
 function SegmentedBar({ parts }: { parts: { label: string; value: number }[] }) {
   const total = parts.reduce((s, p) => s + (p.value || 0), 0);
   return (
     <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-      <div className="flex h-full w-full">
+      <div className="flex h-full">
         {parts.map((p) => {
           const w = total > 0 ? (p.value / total) * 100 : 0;
-          return <div key={p.label} style={{ width: `${w}%` }} className="h-full bg-foreground/70" />;
+          return <div key={p.label} className="h-full bg-foreground/70" style={{ width: `${w}%` }} />;
         })}
       </div>
     </div>
   );
 }
 
-function MiniBars({ values, max }: { values: number[]; max: number }) {
+function DonutChart({
+  parts,
+  size = 72,
+  strokeWidth = 10,
+}: {
+  parts: { label: string; value: number }[];
+  size?: number;
+  strokeWidth?: number;
+}) {
+  const total = parts.reduce((s, p) => s + (p.value || 0), 0);
+  const r = (size - strokeWidth) / 2;
+  const c = 2 * Math.PI * r;
+
+  const classes = ["text-foreground/90", "text-foreground/65", "text-foreground/45", "text-foreground/25"];
+  let acc = 0;
+
   return (
-    <div className="flex h-10 items-end gap-1">
-      {values.map((v, idx) => {
-        const h = max > 0 ? (v / max) * 100 : 0;
-        return <div key={idx} className="w-2 rounded-sm bg-foreground/20" style={{ height: `${clamp(h, 4, 100)}%` }} />;
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="shrink-0">
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={r}
+        fill="none"
+        stroke="currentColor"
+        className="text-muted"
+        strokeWidth={strokeWidth}
+      />
+      {parts.map((p, i) => {
+        const v = p.value || 0;
+        if (total <= 0 || v <= 0) return null;
+
+        const dash = (v / total) * c;
+        const gap = c - dash;
+
+        const offset = c * 0.25 - acc;
+        acc += dash;
+
+        return (
+          <circle
+            key={p.label}
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            fill="none"
+            stroke="currentColor"
+            className={classes[i % classes.length]}
+            strokeWidth={strokeWidth}
+            strokeDasharray={`${dash} ${gap}`}
+            strokeDashoffset={offset}
+            strokeLinecap="butt"
+          />
+        );
       })}
-    </div>
+    </svg>
   );
 }
 
-function StackedBar({
-  todo,
-  inProgress,
-  blocked,
-  done,
-}: {
-  todo: number;
-  inProgress: number;
-  blocked: number;
-  done: number;
-}) {
-  const total = todo + inProgress + blocked + done;
-  const w = (n: number) => (total > 0 ? `${(n / total) * 100}%` : "0%");
-  return (
-    <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-      <div className="flex h-full w-full">
-        <div style={{ width: w(todo) }} className="h-full bg-foreground/20" />
-        <div style={{ width: w(inProgress) }} className="h-full bg-foreground/35" />
-        <div style={{ width: w(blocked) }} className="h-full bg-foreground/55" />
-        <div style={{ width: w(done) }} className="h-full bg-foreground/75" />
-      </div>
-    </div>
-  );
+function parseDeadlineToDateLocal(deadlineText: string) {
+  const t = String(deadlineText ?? "").trim();
+  if (!t) return null;
+
+  const isoTry = new Date(t);
+  if (Number.isFinite(isoTry.getTime())) return isoTry;
+
+  const m1 = t.match(/(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4})(?:\s+(\d{1,2}):(\d{2}))?/);
+  if (m1) {
+    const dd = parseInt(m1[1], 10);
+    const mm = parseInt(m1[2], 10) - 1;
+    let yyyy = parseInt(m1[3], 10);
+    if (yyyy < 100) yyyy += 2000;
+    const hh = m1[4] ? parseInt(m1[4], 10) : 23;
+    const mi = m1[5] ? parseInt(m1[5], 10) : 59;
+    const d = new Date(yyyy, mm, dd, hh, mi, 0, 0);
+    if (Number.isFinite(d.getTime())) return d;
+  }
+
+  const m2 = t.match(/(\d{4})-(\d{2})-(\d{2})(?:\s+(\d{1,2}):(\d{2}))?/);
+  if (m2) {
+    const yyyy = parseInt(m2[1], 10);
+    const mm = parseInt(m2[2], 10) - 1;
+    const dd = parseInt(m2[3], 10);
+    const hh = m2[4] ? parseInt(m2[4], 10) : 23;
+    const mi = m2[5] ? parseInt(m2[5], 10) : 59;
+    const d = new Date(yyyy, mm, dd, hh, mi, 0, 0);
+    if (Number.isFinite(d.getTime())) return d;
+  }
+
+  return null;
+}
+
+function daysUntil(deadline: Date, now: Date) {
+  const ms = deadline.getTime() - now.getTime();
+  return Math.ceil(ms / 86400000);
 }
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-   const [jobs, setJobs] = useState<DbJob[]>([]);
-  const [jobResults, setJobResults] = useState<Record<string, any>>({});
+  const [jobs, setJobs] = useState<DbJob[]>([]);
+  const [jobResults, setJobResults] = useState<Record<string, DbJobResult>>({});
   const [jobMeta, setJobMeta] = useState<Record<string, DbJobMetadata>>({});
   const [workItems, setWorkItems] = useState<DbWorkItem[]>([]);
-
 
   const [ownerFilter, setOwnerFilter] = useState<string>("All");
   const [decisionFilter, setDecisionFilter] = useState<string>("All");
   const [windowDays, setWindowDays] = useState<number>(30);
 
+  // Layout controls (progressive disclosure)
+  const [standupMode, setStandupMode] = useState<boolean>(true);
+
+  const [openSections, setOpenSections] = useState<{
+    standup: boolean;
+    analytics: boolean;
+    blockers: boolean;
+    bids: boolean;
+    attention: boolean;
+  }>({
+    standup: false,
+    analytics: false,
+    blockers: false,
+    bids: false,
+    attention: false,
+  });
+
+  const [queueExpand, setQueueExpand] = useState<Record<string, boolean>>({
+    needsTriage: false,
+    deadlineUnknown: false,
+    dueNext7: false,
+    overdueWorkItems: false,
+    blockedItems: false,
+    unassignedItems: false,
+    clarificationsPending: false,
+  });
+
   async function loadAll() {
-    setError(null);
     setLoading(true);
+    setError(null);
 
-    const supabase = supabaseBrowser();
-    const { data: jobsData, error: jobsErr } = await supabase
-      .from("jobs")
-      .select("id,file_name,status,created_at,updated_at")
-      .order("created_at", { ascending: false });
+    try {
+      const supabase = supabaseBrowser();
 
-    if (jobsErr) {
-      console.error(jobsErr);
-      setError("Could not load dashboard.");
-      setJobs([]);
+      const { data: jobsData, error: jobsErr } = await supabase
+        .from("jobs")
+        .select("id,user_id,status,file_name,created_at,updated_at")
+        .order("created_at", { ascending: false })
+        .limit(200);
+
+      if (jobsErr) throw jobsErr;
+      setJobs((jobsData as DbJob[]) ?? []);
+
+      const ids = (jobsData ?? []).map((j: any) => String(j.id));
+
+      const { data: resultsData } = await supabase
+        .from("job_results")
+        .select("job_id,executive_summary,pipeline,created_at,updated_at")
+        .in("job_id", ids);
+
+      const resMap: Record<string, any> = {};
+      for (const r of resultsData ?? []) resMap[String((r as any).job_id)] = r;
+      setJobResults(resMap);
+
+      const { data: metaRows } = await supabase
+        .from("job_metadata")
+        .select("job_id,deadline_override,portal_url,internal_bid_id,owner_label,decision_override,updated_at")
+        .in("job_id", ids);
+
+      const metaMap: Record<string, DbJobMetadata> = {};
+      for (const row of metaRows ?? []) metaMap[String((row as any).job_id)] = row as any;
+      setJobMeta(metaMap);
+
+      const { data: workData } = await supabase
+        .from("job_work_items")
+        .select("job_id,type,ref_key,title,status,owner_label,due_at,notes,updated_at")
+        .in("job_id", ids);
+
+      setWorkItems((workData as DbWorkItem[]) ?? []);
+    } catch (e: any) {
+      console.error(e);
+      setError(e?.message || "Failed to load dashboard");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const ids = (jobsData ?? []).map((j) => j.id);
-    setJobs((jobsData ?? []) as DbJob[]);
-
-    // job_results (deadline + decision)
-    const { data: resultsData } = await supabase
-      .from("job_results")
-      .select("job_id,executive_summary,clarifications")
-      .in("job_id", ids);
-
-    const resMap: Record<string, any> = {};
-    for (const r of resultsData ?? []) resMap[String((r as any).job_id)] = r;
-    setJobResults(resMap);
-    // job metadata overrides (manual overlays)
-    const { data: metaRows } = await supabase
-      .from("job_metadata")
-      .select("job_id,deadline_override,portal_url,internal_bid_id,owner_label,decision_override,updated_at")
-      .in("job_id", ids);
-
-    const metaMap: Record<string, DbJobMetadata> = {};
-    for (const row of metaRows ?? []) metaMap[String((row as any).job_id)] = row as any;
-    setJobMeta(metaMap);
-
-    // work items (progress + blockers)
-    const { data: workData } = await supabase
-      .from("job_work_items")
-      .select("job_id,type,ref_key,title,status,owner_label,due_at,notes,updated_at")
-      .in("job_id", ids);
-    setWorkItems((workData as DbWorkItem[]) ?? []);
-
-    setLoading(false);
   }
 
   useEffect(() => {
@@ -267,17 +302,15 @@ export default function DashboardPage() {
   const dashboardRows = useMemo(() => {
     const now = new Date();
     const byJob: Record<string, DbWorkItem[]> = {};
-    for (const w of workItems ?? []) {
-      const id = String(w?.job_id ?? "");
-      byJob[id] = byJob[id] || [];
-      byJob[id].push(w);
+    for (const wi of workItems ?? []) {
+      const jid = String(wi.job_id);
+      (byJob[jid] ||= []).push(wi);
     }
 
-    return jobs.map((j) => {
-      const r = jobResults[j.id];
+    return (jobs ?? []).map((job) => {
+      const r = jobResults[job.id];
       const exec = r?.executive_summary ?? {};
-
-            const meta = jobMeta[j.id];
+      const meta = jobMeta[job.id];
 
       const extractedDeadlineText = String(exec?.submissionDeadline ?? "").trim();
       const extractedDeadline = parseDeadlineToDateLocal(extractedDeadlineText);
@@ -291,237 +324,282 @@ export default function DashboardPage() {
 
       const deadlineText = meta?.deadline_override ? String(meta.deadline_override) : extractedDeadlineText;
 
-
-      const w = byJob[j.id] ?? [];
-      const total = w.length;
-      const done = w.filter((x) => String(x?.status ?? "") === "done").length;
-      const blocked = w.filter((x) => String(x?.status ?? "") === "blocked").length;
-      const openClar = w.filter((x) => String(x?.type ?? "") === "clarification" && String(x?.status ?? "") !== "done").length;
-      const unassigned = w.filter((x) => !String(x?.owner_label ?? "").trim()).length;
-      const progressPct = total > 0 ? Math.round((done / total) * 100) : 0;
-
-            const dueSoon = hasValidDeadline ? daysUntil(deadline as Date, now) : null;
+      const dueSoon = hasValidDeadline ? daysUntil(deadline as Date, now) : null;
       const missingDeadline = !hasValidDeadline;
 
       const missingDecision = bucket === "unknown";
 
-      // Work-item due dates (fallback signal, does NOT replace tender deadline)
-      const wiDue = w
-        .map((x) => (x?.due_at ? new Date(String(x.due_at)) : null))
-        .filter((d): d is Date => !!d && Number.isFinite(d.getTime()))
-        .sort((a, b) => a.getTime() - b.getTime())[0];
-      const wiDueSoon = wiDue ? daysUntil(wiDue, now) : null;
+      const items = byJob[job.id] ?? [];
+      const blocked = items.filter((w) => String(w?.status ?? "") === "blocked").length;
+      const done = items.filter((w) => String(w?.status ?? "") === "done").length;
+      const total = items.length;
+
+      const displayName = job.file_name ? job.file_name : getJobDisplayName(job.id);
 
       return {
-        job: j,
-        decision: decisionText,
+        job,
+        displayName,
+        decisionText,
         decisionBucket: bucket,
         deadlineText,
-        deadline,
+        deadline: deadline ? (deadline as Date).toISOString() : null,
         dueSoon,
-        progressPct,
-        total,
-        done,
-        blocked,
-        openClar,
-        unassigned,
         missingDeadline,
         missingDecision,
-        wiDue,
-        wiDueSoon,
+        blocked,
+        done,
+        total,
+        updatedAt: job.updated_at,
       };
     });
-    }, [jobs, jobResults, jobMeta, workItems]);
+  }, [jobs, jobResults, jobMeta, workItems]);
 
+  const totals = useMemo(() => {
+    const missingDeadline = dashboardRows.filter((r) => r.missingDeadline).length;
+    const missingDecision = dashboardRows.filter((r) => r.missingDecision).length;
+    const blockedItems = dashboardRows.reduce((s, r) => s + r.blocked, 0);
+    const totalWork = dashboardRows.reduce((s, r) => s + r.total, 0);
+    const doneWork = dashboardRows.reduce((s, r) => s + r.done, 0);
+    return { missingDeadline, missingDecision, blockedItems, totalWork, doneWork };
+  }, [dashboardRows]);
+
+  const decisionBuckets = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const r of dashboardRows) m.set(r.decisionBucket, (m.get(r.decisionBucket) || 0) + 1);
+    return m;
+  }, [dashboardRows]);
 
   const workloadByOwner = useMemo(() => {
-    const map = new Map<string, { todo: number; in_progress: number; blocked: number; done: number }>();
-    for (const w of workItems ?? []) {
-      const owner = String(w?.owner_label ?? "").trim() || "Unassigned";
-      const s = String(w?.status ?? "todo");
-      if (!map.has(owner)) map.set(owner, { todo: 0, in_progress: 0, blocked: 0, done: 0 });
-      const row = map.get(owner)!;
-      if (s === "done") row.done += 1;
-      else if (s === "in_progress") row.in_progress += 1;
-      else if (s === "blocked") row.blocked += 1;
-      else row.todo += 1;
+    const m = new Map<string, { total: number; blocked: number; overdue: number }>();
+    const now = new Date();
+
+    for (const wi of workItems ?? []) {
+      const owner = String(wi.owner_label ?? "").trim() || "Unassigned";
+      const row = m.get(owner) || { total: 0, blocked: 0, overdue: 0 };
+      row.total += 1;
+      if (String(wi.status ?? "") === "blocked") row.blocked += 1;
+      if (wi.due_at) {
+        const due = new Date(wi.due_at);
+        if (Number.isFinite(due.getTime()) && due.getTime() < now.getTime() && !isDoneStatus(wi.status)) {
+          row.overdue += 1;
+        }
+      }
+      m.set(owner, row);
     }
 
-    return Array.from(map.entries()).sort((a, b) => {
-      const aa = a[1].todo + a[1].in_progress + a[1].blocked;
-      const bb = b[1].todo + b[1].in_progress + b[1].blocked;
-      return bb - aa;
-    });
+    return Array.from(m.entries()).sort((a, b) => b[1].total - a[1].total);
   }, [workItems]);
 
   const owners = useMemo(() => {
     const set = new Set<string>();
     for (const [k] of workloadByOwner) set.add(k);
-
-    // include job-level owner_label overrides too
     for (const j of jobs ?? []) {
       const o = String(jobMeta[j.id]?.owner_label ?? "").trim();
       if (o) set.add(o);
     }
-
     return ["All", ...Array.from(set).filter(Boolean)];
   }, [workloadByOwner, jobs, jobMeta]);
-
-
-  const decisionBuckets = useMemo(() => {
-    const map = new Map<string, number>([
-      ["go", 0],
-      ["hold", 0],
-      ["no-go", 0],
-      ["unknown", 0],
-    ]);
-    for (const r of dashboardRows) map.set(r.decisionBucket, (map.get(r.decisionBucket) || 0) + 1);
-    return map;
-  }, [dashboardRows]);
-
-  const totals = useMemo(() => {
-    const activeBids = jobs.filter((j) => j.status !== "failed").length;
-
-    const withDeadline = dashboardRows.filter((r) => !!r.deadline);
-    const dueSoon = withDeadline.filter((r) => typeof r.dueSoon === "number" && r.dueSoon <= 7 && r.dueSoon >= 0).length;
-    const overdue = withDeadline.filter((r) => typeof r.dueSoon === "number" && r.dueSoon < 0).length;
-
-    const missingDeadline = dashboardRows.filter((r) => r.missingDeadline).length;
-    const missingDecision = dashboardRows.filter((r) => r.missingDecision).length;
-
-    const blockedItems = workItems.filter((w) => String(w?.status ?? "") === "blocked").length;
-    const unassignedItems = workItems.filter((w) => !String(w?.owner_label ?? "").trim()).length;
-    const openClarifications = workItems.filter((w) => String(w?.type ?? "") === "clarification" && String(w?.status ?? "") !== "done").length;
-
-    // Work-item due fallback: due soon if any work item has due_at within 7 days
-    const wiDueSoon = dashboardRows.filter((r) => typeof r.wiDueSoon === "number" && r.wiDueSoon <= 7 && r.wiDueSoon >= 0).length;
-
-    return { activeBids, dueSoon, overdue, blockedItems, unassignedItems, openClarifications, missingDeadline, missingDecision, wiDueSoon };
-  }, [jobs, dashboardRows, workItems]);
 
   const filteredRows = useMemo(() => {
     return dashboardRows.filter((r) => {
       if (decisionFilter !== "All" && r.decisionBucket !== decisionFilter) return false;
       if (ownerFilter === "All") return true;
+
       const items = workItems.filter((w) => String(w.job_id) === r.job.id);
-      return items.some((w) => (String(w.owner_label ?? "").trim() || "Unassigned") === ownerFilter);
+      const hasOwner = items.some((w) => (String(w.owner_label ?? "").trim() || "Unassigned") === ownerFilter);
+
+      const metaOwner = String(jobMeta[r.job.id]?.owner_label ?? "").trim();
+      const hasMetaOwner = metaOwner && metaOwner === ownerFilter;
+
+      return hasOwner || hasMetaOwner;
     });
-  }, [dashboardRows, decisionFilter, ownerFilter, workItems]);
+  }, [dashboardRows, workItems, decisionFilter, ownerFilter, jobMeta]);
+
+  const standupQueues = useMemo(() => {
+    const now = new Date();
+
+    const itemsByJob: Record<string, DbWorkItem[]> = {};
+    for (const wi of workItems ?? []) {
+      const jid = String(wi.job_id);
+      (itemsByJob[jid] ||= []).push(wi);
+    }
+
+    const jobOwnerLabel = (jobId: string) => {
+      const o = String(jobMeta[jobId]?.owner_label ?? "").trim();
+      if (o) return o;
+      const list = itemsByJob[jobId] ?? [];
+      for (const wi of list) {
+        const ow = String(wi.owner_label ?? "").trim();
+        if (ow) return ow;
+      }
+      return "";
+    };
+
+    const needsTriage = (filteredRows ?? []).filter((r) => {
+      const decisionUnknown = String(r?.decisionBucket ?? "").toLowerCase() === "unknown";
+      const hasOwner = !!jobOwnerLabel(String(r.job.id));
+      return decisionUnknown && !hasOwner;
+    });
+
+    const deadlineUnknown = (filteredRows ?? []).filter((r) => !!r?.missingDeadline);
+
+    const dueNext7 = (filteredRows ?? []).filter((r) => {
+      if (r?.missingDeadline) return false;
+      const d = r?.deadline ? new Date(r.deadline) : null;
+      if (!d || !Number.isFinite(d.getTime())) return false;
+      const days = Math.ceil((d.getTime() - now.getTime()) / 86400000);
+      return days >= 0 && days <= 7;
+    });
+
+    const allVisibleJobIds = new Set((filteredRows ?? []).map((r) => String(r.job.id)));
+    const visibleWorkItems = (workItems ?? []).filter((wi) => allVisibleJobIds.has(String(wi.job_id)));
+
+    const overdueWorkItems = visibleWorkItems
+      .filter((wi) => wi.due_at && !isDoneStatus(wi.status))
+      .filter((wi) => new Date(String(wi.due_at)).getTime() < now.getTime())
+      .sort((a, b) => new Date(String(a.due_at)).getTime() - new Date(String(b.due_at)).getTime());
+
+    const blockedItems = visibleWorkItems
+      .filter((wi) => String(wi.status ?? "").toLowerCase() === "blocked")
+      .sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1));
+
+    const unassignedItems = visibleWorkItems
+      .filter((wi) => !isDoneStatus(wi.status))
+      .filter((wi) => !String(wi.owner_label ?? "").trim())
+      .sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1));
+
+    const clarificationsPending = visibleWorkItems
+      .filter((wi) => String(wi.type ?? "").toLowerCase() === "clarification")
+      .filter((wi) => !isDoneStatus(wi.status))
+      .sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1));
+
+    return {
+      needsTriage,
+      deadlineUnknown,
+      dueNext7,
+      overdueWorkItems,
+      blockedItems,
+      unassignedItems,
+      clarificationsPending,
+      jobOwnerLabel,
+    };
+  }, [filteredRows, workItems, jobMeta]);
 
   const deadlineHistogram = useMemo(() => {
     const now = new Date();
-    const buckets = new Array(windowDays).fill(0);
-    let missing = 0;
-    let overdue = 0;
+    const buckets = [
+      { label: "Overdue", value: 0 },
+      { label: "0-7d", value: 0 },
+      { label: "8-30d", value: 0 },
+      { label: "31-90d", value: 0 },
+      { label: "Unknown", value: 0 },
+    ];
 
-    for (const r of dashboardRows) {
-      if (!r.deadline) {
-        missing += 1;
+    for (const r of filteredRows) {
+      if (r.missingDeadline || !r.deadline) {
+        buckets[4].value += 1;
         continue;
       }
-      const d = daysUntil(r.deadline, now);
-      if (d < 0) {
-        overdue += 1;
-        continue;
-      }
-      if (d >= 0 && d < windowDays) buckets[d] += 1;
+      const d = new Date(r.deadline);
+      const days = daysUntil(d, now);
+      if (days < 0) buckets[0].value += 1;
+      else if (days <= 7) buckets[1].value += 1;
+      else if (days <= 30) buckets[2].value += 1;
+      else buckets[3].value += 1;
     }
-
-    const max = buckets.reduce((m, v) => Math.max(m, v), 0);
-    const totalUpcoming = buckets.reduce((s, v) => s + v, 0);
-    return { buckets, max, missing, overdue, totalUpcoming };
-  }, [dashboardRows, windowDays]);
+    return buckets;
+  }, [filteredRows]);
 
   const attentionBids = useMemo(() => {
-    function score(r: any) {
-      let s = 0;
-
-      // Deadline-based urgency
-      if (typeof r.dueSoon === "number") {
-        if (r.dueSoon < 0) s += 1000;
-        else if (r.dueSoon <= 3) s += 550;
-        else if (r.dueSoon <= 7) s += 350;
-        else if (r.dueSoon <= 14) s += 120;
-      } else {
-        // No deadline found: still urgent for a bid manager
-        if (r.missingDeadline) s += 180;
-      }
-
-      // Work-item due date fallback (secondary signal)
-      if (typeof r.wiDueSoon === "number") {
-        if (r.wiDueSoon < 0) s += 200;
-        else if (r.wiDueSoon <= 3) s += 140;
-        else if (r.wiDueSoon <= 7) s += 90;
-      }
-
-      // Execution signals
-      s += (r.blocked || 0) * 80;
-      s += (r.unassigned || 0) * 25;
-      s += (r.openClar || 0) * 20;
-
-      if ((typeof r.dueSoon === "number" && r.dueSoon <= 7) || (typeof r.wiDueSoon === "number" && r.wiDueSoon <= 7)) {
-        if (r.progressPct < 30) s += 120;
-      }
-
-      // Decision readiness
-      if (r.missingDecision) s += 120;
-      if (r.decisionBucket === "hold") s += 60;
-      if (r.decisionBucket === "no-go") s += 30;
-
-      return s;
+    function scoreRow(r: any) {
+      let score = 0;
+      if (r.missingDecision) score += 5;
+      if (r.missingDeadline) score += 4;
+      if (r.decisionBucket === "hold") score += 3;
+      if (r.decisionBucket === "no-go") score += 2;
+      if (r.blocked > 0) score += 4;
+      if (typeof r.dueSoon === "number" && r.dueSoon <= 7) score += 4;
+      if (typeof r.dueSoon === "number" && r.dueSoon < 0) score += 6;
+      return score;
     }
 
-    const rows = filteredRows
-      .map((r) => ({ ...r, score: score(r) }))
+    return [...filteredRows]
+      .map((r) => ({ r, score: scoreRow(r) }))
+      .filter((x) => x.score > 0)
       .sort((a, b) => b.score - a.score)
-      .slice(0, 8);
-
-    return rows.map((r: any) => {
-      const reasons: string[] = [];
-
-      if (typeof r.dueSoon === "number") {
-        if (r.dueSoon < 0) reasons.push(`Overdue ${Math.abs(r.dueSoon)}d`);
-        else if (r.dueSoon <= 7) reasons.push(`Due in ${r.dueSoon}d`);
-      } else if (r.missingDeadline) {
-        reasons.push("Missing deadline");
-      }
-
-      if (typeof r.wiDueSoon === "number") {
-        if (r.wiDueSoon < 0) reasons.push(`Work items overdue`);
-        else if (r.wiDueSoon <= 7) reasons.push(`Work due in ${r.wiDueSoon}d`);
-      }
-
-      if (r.missingDecision) reasons.push("Missing decision");
-      if (r.blocked > 0) reasons.push(`${r.blocked} blocked`);
-      if (r.unassigned > 0) reasons.push(`${r.unassigned} unassigned`);
-      if (r.openClar > 0) reasons.push(`${r.openClar} clarifications`);
-
-      if (!reasons.length) reasons.push("Needs review");
-
-      return { ...r, reason: reasons.slice(0, 3).join(" • ") };
-    });
+      .slice(0, 20)
+      .map((x) => x.r);
   }, [filteredRows]);
 
   const topBlockedItems = useMemo(() => {
-    const now = new Date();
     return (workItems ?? [])
-      .filter((w) => String(w?.status ?? "") === "blocked")
+      .filter((w) => String(w?.status ?? "").toLowerCase() === "blocked")
       .map((w) => ({
         ...w,
-        owner: String(w.owner_label ?? "").trim() || "Unassigned",
-        ageDays: daysAgo(w.updated_at, now),
+        displayOwner: String(w.owner_label ?? "").trim() || "Unassigned",
       }))
-      .sort((a, b) => {
-        const aa = a.ageDays ?? 0;
-        const bb = b.ageDays ?? 0;
-        if (bb !== aa) return bb - aa;
-        return String(b.updated_at).localeCompare(String(a.updated_at));
-      })
       .slice(0, 10);
   }, [workItems]);
 
+  useEffect(() => {
+    if (topBlockedItems.length === 0) {
+      setOpenSections((s) => ({ ...s, blockers: false }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [topBlockedItems.length]);
+
+  const visibleRows = useMemo(() => {
+    const now = new Date();
+    const horizon = new Date(now.getTime() + windowDays * 86400000);
+
+    return filteredRows
+      .filter((r) => {
+        if (!r.deadline) return true;
+        const d = new Date(r.deadline);
+        if (!Number.isFinite(d.getTime())) return true;
+        return d.getTime() <= horizon.getTime();
+      })
+      .sort((a, b) => {
+        const aUrg =
+          (a.dueSoon !== null && a.dueSoon < 0 ? 1000 : 0) +
+          (a.blocked > 0 ? 200 : 0) +
+          (a.missingDecision ? 100 : 0) +
+          (a.missingDeadline ? 80 : 0) +
+          (a.dueSoon !== null ? Math.max(0, 30 - a.dueSoon) : 0);
+
+        const bUrg =
+          (b.dueSoon !== null && b.dueSoon < 0 ? 1000 : 0) +
+          (b.blocked > 0 ? 200 : 0) +
+          (b.missingDecision ? 100 : 0) +
+          (b.missingDeadline ? 80 : 0) +
+          (b.dueSoon !== null ? Math.max(0, 30 - b.dueSoon) : 0);
+
+        if (bUrg !== aUrg) return bUrg - aUrg;
+        return String(b.updatedAt).localeCompare(String(a.updatedAt));
+      })
+      .slice(0, 50);
+  }, [filteredRows, windowDays]);
+
   if (loading) {
-    return <div className="mx-auto max-w-6xl py-10 text-sm text-muted-foreground">Loading dashboard…</div>;
+    return (
+      <div className="mx-auto max-w-6xl space-y-6 py-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Bid manager dashboard</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Loading…</p>
+          </div>
+          <Button variant="outline" className="rounded-full" onClick={loadAll}>
+            Refresh
+          </Button>
+        </div>
+        <Card className="rounded-2xl">
+          <CardContent className="p-4">
+            <div className="h-6 w-48 rounded bg-muted" />
+            <div className="mt-4 h-24 rounded bg-muted" />
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -535,6 +613,17 @@ export default function DashboardPage() {
           <Button asChild variant="outline" className="rounded-full">
             <Link href="/app/jobs">Jobs</Link>
           </Button>
+
+          <button
+            type="button"
+            className="h-9 rounded-full border bg-background px-3 text-sm"
+            onClick={() => setStandupMode((v) => !v)}
+            aria-pressed={standupMode}
+            title="Show only KPI + Daily standup + Needs attention"
+          >
+            {standupMode ? "Standup mode: On" : "Standup mode: Off"}
+          </button>
+
           <Button variant="outline" className="rounded-full" onClick={loadAll}>
             Refresh
           </Button>
@@ -544,77 +633,149 @@ export default function DashboardPage() {
       {error ? (
         <Card className="rounded-2xl border-red-200 bg-red-50">
           <CardContent className="p-4">
-            <p className="text-sm text-red-700">{error}</p>
+            <p className="text-sm font-semibold text-red-700">Dashboard error</p>
+            <p className="mt-1 text-sm text-red-700">{error}</p>
           </CardContent>
         </Card>
       ) : null}
 
       {/* KPI row */}
-      <div className="grid gap-4 md:grid-cols-7">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card className="rounded-2xl">
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Active bids</p>
-            <p className="mt-1 text-2xl font-semibold">{totals.activeBids}</p>
+            <p className="text-sm font-semibold">Portfolio</p>
+
+            {(() => {
+              const total = filteredRows.length;
+              const missDecision = totals.missingDecision;
+              const missDeadline = totals.missingDeadline;
+
+              const bothMissing = filteredRows.filter((r) => r.missingDecision && r.missingDeadline).length;
+              const decisionOnly = Math.max(0, missDecision - bothMissing);
+              const deadlineOnly = Math.max(0, missDeadline - bothMissing);
+              const ready = Math.max(0, total - (decisionOnly + deadlineOnly + bothMissing));
+
+              const basicsPct = total > 0 ? Math.round((ready / total) * 100) : 0;
+
+              return (
+                <>
+                  <div className="mt-3 flex items-center gap-4">
+                    <DonutChart
+                      parts={[
+                        { label: "Ready", value: ready },
+                        { label: "Missing decision", value: decisionOnly },
+                        { label: "Missing deadline", value: deadlineOnly },
+                        { label: "Missing both", value: bothMissing },
+                      ]}
+                      size={72}
+                      strokeWidth={10}
+                    />
+
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground">basics present</p>
+                      <p className="text-2xl font-semibold leading-none">{basicsPct}%</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {ready} ready • {total - ready} missing
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Ready {ready} • Missing decision {missDecision} • Missing deadline {missDeadline}
+                  </p>
+                </>
+              );
+            })()}
           </CardContent>
         </Card>
 
         <Card className="rounded-2xl">
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Due soon (7d)</p>
-            <p className="mt-1 text-2xl font-semibold">{totals.dueSoon}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Overdue: <span className="text-foreground">{totals.overdue}</span>
-            </p>
+            <p className="text-sm font-semibold">Execution</p>
+
+            {(() => {
+              const total = totals.totalWork;
+              const done = totals.doneWork;
+              const blocked = totals.blockedItems;
+              const open = Math.max(0, total - done);
+              const openNonBlocked = Math.max(0, open - blocked);
+
+              const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+
+              return (
+                <>
+                  <div className="mt-3 flex items-center gap-4">
+                    <DonutChart
+                      parts={[
+                        { label: "Done", value: done },
+                        { label: "Blocked", value: blocked },
+                        { label: "Open", value: openNonBlocked },
+                      ]}
+                      size={72}
+                      strokeWidth={10}
+                    />
+
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground">% done</p>
+                      <p className="text-2xl font-semibold leading-none">{pct}%</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {done} done • {open} open
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    {done} done • {open} open • {blocked} blocked
+                  </p>
+                </>
+              );
+            })()}
           </CardContent>
         </Card>
 
         <Card className="rounded-2xl">
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Missing deadline</p>
-            <p className="mt-1 text-2xl font-semibold">{totals.missingDeadline}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Work due soon: <span className="text-foreground">{totals.wiDueSoon}</span>
-            </p>
-          </CardContent>
-        </Card>
+            <p className="text-sm font-semibold">Decisions</p>
 
-        <Card className="rounded-2xl">
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Blocked items</p>
-            <p className="mt-1 text-2xl font-semibold">{totals.blockedItems}</p>
-          </CardContent>
-        </Card>
+            {(() => {
+              const go = decisionBuckets.get("go") || 0;
+              const hold = decisionBuckets.get("hold") || 0;
+              const nogo = decisionBuckets.get("no-go") || 0;
+              const unknown = decisionBuckets.get("unknown") || 0;
 
-        <Card className="rounded-2xl">
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Unassigned</p>
-            <p className="mt-1 text-2xl font-semibold">{totals.unassignedItems}</p>
-          </CardContent>
-        </Card>
+              const decided = go + hold + nogo;
+              const total = decided + unknown;
+              const pct = total > 0 ? Math.round((decided / total) * 100) : 0;
 
-        <Card className="rounded-2xl">
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Open clarifications</p>
-            <p className="mt-1 text-2xl font-semibold">{totals.openClarifications}</p>
-          </CardContent>
-        </Card>
+              return (
+                <>
+                  <div className="mt-3 flex items-center gap-4">
+                    <DonutChart
+                      parts={[
+                        { label: "Go", value: go },
+                        { label: "Hold", value: hold },
+                        { label: "No-Go", value: nogo },
+                        { label: "Unknown", value: unknown },
+                      ]}
+                      size={72}
+                      strokeWidth={10}
+                    />
 
-        <Card className="rounded-2xl">
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Decision mix</p>
-            <div className="mt-2">
-              <SegmentedBar
-                parts={[
-                  { label: "go", value: decisionBuckets.get("go") || 0 },
-                  { label: "hold", value: decisionBuckets.get("hold") || 0 },
-                  { label: "no-go", value: decisionBuckets.get("no-go") || 0 },
-                  { label: "unknown", value: decisionBuckets.get("unknown") || 0 },
-                ]}
-              />
-            </div>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Go {decisionBuckets.get("go") || 0} • Hold {decisionBuckets.get("hold") || 0} • No-Go {decisionBuckets.get("no-go") || 0} • Missing {totals.missingDecision}
-            </p>
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground">% decided</p>
+                      <p className="text-2xl font-semibold leading-none">{pct}%</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {decided} decided • {unknown} unknown
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Go {go} • Hold {hold} • No-Go {nogo} • Missing {totals.missingDecision}
+                  </p>
+                </>
+              );
+            })()}
           </CardContent>
         </Card>
       </div>
@@ -663,173 +824,626 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Charts */}
-      <div className="grid gap-4 md:grid-cols-2">
+      {/* Daily standup (hero) */}
+      <Card className="rounded-2xl">
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold">Daily standup</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Actionable queues. Works even when the tender PDF has no deadline or decision.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+              onClick={() => setOpenSections((s) => ({ ...s, standup: !s.standup }))}
+            >
+              {openSections.standup ? "Collapse" : "Expand"}
+            </button>
+          </div>
+
+          {openSections.standup ? (
+            <div className="mt-4 grid gap-3 lg:grid-cols-2">
+            {/* Needs triage */}
+            <div className="rounded-xl border p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium">Needs triage</p>
+                <span className="text-xs text-muted-foreground">{standupQueues.needsTriage.length}</span>
+              </div>
+              <div className="mt-2 space-y-1">
+                {standupQueues.needsTriage.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No jobs need triage.</p>
+                ) : (
+                  (() => {
+                    const expanded = !!queueExpand.needsTriage;
+                    const rows = expanded ? standupQueues.needsTriage : standupQueues.needsTriage.slice(0, 6);
+                    return (
+                      <>
+                        {rows.map((r) => (
+                          <div key={r.job.id} className="flex items-center justify-between gap-2">
+                            <Link className="text-sm underline-offset-2 hover:underline" href={`/app/jobs/${r.job.id}`}>
+                              {r.displayName}
+                            </Link>
+                            <span className="text-xs text-muted-foreground">Owner: —</span>
+                          </div>
+                        ))}
+                        {standupQueues.needsTriage.length > 6 ? (
+                          <button
+                            type="button"
+                            className="mt-2 text-xs text-muted-foreground underline-offset-2 hover:underline"
+                            onClick={() => setQueueExpand((s) => ({ ...s, needsTriage: !s.needsTriage }))}
+                          >
+                            {expanded ? "Show less" : `Show all (${standupQueues.needsTriage.length})`}
+                          </button>
+                        ) : null}
+                      </>
+                    );
+                  })()
+                )}
+              </div>
+            </div>
+
+            {/* Deadline unknown */}
+            <div className="rounded-xl border p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium">Deadline unknown</p>
+                <span className="text-xs text-muted-foreground">{standupQueues.deadlineUnknown.length}</span>
+              </div>
+              <div className="mt-2 space-y-1">
+                {standupQueues.deadlineUnknown.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">All visible jobs have a deadline (or override).</p>
+                ) : (
+                  (() => {
+                    const expanded = !!queueExpand.deadlineUnknown;
+                    const rows = expanded ? standupQueues.deadlineUnknown : standupQueues.deadlineUnknown.slice(0, 6);
+                    return (
+                      <>
+                        {rows.map((r) => (
+                          <div key={r.job.id} className="flex items-center justify-between gap-2">
+                            <Link className="text-sm underline-offset-2 hover:underline" href={`/app/jobs/${r.job.id}`}>
+                              {r.displayName}
+                            </Link>
+                            <span className="text-xs text-muted-foreground">Add override</span>
+                          </div>
+                        ))}
+                        {standupQueues.deadlineUnknown.length > 6 ? (
+                          <button
+                            type="button"
+                            className="mt-2 text-xs text-muted-foreground underline-offset-2 hover:underline"
+                            onClick={() => setQueueExpand((s) => ({ ...s, deadlineUnknown: !s.deadlineUnknown }))}
+                          >
+                            {expanded ? "Show less" : `Show all (${standupQueues.deadlineUnknown.length})`}
+                          </button>
+                        ) : null}
+                      </>
+                    );
+                  })()
+                )}
+              </div>
+            </div>
+
+            {/* Due next 7 days */}
+            <div className="rounded-xl border p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium">Due next 7 days</p>
+                <span className="text-xs text-muted-foreground">{standupQueues.dueNext7.length}</span>
+              </div>
+              <div className="mt-2 space-y-1">
+                {standupQueues.dueNext7.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No jobs due within 7 days.</p>
+                ) : (
+                  (() => {
+                    const expanded = !!queueExpand.dueNext7;
+                    const rows = expanded ? standupQueues.dueNext7 : standupQueues.dueNext7.slice(0, 6);
+                    return (
+                      <>
+                        {rows.map((r) => (
+                          <div key={r.job.id} className="flex items-center justify-between gap-2">
+                            <Link className="text-sm underline-offset-2 hover:underline" href={`/app/jobs/${r.job.id}`}>
+                              {r.displayName}
+                            </Link>
+                            <span className="text-xs text-muted-foreground">
+                              {r.deadline ? new Date(r.deadline).toLocaleDateString() : "—"}
+                            </span>
+                          </div>
+                        ))}
+                        {standupQueues.dueNext7.length > 6 ? (
+                          <button
+                            type="button"
+                            className="mt-2 text-xs text-muted-foreground underline-offset-2 hover:underline"
+                            onClick={() => setQueueExpand((s) => ({ ...s, dueNext7: !s.dueNext7 }))}
+                          >
+                            {expanded ? "Show less" : `Show all (${standupQueues.dueNext7.length})`}
+                          </button>
+                        ) : null}
+                      </>
+                    );
+                  })()
+                )}
+              </div>
+            </div>
+
+            {/* Overdue work items */}
+            <div className="rounded-xl border p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium">Overdue work items</p>
+                <span className="text-xs text-muted-foreground">{standupQueues.overdueWorkItems.length}</span>
+              </div>
+              <div className="mt-2 space-y-1">
+                {standupQueues.overdueWorkItems.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No overdue work items.</p>
+                ) : (
+                  (() => {
+                    const expanded = !!queueExpand.overdueWorkItems;
+                    const rows = expanded
+                      ? standupQueues.overdueWorkItems
+                      : standupQueues.overdueWorkItems.slice(0, 6);
+                    return (
+                      <>
+                        {rows.map((wi) => (
+                          <div key={`${wi.job_id}:${wi.type}:${wi.ref_key}`} className="flex items-center justify-between gap-2">
+                            <Link className="text-sm underline-offset-2 hover:underline" href={`/app/jobs/${wi.job_id}`}>
+                              {String(wi.title || wi.ref_key || "Work item")}
+                            </Link>
+                            <span className="text-xs text-muted-foreground">
+                              {wi.due_at ? new Date(wi.due_at).toLocaleDateString() : "—"}
+                            </span>
+                          </div>
+                        ))}
+                        {standupQueues.overdueWorkItems.length > 6 ? (
+                          <button
+                            type="button"
+                            className="mt-2 text-xs text-muted-foreground underline-offset-2 hover:underline"
+                            onClick={() => setQueueExpand((s) => ({ ...s, overdueWorkItems: !s.overdueWorkItems }))}
+                          >
+                            {expanded ? "Show less" : `Show all (${standupQueues.overdueWorkItems.length})`}
+                          </button>
+                        ) : null}
+                      </>
+                    );
+                  })()
+                )}
+              </div>
+            </div>
+
+            {/* Blocked items */}
+            <div className="rounded-xl border p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium">Blocked items</p>
+                <span className="text-xs text-muted-foreground">{standupQueues.blockedItems.length}</span>
+              </div>
+              <div className="mt-2 space-y-1">
+                {standupQueues.blockedItems.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No blocked items.</p>
+                ) : (
+                  (() => {
+                    const expanded = !!queueExpand.blockedItems;
+                    const rows = expanded ? standupQueues.blockedItems : standupQueues.blockedItems.slice(0, 6);
+                    return (
+                      <>
+                        {rows.map((wi) => (
+                          <div key={`${wi.job_id}:${wi.type}:${wi.ref_key}`} className="flex items-center justify-between gap-2">
+                            <Link className="text-sm underline-offset-2 hover:underline" href={`/app/jobs/${wi.job_id}`}>
+                              {String(wi.title || wi.ref_key || "Work item")}
+                            </Link>
+                            <span className="text-xs text-muted-foreground">{String(wi.owner_label ?? "Unassigned")}</span>
+                          </div>
+                        ))}
+                        {standupQueues.blockedItems.length > 6 ? (
+                          <button
+                            type="button"
+                            className="mt-2 text-xs text-muted-foreground underline-offset-2 hover:underline"
+                            onClick={() => setQueueExpand((s) => ({ ...s, blockedItems: !s.blockedItems }))}
+                          >
+                            {expanded ? "Show less" : `Show all (${standupQueues.blockedItems.length})`}
+                          </button>
+                        ) : null}
+                      </>
+                    );
+                  })()
+                )}
+              </div>
+            </div>
+
+            {/* Unassigned items */}
+            <div className="rounded-xl border p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium">Unassigned items</p>
+                <span className="text-xs text-muted-foreground">{standupQueues.unassignedItems.length}</span>
+              </div>
+              <div className="mt-2 space-y-1">
+                {standupQueues.unassignedItems.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No unassigned items.</p>
+                ) : (
+                  (() => {
+                    const expanded = !!queueExpand.unassignedItems;
+                    const rows = expanded ? standupQueues.unassignedItems : standupQueues.unassignedItems.slice(0, 6);
+                    return (
+                      <>
+                        {rows.map((wi) => (
+                          <div key={`${wi.job_id}:${wi.type}:${wi.ref_key}`} className="flex items-center justify-between gap-2">
+                            <Link className="text-sm underline-offset-2 hover:underline" href={`/app/jobs/${wi.job_id}`}>
+                              {String(wi.title || wi.ref_key || "Work item")}
+                            </Link>
+                            <span className="text-xs text-muted-foreground">Owner: —</span>
+                          </div>
+                        ))}
+                        {standupQueues.unassignedItems.length > 6 ? (
+                          <button
+                            type="button"
+                            className="mt-2 text-xs text-muted-foreground underline-offset-2 hover:underline"
+                            onClick={() => setQueueExpand((s) => ({ ...s, unassignedItems: !s.unassignedItems }))}
+                          >
+                            {expanded ? "Show less" : `Show all (${standupQueues.unassignedItems.length})`}
+                          </button>
+                        ) : null}
+                      </>
+                    );
+                  })()
+                )}
+              </div>
+            </div>
+
+            {/* Clarifications pending */}
+            <div className="rounded-xl border p-3 lg:col-span-2">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-medium">Clarifications pending</p>
+                <span className="text-xs text-muted-foreground">{standupQueues.clarificationsPending.length}</span>
+              </div>
+              <div className="mt-2 space-y-1">
+                {standupQueues.clarificationsPending.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No open clarification items.</p>
+                ) : (
+                  (() => {
+                    const expanded = !!queueExpand.clarificationsPending;
+                    const rows = expanded
+                      ? standupQueues.clarificationsPending
+                      : standupQueues.clarificationsPending.slice(0, 8);
+                    return (
+                      <>
+                        {rows.map((wi) => (
+                          <div key={`${wi.job_id}:${wi.type}:${wi.ref_key}`} className="flex items-center justify-between gap-2">
+                            <Link className="text-sm underline-offset-2 hover:underline" href={`/app/jobs/${wi.job_id}`}>
+                              {String(wi.title || wi.ref_key || "Clarification")}
+                            </Link>
+                            <span className="text-xs text-muted-foreground">{String(wi.owner_label ?? "Unassigned")}</span>
+                          </div>
+                        ))}
+                        {standupQueues.clarificationsPending.length > 8 ? (
+                          <button
+                            type="button"
+                            className="mt-2 text-xs text-muted-foreground underline-offset-2 hover:underline"
+                            onClick={() =>
+                              setQueueExpand((s) => ({ ...s, clarificationsPending: !s.clarificationsPending }))
+                            }
+                          >
+                            {expanded ? "Show less" : `Show all (${standupQueues.clarificationsPending.length})`}
+                          </button>
+                        ) : null}
+                      </>
+                    );
+                  })()
+                )}
+              </div>
+            </div>
+          </div>
+          ) : (
+            <p className="mt-3 text-xs text-muted-foreground">Collapsed.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Needs attention (expanded by default; Top 5 when collapsed) */}
+      <Card className="rounded-2xl">
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold">Needs attention</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Highest priority bids based on missing fields, deadlines, and blockers.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+              onClick={() => setOpenSections((s) => ({ ...s, attention: !s.attention }))}
+            >
+              {openSections.attention ? "Collapse" : "Expand"}
+            </button>
+          </div>
+
+          <div className="mt-4 grid gap-2">
+            {attentionBids.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Nothing urgent right now.</p>
+            ) : (
+              (() => {
+                const expanded = openSections.attention;
+                const rows = expanded ? attentionBids : attentionBids.slice(0, 5);
+
+                return (
+                  <>
+                    {rows.map((r: any) => (
+                      <div key={r.job.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3">
+                        <div className="min-w-0">
+                          <Link href={`/app/jobs/${r.job.id}`} className="text-sm font-semibold hover:underline">
+                            {r.displayName}
+                          </Link>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {r.missingDecision ? "Decision missing" : r.decisionText || "Decision unknown"}
+                            {" • "}
+                            {r.missingDeadline ? "Deadline missing" : r.deadlineText || "Deadline unknown"}
+                            {" • "}
+                            {r.blocked > 0 ? `${r.blocked} blocked` : "No blockers"}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <DecisionBadge raw={r.decisionText} />
+                          {r.dueSoon !== null ? (
+                            <Badge variant={r.dueSoon < 0 ? "destructive" : "outline"} className="rounded-full">
+                              {r.dueSoon < 0 ? `${Math.abs(r.dueSoon)}d overdue` : `${r.dueSoon}d`}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="rounded-full">
+                              No deadline
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+
+                    {attentionBids.length > 5 ? (
+                      <button
+                        type="button"
+                        className="mt-2 text-xs text-muted-foreground underline-offset-2 hover:underline"
+                        onClick={() => setOpenSections((s) => ({ ...s, attention: !s.attention }))}
+                      >
+                        {expanded ? "Show less" : `Show all (${attentionBids.length})`}
+                      </button>
+                    ) : null}
+                  </>
+                );
+              })()
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Analytics (collapsed by default; hidden in standup mode) */}
+      <Card className="rounded-2xl">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold">Analytics</p>
+              <p className="mt-1 text-xs text-muted-foreground">Deadline distribution and workload overview.</p>
+            </div>
+
+            <button
+              type="button"
+              className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+              onClick={() => setOpenSections((s) => ({ ...s, analytics: !s.analytics }))}
+              disabled={standupMode}
+              title={standupMode ? "Hidden in standup mode" : "Expand/collapse analytics"}
+            >
+              {standupMode ? "Hidden" : openSections.analytics ? "Collapse" : "Expand"}
+            </button>
+          </div>
+
+          {standupMode ? (
+            <p className="mt-3 text-xs text-muted-foreground">Hidden in standup mode.</p>
+          ) : openSections.analytics ? (
+            <div className="mt-4 grid gap-4 md:grid-cols-2">
+              <Card className="rounded-2xl">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold">Deadlines</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Distribution of deadlines across the visible portfolio.
+                      </p>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{filteredRows.length} bids</p>
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    <SegmentedBar parts={deadlineHistogram} />
+                    <p className="text-xs text-muted-foreground">
+                      Overdue {deadlineHistogram[0].value} • 0-7d {deadlineHistogram[1].value} • 8-30d{" "}
+                      {deadlineHistogram[2].value} • 31-90d {deadlineHistogram[3].value} • Unknown{" "}
+                      {deadlineHistogram[4].value}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-2xl">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold">Workload by owner</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Who is carrying open work and where the blockers are.
+                      </p>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{workloadByOwner.length} owners</p>
+                  </div>
+
+                  <div className="mt-4 space-y-2">
+                    {workloadByOwner.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">No work items yet.</p>
+                    ) : (
+                      workloadByOwner.slice(0, 7).map(([owner, stats]) => (
+                        <div key={owner} className="flex items-center justify-between">
+                          <p className="text-sm">{owner}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {stats.total} items • {stats.blocked} blocked • {stats.overdue} overdue
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <p className="mt-3 text-xs text-muted-foreground">Expand to view analytics.</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Top blockers (collapsible; hidden in standup mode) */}
+      {!standupMode ? (
         <Card className="rounded-2xl">
           <CardContent className="p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold">Deadlines</p>
-                <p className="mt-1 text-xs text-muted-foreground">Bids due in the next {windowDays} days.</p>
+                <p className="text-sm font-semibold">Top blockers</p>
+                <p className="mt-1 text-xs text-muted-foreground">Blocked work items across bids.</p>
               </div>
-              <div className="text-right">
-                <p className="text-xs text-muted-foreground">Upcoming</p>
-                <p className="text-sm font-semibold">{deadlineHistogram.totalUpcoming}</p>
-              </div>
-            </div>
-            <Separator className="my-3" />
-            <MiniBars values={deadlineHistogram.buckets} max={deadlineHistogram.max} />
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-              <span>Overdue: <span className="text-foreground">{deadlineHistogram.overdue}</span></span>
-              <span>•</span>
-              <span>Missing: <span className="text-foreground">{deadlineHistogram.missing}</span></span>
-            </div>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Each bar represents a day from today (left) to +{windowDays}d (right). Overdue/missing are counted separately.
-            </p>
-          </CardContent>
-        </Card>
 
-        <Card className="rounded-2xl">
-          <CardContent className="p-4">
-            <p className="text-sm font-semibold">Workload by owner</p>
-            <p className="mt-1 text-xs text-muted-foreground">Capacity view across all bids.</p>
+              <button
+                type="button"
+                className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+                onClick={() => setOpenSections((s) => ({ ...s, blockers: !s.blockers }))}
+                disabled={topBlockedItems.length === 0}
+                title={topBlockedItems.length === 0 ? "No blockers" : "Expand/collapse"}
+              >
+                {topBlockedItems.length === 0 ? "None" : openSections.blockers ? "Collapse" : "Expand"}
+              </button>
+            </div>
+
             <Separator className="my-3" />
 
-            <div className="space-y-3">
-              {workloadByOwner.length ? (
-                workloadByOwner.map(([owner, c]) => (
-                  <div key={owner} className="rounded-xl border bg-background/60 p-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <button
-                        type="button"
-                        className="text-left text-sm font-medium hover:underline"
-                        onClick={() => setOwnerFilter(owner === ownerFilter ? "All" : owner)}
-                      >
-                        {owner}
-                      </button>
-                      <p className="text-xs text-muted-foreground">{c.todo + c.in_progress + c.blocked} open</p>
-                    </div>
-                    <div className="mt-2">
-                      <StackedBar todo={c.todo} inProgress={c.in_progress} blocked={c.blocked} done={c.done} />
-                    </div>
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                      <Badge variant="outline" className="rounded-full">Todo {c.todo}</Badge>
-                      <Badge variant="outline" className="rounded-full">In progress {c.in_progress}</Badge>
-                      <Badge variant="secondary" className="rounded-full">Blocked {c.blocked}</Badge>
-                      <Badge className="rounded-full">Done {c.done}</Badge>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">No work items yet. Open a bid and use “Bid room” to assign tasks.</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Action panels */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="rounded-2xl lg:col-span-2">
-          <CardContent className="p-4">
-            <p className="text-sm font-semibold">Needs attention today</p>
-            <p className="mt-1 text-xs text-muted-foreground">Ranked by deadline risk, blockers, missing deadline/decision, and missing ownership.</p>
-            <Separator className="my-3" />
-
-            <div className="space-y-2">
-              {attentionBids.length ? (
-                attentionBids.map((r: any) => (
-                  <div key={r.job.id} className="flex items-start justify-between gap-3 rounded-xl border bg-background/60 p-3">
-                    <div className="min-w-0">
-                      <Link className="text-sm font-medium hover:underline" href={`/app/jobs/${r.job.id}`}>
-                        {getJobDisplayName(r.job.id) || r.job.file_name}
-                      </Link>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {r.deadlineText ? `Deadline: ${r.deadlineText}` : "Deadline: —"} • {r.reason}
-                      </p>
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        {verdictBadge(r.decision)}
-                        <Badge variant="outline" className="rounded-full">Progress {r.progressPct}%</Badge>
-                        {r.blocked > 0 ? <Badge variant="secondary" className="rounded-full">Blocked {r.blocked}</Badge> : null}
-                        {r.unassigned > 0 ? <Badge variant="outline" className="rounded-full">Unassigned {r.unassigned}</Badge> : null}
-                        {r.openClar > 0 ? <Badge variant="outline" className="rounded-full">Clarifications {r.openClar}</Badge> : null}
-                        {r.missingDeadline ? <Badge variant="outline" className="rounded-full">Missing deadline</Badge> : null}
-                        {r.missingDecision ? <Badge variant="outline" className="rounded-full">Missing decision</Badge> : null}
+            {openSections.blockers ? (
+              <div className="space-y-2">
+                {topBlockedItems.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No blocked items.</p>
+                ) : (
+                  topBlockedItems.map((w: any, idx: number) => (
+                    <div
+                      key={`${w.job_id}:${w.ref_key}:${idx}`}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3"
+                    >
+                      <div className="min-w-0">
+                        <Link href={`/app/jobs/${w.job_id}`} className="text-sm font-semibold hover:underline">
+                          {getJobDisplayName(String(w.job_id))}
+                        </Link>
+                        <p className="mt-1 text-xs text-muted-foreground">{w.title}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="rounded-full">
+                          {String(w.displayOwner)}
+                        </Badge>
+                        <Badge variant="secondary" className="rounded-full">
+                          Blocked
+                        </Badge>
                       </div>
                     </div>
-                    <div className="shrink-0 text-right">
-                      {typeof r.dueSoon === "number" ? (
-                        r.dueSoon < 0 ? (
-                          <Badge variant="destructive" className="rounded-full">Past due</Badge>
-                        ) : r.dueSoon <= 7 ? (
-                          <Badge variant="secondary" className="rounded-full">Due in {r.dueSoon}d</Badge>
-                        ) : (
-                          <Badge variant="outline" className="rounded-full">{r.dueSoon}d</Badge>
-                        )
-                      ) : typeof r.wiDueSoon === "number" ? (
-                        r.wiDueSoon < 0 ? (
-                          <Badge variant="secondary" className="rounded-full">Work overdue</Badge>
-                        ) : r.wiDueSoon <= 7 ? (
-                          <Badge variant="secondary" className="rounded-full">Work due {r.wiDueSoon}d</Badge>
-                        ) : (
-                          <Badge variant="outline" className="rounded-full">Work {r.wiDueSoon}d</Badge>
-                        )
-                      ) : (
-                        <Badge variant="outline" className="rounded-full">—</Badge>
-                      )}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">No items need attention based on the current filters.</p>
-              )}
-            </div>
+                  ))
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">Collapsed.</p>
+            )}
           </CardContent>
         </Card>
+      ) : null}
 
+      {/* Bids (collapsible; hidden in standup mode; Top 10 by default) */}
+      {!standupMode ? (
         <Card className="rounded-2xl">
           <CardContent className="p-4">
-            <p className="text-sm font-semibold">Top blockers</p>
-            <p className="mt-1 text-xs text-muted-foreground">Blocked work items across bids.</p>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold">Bids</p>
+                <p className="mt-1 text-xs text-muted-foreground">Sorted by urgency within the selected window.</p>
+              </div>
+
+              <button
+                type="button"
+                className="text-xs text-muted-foreground underline-offset-2 hover:underline"
+                onClick={() => setOpenSections((s) => ({ ...s, bids: !s.bids }))}
+              >
+                {openSections.bids ? "Collapse" : "Expand"}
+              </button>
+            </div>
+
             <Separator className="my-3" />
 
-            <div className="space-y-2">
-              {topBlockedItems.length ? (
-                topBlockedItems.map((w: any) => (
-                  <div key={`${w.job_id}:${w.type}:${w.ref_key}`} className="rounded-xl border bg-background/60 p-3">
-                    <Link className="text-sm font-medium hover:underline" href={`/app/jobs/${w.job_id}`}>
-                      {w.title || `${w.type} item`}
-                    </Link>
-                    <p className="mt-1 text-xs text-muted-foreground">{w.owner} • {w.ageDays !== null ? `${w.ageDays}d blocked` : "blocked"}</p>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <Badge variant="secondary" className="rounded-full">Blocked</Badge>
-                      <Badge variant="outline" className="rounded-full">{String(w.type)}</Badge>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">No blocked items 🎉</p>
-              )}
-            </div>
+            {openSections.bids ? (
+              <div className="space-y-2">
+                {visibleRows.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No bids match the current filters.</p>
+                ) : (
+                  (() => {
+                    const topN = 10;
+                    const expanded = queueExpand.__bidsAll === true;
+                    const rows = expanded ? visibleRows : visibleRows.slice(0, topN);
+
+                    return (
+                      <>
+                        {rows.map((r) => (
+                          <div
+                            key={r.job.id}
+                            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3"
+                          >
+                            <div className="min-w-0">
+                              <Link href={`/app/jobs/${r.job.id}`} className="text-sm font-semibold hover:underline">
+                                {r.displayName}
+                              </Link>
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                {r.missingDecision ? "Decision missing" : r.decisionText || "Decision unknown"}
+                                {" • "}
+                                {r.missingDeadline ? "Deadline missing" : r.deadlineText || "Deadline unknown"}
+                                {" • "}
+                                {r.total > 0 ? `${r.done}/${r.total} items done` : "No work items"}
+                                {r.blocked > 0 ? ` • ${r.blocked} blocked` : ""}
+                              </p>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-2">
+                              <DecisionBadge raw={r.decisionText} />
+                              {r.dueSoon !== null ? (
+                                <Badge variant={r.dueSoon < 0 ? "destructive" : "outline"} className="rounded-full">
+                                  {r.dueSoon < 0 ? `${Math.abs(r.dueSoon)}d overdue` : `${r.dueSoon}d`}
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="rounded-full">
+                                  No deadline
+                                </Badge>
+                              )}
+                              <Badge variant="outline" className="rounded-full">
+                                {r.job.status}
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+
+                        {visibleRows.length > topN ? (
+                          <button
+                            type="button"
+                            className="mt-2 text-xs text-muted-foreground underline-offset-2 hover:underline"
+                            onClick={() => setQueueExpand((s) => ({ ...s, __bidsAll: !s.__bidsAll }))}
+                          >
+                            {expanded ? "Show less" : `Show all (${visibleRows.length})`}
+                          </button>
+                        ) : null}
+                      </>
+                    );
+                  })()
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">Collapsed.</p>
+            )}
           </CardContent>
         </Card>
-      </div>
+      ) : null}
 
-      {/* CTA instead of duplicate job list */}
-      <Card className="rounded-2xl">
-        <CardContent className="p-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-semibold">Navigate bids</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              The full bid list lives in Jobs. Use the filters above to focus the dashboard.
-            </p>
-          </div>
-          <Button asChild variant="outline" className="rounded-full">
-            <Link href="/app/jobs">Go to Jobs</Link>
-          </Button>
-        </CardContent>
-      </Card>
+      <p className="text-xs text-muted-foreground">
+        Tip: Missing deadlines and decisions are common when the tender PDF does not contain them. Use job metadata overrides to keep your workflow usable.
+      </p>
     </div>
   );
 }
