@@ -14,6 +14,9 @@ type Props = {
   onShowEvidence?: (evidenceIds: string[] | undefined, fallbackQuery: string) => void; // NEW (optional for backward compatibility)
   /** Optional list of evidence ids that are actually available in jobs.pipeline.evidence.candidates */
   knownEvidenceIds?: string[];
+
+  /** Optional evidence map from jobs.pipeline.evidence.candidates keyed by evidence id */
+  evidenceById?: Map<string, any>;
 };
 
 
@@ -153,7 +156,7 @@ function findExcerpt(text: string, query: string) {
   return makeSnippet(best.center, best.tokenLen);
 }
 
-export default function Checklist({ checklist, extractedText, onJumpToSource, onShowEvidence, knownEvidenceIds }: Props) {
+export default function Checklist({ checklist, extractedText, onJumpToSource, onShowEvidence, knownEvidenceIds, evidenceById }: Props) {
   const [filter, setFilter] = useState<"ALL" | "MUST" | "SHOULD" | "INFO">("ALL");
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<string | null>(null);
@@ -337,11 +340,19 @@ export default function Checklist({ checklist, extractedText, onJumpToSource, on
         <div className="space-y-3">
           {filtered.map((it) => {
             const isOpen = open === it.id;
-            const excerpt = isOpen ? findExcerpt(extractedText, it.text) : null;
+
+            // Evidence-first: pick the currently selected evidence id for this item (default: first),
+            // then show its deterministic excerpt if it exists in the pipeline evidence map.
+            const selectedEvidence = selectedEvidenceByItem[it.id] || it.evidenceIds?.[0] || "";
+            const selectedCandidate =
+              selectedEvidence && evidenceById ? evidenceById.get(String(selectedEvidence)) : null;
+
+            const excerpt = isOpen
+              ? String(selectedCandidate?.excerpt ?? "").trim() || findExcerpt(extractedText, it.text)
+              : null;
 
             const resolved = hasResolvedEvidence(it.evidenceIds);
             const needsVerification = it.type === "MUST" && !resolved;
-            const selectedEvidence = selectedEvidenceByItem[it.id] || it.evidenceIds?.[0] || "";
 
             const selectableEvidenceIds = Array.isArray(it.evidenceIds)
               ? it.evidenceIds.filter((id) => knownEvidenceIdSet.has(String(id ?? "").trim()))
@@ -414,6 +425,9 @@ export default function Checklist({ checklist, extractedText, onJumpToSource, on
 
                       <div className="rounded-2xl border bg-muted/20 p-4">
                         <p className="text-xs text-muted-foreground">Source excerpt</p>
+                        {selectedCandidate?.page ? (
+                          <p className="mt-0.5 text-xs text-muted-foreground">Page {String(selectedCandidate.page)}</p>
+                        ) : null}
                         <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
                           {excerpt ?? "No matching excerpt found in the source text."}
                         </p>
