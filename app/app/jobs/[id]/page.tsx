@@ -1301,6 +1301,9 @@ export default function JobDetailPage() {
   }
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
 
+  // UI-only shared state: selected clarifications (single source of truth)
+  const [selectedBuyerQuestions, setSelectedBuyerQuestions] = useState<Record<number, false>>({});
+
   const [displayName, setDisplayNameState] = useState<string>("");
   const [renaming, setRenaming] = useState(false);
   const [renameInput, setRenameInput] = useState("");
@@ -1679,6 +1682,31 @@ export default function JobDetailPage() {
 	  return normalizeQuestions((result as any)?.clarifications);
 	}, [result]);
 
+  // Keep selection stable and safe across navigation / re-runs (UI-only)
+  useEffect(() => {
+    setSelectedBuyerQuestions({});
+  }, [jobId]);
+
+  const toggleBuyerQuestionIndex = (idx: number) => {
+    setSelectedBuyerQuestions((prev) => {
+      const next: Record<number, false> = { ...prev };
+      if (next[idx] === false) {
+        // currently removed -> re-add (delete removal flag)
+        delete (next as any)[idx];
+      } else {
+        // remove from selection
+        (next as any)[idx] = false;
+      }
+      return next;
+    });
+  };
+
+  const toggleBuyerQuestionByText = (q: string) => {
+    const idx = (questions ?? []).findIndex((x) => String(x ?? "").trim() === String(q ?? "").trim());
+    if (idx < 0) return;
+    toggleBuyerQuestionIndex(idx);
+  };
+
 
   const mustItems = useMemo(() => {
     return checklist
@@ -1836,6 +1864,14 @@ const executive = useMemo(() => {
 	const draftForUi = useMemo(() => {
 	  return (result as any)?.proposal_draft ?? null;
 	}, [result]);
+
+  const draftSectionsForUi = useMemo(() => {
+    if (typeof draftForUi !== "object" || !draftForUi) return null;
+    const secs = (draftForUi as any)?.sections;
+    return Array.isArray(secs) ? (secs as any[]) : null;
+  }, [draftForUi]);
+
+  const hasDraftSectionsForUi = Boolean(draftSectionsForUi && draftSectionsForUi.length);
 
 
   const draftLinesForUi = useMemo(() => renderDraftPlain(draftForUi), [draftForUi]);
@@ -3378,17 +3414,32 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
                         </div>
                         <div className="flex flex-col gap-2 shrink-0">
                         <Button
+                          className="rounded-full"
+                          onClick={() => {
+                            toggleBuyerQuestionByText(q);
+                            setCopiedSection(`qemail_${i}`);
+                            window.setTimeout(() => setCopiedSection(null), 800);
+                          }}
+                        >
+                          {(selectedBuyerQuestions[(questions ?? []).findIndex((x) => String(x ?? "").trim() === String(q ?? "").trim())] !== false)
+                            ? "Remove from buyer email"
+                            : copiedSection === `qemail_${i}`
+                            ? "Added"
+                            : "Add to buyer email"}
+                        </Button>
+
+                        <Button
                           variant="outline"
                           className="rounded-full"
                           onClick={async () => {
                             const ok = await safeCopy(`- ${q}`);
                             if (ok) {
-                              setCopiedSection(`qemail_${i}`);
+                              setCopiedSection(`qbullet_${i}`);
                               window.setTimeout(() => setCopiedSection(null), 1200);
                             }
                           }}
                         >
-                          {copiedSection === `qemail_${i}` ? "Copied" : "Add to buyer email"}
+                          {copiedSection === `qbullet_${i}` ? "Copied" : "Copy bullet"}
                         </Button>
                         <Button
                           variant="outline"
@@ -3703,6 +3754,8 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
 				extractedText={extractedText}
 				onJumpToSource={onJumpToSource}
 				questions={questions}
+				selectedMap={selectedBuyerQuestions}
+				onToggleSelected={toggleBuyerQuestionIndex}
 				tenderName={String(displayName || job?.file_name || "Tender").trim()}
 			  />
 			) : (
@@ -3725,14 +3778,56 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
             <CardContent className="p-6">
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
-                  <p className="text-sm font-semibold">Tender  outline</p>
-                  <p className="mt-1 text-sm text-muted-foreground"> A structured outline based on the tender text. <span className="font-medium text-foreground">Not a full quotation.</span> Use it to start your tender response, then tailor and verify.</p>
+                  <p className="text-sm font-semibold">Tender outline</p>
+                  <p className="mt-1 text-sm text-muted-foreground">A structured outline based on the tender text. <span className="font-medium text-foreground">Not a full quotation.</span> Use it to start your tender response, then tailor and verify.</p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button variant="outline" className="rounded-full" onClick={() => copySection("draft")} disabled={!canDownload}>
-                    {copiedSection === "draft" ? "Copied" : "Copy section"}
-                  </Button>
+                  {hasDraftSectionsForUi ? (
+                    <Button
+                      variant="outline"
+                      className="rounded-full"
+                      onClick={async () => {
+                        const secs = draftSectionsForUi ?? [];
+                        const blocks = secs
+                          .map((s: any, idx: number) => {
+                            const title = String(s?.title ?? "").trim() || `Section ${idx + 1}`;
+                            const owner = String(s?.ownerRole ?? s?.owner ?? s?.assignee ?? "").trim();
+                            const bullets = Array.isArray(s?.bullets) ? s.bullets : [];
+                            const doneWhen = String(s?.acceptanceCriteria ?? s?.doneWhen ?? s?.completion ?? "").trim();
+
+                            const lines: string[] = [];
+                            lines.push(title);
+                            if (owner) lines.push(`Owner: ${owner}`);
+                            const bulletLines = bullets
+                              .map((b: any) => String(b ?? "").trim())
+                              .filter(Boolean)
+                              .map((b: string) => `- ${b}`);
+                            if (bulletLines.length) lines.push(...bulletLines);
+                            if (doneWhen) lines.push(`Done when: ${doneWhen}`);
+
+                            const payload = lines.join("\n").trim();
+                            return payload || null;
+                          })
+                          .filter(Boolean);
+
+                        const payload = blocks.join("\n\n").trim();
+                        if (!payload) return;
+                        const ok = await safeCopy(payload);
+                        if (ok) {
+                          setCopiedSection("draft_all");
+                          window.setTimeout(() => setCopiedSection(null), 1200);
+                        }
+                      }}
+                      disabled={!canDownload || !hasDraftSectionsForUi}
+                    >
+                      {copiedSection === "draft_all" ? "Copied" : "Copy all section briefs"}
+                    </Button>
+                  ) : (
+                    <Button variant="outline" className="rounded-full" onClick={() => copySection("draft")} disabled={!canDownload}>
+                      {copiedSection === "draft" ? "Copied" : "Copy outline"}
+                    </Button>
+                  )}
                 </div>
               </div>
 
@@ -3758,13 +3853,17 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
                       <div className="space-y-4">
                         {sections.map((s: any, idx: number) => {
                           const title = String(s?.title ?? "").trim();
+                          const owner = String(s?.ownerRole ?? s?.owner ?? s?.assignee ?? "").trim();
+                          const doneWhen = String(s?.acceptanceCriteria ?? s?.doneWhen ?? s?.completion ?? "").trim();
                           const bullets = Array.isArray(s?.bullets) ? s.bullets : [];
                           const payloadLines = [
                             title || `Section ${idx + 1}`,
+                            owner ? `Owner: ${owner}` : "Assign to: Writer/SME (manual)",
                             ...bullets
                               .map((b: any) => String(b ?? "").trim())
                               .filter(Boolean)
                               .map((b: string) => `- ${b}`),
+                            doneWhen ? `Done when: ${doneWhen}` : null,
                           ].filter(Boolean);
 
                           const payload = payloadLines.join("\n").trim();
@@ -3778,6 +3877,18 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
                                   <p className="mt-1 text-xs text-muted-foreground">
                                     Copy a section brief to assign writing work. Tailor and verify against the tender source.
                                   </p>
+                                <p className="mt-2 text-xs text-muted-foreground">
+                                  {owner ? (
+                                    <>Owner: <span className="font-medium text-foreground">{owner}</span></>
+                                  ) : (
+                                    <>Assign to: <span className="font-medium text-foreground">Writer/SME</span> (manual)</>
+                                  )}
+                                  {doneWhen ? (
+                                    <>
+                                      {" "}• Done when: <span className="text-foreground/80">{doneWhen}</span>
+                                    </>
+                                  ) : null}
+                                </p>
                                 </div>
 
                                 <Button
@@ -3814,7 +3925,7 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
                     );
                   }
 
-                  return <pre className="text-sm whitespace-pre-wrap">{draftLinesForUi.join("\n")}</pre>;
+                  return <pre className="text-sm whitespace-pre-wrap leading-relaxed text-foreground/80">{draftLinesForUi.join("\n")}</pre>;
                 })()
               ) : (
                 <p className="text-sm text-muted-foreground">No draft outline was generated. Try re-uploading the PDF or verify the source text tab.</p>

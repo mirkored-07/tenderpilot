@@ -26,6 +26,10 @@ type Props = {
   // NEW (optional): explicit questions from DB (proposal_draft.buyer_questions)
   questions?: string[];
   tenderName?: string;
+
+  /** OPTIONAL (UI-only): controlled selection state (single source of truth lives in the page) */
+  selectedMap?: Record<number, false>;
+  onToggleSelected?: (index: number) => void;
 };
 
 function normalizeStrArray(raw: any): string[] {
@@ -42,11 +46,15 @@ export default function BuyerQuestions({
   onJumpToSource,
   questions: explicitQuestions,
   tenderName,
+  selectedMap,
+  onToggleSelected,
 }: Props) {
   const [copied, setCopied] = useState<string | null>(null);
-  const [selected, setSelected] = useState<Record<number, boolean>>({});
+  const [selectedLocal, setSelectedLocal] = useState<Record<number, false>>({});
   const [showDraft, setShowDraft] = useState(false);
   const [showExtracts, setShowExtracts] = useState(false);
+
+  const selected = selectedMap ?? selectedLocal;
 
   const questions = useMemo(() => {
     // 1) Prefer explicit questions from DB (passed in by the page)
@@ -140,25 +148,25 @@ export default function BuyerQuestions({
   }
 
   const selectedItems = useMemo(() => {
-    const idxs = Object.entries(selected)
-      .filter(([, v]) => Boolean(v))
-      .map(([k]) => Number(k))
-      .filter((n) => Number.isFinite(n));
-    return idxs.map((i) => questions[i]).filter(Boolean);
+    // Bid-room default: all questions are selected unless explicitly removed (selected[idx] === false).
+    return questions.filter((_, i) => selected[i] !== false);
   }, [selected, questions]);
 
   const selectedCount = selectedItems.length;
   const totalCount = questions.length;
 
-  const draftItems = useMemo(
-    () => (selectedItems.length ? selectedItems : questions),
-    [selectedItems, questions]
-  );
-
+  // Email draft reflects the current selection. Default is ALL selected unless removed.
   const emailDraft = useMemo(() => {
-    if (!draftItems.length) return null;
-    return buildEmailDraft(draftItems);
-  }, [draftItems, tenderName]);
+    if (!selectedItems.length) return null;
+    return buildEmailDraft(selectedItems);
+  }, [selectedItems, tenderName]);
+
+  const selectionHint = useMemo(() => {
+    if (totalCount === 0) return "";
+    if (selectedCount === 0) return "Includes: 0 questions (none selected).";
+    if (selectedCount === totalCount) return `Includes: All questions (${totalCount}).`;
+    return `Includes: ${selectedCount} of ${totalCount} questions.`;
+  }, [selectedCount, totalCount]);
 
   const { pricingConstraints, complianceConstraints } = useMemo(() => {
     const pick = (s: unknown) => String(s ?? "").trim();
@@ -376,31 +384,36 @@ export default function BuyerQuestions({
             </div>
           ) : null}
 
-          {showDraft && emailDraft ? (
+          {showDraft ? (
             <div className="mt-4 rounded-2xl border bg-muted/20 p-4">
               <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                 <div>
                   <p className="text-xs font-semibold">Email draft preview</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Includes:{" "}
-                    {selectedCount > 0 ? `Selected questions (${selectedCount})` : `All questions (${totalCount})`}
+                    {selectionHint}
                   </p>
                 </div>
               </div>
 
-              <div className="mt-3 space-y-3">
-                <div>
-                  <p className="text-xs font-semibold">Subject</p>
-                  <p className="mt-1 text-sm">{emailDraft.subject}</p>
-                </div>
+              {emailDraft ? (
+                <div className="mt-3 space-y-3">
+                  <div>
+                    <p className="text-xs font-semibold">Subject</p>
+                    <p className="mt-1 text-sm">{emailDraft.subject}</p>
+                  </div>
 
-                <div>
-                  <p className="text-xs font-semibold">Body</p>
-                  <pre className="mt-2 max-h-72 overflow-auto whitespace-pre-wrap text-sm text-muted-foreground">
-                    {emailDraft.body}
-                  </pre>
+                  <div>
+                    <p className="text-xs font-semibold">Body</p>
+                    <pre className="mt-2 max-h-72 overflow-auto whitespace-pre-wrap text-sm text-muted-foreground">
+                      {emailDraft.body}
+                    </pre>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div className="mt-3 rounded-xl border bg-background/60 p-3">
+                  <p className="text-sm text-muted-foreground">Select one or more questions above to generate a buyer email draft.</p>
+                </div>
+              )}
             </div>
           ) : null}
         </CardContent>
@@ -425,13 +438,22 @@ export default function BuyerQuestions({
                     <input
                       type="checkbox"
                       className="mt-1 h-4 w-4"
-                      checked={Boolean(selected[idx])}
-                      onChange={(e) =>
-                        setSelected((prev) => ({
-                          ...prev,
-                          [idx]: e.target.checked,
-                        }))
+                      checked={selected[idx] !== false}
+                    onChange={() => {
+                      if (onToggleSelected) {
+                        onToggleSelected(idx);
+                        return;
                       }
+                      setSelectedLocal((prev) => {
+                        const next: Record<number, false> = { ...prev };
+                        if (next[idx] === false) {
+                          delete (next as any)[idx];
+                        } else {
+                          (next as any)[idx] = false;
+                        }
+                        return next;
+                      });
+                    }}
                       aria-label="Select question"
                     />
                     <p className="min-w-0 text-sm leading-relaxed">{q.text}</p>
