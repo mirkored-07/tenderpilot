@@ -1688,17 +1688,10 @@ export default function JobDetailPage() {
   }, [jobId]);
 
   const toggleBuyerQuestionIndex = (idx: number) => {
-    setSelectedBuyerQuestions((prev) => {
-      const next: Record<number, false> = { ...prev };
-      if (next[idx] === false) {
-        // currently removed -> re-add (delete removal flag)
-        delete (next as any)[idx];
-      } else {
-        // remove from selection
-        (next as any)[idx] = false;
-      }
-      return next;
-    });
+    setSelectedBuyerQuestions((prev) => ({
+      ...prev,
+      [idx]: !Boolean(prev[idx]),
+    }));
   };
 
   const toggleBuyerQuestionByText = (q: string) => {
@@ -3421,7 +3414,7 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
                             window.setTimeout(() => setCopiedSection(null), 800);
                           }}
                         >
-                          {(selectedBuyerQuestions[(questions ?? []).findIndex((x) => String(x ?? "").trim() === String(q ?? "").trim())] !== false)
+                          {(selectedBuyerQuestions[(questions ?? []).findIndex((x) => String(x ?? "").trim() === String(q ?? "").trim())])
                             ? "Remove from buyer email"
                             : copiedSection === `qemail_${i}`
                             ? "Added"

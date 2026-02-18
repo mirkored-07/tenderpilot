@@ -148,24 +148,25 @@ export default function BuyerQuestions({
   }
 
   const selectedItems = useMemo(() => {
-    // Bid-room default: all questions are selected unless explicitly removed (selected[idx] === false).
-    return questions.filter((_, i) => selected[i] !== false);
+    // Selection model: default is selected; map stores explicit removals (idx -> false).
+    return questions.filter((_, idx) => selected[idx] !== false);
   }, [selected, questions]);
 
   const selectedCount = selectedItems.length;
   const totalCount = questions.length;
 
-  // Email draft reflects the current selection. Default is ALL selected unless removed.
+  const draftItems = useMemo(() => selectedItems, [selectedItems]);
+
   const emailDraft = useMemo(() => {
-    if (!selectedItems.length) return null;
-    return buildEmailDraft(selectedItems);
-  }, [selectedItems, tenderName]);
+    if (!draftItems.length) return null;
+    return buildEmailDraft(draftItems);
+  }, [draftItems, tenderName]);
 
   const selectionHint = useMemo(() => {
     if (totalCount === 0) return "";
-    if (selectedCount === 0) return "Includes: 0 questions (none selected).";
     if (selectedCount === totalCount) return `Includes: All questions (${totalCount}).`;
-    return `Includes: ${selectedCount} of ${totalCount} questions.`;
+    if (selectedCount === 0) return "Includes: 0 questions (none selected).";
+    return `Includes: ${selectedCount} selected question${selectedCount === 1 ? "" : "s"}.`;
   }, [selectedCount, totalCount]);
 
   const { pricingConstraints, complianceConstraints } = useMemo(() => {
