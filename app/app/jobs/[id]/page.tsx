@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { getJobDisplayName, setJobDisplayName, clearJobDisplayName } from "@/lib/pilot-job-names";
+import { stableRefKey } from "@/lib/bid-workflow/keys";
 
 import Checklist from "@/components/checklist/Checklist";
 import Risks from "@/components/risks/Risks";
@@ -14,9 +15,11 @@ import BuyerQuestions from "@/components/questions/BuyerQuestions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 type JobStatus = "queued" | "processing" | "done" | "failed";
 
@@ -1290,7 +1293,12 @@ export default function JobDetailPage() {
   const [polling, setPolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [tab, setTab] = useState<"checklist" | "risks" | "questions" | "draft" | "text">("checklist");
+  const [tab, setTab] = useState<"checklist" | "risks" | "questions" | "draft" | "text" | "work">("checklist");
+
+  // Collaboration layer (does NOT modify job_results; it only overlays assignments/status/notes)
+  const [workItems, setWorkItems] = useState<any[]>([]);
+  const [workSaving, setWorkSaving] = useState<string | null>(null);
+  const [workError, setWorkError] = useState<string | null>(null);
 
   function openRequirementsForVerification() {
     setTab("checklist");
@@ -1312,7 +1320,7 @@ export default function JobDetailPage() {
   /** UI safety state for very large extracted text */
   const [showFullSourceText, setShowFullSourceText] = useState(false);
 
-  const [exporting, setExporting] = useState<null | "summary" | "brief">(null);
+  const [exporting, setExporting] = useState<null | "summary" | "brief" | "xlsx">(null);
 
   const [showAllBlockers, setShowAllBlockers] = useState(false);
   const [showAllDrivers, setShowAllDrivers] = useState(false);
@@ -1562,6 +1570,35 @@ export default function JobDetailPage() {
     };
   }, [jobId, invalidLink]);
 
+  // Load collaboration overlay (work items)
+  useEffect(() => {
+    if (invalidLink) return;
+    const supabase = supabaseBrowser();
+    let cancelled = false;
+
+    async function loadWork() {
+      setWorkError(null);
+      const { data, error } = await supabase
+        .from("job_work_items")
+        .select("*")
+        .eq("job_id", jobId)
+        .order("updated_at", { ascending: false });
+      if (cancelled) return;
+      if (error) {
+        console.warn("Failed to load work items", error);
+        setWorkError("Work items could not be loaded.");
+        setWorkItems([]);
+        return;
+      }
+      setWorkItems((data as any[]) ?? []);
+    }
+
+    loadWork();
+    return () => {
+      cancelled = true;
+    };
+  }, [jobId, invalidLink]);
+
   const showProgress = useMemo(() => {
     const s = job?.status;
     return s === "queued" || s === "processing";
@@ -1678,6 +1715,111 @@ export default function JobDetailPage() {
 	 const questions = useMemo(() => {
 	  return normalizeQuestions((result as any)?.clarifications);
 	}, [result]);
+
+  const outlineSections = useMemo(() => {
+    const d: any = (result as any)?.proposal_draft;
+    if (d && typeof d === "object" && Array.isArray(d.sections)) {
+      return (d.sections as any[])
+        .map((s) => ({
+          title: String(s?.title ?? "").trim(),
+          bullets: Array.isArray(s?.bullets) ? (s.bullets as any[]).map((b) => String(b ?? "").trim()).filter(Boolean) : [],
+        }))
+        .filter((s) => s.title);
+    }
+    return [] as Array<{ title: string; bullets: string[] }>;
+  }, [result]);
+
+  const workBaseRows = useMemo(() => {
+    const rows: Array<{ type: "requirement" | "risk" | "clarification" | "outline"; ref_key: string; title: string; meta?: string }>=[];
+
+    for (const it of checklist ?? []) {
+      const kind = String((it as any)?.type ?? (it as any)?.level ?? (it as any)?.priority ?? "INFO").toUpperCase();
+      const text = String((it as any)?.text ?? (it as any)?.requirement ?? "").trim();
+      if (!text) continue;
+      const ref = stableRefKey({ jobId, type: "requirement", text, extra: kind });
+      rows.push({ type: "requirement", ref_key: ref, title: text, meta: kind });
+    }
+
+    for (const r of risks ?? []) {
+      const title = String((r as any)?.title ?? (r as any)?.text ?? (r as any)?.risk ?? "").trim();
+      const detail = String((r as any)?.detail ?? (r as any)?.description ?? (r as any)?.why ?? (r as any)?.impact ?? "").trim();
+      const sev = String((r as any)?.severity ?? (r as any)?.level ?? "medium").toLowerCase();
+      const text = title || detail;
+      if (!text) continue;
+      const ref = stableRefKey({ jobId, type: "risk", text, extra: sev });
+      rows.push({ type: "risk", ref_key: ref, title: title || detail, meta: sev });
+    }
+
+    for (const q of questions ?? []) {
+      const text = String(q ?? "").trim();
+      if (!text) continue;
+      const ref = stableRefKey({ jobId, type: "clarification", text });
+      rows.push({ type: "clarification", ref_key: ref, title: text });
+    }
+
+    for (const s of outlineSections ?? []) {
+      const ref = stableRefKey({ jobId, type: "outline", text: s.title });
+      rows.push({ type: "outline", ref_key: ref, title: s.title });
+    }
+
+    return rows;
+  }, [jobId, checklist, risks, questions, outlineSections]);
+
+  const workByKey = useMemo(() => {
+    const m = new Map<string, any>();
+    for (const w of workItems ?? []) {
+      const k = `${String(w?.type ?? "")}:${String(w?.ref_key ?? "")}`;
+      if (k.includes(":")) m.set(k, w);
+    }
+    return m;
+  }, [workItems]);
+
+  async function upsertWorkItem(input: {
+    type: "requirement" | "risk" | "clarification" | "outline";
+    ref_key: string;
+    title: string;
+    status?: string;
+    owner_label?: string;
+    due_at?: string | null;
+    notes?: string;
+  }) {
+    setWorkError(null);
+    setWorkSaving(`${input.type}:${input.ref_key}`);
+
+    try {
+      const supabase = supabaseBrowser();
+      const payload: any = {
+        job_id: jobId,
+        type: input.type,
+        ref_key: input.ref_key,
+        title: input.title,
+        status: input.status ?? "todo",
+        owner_label: input.owner_label ?? null,
+        due_at: input.due_at ? input.due_at : null,
+        notes: input.notes ?? null,
+      };
+
+      const { error } = await supabase
+        .from("job_work_items")
+        .upsert(payload, { onConflict: "job_id,type,ref_key" });
+      if (error) throw error;
+
+      // refresh
+      const { data, error: loadErr } = await supabase
+        .from("job_work_items")
+        .select("*")
+        .eq("job_id", jobId)
+        .order("updated_at", { ascending: false });
+
+      if (loadErr) throw loadErr;
+      setWorkItems((data as any[]) ?? []);
+    } catch (e) {
+      console.error(e);
+      setWorkError("Could not save changes.");
+    } finally {
+      setWorkSaving(null);
+    }
+  }
 
 
   const mustItems = useMemo(() => {
@@ -2853,6 +2995,60 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
     }, 300);
   }
 
+  async function exportBidPackXlsx() {
+    if (!job) return;
+    setError(null);
+
+    const res = await fetch(`/api/jobs/${jobId}/export/bid-pack`, {
+      method: "GET",
+      headers: { Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+    });
+
+    if (!res.ok) {
+      const txt = await res.text().catch(() => "");
+      console.error("Bid Pack export failed", res.status, txt);
+      setError("Could not export the Bid Pack. Please try again.");
+      return;
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `TenderPilot_BidPack_${jobId}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+  async function exportCsv(type: "overview" | "requirements" | "risks" | "clarifications" | "outline") {
+    if (!job) return;
+    setError(null);
+
+    const res = await fetch(`/api/jobs/${jobId}/export/csv?type=${encodeURIComponent(type)}`, {
+      method: "GET",
+      headers: { Accept: "text/csv" },
+    });
+
+    if (!res.ok) {
+      const txt = await res.text().catch(() => "");
+      console.error("CSV export failed", type, res.status, txt);
+      setError(`Could not export ${type} CSV. Please try again.`);
+      return;
+    }
+
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `TenderPilot_${type}_${jobId}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+
   async function handleDelete() {
     if (!job) return;
     const ok = window.confirm("Delete this tender review? This cannot be undone.");
@@ -3014,6 +3210,77 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
         >
           {exporting === "brief" ? "Preparing…" : "Export tender brief PDF"}
         </Button>
+
+        <Button
+          variant="outline"
+          className="rounded-full"
+          onClick={async () => {
+            if (!canDownload) return;
+            setExporting("xlsx");
+            try {
+              await exportBidPackXlsx();
+            } finally {
+              setExporting(null);
+            }
+          }}
+          disabled={!canDownload || exporting !== null}
+        >
+          {exporting === "xlsx" ? "Preparing…" : "Export Bid Pack (Excel)"}
+        </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="rounded-full" disabled={!canDownload || exporting !== null}>
+                More exports
+              </Button>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  exportCsv("overview");
+                }}
+              >
+                Overview (CSV)
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  exportCsv("requirements");
+                }}
+              >
+                Requirements (CSV)
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  exportCsv("risks");
+                }}
+              >
+                Risks (CSV)
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  exportCsv("clarifications");
+                }}
+              >
+                Clarifications (CSV)
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  exportCsv("outline");
+                }}
+              >
+                Outline (CSV)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <Button
             className="rounded-full"
@@ -3554,6 +3821,9 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
           <TabsTrigger value="draft" className="rounded-full">
             Tender Outline
           </TabsTrigger>
+          <TabsTrigger value="work" className="rounded-full">
+            Bid room
+          </TabsTrigger>
           <TabsTrigger value="text" className="rounded-full">
             Source text
           </TabsTrigger>
@@ -3820,6 +4090,231 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
               ) : (
                 <p className="text-sm text-muted-foreground">No draft outline was generated. Try re-uploading the PDF or verify the source text tab.</p>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="work">
+          <Card className="rounded-2xl">
+            <CardContent className="p-5 space-y-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold">Bid room</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Assign owners, track status, and leave short notes. This overlays the evidence-first results (it does not change them).
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    className="rounded-full"
+                    onClick={async () => {
+                      try {
+                        const res = await fetch(`/api/jobs/${jobId}/export/bid-pack`, { method: "GET" });
+                        if (!res.ok) throw new Error(String(res.status));
+                        const blob = await res.blob();
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = `TenderPilot_BidPack_${jobId}.xlsx`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        URL.revokeObjectURL(url);
+                      } catch {
+                        setWorkError("Could not export the Bid Pack.");
+                      }
+                    }}
+                    disabled={!canDownload}
+                  >
+                    Export Bid Pack
+                  </Button>
+                </div>
+              </div>
+
+              {workError ? (
+                <div className="rounded-xl border border-red-200 bg-red-50 p-3">
+                  <p className="text-sm text-red-700">{workError}</p>
+                </div>
+              ) : null}
+
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <Badge variant="outline" className="rounded-full">
+                  Items: {workBaseRows.length}
+                </Badge>
+                <Badge variant="outline" className="rounded-full">
+                  Done: {workItems.filter((w) => String(w?.status ?? "") === "done").length}
+                </Badge>
+                <Badge variant="outline" className="rounded-full">
+                  Blocked: {workItems.filter((w) => String(w?.status ?? "") === "blocked").length}
+                </Badge>
+              </div>
+
+              <div className="rounded-xl border bg-background/60">
+                <div className="grid grid-cols-12 gap-2 border-b bg-background/60 p-2 text-[11px] font-medium text-muted-foreground">
+                  <div className="col-span-2">Type</div>
+                  <div className="col-span-5">Item</div>
+                  <div className="col-span-2">Owner</div>
+                  <div className="col-span-1">Status</div>
+                  <div className="col-span-1">Due</div>
+                  <div className="col-span-1">Notes</div>
+                </div>
+
+                <ScrollArea className="h-[520px]">
+                  <div className="divide-y">
+                    {workBaseRows.map((r) => {
+                      const key = `${r.type}:${r.ref_key}`;
+                      const w = workByKey.get(key);
+                      const status = String(w?.status ?? "todo");
+                      const owner = String(w?.owner_label ?? "");
+                      const due = w?.due_at ? String(w.due_at).slice(0, 10) : "";
+                      const notes = String(w?.notes ?? "");
+
+                      return (
+                        <div key={key} className="grid grid-cols-12 gap-2 p-2 text-sm">
+                          <div className="col-span-2">
+                            <p className="text-xs font-medium">
+                              {r.type}
+                              {r.meta ? <span className="text-muted-foreground"> • {r.meta}</span> : null}
+                            </p>
+                            <p className="mt-1 text-[10px] text-muted-foreground">{r.ref_key}</p>
+                          </div>
+
+                          <div className="col-span-5 min-w-0">
+                            <p className="text-sm text-foreground/90 break-words">{r.title}</p>
+                          </div>
+
+                          <div className="col-span-2">
+                            <Input
+                              value={owner}
+                              placeholder="e.g., Michela"
+                              className="h-8"
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                // local-only update for instant feedback
+                                setWorkItems((prev) => {
+                                  const k = `${r.type}:${r.ref_key}`;
+                                  const next = [...prev];
+                                  const idx = next.findIndex((x) => `${x.type}:${x.ref_key}` === k);
+                                  if (idx >= 0) next[idx] = { ...next[idx], owner_label: v };
+                                  else next.unshift({ job_id: jobId, type: r.type, ref_key: r.ref_key, title: r.title, status, owner_label: v });
+                                  return next;
+                                });
+                              }}
+                              onBlur={async (e) => {
+                                await upsertWorkItem({
+                                  type: r.type,
+                                  ref_key: r.ref_key,
+                                  title: r.title,
+                                  status,
+                                  owner_label: e.target.value,
+                                  due_at: due || null,
+                                  notes,
+                                });
+                              }}
+                              disabled={workSaving === key}
+                            />
+                          </div>
+
+                          <div className="col-span-1">
+                            <select
+                              className="h-8 w-full rounded-md border bg-background px-2 text-sm"
+                              value={status}
+                              onChange={async (e) => {
+                                const v = e.target.value;
+                                await upsertWorkItem({
+                                  type: r.type,
+                                  ref_key: r.ref_key,
+                                  title: r.title,
+                                  status: v,
+                                  owner_label: owner,
+                                  due_at: due || null,
+                                  notes,
+                                });
+                              }}
+                              disabled={workSaving === key}
+                            >
+                              {[
+                                "todo",
+                                "in_progress",
+                                "done",
+                                "blocked",
+                                "rejected",
+                              ].map((s) => (
+                                <option key={s} value={s}>
+                                  {s}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div className="col-span-1">
+                            <Input
+                              type="date"
+                              value={due}
+                              className="h-8"
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                setWorkItems((prev) => {
+                                  const k = `${r.type}:${r.ref_key}`;
+                                  const next = [...prev];
+                                  const idx = next.findIndex((x) => `${x.type}:${x.ref_key}` === k);
+                                  if (idx >= 0) next[idx] = { ...next[idx], due_at: v };
+                                  else next.unshift({ job_id: jobId, type: r.type, ref_key: r.ref_key, title: r.title, status, due_at: v });
+                                  return next;
+                                });
+                              }}
+                              onBlur={async (e) => {
+                                await upsertWorkItem({
+                                  type: r.type,
+                                  ref_key: r.ref_key,
+                                  title: r.title,
+                                  status,
+                                  owner_label: owner,
+                                  due_at: e.target.value || null,
+                                  notes,
+                                });
+                              }}
+                              disabled={workSaving === key}
+                            />
+                          </div>
+
+                          <div className="col-span-1">
+                            <Input
+                              value={notes}
+                              placeholder="Short note"
+                              className="h-8"
+                              onChange={(e) => {
+                                const v = e.target.value;
+                                setWorkItems((prev) => {
+                                  const k = `${r.type}:${r.ref_key}`;
+                                  const next = [...prev];
+                                  const idx = next.findIndex((x) => `${x.type}:${x.ref_key}` === k);
+                                  if (idx >= 0) next[idx] = { ...next[idx], notes: v };
+                                  else next.unshift({ job_id: jobId, type: r.type, ref_key: r.ref_key, title: r.title, status, notes: v });
+                                  return next;
+                                });
+                              }}
+                              onBlur={async (e) => {
+                                await upsertWorkItem({
+                                  type: r.type,
+                                  ref_key: r.ref_key,
+                                  title: r.title,
+                                  status,
+                                  owner_label: owner,
+                                  due_at: due || null,
+                                  notes: e.target.value,
+                                });
+                              }}
+                              disabled={workSaving === key}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

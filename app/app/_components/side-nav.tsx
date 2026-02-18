@@ -13,6 +13,7 @@ type NavItem = {
 
 const nav: NavItem[] = [
   { href: "/app/upload", label: "New bid review" },
+  { href: "/app/dashboard", label: "Dashboard" },
   { href: "/app/jobs", label: "Jobs" },
   { href: "/app/account", label: "Account" },
 ];
