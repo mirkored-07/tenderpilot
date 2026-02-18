@@ -10,16 +10,16 @@ export const dynamic = "force-static";
 
 // 2. METADATA
 export const metadata: Metadata = {
-  title: "Live Engineering & Architectural Tenders (CPV 71000000) | TenderRay",
+  title: "Live Engineering & Architectural Tenders (CPV 71000000) | TenderPilot",
   description: "Browse active Engineering and Architectural tenders (CPV 71000000). Find opportunities for civil engineering, design, and technical analysis in the EU.",
   alternates: {
     canonical: "https://www.trytenderpilot.com/tenders/engineering",
   },
   openGraph: {
-    title: "Live Engineering Tenders (EU) - TenderRay",
+    title: "Live Engineering Tenders (EU) - TenderPilot",
     description: "Find your next project. View active engineering, architectural, and technical tenders in the EU.",
     url: "https://www.trytenderpilot.com/tenders/engineering",
-    siteName: "TenderRay",
+    siteName: "TenderPilot",
     type: "website",
   },
 };
@@ -120,7 +120,7 @@ export default function EngineeringTendersPage() {
             <div className="h-8 w-8 bg-zinc-800 text-white rounded-lg flex items-center justify-center">
                <BrandIcon size={35} className="h-8 w-8" />
             </div>
-            <span>TenderRay</span>
+            <span>TenderPilot</span>
           </Link>
           <div className="hidden md:flex items-center gap-4">
             <Button asChild className="rounded-full shadow-lg shadow-indigo-500/20 bg-white text-black hover:bg-gray-100 font-semibold">

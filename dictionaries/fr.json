@@ -1,6 +1,6 @@
 {
   "nav": {
-    "title": "TenderRay",
+    "title": "TenderPilot",
     "howItWorks": "Comment ça marche",
     "sample": "Exemple de sortie",
     "waitlist": "Accès anticipé",
@@ -61,7 +61,7 @@
   "howItWorks": {
     "eyebrow": "Processus concret. Sans superflu.",
     "title": "Comment ça marche",
-    "description": "TenderRay vous aide à comprendre rapidement un appel d’offres afin de prendre une décision go/no-go en toute confiance. Il structure les RFP et appels d’offres publics en livrables prêts à être revus : exigences obligatoires, critères d’évaluation, risques et ambiguïtés, et un plan de réponse initial.",
+    "description": "TenderPilot vous aide à comprendre rapidement un appel d’offres afin de prendre une décision go/no-go en toute confiance. Il structure les RFP et appels d’offres publics en livrables prêts à être revus : exigences obligatoires, critères d’évaluation, risques et ambiguïtés, et un plan de réponse initial.",
     "disclaimer": "Aide à la décision uniquement. Aucun conseil juridique ni en commande publique. Vérifiez toujours avec le document original.",
     "cta_sample": "Voir l’exemple de sortie",
     "cta_join": "Accès anticipé",
@@ -355,7 +355,7 @@
     },
     "workspace": {
       "title": "Votre espace de travail d’appel d’offres",
-      "desc": "Ceci est un exemple statique montrant comment TenderRay structure la revue d’un appel d’offres. Vérifiez toujours avec le PDF source."
+      "desc": "Ceci est un exemple statique montrant comment TenderPilot structure la revue d’un appel d’offres. Vérifiez toujours avec le PDF source."
     },
     "nextActions": {
       "title": "Prochaines actions"

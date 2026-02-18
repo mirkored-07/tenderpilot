@@ -1,6 +1,6 @@
 {
   "nav": {
-    "title": "TenderRay",
+    "title": "TenderPilot",
     "howItWorks": "Come funziona",
     "sample": "Esempio di output",
     "waitlist": "Accesso anticipato",
@@ -61,7 +61,7 @@
   "howItWorks": {
     "eyebrow": "Flusso pratico. Poco rumore.",
     "title": "Come funziona",
-    "description": "TenderRay ti aiuta a capire rapidamente una gara per prendere una decisione go/no-go con sicurezza. Struttura RFP e gare pubbliche in output pronti per la revisione: requisiti obbligatori, criteri di valutazione, rischi e ambiguità, e una bozza di struttura dell’offerta.",
+    "description": "TenderPilot ti aiuta a capire rapidamente una gara per prendere una decisione go/no-go con sicurezza. Struttura RFP e gare pubbliche in output pronti per la revisione: requisiti obbligatori, criteri di valutazione, rischi e ambiguità, e una bozza di struttura dell’offerta.",
     "disclaimer": "Solo supporto decisionale. Nessuna consulenza legale o di procurement. Verifica sempre con il documento originale.",
     "cta_sample": "Vedi esempio di output",
     "cta_join": "Accesso anticipato",
@@ -355,7 +355,7 @@
     },
     "workspace": {
       "title": "Il tuo workspace di gara",
-      "desc": "Questo è un esempio statico che mostra come TenderRay struttura la revisione di una gara. Verifica sempre con il PDF originale."
+      "desc": "Questo è un esempio statico che mostra come TenderPilot struttura la revisione di una gara. Verifica sempre con il PDF originale."
     },
     "nextActions": {
       "title": "Prossime azioni"

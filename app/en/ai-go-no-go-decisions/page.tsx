@@ -12,9 +12,9 @@ import {
 } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "AI Go/No-Go Decisions for Tenders & RFPs | TenderRay",
+  title: "AI Go/No-Go Decisions for Tenders & RFPs | TenderPilot",
   description:
-    "Learn why Go/No-Go decisions are hard in tenders and how TenderRay helps teams extract requirements and risks to decide faster and with more confidence.",
+    "Learn why Go/No-Go decisions are hard in tenders and how TenderPilot helps teams extract requirements and risks to decide faster and with more confidence.",
   alternates: {
     canonical: "https://www.trytenderpilot.com/en/ai-go-no-go-decisions",
   },
@@ -191,11 +191,11 @@ export default async function AIGoNoGoDecisionsPage() {
 
           <div className="md:col-span-2">
             <GlassCard
-              title="How TenderRay supports AI Go/No-Go decisions"
+              title="How TenderPilot supports AI Go/No-Go decisions"
               icon={<ListChecks className="w-6 h-6 text-emerald-400" />}
             >
               <p className="mb-8">
-                TenderRay is built specifically to support early-stage Go/No-Go
+                TenderPilot is built specifically to support early-stage Go/No-Go
                 decisions — not proposal writing and not generic document
                 analysis. By uploading tender or RFP documents, teams can
                 quickly identify key requirements, constraints, and potential

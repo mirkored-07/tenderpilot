@@ -530,7 +530,7 @@ function toPlainTextSummary(args: {
   const info = checklist.filter((i) => String(i?.type ?? i?.level ?? i?.priority ?? "").toUpperCase().includes("INFO"));
 
   const lines: string[] = [];
-  lines.push("TenderRay summary");
+  lines.push("TenderPilot summary");
   lines.push("");
   if (fileName) lines.push(`File: ${fileName}`);
   if (createdAt) lines.push(`Created: ${formatDate(createdAt)}`);
@@ -1655,7 +1655,7 @@ export default function JobDetailPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `TenderRay_summary_${jobId}.txt`;
+    a.download = `TenderPilot_summary_${jobId}.txt`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -1780,7 +1780,7 @@ export default function JobDetailPage() {
     <div class="page">
       <div class="header">
         <div>
-          <div class="brand">TenderRay</div>
+          <div class="brand">TenderPilot</div>
           <div class="docTitle">Tender brief</div>
           <div class="pillRow">
             <span class="pill emph">${escapeHtml(verdictLabel)}</span>
@@ -1833,7 +1833,7 @@ export default function JobDetailPage() {
     </div>
 
     <div class="footer">
-      <span>TenderRay</span>
+      <span>TenderPilot</span>
       <span>Tender brief</span>
     </div>
   </body>

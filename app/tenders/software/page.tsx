@@ -10,16 +10,16 @@ export const dynamic = "force-static";
 
 // 2. SEO METADATA
 export const metadata: Metadata = {
-  title: "Live Software Development Tenders (CPV 72200000) | TenderRay",
+  title: "Live Software Development Tenders (CPV 72200000) | TenderPilot",
   description: "Browse active EU software tenders (CPV 72200000) in Germany, Italy, and Austria. Use AI to analyze risks and write winning bids instantly.",
   alternates: {
     canonical: "https://www.trytenderpilot.com/tenders/software",
   },
   openGraph: {
-    title: "Live Software Tenders (EU) - TenderRay",
+    title: "Live Software Tenders (EU) - TenderPilot",
     description: "Don't waste time searching. View active software tenders in the EU and analyze them with AI.",
     url: "https://www.trytenderpilot.com/tenders/software",
-    siteName: "TenderRay",
+    siteName: "TenderPilot",
     type: "website",
   },
 };
@@ -120,7 +120,7 @@ export default function SoftwareTendersPage() {
             <div className="h-8 w-8 bg-zinc-800 text-white rounded-lg flex items-center justify-center">
                <BrandIcon size={35} className="h-8 w-8" />
             </div>
-            <span>TenderRay</span>
+            <span>TenderPilot</span>
           </Link>
           <div className="hidden md:flex items-center gap-4">
             <Button asChild className="rounded-full shadow-lg shadow-blue-500/20 bg-white text-black hover:bg-gray-100 font-semibold">

@@ -19,8 +19,8 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://www.trytenderpilot.com"),
 
   title: {
-    default: "TenderRay - AI Tender Analysis & Risk Assessment",
-    template: "%s | TenderRay",
+    default: "TenderPilot - AI Tender Analysis & Risk Assessment",
+    template: "%s | TenderPilot",
   },
 
   description:
@@ -40,9 +40,9 @@ export const metadata: Metadata = {
     "Proposal Management Tool",
   ],
 
-  authors: [{ name: "TenderRay Team" }],
-  creator: "TenderRay",
-  publisher: "TenderRay",
+  authors: [{ name: "TenderPilot Team" }],
+  creator: "TenderPilot",
+  publisher: "TenderPilot",
 
   formatDetection: {
     email: false,
@@ -55,7 +55,7 @@ export const metadata: Metadata = {
     description:
       "Instant risk analysis and compliance checklists for public tenders. Make your Go/No-Go decision in minutes, not hours.",
     url: "https://www.trytenderpilot.com",
-    siteName: "TenderRay",
+    siteName: "TenderPilot",
     locale: "en_US",
     type: "website",
     images: [
@@ -63,20 +63,20 @@ export const metadata: Metadata = {
         url: "/og-image.jpg",
         width: 1200,
         height: 630,
-        alt: "TenderRay Dashboard Preview",
+        alt: "TenderPilot Dashboard Preview",
       },
     ],
   },
 
   twitter: {
     card: "summary_large_image",
-    title: "TenderRay - AI Tender Analysis",
+    title: "TenderPilot - AI Tender Analysis",
     description: "Automated risk analysis for RFPs and Tenders.",
     creator: "@tenderpilot",
     images: [
       {
         url: "/twitter-image.jpg",
-        alt: "TenderRay",
+        alt: "TenderPilot",
       },
     ],
   },

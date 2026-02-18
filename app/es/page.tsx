@@ -10,7 +10,7 @@ import type { Metadata } from "next";
 import { BrandIcon } from "@/components/brand-icon";
 
 export const metadata: Metadata = {
-  title: "TenderRay - AI Go/No-Go Decisions for Tenders & RFPs — Análisis de licitaciones y RFP con IA",
+  title: "TenderPilot - AI Go/No-Go Decisions for Tenders & RFPs — Análisis de licitaciones y RFP con IA",
   description:
     "Analiza licitaciones y RFP en minutos: requisitos obligatorios, riesgos, checklist y estructura de propuesta para decisiones go/no-go más rápidas.",
   alternates: {

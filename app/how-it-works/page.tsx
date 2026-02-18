@@ -48,7 +48,7 @@ export default function HowItWorks() {
             <div className="h-8 w-8 bg-zinc-800 text-white rounded-lg flex items-center justify-center">
                <BrandIcon size={35} className="h-8 w-8" />
             </div>
-            <span>TenderRay - AI Go/No-Go Decisions for Tenders & RFPs</span>
+            <span>TenderPilot - AI Go/No-Go Decisions for Tenders & RFPs</span>
           </Link>
           
           <Button asChild size="sm" variant="ghost" className="rounded-full">
