@@ -32,6 +32,15 @@ type DbWorkItem = {
   notes: string | null;
   updated_at: string;
 };
+type DbJobMetadata = {
+  job_id: string;
+  deadline_override: string | null;
+  portal_url: string | null;
+  internal_bid_id: string | null;
+  owner_label: string | null;
+  decision_override: string | null;
+  updated_at: string;
+};
 
 function formatDate(iso: string) {
   try {
@@ -190,9 +199,11 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [jobs, setJobs] = useState<DbJob[]>([]);
+   const [jobs, setJobs] = useState<DbJob[]>([]);
   const [jobResults, setJobResults] = useState<Record<string, any>>({});
+  const [jobMeta, setJobMeta] = useState<Record<string, DbJobMetadata>>({});
   const [workItems, setWorkItems] = useState<DbWorkItem[]>([]);
+
 
   const [ownerFilter, setOwnerFilter] = useState<string>("All");
   const [decisionFilter, setDecisionFilter] = useState<string>("All");
@@ -228,6 +239,15 @@ export default function DashboardPage() {
     const resMap: Record<string, any> = {};
     for (const r of resultsData ?? []) resMap[String((r as any).job_id)] = r;
     setJobResults(resMap);
+    // job metadata overrides (manual overlays)
+    const { data: metaRows } = await supabase
+      .from("job_metadata")
+      .select("job_id,deadline_override,portal_url,internal_bid_id,owner_label,decision_override,updated_at")
+      .in("job_id", ids);
+
+    const metaMap: Record<string, DbJobMetadata> = {};
+    for (const row of metaRows ?? []) metaMap[String((row as any).job_id)] = row as any;
+    setJobMeta(metaMap);
 
     // work items (progress + blockers)
     const { data: workData } = await supabase
@@ -257,11 +277,20 @@ export default function DashboardPage() {
       const r = jobResults[j.id];
       const exec = r?.executive_summary ?? {};
 
-      const deadlineText = String(exec?.submissionDeadline ?? "").trim();
-      const deadline = parseDeadlineToDateLocal(deadlineText);
+            const meta = jobMeta[j.id];
 
-      const decisionText = String(exec?.verdict ?? exec?.decisionBadge ?? "").trim();
+      const extractedDeadlineText = String(exec?.submissionDeadline ?? "").trim();
+      const extractedDeadline = parseDeadlineToDateLocal(extractedDeadlineText);
+
+      const deadline = meta?.deadline_override ? new Date(String(meta.deadline_override)) : extractedDeadline;
+      const hasValidDeadline = !!deadline && Number.isFinite((deadline as Date).getTime());
+
+      const extractedDecisionText = String(exec?.verdict ?? exec?.decisionBadge ?? "").trim();
+      const decisionText = String(meta?.decision_override ?? extractedDecisionText).trim();
       const bucket = decisionBucket(decisionText);
+
+      const deadlineText = meta?.deadline_override ? String(meta.deadline_override) : extractedDeadlineText;
+
 
       const w = byJob[j.id] ?? [];
       const total = w.length;
@@ -271,8 +300,9 @@ export default function DashboardPage() {
       const unassigned = w.filter((x) => !String(x?.owner_label ?? "").trim()).length;
       const progressPct = total > 0 ? Math.round((done / total) * 100) : 0;
 
-      const dueSoon = deadline ? daysUntil(deadline, now) : null;
-      const missingDeadline = !deadline;
+            const dueSoon = hasValidDeadline ? daysUntil(deadline as Date, now) : null;
+      const missingDeadline = !hasValidDeadline;
+
       const missingDecision = bucket === "unknown";
 
       // Work-item due dates (fallback signal, does NOT replace tender deadline)
@@ -301,7 +331,8 @@ export default function DashboardPage() {
         wiDueSoon,
       };
     });
-  }, [jobs, jobResults, workItems]);
+    }, [jobs, jobResults, jobMeta, workItems]);
+
 
   const workloadByOwner = useMemo(() => {
     const map = new Map<string, { todo: number; in_progress: number; blocked: number; done: number }>();
@@ -326,8 +357,16 @@ export default function DashboardPage() {
   const owners = useMemo(() => {
     const set = new Set<string>();
     for (const [k] of workloadByOwner) set.add(k);
+
+    // include job-level owner_label overrides too
+    for (const j of jobs ?? []) {
+      const o = String(jobMeta[j.id]?.owner_label ?? "").trim();
+      if (o) set.add(o);
+    }
+
     return ["All", ...Array.from(set).filter(Boolean)];
-  }, [workloadByOwner]);
+  }, [workloadByOwner, jobs, jobMeta]);
+
 
   const decisionBuckets = useMemo(() => {
     const map = new Map<string, number>([
