@@ -49,6 +49,7 @@ type DbJobMetadata = {
   internal_bid_id: string | null;
   owner_label: string | null;
   decision_override: string | null;
+  target_decision_at: string | null;
   updated_at: string;
 };
 
@@ -279,6 +280,7 @@ export default function DashboardPage() {
     blockedItems: false,
     unassignedItems: false,
     clarificationsPending: false,
+    holdUnblock: false,
   });
 
   async function loadAll() {
@@ -310,7 +312,7 @@ export default function DashboardPage() {
 
       const { data: metaRows } = await supabase
         .from("job_metadata")
-        .select("job_id,deadline_override,portal_url,internal_bid_id,owner_label,decision_override,updated_at")
+        .select("job_id,deadline_override,target_decision_at,portal_url,internal_bid_id,owner_label,decision_override,updated_at")
         .in("job_id", ids);
 
       const metaMap: Record<string, DbJobMetadata> = {};
@@ -524,7 +526,23 @@ export default function DashboardPage() {
       .filter((wi) => !isDoneStatus(wi.status))
       .sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1));
 
-    return {
+    
+    const holdUnblock = (filteredRows ?? [])
+      .filter((r) => String(r?.decisionBucket ?? "").toLowerCase() === "hold")
+      .map((r) => {
+        const jid = String(r.job.id);
+        const openUnblock = (itemsByJob[jid] ?? [])
+          .filter((wi) => {
+            const t = String(wi.type ?? "").toLowerCase();
+            return t === "requirement" || t === "clarification";
+          })
+          .filter((wi) => !isDoneStatus(wi.status));
+        return { row: r, jobId: jid, openCount: openUnblock.length };
+      })
+      .filter((x) => x.openCount > 0)
+      .sort((a, b) => b.openCount - a.openCount)
+      .map((x) => x.row);
+return {
       needsTriage,
       deadlineUnknown,
       dueNext7,
@@ -532,6 +550,7 @@ export default function DashboardPage() {
       blockedItems,
       unassignedItems,
       clarificationsPending,
+      holdUnblock,
       jobOwnerLabel,
     };
   }, [filteredRows, workItems, jobMeta]);
@@ -1195,6 +1214,72 @@ export default function DashboardPage() {
           )}
         </CardContent>
       </Card>
+
+              <Card className="rounded-2xl">
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold">Hold: unblock actions open</p>
+                    <span className="text-xs text-muted-foreground">{standupQueues.holdUnblock.length}</span>
+                  </div>
+
+                  {standupQueues.holdUnblock.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No Hold jobs with open unblock actions in the current filters.</p>
+                  ) : (
+                    (() => {
+                      const expanded = !!queueExpand.holdUnblock;
+                      const rows = expanded ? standupQueues.holdUnblock : standupQueues.holdUnblock.slice(0, 6);
+
+                      return (
+                        <div className="space-y-2">
+                          {rows.map((r) => {
+                            const jid = String(r.job.id);
+                            const items = (workItems ?? []).filter((wi) => String(wi.job_id) === jid);
+                            const open = items
+                              .filter((wi) => {
+                                const t = String(wi.type ?? "").toLowerCase();
+                                return t === "requirement" || t === "clarification";
+                              })
+                              .filter((wi) => !isDoneStatus(wi.status));
+                            const openCount = open.length;
+
+                            const targetIso = String((jobMeta[jid] as any)?.target_decision_at ?? "").trim();
+                            const target = targetIso ? new Date(targetIso) : null;
+                            const targetTxt = target && Number.isFinite(target.getTime()) ? target.toLocaleDateString() : "";
+
+                            return (
+                              <div key={jid} className="rounded-xl border bg-background/60 p-3">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-medium truncate">{r.displayName}</p>
+                                    <p className="mt-1 text-xs text-muted-foreground">
+                                      {openCount} unblock action{openCount === 1 ? "" : "s"} open
+                                      {targetTxt ? ` • target decision: ${targetTxt}` : ""}
+                                    </p>
+                                  </div>
+                                  <Link href={`/app/jobs/${jid}`} className="text-xs underline text-foreground/80 hover:text-foreground">
+                                    Open
+                                  </Link>
+                                </div>
+                              </div>
+                            );
+                          })}
+
+                          {standupQueues.holdUnblock.length > 6 ? (
+                            <Button
+                              variant="outline"
+                              className="rounded-full"
+                              onClick={() => setQueueExpand((s) => ({ ...s, holdUnblock: !s.holdUnblock }))}
+                            >
+                              {expanded ? "Show less" : `Show all (${standupQueues.holdUnblock.length})`}
+                            </Button>
+                          ) : null}
+                        </div>
+                      );
+                    })()
+                  )}
+                </CardContent>
+              </Card>
+
 
       {/* Needs attention (expanded by default; Top 5 when collapsed) */}
       <Card className="rounded-2xl">

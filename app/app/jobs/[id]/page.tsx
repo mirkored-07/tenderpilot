@@ -87,6 +87,7 @@ type DbJobMetadata = {
   internal_bid_id: string | null;
   owner_label: string | null;
   decision_override: string | null;
+  target_decision_at: string | null;
   updated_at: string;
 };
 
@@ -1298,12 +1299,14 @@ const [metaOpen, setMetaOpen] = useState(false);
   const [job, setJob] = useState<DbJob | null>(null);
 	const [result, setResult] = useState<DbJobResult | null>(null);
 	const [jobMeta, setJobMeta] = useState<DbJobMetadata | null>(null);
-	const [metaDraft, setMetaDraft] = useState<{ deadlineLocal: string; portal_url: string; internal_bid_id: string; owner_label: string; decision_override: string }>(
-	  { deadlineLocal: "", portal_url: "", internal_bid_id: "", owner_label: "", decision_override: "" }
+	const [metaDraft, setMetaDraft] = useState<{ deadlineLocal: string; targetDecisionLocal: string; portal_url: string; internal_bid_id: string; owner_label: string; decision_override: string }>(
+	  { deadlineLocal: "", targetDecisionLocal: "", portal_url: "", internal_bid_id: "", owner_label: "", decision_override: "" }
 	);
 const [savingMeta, setSavingMeta] = useState(false);
 
 	const [events, setEvents] = useState<DbJobEvent[]>([]);
+
+	const [workItems, setWorkItems] = useState<any[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [polling, setPolling] = useState(false);
@@ -1427,7 +1430,7 @@ const [savingMeta, setSavingMeta] = useState(false);
 		// Manual overlay: job metadata (deadline, portal link, owner, decision override)
 const { data: metaRow, error: metaErr } = await supabase
   .from("job_metadata")
-  .select("job_id,deadline_override,portal_url,internal_bid_id,owner_label,decision_override,updated_at")
+  .select("job_id,deadline_override,target_decision_at,portal_url,internal_bid_id,owner_label,decision_override,updated_at")
   .eq("job_id", jobId)
   .maybeSingle();
 
@@ -1446,11 +1449,27 @@ const toLocalInput = (dt: Date) => {
 
 setMetaDraft({
   deadlineLocal: d && Number.isFinite(d.getTime()) ? toLocalInput(d) : "",
+  targetDecisionLocal: (() => {
+    const tIso = (metaRow as any)?.target_decision_at ? String((metaRow as any).target_decision_at) : "";
+    const t = tIso ? new Date(tIso) : null;
+    return t && Number.isFinite(t.getTime()) ? toLocalInput(t) : "";
+  })(),
   portal_url: String((metaRow as any)?.portal_url ?? ""),
   internal_bid_id: String((metaRow as any)?.internal_bid_id ?? ""),
   owner_label: String((metaRow as any)?.owner_label ?? ""),
   decision_override: String((metaRow as any)?.decision_override ?? ""),
 });
+
+// Load bid workflow work items (unblock checklist uses these; does not change pipeline output)
+const { data: wiRows, error: wiErr } = await supabase
+  .from("job_work_items")
+  .select("job_id,type,ref_key,title,status,owner_label,due_at,notes,updated_at")
+  .eq("job_id", jobId)
+  .order("updated_at", { ascending: false });
+
+if (wiErr) console.warn(wiErr);
+setWorkItems((wiRows as any[]) ?? []);
+
 
 
 		// Read-only: fetch job events for trust + failure explanations
@@ -2827,12 +2846,12 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
 
           <div style="margin-top:12px" class="grid2">
             <div class="card" style="background:#fff">
-              <div class="subhead">Rationale snapshot</div>
+              <div class="subhead">Key considerations</div>
               ${rationaleLines}
             </div>
 
             <div class="card" style="background:#fff">
-              <div class="subhead">Recommended action</div>
+              <div class="subhead">Recommended focus now</div>
               <p style="margin:0;color:var(--ink)">${escapeHtml(recommendedAction)}</p>
               <p class="note" style="margin-top:10px">${escapeHtml(manualChecks)}</p>
               <p class="note" style="margin-top:8px">Tip: In the print dialog, choose “Save as PDF”. Disable “Headers and footers” to remove the URL/footer line.</p>
@@ -2979,10 +2998,12 @@ async function saveJobMetadata() {
     const supabase = supabaseBrowser();
 
     const deadlineIso = metaDraft.deadlineLocal ? new Date(metaDraft.deadlineLocal).toISOString() : null;
+    const targetDecisionIso = metaDraft.targetDecisionLocal ? new Date(metaDraft.targetDecisionLocal).toISOString() : null;
 
     const payload: any = {
       job_id: job.id,
       deadline_override: deadlineIso,
+      target_decision_at: targetDecisionIso,
       portal_url: metaDraft.portal_url.trim() || null,
       internal_bid_id: metaDraft.internal_bid_id.trim() || null,
       owner_label: metaDraft.owner_label.trim() || null,
@@ -2993,7 +3014,7 @@ async function saveJobMetadata() {
     const { data, error } = await supabase
       .from("job_metadata")
       .upsert(payload, { onConflict: "job_id" })
-      .select("job_id,deadline_override,portal_url,internal_bid_id,owner_label,decision_override,updated_at")
+      .select("job_id,deadline_override,target_decision_at,portal_url,internal_bid_id,owner_label,decision_override,updated_at")
       .maybeSingle();
 
     if (error) throw error;
@@ -3470,24 +3491,105 @@ async function saveJobMetadata() {
       {/* Blockers + Document review (kept in the same workspace grid dimensions as Action plan / Secondary risks) */}
       {showReady && !showFailed && !finalizingResults ? (
         <div className="mt-4 space-y-4">
-          {verdictState === "hold" && (mustItems ?? []).length > 0 ? (
+          {verdictState === "hold" ? (
             <Card className="rounded-2xl">
               <CardContent className="p-5">
-                <div className="rounded-xl border border-red-200 bg-red-50 p-4 space-y-2">
-                  <p className="text-xs font-semibold text-red-900">Blockers to resolve before bidding</p>
-                                          <p className="text-xs text-red-900/80">
-                                            Bid is possible only if these MUST gate-checks are satisfied or formally waived. Verify in the tender portal and original PDF.
-                                          </p>
-                                          <ul className="list-disc pl-5 text-xs text-red-900/80 space-y-1">
-                                            {(mustItems ?? []).slice(0, 3).map((t, i) => (
-                                              <li key={i}>{t}</li>
-                                            ))}
-                                          </ul>
-                                          <div className="pt-1">
-                                            <Button className="rounded-full" onClick={openRequirementsForVerification}>
-                                              Review MUST items
-                                            </Button>
-                                          </div>
+                <div className="rounded-xl border border-red-200 bg-red-50 p-4 space-y-3">
+                  <div className="space-y-1">
+                    <p className="text-xs font-semibold text-red-900">Hold: blocked pending verification</p>
+                    <p className="text-xs text-red-900/80">
+                      This is a temporary state. It does not mean the bid failed — it means key conditions must be verified before committing.
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg bg-white/60 dark:bg-zinc-950/40 p-3">
+                    <p className="text-xs font-semibold text-foreground/90">Why Hold</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{verdictDriverLine}</p>
+                  </div>
+
+                  <div className="rounded-lg bg-white/60 dark:bg-zinc-950/40 p-3 space-y-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-semibold text-foreground/90">Actions to clear Hold</p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+						  Complete these actions to exit Hold and finalize the Go/No-Go decision. Manage owner, status, and due date in the Bid Room.
+						</p>
+
+                      </div>
+                      <Link href={`/app/jobs/${jobId}/bid-room`} className="text-xs underline text-foreground/80 hover:text-foreground">
+                        Open Bid Room
+                      </Link>
+                    </div>
+
+                    {(() => {
+                      const open = (workItems ?? [])
+                        .filter((w: any) => String(w?.type ?? "").toLowerCase() === "requirement" || String(w?.type ?? "").toLowerCase() === "clarification")
+                        .filter((w: any) => String(w?.status ?? "").toLowerCase() !== "done");
+
+                      if (open.length === 0) {
+                        return (
+                          <div className="rounded-lg border bg-background/60 p-3">
+                            <p className="text-xs text-muted-foreground">
+							  No actions are tracked yet. Add the key verification tasks in the Bid Room so Hold has clear owners and due dates.
+							</p>
+
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div className="space-y-2">
+                          {open.slice(0, 8).map((w: any) => {
+                            const status = String(w?.status ?? "todo");
+                            const owner = String(w?.owner_label ?? "").trim() || "Unassigned";
+                            const due = w?.due_at ? new Date(String(w.due_at)) : null;
+                            const dueTxt = due && Number.isFinite(due.getTime()) ? due.toLocaleDateString() : "";
+                            return (
+                              <div key={`${String(w?.type)}:${String(w?.ref_key)}`} className="rounded-lg border bg-background/60 p-3">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <p className="text-xs font-medium text-foreground/90">{String(w?.title ?? "").trim() || "(Untitled)"}</p>
+                                  <span className="text-[11px] text-muted-foreground">
+                                    {owner}{dueTxt ? ` • due ${dueTxt}` : ""}{status ? ` • ${status}` : ""}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                          {open.length > 8 ? (
+                            <p className="text-[11px] text-muted-foreground">Showing 8 of {open.length}. Open the Bid Room to see all.</p>
+                          ) : null}
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  <div className="rounded-lg bg-white/60 dark:bg-zinc-950/40 p-3 space-y-2">
+                    <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <p className="text-xs font-semibold text-foreground/90">Target decision date</p>
+                        <p className="mt-1 text-xs text-muted-foreground">Set a realistic date for the Go/No-Go decision once unblock actions are completed.</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="datetime-local"
+                          className="rounded-xl"
+                          value={metaDraft.targetDecisionLocal}
+                          onChange={(e) => setMetaDraft((s) => ({ ...s, targetDecisionLocal: e.target.value }))}
+                        />
+                        <Button className="rounded-full" onClick={saveJobMetadata} disabled={savingMeta}>
+                          {savingMeta ? "Saving…" : "Save"}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {(mustItems ?? []).length > 0 ? (
+                    <div className="pt-1">
+                      <Button className="rounded-full" onClick={openRequirementsForVerification}>
+                        Review MUST items
+                      </Button>
+                    </div>
+                  ) : null}
                 </div>
               </CardContent>
             </Card>
@@ -3778,15 +3880,16 @@ async function saveJobMetadata() {
                     <div>
                       <p className="text-sm font-semibold">Executive summary</p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        Decision rationale and immediate next step.
-                      </p>
+						  Stakeholder context and recommended focus while on Hold.
+						</p>
+
                     </div>
                   </div>
 
                   <div className="mt-3 space-y-3">
                     
 <div className="rounded-xl border bg-background p-3">
-                      <p className="text-xs font-semibold">Rationale snapshot</p>
+                      <p className="text-xs font-semibold">Key considerations</p>
                       {rationaleDrivers?.length ? (
                         <ul className="mt-2 list-disc pl-5 space-y-1 text-sm text-foreground/80">
                           {rationaleDrivers.map((t, i) => (
@@ -3799,10 +3902,10 @@ async function saveJobMetadata() {
                     </div>
 
                     <div className="rounded-xl border bg-background p-3">
-                      <p className="text-xs font-semibold">Recommended action</p>
+                     <p className="text-xs font-semibold">Recommended focus now</p>
                       <p className="mt-2 text-sm text-foreground/80">
                         {verdictState === "hold"
-                          ? "Verify all mandatory requirements and submission conditions before investing in a full response."
+                          ? "Verify mandatory requirements and submission conditions to unblock the Go/No-Go decision."
                           : verdictState === "caution"
                           ? "Proceed, but validate the risks and any missing information before committing resources."
                           : "Proceed to bid. Confirm the deadline and submission method, then start drafting."}
