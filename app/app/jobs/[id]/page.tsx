@@ -4013,7 +4013,10 @@ async function saveJobMetadata() {
             Tender Outline
           </TabsTrigger>
           <TabsTrigger value="work" className="rounded-full">
-            Bid room
+            Bid room (work)
+          </TabsTrigger>
+          <TabsTrigger value="compliance" className="rounded-full">
+            Compliance (audit)
           </TabsTrigger>
           <TabsTrigger value="text" className="rounded-full">
             Source text
@@ -4294,6 +4297,33 @@ async function saveJobMetadata() {
             outlineSections={outlineSections}
             canDownload={canDownload}
           />
+        </TabsContent>
+
+        <TabsContent value="compliance">
+          <Card className="rounded-2xl">
+            <CardContent className="p-5 space-y-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold">Compliance matrix (audit lens)</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Requirements-only view to mark compliance status and where each requirement is addressed in the proposal. This does not change AI results.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button asChild variant="outline" className="rounded-full">
+                    <Link href={`/app/jobs/${jobId}/bid-room`}>Open bid room</Link>
+                  </Button>
+                  <Button asChild className="rounded-full">
+                    <Link href={`/app/jobs/${jobId}/compliance`}>Open compliance matrix</Link>
+                  </Button>
+                </div>
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                Evidence IDs are derived from extraction. Use the Job page evidence viewer to open authoritative excerpts (Locate in source is best-effort).
+              </p>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="text">

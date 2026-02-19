@@ -107,6 +107,7 @@ export default function JobBidRoomPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-lg font-semibold">Bid room</p>
+          <p className="mt-1 text-sm text-muted-foreground">Work view: assign owners, track tasks, and coordinate the bid.</p>
           <p className="mt-1 text-sm text-muted-foreground">
             {job?.file_name ? (
               <>
@@ -118,6 +119,9 @@ export default function JobBidRoomPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button asChild variant="outline" className="rounded-full">
+            <Link href={`/app/jobs/${jobId}/compliance`}>Compliance matrix</Link>
+          </Button>
           <Button asChild variant="outline" className="rounded-full">
             <Link href={`/app/jobs/${jobId}`}>Back to job</Link>
           </Button>

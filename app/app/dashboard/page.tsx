@@ -685,7 +685,7 @@ return {
           </Button>
 
           <Button asChild variant="outline" className="rounded-full">
-            <Link href="/app/bid-room">Global Bid Room</Link>
+            <Link href="/app/bid-room">Global bid room (work)</Link>
           </Button>
 
           <button
