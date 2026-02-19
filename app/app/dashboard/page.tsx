@@ -665,6 +665,10 @@ export default function DashboardPage() {
             <Link href="/app/jobs">Jobs</Link>
           </Button>
 
+          <Button asChild variant="outline" className="rounded-full">
+            <Link href="/app/bid-room">Global Bid Room</Link>
+          </Button>
+
           <button
             type="button"
             className="h-9 rounded-full border bg-background px-3 text-sm"

@@ -6,11 +6,11 @@ import { useParams, useRouter } from "next/navigation";
 
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { getJobDisplayName, setJobDisplayName, clearJobDisplayName } from "@/lib/pilot-job-names";
-import { stableRefKey } from "@/lib/bid-workflow/keys";
 
 import Checklist from "@/components/checklist/Checklist";
 import Risks from "@/components/risks/Risks";
 import BuyerQuestions from "@/components/questions/BuyerQuestions";
+import { BidRoomPanel } from "@/components/bidroom/BidRoomPanel";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -1311,10 +1311,7 @@ const [savingMeta, setSavingMeta] = useState(false);
 
   const [tab, setTab] = useState<"checklist" | "risks" | "questions" | "draft" | "text" | "work">("checklist");
 
-  // Collaboration layer (does NOT modify job_results; it only overlays assignments/status/notes)
-  const [workItems, setWorkItems] = useState<any[]>([]);
-  const [workSaving, setWorkSaving] = useState<string | null>(null);
-  const [workError, setWorkError] = useState<string | null>(null);
+  // Bid room overlay is handled via BidRoomPanel (job-level route + optional tab).
 
   function openRequirementsForVerification() {
     setTab("checklist");
@@ -1614,34 +1611,7 @@ setMetaDraft({
     };
   }, [jobId, invalidLink]);
 
-  // Load collaboration overlay (work items)
-  useEffect(() => {
-    if (invalidLink) return;
-    const supabase = supabaseBrowser();
-    let cancelled = false;
-
-    async function loadWork() {
-      setWorkError(null);
-      const { data, error } = await supabase
-        .from("job_work_items")
-        .select("*")
-        .eq("job_id", jobId)
-        .order("updated_at", { ascending: false });
-      if (cancelled) return;
-      if (error) {
-        console.warn("Failed to load work items", error);
-        setWorkError("Work items could not be loaded.");
-        setWorkItems([]);
-        return;
-      }
-      setWorkItems((data as any[]) ?? []);
-    }
-
-    loadWork();
-    return () => {
-      cancelled = true;
-    };
-  }, [jobId, invalidLink]);
+  // BidRoomPanel handles loading/saving work items.
 
   const showProgress = useMemo(() => {
     const s = job?.status;
@@ -1773,97 +1743,7 @@ setMetaDraft({
     return [] as Array<{ title: string; bullets: string[] }>;
   }, [result]);
 
-  const workBaseRows = useMemo(() => {
-    const rows: Array<{ type: "requirement" | "risk" | "clarification" | "outline"; ref_key: string; title: string; meta?: string }>=[];
-
-    for (const it of checklist ?? []) {
-      const kind = String((it as any)?.type ?? (it as any)?.level ?? (it as any)?.priority ?? "INFO").toUpperCase();
-      const text = String((it as any)?.text ?? (it as any)?.requirement ?? "").trim();
-      if (!text) continue;
-      const ref = stableRefKey({ jobId, type: "requirement", text, extra: kind });
-      rows.push({ type: "requirement", ref_key: ref, title: text, meta: kind });
-    }
-
-    for (const r of risks ?? []) {
-      const title = String((r as any)?.title ?? (r as any)?.text ?? (r as any)?.risk ?? "").trim();
-      const detail = String((r as any)?.detail ?? (r as any)?.description ?? (r as any)?.why ?? (r as any)?.impact ?? "").trim();
-      const sev = String((r as any)?.severity ?? (r as any)?.level ?? "medium").toLowerCase();
-      const text = title || detail;
-      if (!text) continue;
-      const ref = stableRefKey({ jobId, type: "risk", text, extra: sev });
-      rows.push({ type: "risk", ref_key: ref, title: title || detail, meta: sev });
-    }
-
-    for (const q of questions ?? []) {
-      const text = String(q ?? "").trim();
-      if (!text) continue;
-      const ref = stableRefKey({ jobId, type: "clarification", text });
-      rows.push({ type: "clarification", ref_key: ref, title: text });
-    }
-
-    for (const s of outlineSections ?? []) {
-      const ref = stableRefKey({ jobId, type: "outline", text: s.title });
-      rows.push({ type: "outline", ref_key: ref, title: s.title });
-    }
-
-    return rows;
-  }, [jobId, checklist, risks, questions, outlineSections]);
-
-  const workByKey = useMemo(() => {
-    const m = new Map<string, any>();
-    for (const w of workItems ?? []) {
-      const k = `${String(w?.type ?? "")}:${String(w?.ref_key ?? "")}`;
-      if (k.includes(":")) m.set(k, w);
-    }
-    return m;
-  }, [workItems]);
-
-  async function upsertWorkItem(input: {
-    type: "requirement" | "risk" | "clarification" | "outline";
-    ref_key: string;
-    title: string;
-    status?: string;
-    owner_label?: string;
-    due_at?: string | null;
-    notes?: string;
-  }) {
-    setWorkError(null);
-    setWorkSaving(`${input.type}:${input.ref_key}`);
-
-    try {
-      const supabase = supabaseBrowser();
-      const payload: any = {
-        job_id: jobId,
-        type: input.type,
-        ref_key: input.ref_key,
-        title: input.title,
-        status: input.status ?? "todo",
-        owner_label: input.owner_label ?? null,
-        due_at: input.due_at ? input.due_at : null,
-        notes: input.notes ?? null,
-      };
-
-      const { error } = await supabase
-        .from("job_work_items")
-        .upsert(payload, { onConflict: "job_id,type,ref_key" });
-      if (error) throw error;
-
-      // refresh
-      const { data, error: loadErr } = await supabase
-        .from("job_work_items")
-        .select("*")
-        .eq("job_id", jobId)
-        .order("updated_at", { ascending: false });
-
-      if (loadErr) throw loadErr;
-      setWorkItems((data as any[]) ?? []);
-    } catch (e) {
-      console.error(e);
-      setWorkError("Could not save changes.");
-    } finally {
-      setWorkSaving(null);
-    }
-  }
+  // BidRoomPanel derives the work rows and performs overlay upserts.
 
 
   const mustItems = useMemo(() => {
@@ -3271,6 +3151,10 @@ async function saveJobMetadata() {
             <Link href="/app/jobs">Back to jobs</Link>
           </Button>
 
+          <Button asChild className="rounded-full">
+            <Link href={`/app/jobs/${jobId}/bid-room`}>Open Bid Room</Link>
+          </Button>
+
           <Button
           variant="outline"
           className="rounded-full"
@@ -4299,228 +4183,14 @@ async function saveJobMetadata() {
         </TabsContent>
 
         <TabsContent value="work">
-          <Card className="rounded-2xl">
-            <CardContent className="p-5 space-y-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold">Bid room</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Assign owners, track status, and leave short notes. This overlays the evidence-first results (it does not change them).
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button
-                    variant="outline"
-                    className="rounded-full"
-                    onClick={async () => {
-                      try {
-                        const res = await fetch(`/api/jobs/${jobId}/export/bid-pack`, { method: "GET" });
-                        if (!res.ok) throw new Error(String(res.status));
-                        const blob = await res.blob();
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement("a");
-                        a.href = url;
-                        a.download = `TenderPilot_BidPack_${jobId}.xlsx`;
-                        document.body.appendChild(a);
-                        a.click();
-                        a.remove();
-                        URL.revokeObjectURL(url);
-                      } catch {
-                        setWorkError("Could not export the Bid Pack.");
-                      }
-                    }}
-                    disabled={!canDownload}
-                  >
-                    Export Bid Pack
-                  </Button>
-                </div>
-              </div>
-
-              {workError ? (
-                <div className="rounded-xl border border-red-200 bg-red-50 p-3">
-                  <p className="text-sm text-red-700">{workError}</p>
-                </div>
-              ) : null}
-
-              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <Badge variant="outline" className="rounded-full">
-                  Items: {workBaseRows.length}
-                </Badge>
-                <Badge variant="outline" className="rounded-full">
-                  Done: {workItems.filter((w) => String(w?.status ?? "") === "done").length}
-                </Badge>
-                <Badge variant="outline" className="rounded-full">
-                  Blocked: {workItems.filter((w) => String(w?.status ?? "") === "blocked").length}
-                </Badge>
-              </div>
-
-              <div className="rounded-xl border bg-background/60">
-                <div className="grid grid-cols-12 gap-2 border-b bg-background/60 p-2 text-[11px] font-medium text-muted-foreground">
-                  <div className="col-span-2">Type</div>
-                  <div className="col-span-5">Item</div>
-                  <div className="col-span-2">Owner</div>
-                  <div className="col-span-1">Status</div>
-                  <div className="col-span-1">Due</div>
-                  <div className="col-span-1">Notes</div>
-                </div>
-
-                <ScrollArea className="h-[520px]">
-                  <div className="divide-y">
-                    {workBaseRows.map((r) => {
-                      const key = `${r.type}:${r.ref_key}`;
-                      const w = workByKey.get(key);
-                      const status = String(w?.status ?? "todo");
-                      const owner = String(w?.owner_label ?? "");
-                      const due = w?.due_at ? String(w.due_at).slice(0, 10) : "";
-                      const notes = String(w?.notes ?? "");
-
-                      return (
-                        <div key={key} className="grid grid-cols-12 gap-2 p-2 text-sm">
-                          <div className="col-span-2">
-                            <p className="text-xs font-medium">
-                              {r.type}
-                              {r.meta ? <span className="text-muted-foreground"> • {r.meta}</span> : null}
-                            </p>
-                            <p className="mt-1 text-[10px] text-muted-foreground">{r.ref_key}</p>
-                          </div>
-
-                          <div className="col-span-5 min-w-0">
-                            <p className="text-sm text-foreground/90 break-words">{r.title}</p>
-                          </div>
-
-                          <div className="col-span-2">
-                            <Input
-                              value={owner}
-                              placeholder="e.g., Michela"
-                              className="h-8"
-                              onChange={(e) => {
-                                const v = e.target.value;
-                                // local-only update for instant feedback
-                                setWorkItems((prev) => {
-                                  const k = `${r.type}:${r.ref_key}`;
-                                  const next = [...prev];
-                                  const idx = next.findIndex((x) => `${x.type}:${x.ref_key}` === k);
-                                  if (idx >= 0) next[idx] = { ...next[idx], owner_label: v };
-                                  else next.unshift({ job_id: jobId, type: r.type, ref_key: r.ref_key, title: r.title, status, owner_label: v });
-                                  return next;
-                                });
-                              }}
-                              onBlur={async (e) => {
-                                await upsertWorkItem({
-                                  type: r.type,
-                                  ref_key: r.ref_key,
-                                  title: r.title,
-                                  status,
-                                  owner_label: e.target.value,
-                                  due_at: due || null,
-                                  notes,
-                                });
-                              }}
-                              disabled={workSaving === key}
-                            />
-                          </div>
-
-                          <div className="col-span-1">
-                            <select
-                              className="h-8 w-full rounded-md border bg-background px-2 text-sm"
-                              value={status}
-                              onChange={async (e) => {
-                                const v = e.target.value;
-                                await upsertWorkItem({
-                                  type: r.type,
-                                  ref_key: r.ref_key,
-                                  title: r.title,
-                                  status: v,
-                                  owner_label: owner,
-                                  due_at: due || null,
-                                  notes,
-                                });
-                              }}
-                              disabled={workSaving === key}
-                            >
-                              {[
-                                "todo",
-                                "in_progress",
-                                "done",
-                                "blocked",
-                                "rejected",
-                              ].map((s) => (
-                                <option key={s} value={s}>
-                                  {s}
-                                </option>
-                              ))}
-                            </select>
-                          </div>
-
-                          <div className="col-span-1">
-                            <Input
-                              type="date"
-                              value={due}
-                              className="h-8"
-                              onChange={(e) => {
-                                const v = e.target.value;
-                                setWorkItems((prev) => {
-                                  const k = `${r.type}:${r.ref_key}`;
-                                  const next = [...prev];
-                                  const idx = next.findIndex((x) => `${x.type}:${x.ref_key}` === k);
-                                  if (idx >= 0) next[idx] = { ...next[idx], due_at: v };
-                                  else next.unshift({ job_id: jobId, type: r.type, ref_key: r.ref_key, title: r.title, status, due_at: v });
-                                  return next;
-                                });
-                              }}
-                              onBlur={async (e) => {
-                                await upsertWorkItem({
-                                  type: r.type,
-                                  ref_key: r.ref_key,
-                                  title: r.title,
-                                  status,
-                                  owner_label: owner,
-                                  due_at: e.target.value || null,
-                                  notes,
-                                });
-                              }}
-                              disabled={workSaving === key}
-                            />
-                          </div>
-
-                          <div className="col-span-1">
-                            <Input
-                              value={notes}
-                              placeholder="Short note"
-                              className="h-8"
-                              onChange={(e) => {
-                                const v = e.target.value;
-                                setWorkItems((prev) => {
-                                  const k = `${r.type}:${r.ref_key}`;
-                                  const next = [...prev];
-                                  const idx = next.findIndex((x) => `${x.type}:${x.ref_key}` === k);
-                                  if (idx >= 0) next[idx] = { ...next[idx], notes: v };
-                                  else next.unshift({ job_id: jobId, type: r.type, ref_key: r.ref_key, title: r.title, status, notes: v });
-                                  return next;
-                                });
-                              }}
-                              onBlur={async (e) => {
-                                await upsertWorkItem({
-                                  type: r.type,
-                                  ref_key: r.ref_key,
-                                  title: r.title,
-                                  status,
-                                  owner_label: owner,
-                                  due_at: due || null,
-                                  notes: e.target.value,
-                                });
-                              }}
-                              disabled={workSaving === key}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </ScrollArea>
-              </div>
-            </CardContent>
-          </Card>
+          <BidRoomPanel
+            jobId={jobId}
+            checklist={checklist}
+            risks={risks}
+            questions={questions}
+            outlineSections={outlineSections}
+            canDownload={canDownload}
+          />
         </TabsContent>
 
         <TabsContent value="text">
