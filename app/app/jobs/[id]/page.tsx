@@ -3787,7 +3787,7 @@ async function saveJobMetadata() {
                                   className="rounded-full"
                                   onClick={() => showEvidenceByIds(ids, jumpText)}
                                 >
-                                  Open evidence
+                                 Open evidence excerpt
                                 </Button>
                               );
                             }
@@ -4302,7 +4302,7 @@ async function saveJobMetadata() {
               <CardContent className="p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-sm font-semibold">Evidence snippet</p>
+                    <p className="text-sm font-semibold">Evidence excerpt</p>
                     <p className="mt-1 text-sm text-muted-foreground">
                       {evidenceFocus.id ? (
                         <>ID: <span className="font-medium text-foreground">{evidenceFocus.id}</span></>
@@ -4377,7 +4377,7 @@ async function saveJobMetadata() {
                       <p className="mt-2 text-xs text-muted-foreground">{evidenceFocus.note}</p>
                     ) : (
                       <p className="mt-2 text-xs text-muted-foreground">
-                        Deterministic evidence-first view: this snippet is shown directly from the pipeline evidence map. Verify it in the original PDF.
+                        Excerpt is authoritative (from the pipeline evidence map). “Locate in source” is best-effort—verify in the original PDF.
                       </p>
                     )}
                   </div>
@@ -4429,12 +4429,12 @@ async function saveJobMetadata() {
                         }}
                         disabled={!extractedText}
                       >
-                        Locate in source
+                        Locate in source (best-effort)
                       </Button>
                     ) : null}
 
                     <Button variant="outline" className="rounded-full" onClick={() => setEvidenceFocus(null)}>
-                      Close excerpt
+                      Close
                     </Button>
                   </div>
                 </div>
@@ -4453,12 +4453,12 @@ async function saveJobMetadata() {
               <CardContent className="p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-sm font-semibold">Focused excerpt</p>
+                    <p className="text-sm font-semibold">Locate in source (best-effort)</p>
                     <p className="mt-1 text-sm text-muted-foreground">
                       Match for: <span className="font-medium text-foreground">{sourceFocus.query}</span>
                     </p>
                     <p className="mt-2 text-xs text-muted-foreground">
-                      Evidence highlights the matching line in the Source text below. Use it as a pointer only: locate the same clause in the original PDF (search the phrase) and verify the exact wording and formatting.
+                      This view highlights a best-effort match in the extracted Source text. Use it as a pointer only: locate the same clause in the original PDF (search the phrase) and verify the exact wording and formatting.
                     </p>
                   </div>
                   <div className="flex flex-col gap-2">

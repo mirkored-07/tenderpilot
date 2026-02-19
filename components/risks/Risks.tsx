@@ -443,7 +443,7 @@ export default function Risks({
                           className="rounded-full"
                           onClick={() => handleEvidence(r)}
                         >
-                          {onShowEvidence && (hasEvidence || !!activeId) ? "Open evidence" : "Locate in source"}
+                          {onShowEvidence && (hasEvidence || !!activeId) ? "Open evidence excerpt excerpt" : "Locate in source (best-effort)"}
                         </Button>
 
                         {/* Optional: keep a manual jump path even when evidence exists */}
@@ -454,7 +454,7 @@ export default function Risks({
                             className="rounded-full"
                             onClick={() => onJumpToSource(r.title)}
                           >
-                            Locate in source
+                            Locate in source (best-effort)
                           </Button>
                         ) : null}
                       </div>

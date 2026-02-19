@@ -398,7 +398,7 @@ export default function Checklist({ checklist, extractedText, onJumpToSource, on
                           Open evidence
                         </Button>
                         <Button type="button" variant="ghost" className="rounded-full" onClick={() => onJumpToSource(it.text)}>
-                          Locate in source
+                          Locate in source (best-effort)
                         </Button>
                       </div>
 
