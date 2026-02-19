@@ -53,22 +53,22 @@ type DbJobMetadata = {
 };
 
 function DecisionBadge({ raw }: { raw: string }) {
-  const t = String(raw ?? "").toLowerCase();
-  if (t.includes("no") || t.includes("do not") || t.includes("reject")) {
+  const b = decisionBucket(raw);
+  if (b === "no-go") {
     return (
       <Badge variant="destructive" className="rounded-full">
         No-Go
       </Badge>
     );
   }
-  if (t.includes("hold") || t.includes("caution") || t.includes("verify")) {
+  if (b === "hold") {
     return (
       <Badge variant="secondary" className="rounded-full">
         Hold
       </Badge>
     );
   }
-  if (t.includes("go") || t.includes("proceed")) {
+  if (b === "go") {
     return (
       <Badge variant="default" className="rounded-full">
         Go
@@ -82,11 +82,48 @@ function DecisionBadge({ raw }: { raw: string }) {
   );
 }
 
+function normalizeDecisionText(raw: string): string {
+  return String(raw ?? "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isUseExtractedDecisionOverride(v: unknown): boolean {
+  const t = String(v ?? "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // Treat sentinel UI values as "no override"
+  if (!t) return true;
+  if (t === "extracted") return true;
+  if (t.includes("use extracted")) return true;
+  if (t.includes("extracted decision")) return true;
+  if (t.startsWith("(") && t.includes("extracted")) return true;
+
+  return false;
+}
+
 function decisionBucket(raw: string): "go" | "hold" | "no-go" | "unknown" {
-  const t = String(raw ?? "").toLowerCase();
-  if (t.includes("no") || t.includes("do not") || t.includes("reject")) return "no-go";
-  if (t.includes("hold") || t.includes("caution") || t.includes("verify")) return "hold";
-  if (t.includes("go") || t.includes("proceed")) return "go";
+  const t = normalizeDecisionText(raw);
+
+  // Order matters: check no-go first so "go/no-go" doesn't classify as "go"
+  const isNoGo =
+    /\b(no[-\s]?go|nogo|do\s+not\s+(bid|proceed|submit)|not\s+(bid|proceed|submit)|reject|decline|withdraw)\b/.test(t);
+  if (isNoGo) return "no-go";
+
+  // Treat "Proceed with caution" as Hold (caution state)
+  const isHold =
+  /\b(hold|caution|clarif(y|ication)|verify|pending|tbd|conditional|depends|review)\b/.test(t) ||
+  t.includes("proceed with caution");
+if (isHold) return "hold";
+
+
+
+  const isGo = /\b(go|proceed|bid|submit)\b/.test(t);
+  if (isGo) return "go";
+
   return "unknown";
 }
 
@@ -318,9 +355,23 @@ export default function DashboardPage() {
       const deadline = meta?.deadline_override ? new Date(String(meta.deadline_override)) : extractedDeadline;
       const hasValidDeadline = !!deadline && Number.isFinite((deadline as Date).getTime());
 
-      const extractedDecisionText = String(exec?.verdict ?? exec?.decisionBadge ?? "").trim();
-      const decisionText = String(meta?.decision_override ?? extractedDecisionText).trim();
-      const bucket = decisionBucket(decisionText);
+     const extractedDecisionTextRaw = String(
+		  exec?.decisionBadge ?? exec?.decision ?? exec?.verdict ?? ""
+		).trim();
+
+		// Keep dashboard consistent with Job page: if AI did not provide a decision badge,
+		// the UI defaults to "Proceed with caution" (caution state), not "missing".
+		const extractedDecisionText = extractedDecisionTextRaw || "Proceed with caution";
+
+
+
+	const overrideRaw = meta?.decision_override;
+	const decisionText = isUseExtractedDecisionOverride(overrideRaw)
+	  ? extractedDecisionText
+	  : String(overrideRaw ?? "").trim();
+
+	const bucket = decisionBucket(decisionText);
+
 
       const deadlineText = meta?.deadline_override ? String(meta.deadline_override) : extractedDeadlineText;
 
@@ -353,22 +404,6 @@ export default function DashboardPage() {
       };
     });
   }, [jobs, jobResults, jobMeta, workItems]);
-
-  const totals = useMemo(() => {
-    const missingDeadline = dashboardRows.filter((r) => r.missingDeadline).length;
-    const missingDecision = dashboardRows.filter((r) => r.missingDecision).length;
-    const blockedItems = dashboardRows.reduce((s, r) => s + r.blocked, 0);
-    const totalWork = dashboardRows.reduce((s, r) => s + r.total, 0);
-    const doneWork = dashboardRows.reduce((s, r) => s + r.done, 0);
-    return { missingDeadline, missingDecision, blockedItems, totalWork, doneWork };
-  }, [dashboardRows]);
-
-  const decisionBuckets = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const r of dashboardRows) m.set(r.decisionBucket, (m.get(r.decisionBucket) || 0) + 1);
-    return m;
-  }, [dashboardRows]);
-
   const workloadByOwner = useMemo(() => {
     const m = new Map<string, { total: number; blocked: number; overdue: number }>();
     const now = new Date();
@@ -414,6 +449,22 @@ export default function DashboardPage() {
       return hasOwner || hasMetaOwner;
     });
   }, [dashboardRows, workItems, decisionFilter, ownerFilter, jobMeta]);
+
+
+  const kpiTotals = useMemo(() => {
+    const missingDeadline = filteredRows.filter((r) => r.missingDeadline).length;
+    const missingDecision = filteredRows.filter((r) => r.missingDecision).length;
+    const blockedItems = filteredRows.reduce((s, r) => s + r.blocked, 0);
+    const totalWork = filteredRows.reduce((s, r) => s + r.total, 0);
+    const doneWork = filteredRows.reduce((s, r) => s + r.done, 0);
+    return { missingDeadline, missingDecision, blockedItems, totalWork, doneWork };
+  }, [filteredRows]);
+
+  const kpiDecisionBuckets = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const r of filteredRows) m.set(r.decisionBucket, (m.get(r.decisionBucket) || 0) + 1);
+    return m;
+  }, [filteredRows]);
 
   const standupQueues = useMemo(() => {
     const now = new Date();
@@ -647,8 +698,8 @@ export default function DashboardPage() {
 
             {(() => {
               const total = filteredRows.length;
-              const missDecision = totals.missingDecision;
-              const missDeadline = totals.missingDeadline;
+              const missDecision = kpiTotals.missingDecision;
+              const missDeadline = kpiTotals.missingDeadline;
 
               const bothMissing = filteredRows.filter((r) => r.missingDecision && r.missingDeadline).length;
               const decisionOnly = Math.max(0, missDecision - bothMissing);
@@ -680,6 +731,8 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
+                  <p className="mt-2 text-xs text-muted-foreground">Deadline/decision from AI extraction unless overridden.</p>
+
                   <p className="mt-3 text-xs text-muted-foreground">
                     Ready {ready} • Missing decision {missDecision} • Missing deadline {missDeadline}
                   </p>
@@ -694,9 +747,9 @@ export default function DashboardPage() {
             <p className="text-sm font-semibold">Execution</p>
 
             {(() => {
-              const total = totals.totalWork;
-              const done = totals.doneWork;
-              const blocked = totals.blockedItems;
+              const total = kpiTotals.totalWork;
+              const done = kpiTotals.doneWork;
+              const blocked = kpiTotals.blockedItems;
               const open = Math.max(0, total - done);
               const openNonBlocked = Math.max(0, open - blocked);
 
@@ -724,6 +777,8 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
+                  <p className="mt-2 text-xs text-muted-foreground">Based on team work items.</p>
+
                   <p className="mt-3 text-xs text-muted-foreground">
                     {done} done • {open} open • {blocked} blocked
                   </p>
@@ -738,10 +793,10 @@ export default function DashboardPage() {
             <p className="text-sm font-semibold">Decisions</p>
 
             {(() => {
-              const go = decisionBuckets.get("go") || 0;
-              const hold = decisionBuckets.get("hold") || 0;
-              const nogo = decisionBuckets.get("no-go") || 0;
-              const unknown = decisionBuckets.get("unknown") || 0;
+              const go = kpiDecisionBuckets.get("go") || 0;
+              const hold = kpiDecisionBuckets.get("hold") || 0;
+              const nogo = kpiDecisionBuckets.get("no-go") || 0;
+              const unknown = kpiDecisionBuckets.get("unknown") || 0;
 
               const decided = go + hold + nogo;
               const total = decided + unknown;
@@ -770,8 +825,10 @@ export default function DashboardPage() {
                     </div>
                   </div>
 
+                  <p className="mt-2 text-xs text-muted-foreground">AI suggestion unless overridden by team decision.</p>
+
                   <p className="mt-3 text-xs text-muted-foreground">
-                    Go {go} • Hold {hold} • No-Go {nogo} • Missing {totals.missingDecision}
+                    Go {go} • Hold {hold} • No-Go {nogo} • Missing {kpiTotals.missingDecision}
                   </p>
                 </>
               );
