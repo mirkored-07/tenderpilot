@@ -15,6 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ArrowLeft, MoreHorizontal } from "lucide-react";
 
 type JobStatus = "queued" | "processing" | "done" | "failed";
 
@@ -3162,14 +3163,23 @@ async function saveJobMetadata() {
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <Button asChild variant="outline" className="rounded-full">
-            <Link href="/app/jobs">Back to jobs</Link>
+          <Button asChild variant="ghost" className="h-9 rounded-full px-3">
+            <Link href="/app/jobs" className="inline-flex items-center gap-2">
+              <ArrowLeft className="h-4 w-4" />
+              <span>Back</span>
+            </Link>
           </Button>
 
-           <DropdownMenu>
+          <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="rounded-full" disabled={exporting !== null}>
-                Actions
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 rounded-full"
+                disabled={exporting !== null}
+                aria-label="Actions"
+              >
+                <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
 
@@ -3317,8 +3327,8 @@ async function saveJobMetadata() {
 
       
             {/* Decision cockpit */}
-      <Card className="rounded-3xl border border-black/5 bg-white shadow-sm">
-        <CardContent className="p-6 md:p-8">
+      <Card className="rounded-3xl border border-border bg-card/80 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/70">
+        <CardContent className="p-7 md:p-10">
           <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
             <div className="min-w-0 flex-1">
               <p className="text-xs font-medium text-muted-foreground">Decision</p>
@@ -3345,7 +3355,7 @@ async function saveJobMetadata() {
                   <p className="mt-3 text-sm text-muted-foreground">Results are still being written. Refresh in a moment if needed.</p>
                 </div>
               ) : (
-                <div className="mt-3 space-y-4">
+                <div className="mt-3 space-y-5">
                   <div className="flex flex-col gap-3">
                     <div className="flex flex-wrap items-center gap-3">
                       <div
@@ -3370,7 +3380,7 @@ async function saveJobMetadata() {
                   </div>
 
                   {verdictState === "hold" && (mustItems ?? []).length ? (
-                    <div className="rounded-2xl border border-rose-100 bg-rose-50/50 p-4">
+                    <div className="rounded-2xl border border-rose-200/40 bg-rose-500/5 p-4">
                       <p className="text-xs font-semibold text-rose-900">Top blockers</p>
                       <ul className="mt-2 space-y-2 text-sm text-rose-950/90">
                         {(mustItems ?? []).slice(0, 3).map((t, i) => (
@@ -3393,8 +3403,8 @@ async function saveJobMetadata() {
       </Card>
 
       {showReady && !showFailed && !finalizingResults ? (
-        <Card id="decision-drivers" className="rounded-3xl border border-black/5 bg-white shadow-sm">
-          <CardContent className="p-6 md:p-8">
+        <Card id="decision-drivers" className="rounded-3xl border border-border bg-card/80 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/70">
+          <CardContent className="p-7 md:p-10">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-sm font-semibold">Decision drivers</p>
@@ -3405,13 +3415,13 @@ async function saveJobMetadata() {
               </div>
             </div>
 
-            <div className="mt-5 grid gap-4 md:grid-cols-3">
-              <div className="rounded-2xl border bg-background p-4">
+            <div className="mt-6 grid gap-5 md:grid-cols-3">
+              <div className="rounded-2xl border border-border bg-muted/30 p-4">
                 <p className="text-xs font-semibold">Blockers</p>
                 {(mustItems ?? []).length ? (
                   <div className="mt-3 space-y-2">
                     {(mustItems ?? []).slice(0, 5).map((t, i) => (
-                      <div key={i} className="rounded-xl border bg-background p-3">
+                      <div key={i} className="rounded-xl border border-border bg-card p-3">
                         <p className="text-sm text-foreground/80 leading-relaxed">• {t}</p>
                         <div className="mt-2 flex justify-end">
                           <Button
@@ -3432,7 +3442,7 @@ async function saveJobMetadata() {
                 )}
               </div>
 
-              <div className="rounded-2xl border bg-background p-4">
+              <div className="rounded-2xl border border-border bg-muted/30 p-4">
                 <p className="text-xs font-semibold">Strategic risks</p>
                 {(executive?.topRisks ?? []).length ? (
                   <ul className="mt-3 space-y-2 text-sm text-foreground/80">
@@ -3445,7 +3455,7 @@ async function saveJobMetadata() {
                 )}
               </div>
 
-              <div className="rounded-2xl border bg-background p-4">
+              <div className="rounded-2xl border border-border bg-muted/30 p-4">
                 <p className="text-xs font-semibold">Immediate actions</p>
                 {(nextActionsForUi ?? []).length ? (
                   <ul className="mt-3 space-y-2 text-sm text-foreground/80">
@@ -3461,9 +3471,9 @@ async function saveJobMetadata() {
 
             <div className="mt-5">
 {showUnknownsSection ? (
-                  <div className="rounded-xl border bg-background p-3 space-y-2">
+                  <div className="rounded-xl border border-border bg-muted/30 p-3 space-y-2">
                     {(questions ?? []).slice(0, 5).map((q, i) => (
-                      <div key={i} className="flex items-start justify-between gap-3 rounded-lg border bg-background p-3">
+                      <div key={i} className="flex items-start justify-between gap-3 rounded-lg border border-border bg-card p-3">
                         <div className="min-w-0">
                           <p className="text-sm text-foreground/90">{q}</p>
                           <p className="mt-1 text-[11px] text-muted-foreground">{classifyClarification(q).hint}</p>
@@ -3506,8 +3516,8 @@ async function saveJobMetadata() {
         </Card>
       ) : null}
 
-      <Card className="rounded-3xl border border-black/5 bg-white shadow-sm">
-        <CardContent className="p-6 md:p-8">
+      <Card className="rounded-3xl border border-border bg-card/80 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/70">
+        <CardContent className="p-7 md:p-10">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm font-semibold">Evidence & Source</p>
