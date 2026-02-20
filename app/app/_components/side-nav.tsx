@@ -45,7 +45,7 @@ export function SideNav() {
                     "flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition-all",
                     "hover:bg-white/10 hover:text-white",
                     active
-                      ? "bg-muted text-foreground shadow-sm ring-1 ring-border"
+                      ? "bg-white/12 text-white shadow-sm ring-1 ring-white/15"
                       : "text-white/70"
                   )}
                 >

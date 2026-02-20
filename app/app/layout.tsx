@@ -15,10 +15,10 @@ import { TelemetryInit } from "./_components/telemetry-init";
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-background overflow-x-hidden">
+    <div className="min-h-screen aurora-bg overflow-x-hidden">
       <TelemetryInit />
       <div className="grid min-h-screen grid-cols-1 md:grid-cols-[280px_1fr]">
-        <aside className="hidden md:flex flex-col bg-gradient-to-b from-purple-600 to-indigo-700 text-white">
+        <aside className="hidden md:flex flex-col bg-gradient-to-b from-teal-600 via-cyan-700 to-sky-800 text-white">
           <div className="h-16 px-6 flex items-center justify-between">
             <Link href="/app/jobs" className="font-semibold text-lg tracking-tight">
               TenderPilot
@@ -46,7 +46,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         </aside>
 
         <div className="flex flex-col">
-          <header className="h-16 border-b bg-white/80 dark:bg-background/80 backdrop-blur flex items-center justify-between px-4 md:px-8">
+          <header className="h-16 border-b border-border bg-background/70 backdrop-blur flex items-center justify-between px-4 md:px-8">
             <div className="flex items-center gap-3">
               <div className="md:hidden font-semibold">TenderPilot</div>
               <div>
@@ -59,7 +59,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
             <DropdownMenu>
               <DropdownMenuTrigger className="outline-none">
-                <div className="flex items-center gap-2 rounded-full border border-black/5 bg-white/70 dark:bg-zinc-900/50 px-2 py-1.5 shadow-sm backdrop-blur hover:opacity-90 transition">
+                <div className="flex items-center gap-2 rounded-full border border-border bg-card/70 px-2 py-1.5 shadow-sm backdrop-blur hover:opacity-90 transition">
                   <Avatar className="h-7 w-7">
                     <AvatarFallback>TP</AvatarFallback>
                   </Avatar>
