@@ -1311,11 +1311,7 @@ const [savingMeta, setSavingMeta] = useState(false);
 
 	const [tab, setTab] = useState<AnalysisTab>("text");
 
-
-
   // Bid room overlay is handled via BidRoomPanel (job-level route + optional tab).
-
-
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
 
   const [displayName, setDisplayNameState] = useState<string>("");
@@ -1337,7 +1333,6 @@ const [savingMeta, setSavingMeta] = useState(false);
 
   const [exporting, setExporting] = useState<null | "summary" | "brief" | "xlsx">(null);
 
-  const [showAllBlockers, setShowAllBlockers] = useState(false);
   const [showAllDrivers, setShowAllDrivers] = useState(false);
   const [showRisksSection, setShowRisksSection] = useState(false);
   const [showUnknownsSection, setShowUnknownsSection] = useState(false);
@@ -3146,10 +3141,6 @@ async function saveJobMetadata() {
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="truncate text-2xl font-semibold tracking-tight">{displayName || job?.file_name || "Tender review"}</h1>
 
-            <Button variant="outline" className="rounded-full" onClick={() => setRenaming(true)} disabled={!job || showProgress}>
-              Rename
-            </Button>
-
             {(job?.status === "queued" || job?.status === "processing") && (
               <Button variant="secondary" className="rounded-full" onClick={triggerProcessingOnce} disabled={!job}>
                 Retry processing
@@ -3175,11 +3166,7 @@ async function saveJobMetadata() {
             <Link href="/app/jobs">Back to jobs</Link>
           </Button>
 
-          <Button asChild className="rounded-full">
-		  <Link href={`/app/jobs/${jobId}/bid-room`}>Open Workspace</Link>
-		</Button>
-
-          <DropdownMenu>
+           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="rounded-full" disabled={exporting !== null}>
                 Actions
@@ -3187,6 +3174,19 @@ async function saveJobMetadata() {
             </DropdownMenuTrigger>
 
             <DropdownMenuContent align="end" className="min-w-[240px]">
+              <DropdownMenuItem
+                disabled={!job || showProgress}
+                onSelect={(e) => {
+                  e.preventDefault();
+                  if (!job || showProgress) return;
+                  setRenaming(true);
+                }}
+              >
+                Rename
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+
               <DropdownMenuItem
                 disabled={!canDownload || exporting !== null}
                 onSelect={async (e) => {
@@ -3401,9 +3401,7 @@ async function saveJobMetadata() {
                 <p className="mt-1 text-xs text-muted-foreground">Structured drivers only. Verify using Evidence & Source.</p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                 <Button asChild variant="outline" className="rounded-full">
-                  <Link href={`/app/jobs/${jobId}/bid-room`}>Work in Workspace</Link>
-                </Button>
+                
               </div>
             </div>
 
