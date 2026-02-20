@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { AuthGate } from "./_components/auth-gate";
 import Link from "next/link";
 import { Separator } from "@/components/ui/separator";
@@ -12,24 +13,24 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { SideNav } from "./_components/side-nav";
 import { TelemetryInit } from "./_components/telemetry-init";
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+export default function AppLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-background aurora-bg selection:bg-blue-500/30 overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-background overflow-x-hidden">
       <TelemetryInit />
       <div className="grid min-h-screen grid-cols-1 md:grid-cols-[280px_1fr]">
-        <aside className="hidden md:flex flex-col border-r border-white/5 bg-background/70 backdrop-blur-xl">
+        <aside className="hidden md:flex flex-col bg-gradient-to-b from-purple-600 to-indigo-700 text-white">
           <div className="h-16 px-6 flex items-center justify-between">
             <Link href="/app/jobs" className="font-semibold text-lg tracking-tight">
               TenderPilot
             </Link>
           </div>
 
-          <Separator />
+          <Separator className="bg-white/15" />
 
           <SideNav />
 
           <div className="mt-auto p-4">
-            <div className="rounded-2xl glass-card p-4">
+            <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15">
               <p className="text-xs text-muted-foreground">Credits</p>
               <div className="mt-2 flex items-center justify-between">
                 <Badge variant="secondary" className="rounded-full">
@@ -45,7 +46,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </aside>
 
         <div className="flex flex-col">
-          <header className="h-16 border-b border-white/5 bg-background/90 backdrop-blur-xl flex items-center justify-between px-4 md:px-8">
+          <header className="h-16 border-b bg-white/80 dark:bg-background/80 backdrop-blur flex items-center justify-between px-4 md:px-8">
             <div className="flex items-center gap-3">
               <div className="md:hidden font-semibold">TenderPilot</div>
               <div>
@@ -58,7 +59,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
             <DropdownMenu>
               <DropdownMenuTrigger className="outline-none">
-                <div className="flex items-center gap-2 rounded-full border border-white/10 bg-background/70 dark:bg-zinc-900/50 px-2 py-1.5 shadow-sm backdrop-blur-md hover:opacity-90 transition">
+                <div className="flex items-center gap-2 rounded-full border border-black/5 bg-white/70 dark:bg-zinc-900/50 px-2 py-1.5 shadow-sm backdrop-blur hover:opacity-90 transition">
                   <Avatar className="h-7 w-7">
                     <AvatarFallback>TP</AvatarFallback>
                   </Avatar>

@@ -7,11 +7,6 @@ import { useParams, useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { getJobDisplayName, setJobDisplayName, clearJobDisplayName } from "@/lib/pilot-job-names";
 
-import Checklist from "@/components/checklist/Checklist";
-import Risks from "@/components/risks/Risks";
-import BuyerQuestions from "@/components/questions/BuyerQuestions";
-import { BidRoomPanel } from "@/components/bidroom/BidRoomPanel";
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -93,6 +88,8 @@ type DbJobMetadata = {
 
 
 type VerdictState = "proceed" | "caution" | "hold";
+type AnalysisTab = "text";
+
 
 /** UI safety: cap initial source-text render to avoid freezing on huge extractions */
 const SOURCE_TEXT_PREVIEW_LIMIT = 20_000;
@@ -1312,7 +1309,9 @@ const [savingMeta, setSavingMeta] = useState(false);
   const [polling, setPolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [tab, setTab] = useState<"checklist" | "risks" | "questions" | "draft" | "text" | "work">("checklist");
+	const [tab, setTab] = useState<AnalysisTab>("text");
+
+
 
   // Bid room overlay is handled via BidRoomPanel (job-level route + optional tab).
 
@@ -1331,10 +1330,15 @@ const [savingMeta, setSavingMeta] = useState(false);
 
   const [sourceFocus, setSourceFocus] = useState<{ query: string; snippet: string; idx: number | null; highlightStart: number | null; highlightEnd: number | null } | null>(null);
 
+
+  const [sourceQuery, setSourceQuery] = useState("");
+
   const [evidenceFocus, setEvidenceFocus] = useState<EvidenceFocus | null>(null);
 
   /** UI safety state for very large extracted text */
   const [showFullSourceText, setShowFullSourceText] = useState(false);
+
+  const [showReferenceText, setShowReferenceText] = useState(false);
 
   const [exporting, setExporting] = useState<null | "summary" | "brief" | "xlsx">(null);
 
@@ -1853,7 +1857,7 @@ function showEvidenceByIds(evidenceIds: string[] | undefined, fallbackQuery: str
 
     // Evidence-first UX:
     // Open Source text AND immediately jump/highlight using the candidate excerpt (deterministic).
-    openTabAndScroll("text");
+    openTabAndScroll();
 
     if (excerpt) {
       // Defer one tick so the tab state + DOM are ready before scrolling
@@ -1884,7 +1888,7 @@ function showEvidenceByIds(evidenceIds: string[] | undefined, fallbackQuery: str
   }
 
   // No candidate excerpt to jump to → still open Source text so the user can search manually.
-  openTabAndScroll("text");
+  openTabAndScroll();
 }
 
 
@@ -2430,12 +2434,14 @@ const executive = useMemo(() => {
     setRenaming(false);
   }
 
-  function openTabAndScroll(next: "checklist" | "risks" | "questions" | "draft" | "text") {
-  setTab(next);
+  function openTabAndScroll() {
+  setTab("text");
+  setShowReferenceText(true);
   requestAnimationFrame(() => {
     tabsTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 }
+
 
 
 
@@ -2454,7 +2460,7 @@ const executive = useMemo(() => {
         highlightStart: null,
         highlightEnd: null,
       });
-      openTabAndScroll("text");
+      openTabAndScroll();
       return;
     }
 
@@ -2470,7 +2476,7 @@ const executive = useMemo(() => {
       highlightEnd: idx + marker.length,
     });
 
-    openTabAndScroll("text");
+    openTabAndScroll();
   }
 
 
@@ -2519,7 +2525,7 @@ const executive = useMemo(() => {
           highlightStart: null,
           highlightEnd: null,
         });
-        openTabAndScroll("text");
+        openTabAndScroll();
         return;
       }
     }
@@ -2532,7 +2538,7 @@ const executive = useMemo(() => {
         ? "No exact supporting clause found for this item in the extracted text. Verify in the original PDF / tender portal."
         : "Exact match not found in extracted text (OCR/layout differences are common). Use the evidence snippet above and search the phrase in the original PDF.";
       setSourceFocus({ query: displayQuery, snippet: msg, idx: null, highlightStart: null, highlightEnd: null });
-      openTabAndScroll("text");
+      openTabAndScroll();
       return;
     }
 
@@ -2548,7 +2554,7 @@ const executive = useMemo(() => {
       highlightEnd: match.highlightEnd,
     });
 
-    openTabAndScroll("text");
+    openTabAndScroll();
   }
 
   // Auto-scroll the Source text viewport to the matched location when opening the tab
@@ -3173,50 +3179,47 @@ async function saveJobMetadata() {
           </Button>
 
           <Button asChild className="rounded-full">
-            <Link href={`/app/jobs/${jobId}/bid-room`}>Open Bid Room</Link>
-          </Button>
+		  <Link href={`/app/jobs/${jobId}/bid-room`}>Open Workspace</Link>
+		</Button>
 
-          <Button
-          variant="outline"
-          className="rounded-full"
-          onClick={async () => {
-            if (!canDownload) return;
-            setExporting("brief");
-            try {
-              await exportTenderBriefPdf();
-            } finally {
-              setExporting(null);
-            }
-          }}
-          disabled={!canDownload || exporting !== null}
-        >
-          {exporting === "brief" ? "Preparing…" : "Export tender brief PDF"}
-        </Button>
-
-        <Button
-          variant="outline"
-          className="rounded-full"
-          onClick={async () => {
-            if (!canDownload) return;
-            setExporting("xlsx");
-            try {
-              await exportBidPackXlsx();
-            } finally {
-              setExporting(null);
-            }
-          }}
-          disabled={!canDownload || exporting !== null}
-        >
-          {exporting === "xlsx" ? "Preparing…" : "Export Bid Pack (Excel)"}
-        </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="rounded-full" disabled={!canDownload || exporting !== null}>
-                More exports
+                Exports
               </Button>
             </DropdownMenuTrigger>
 
             <DropdownMenuContent align="end">
+						  <DropdownMenuItem
+				onSelect={async (e) => {
+				  e.preventDefault();
+				  if (!canDownload || exporting !== null) return;
+				  setExporting("brief");
+				  try {
+					await exportTenderBriefPdf();
+				  } finally {
+					setExporting(null);
+				  }
+				}}
+			  >
+				{exporting === "brief" ? "Preparing…" : "Export tender brief PDF"}
+			  </DropdownMenuItem>
+
+			  <DropdownMenuItem
+				onSelect={async (e) => {
+				  e.preventDefault();
+				  if (!canDownload || exporting !== null) return;
+				  setExporting("xlsx");
+				  try {
+					await exportBidPackXlsx();
+				  } finally {
+					setExporting(null);
+				  }
+				}}
+			  >
+				{exporting === "xlsx" ? "Preparing…" : "Export Bid Pack (Excel)"}
+			  </DropdownMenuItem>
+
               <DropdownMenuItem
                 onSelect={(e) => {
                   e.preventDefault();
@@ -3285,135 +3288,8 @@ async function saveJobMetadata() {
           </Button>
         </div>
       </div>
-{/* Bid metadata (manual overlay) */}
 
-<Card className="rounded-2xl">
-  <CardContent className="p-4">
-    <div className="flex flex-wrap items-start justify-between gap-3">
-      <button
-        type="button"
-        className="text-left"
-        onClick={() => setMetaOpen((v) => !v)}
-        aria-expanded={metaOpen}
-      >
-        <p className="text-sm font-medium flex items-center gap-2">
-          Bid metadata
-          <span className="text-xs text-muted-foreground">{metaOpen ? "▲" : "▼"}</span>
-        </p>
-
-        {/* Collapsed summary (always visible) */}
-        <div className="mt-1 text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-1">
-          <span>
-            Deadline:{" "}
-            {jobMeta?.deadline_override
-              ? new Date(jobMeta.deadline_override).toLocaleString()
-              : metaDraft.deadlineLocal
-              ? "(unsaved)"
-              : "Unknown"}
-          </span>
-          <span>
-            Decision:{" "}
-            {metaDraft.decision_override
-              ? metaDraft.decision_override
-              : jobMeta?.decision_override
-              ? jobMeta.decision_override
-              : "Extracted"}
-          </span>
-          <span>
-            Owner:{" "}
-            {metaDraft.owner_label?.trim()
-              ? metaDraft.owner_label.trim()
-              : jobMeta?.owner_label?.trim()
-              ? jobMeta.owner_label.trim()
-              : "—"}
-          </span>
-          <span>
-            Portal:{" "}
-            {(metaDraft.portal_url?.trim() || jobMeta?.portal_url?.trim()) ? "set" : "—"}
-          </span>
-        </div>
-
-        <p className="mt-1 text-xs text-muted-foreground">
-          Manual overlays for deadline and bid context. This does not change the evidence-first results.
-        </p>
-      </button>
-
-      {/* Keep Save always accessible */}
-      <Button
-        variant="outline"
-        className="rounded-full"
-        onClick={saveJobMetadata}
-        disabled={!job || savingMeta}
-      >
-        {savingMeta ? "Saving…" : "Save"}
-      </Button>
-    </div>
-
-    {/* Expanded form */}
-    {metaOpen && (
-      <>
-        <div className="mt-4 grid gap-3 md:grid-cols-2">
-          <div className="space-y-1">
-            <p className="text-xs text-muted-foreground">Submission deadline override</p>
-            <Input
-              type="datetime-local"
-              value={metaDraft.deadlineLocal}
-              onChange={(e) => setMetaDraft((s) => ({ ...s, deadlineLocal: e.target.value }))}
-            />
-          </div>
-
-          <div className="space-y-1">
-            <p className="text-xs text-muted-foreground">Decision override</p>
-            <select
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-              value={metaDraft.decision_override}
-              onChange={(e) => setMetaDraft((s) => ({ ...s, decision_override: e.target.value }))}
-            >
-              <option value="">(use extracted decision)</option>
-              <option value="Go">Go</option>
-              <option value="Hold">Hold</option>
-              <option value="No-Go">No-Go</option>
-            </select>
-          </div>
-
-          <div className="space-y-1">
-            <p className="text-xs text-muted-foreground">Portal / tender link</p>
-            <Input
-              value={metaDraft.portal_url}
-              onChange={(e) => setMetaDraft((s) => ({ ...s, portal_url: e.target.value }))}
-              placeholder="https://…"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <p className="text-xs text-muted-foreground">Internal bid ID</p>
-            <Input
-              value={metaDraft.internal_bid_id}
-              onChange={(e) => setMetaDraft((s) => ({ ...s, internal_bid_id: e.target.value }))}
-              placeholder="e.g. BID-2026-017"
-            />
-          </div>
-
-          <div className="space-y-1 md:col-span-2">
-            <p className="text-xs text-muted-foreground">Owner label</p>
-            <Input
-              value={metaDraft.owner_label}
-              onChange={(e) => setMetaDraft((s) => ({ ...s, owner_label: e.target.value }))}
-              placeholder="e.g. Michela"
-            />
-          </div>
-        </div>
-
-        <p className="mt-3 text-xs text-muted-foreground">
-          {jobMeta?.updated_at ? `Last saved: ${new Date(jobMeta.updated_at).toLocaleString()}` : "Not saved yet."}
-        </p>
-      </>
-    )}
-  </CardContent>
-</Card>
-
-
-      {error ? (
+{error ? (
         <Card className="rounded-2xl border-red-200 bg-red-50">
           <CardContent className="p-4">
             <p className="text-sm text-red-700">{error}</p>
@@ -3426,406 +3302,156 @@ async function saveJobMetadata() {
 
 
       
-      {/* Decision (Go/No-Go) — decision-first layout */}
-      <Card className="rounded-2xl border border-white/10 bg-background/70 dark:bg-zinc-900/50 backdrop-blur-xl">
-        <CardContent className="p-6">
-          <div className="rounded-xl bg-background/90 dark:bg-zinc-950/70 ring-1 ring-black/5 dark:ring-white/10 p-5">
-            <div className="flex flex-col gap-4 md:flex-row md:items-stretch md:justify-between md:gap-6">
-              {/* Left column should fill available space and keep breathing room from the deadline card */}
-              <div className="min-w-0 flex-1 space-y-2 md:pr-4">
-                <p className="text-sm font-semibold">Go/No-Go</p>
+            {/* Decision cockpit */}
+      <Card className="rounded-3xl border border-black/5 bg-white shadow-sm">
+        <CardContent className="p-6 md:p-8">
+          <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-medium text-muted-foreground">Decision</p>
 
-                {showFailed ? (
-                  <>
-                    <p className="text-sm text-foreground/80">This tender review could not be completed.</p>
-                    <p className="text-xs text-muted-foreground">Re-upload the tender document or try again.</p>
-                  </>
-                ) : !showReady ? (
-                  <>
-                    <p className="text-sm text-foreground/80">Preparing decision support for this tender…</p>
-                    <p className="text-xs text-muted-foreground">This page updates automatically while processing.</p>
-                  </>
-                ) : finalizingResults ? (
-                  <>
-                    <p className="text-sm text-foreground/80">Finalizing results…</p>
-                    <p className="text-xs text-muted-foreground">Results are still being written. Refresh in a moment if needed.</p>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <VerdictBadge state={verdictState} />
-                      <p className="text-sm text-foreground/80">{verdictMicrocopy(verdictState)}</p>
+              {showFailed ? (
+                <div className="mt-3">
+                  <div className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-800">
+                    FAILED
+                  </div>
+                  <p className="mt-3 text-sm text-muted-foreground">This tender review could not be completed. Re-upload the document or retry processing.</p>
+                </div>
+              ) : !showReady ? (
+                <div className="mt-3">
+                  <div className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-800">
+                    PREPARING
+                  </div>
+                  <p className="mt-3 text-sm text-muted-foreground">Preparing decision support. This page updates automatically.</p>
+                </div>
+              ) : finalizingResults ? (
+                <div className="mt-3">
+                  <div className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-800">
+                    FINALIZING
+                  </div>
+                  <p className="mt-3 text-sm text-muted-foreground">Results are still being written. Refresh in a moment if needed.</p>
+                </div>
+              ) : (
+                <div className="mt-3 space-y-4">
+                  <div className="flex flex-col gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div
+                        className={[
+                          "inline-flex items-center rounded-2xl px-4 py-2 text-sm font-semibold tracking-wide",
+                          verdictState === "proceed"
+                            ? "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200"
+                            : verdictState === "hold"
+                            ? "bg-rose-50 text-rose-800 ring-1 ring-rose-200"
+                            : "bg-amber-50 text-amber-900 ring-1 ring-amber-200",
+                        ].join(" ")}
+                      >
+                        {verdictState === "proceed" ? "GO" : verdictState === "hold" ? "HOLD" : "GO (CAUTION)"}
+                      </div>
+
+                      <p className="text-sm text-foreground/80">
+                        {verdictState === "hold" ? "Fixable blockers detected" : verdictState === "caution" ? "Bid looks feasible with validation" : "Ready to bid"}
+                      </p>
                     </div>
 
                     <p className="text-sm text-foreground/80">{verdictDriverLine}</p>
-                    
-                  </>
-                )}
-              </div>
-
-              {/* Deadline box: kept secondary, not competing with the verdict */}
-              <div className="rounded-2xl border bg-muted/30 dark:bg-white/5 p-3 w-full md:w-[360px] lg:w-[400px] h-full flex flex-col">
-                <p className="text-xs font-semibold">Submission deadline</p>
-                <p className="mt-1 text-sm">
-                  {showReady && deadlineText ? (
-                    <span className="font-medium">{deadlineText}</span>
-                  ) : (
-                    <span className="text-muted-foreground">Not detected</span>
-                  )}
-                </p>
-                <p className="mt-2 text-xs text-muted-foreground">Verify on the tender cover page or timeline section.</p>
-                {showReady && timeToDeadline ? (
-                  <p className="mt-2 text-xs text-muted-foreground">{timeToDeadline}</p>
-                ) : null}
-                {showReady && todayFocus ? (
-                  <p className="mt-2 text-xs text-muted-foreground">{todayFocus}</p>
-                ) : null}
-
-                {/* keep the card visually aligned with the decision column height on desktop */}
-                <div className="flex-1" />
-              </div>
-            </div>
-
-
-
-      {/* Blockers + Document review (kept in the same workspace grid dimensions as Action plan / Secondary risks) */}
-      {showReady && !showFailed && !finalizingResults ? (
-        <div className="mt-4 space-y-4">
-          {verdictState === "hold" ? (
-            <Card className="rounded-2xl">
-              <CardContent className="p-5">
-                <div className="rounded-xl border border-red-200 bg-red-50 p-4 space-y-3">
-                  <div className="space-y-1">
-                    <p className="text-xs font-semibold text-red-900">Hold: blocked pending verification</p>
-                    <p className="text-xs text-red-900/80">
-                      This is a temporary state. It does not mean the bid failed — it means key conditions must be verified before committing.
-                    </p>
                   </div>
 
-                  <div className="rounded-lg bg-white/60 dark:bg-zinc-950/40 p-3">
-                    <p className="text-xs font-semibold text-foreground/90">Why Hold</p>
-                    <p className="mt-1 text-xs text-muted-foreground">{verdictDriverLine}</p>
-                  </div>
-
-                  <div className="rounded-lg bg-white/60 dark:bg-zinc-950/40 p-3 space-y-2">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-xs font-semibold text-foreground/90">Actions to clear Hold</p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-						  Complete these actions to exit Hold and finalize the Go/No-Go decision. Manage owner, status, and due date in the Bid Room.
-						</p>
-
-                      </div>
-                      <Link href={`/app/jobs/${jobId}/bid-room`} className="text-xs underline text-foreground/80 hover:text-foreground">
-                        Open Bid Room
-                      </Link>
-                    </div>
-
-                    {(() => {
-                      const open = (workItems ?? [])
-                        .filter((w: any) => String(w?.type ?? "").toLowerCase() === "requirement" || String(w?.type ?? "").toLowerCase() === "clarification")
-                        .filter((w: any) => String(w?.status ?? "").toLowerCase() !== "done");
-
-                      if (open.length === 0) {
-                        return (
-                          <div className="rounded-lg border bg-background/60 p-3">
-                            <p className="text-xs text-muted-foreground">
-							  No actions are tracked yet. Add the key verification tasks in the Bid Room so Hold has clear owners and due dates.
-							</p>
-
-                          </div>
-                        );
-                      }
-
-                      return (
-                        <div className="space-y-2">
-                          {open.slice(0, 8).map((w: any) => {
-                            const status = String(w?.status ?? "todo");
-                            const owner = String(w?.owner_label ?? "").trim() || "Unassigned";
-                            const due = w?.due_at ? new Date(String(w.due_at)) : null;
-                            const dueTxt = due && Number.isFinite(due.getTime()) ? due.toLocaleDateString() : "";
-                            return (
-                              <div key={`${String(w?.type)}:${String(w?.ref_key)}`} className="rounded-lg border bg-background/60 p-3">
-                                <div className="flex flex-wrap items-center justify-between gap-2">
-                                  <p className="text-xs font-medium text-foreground/90">{String(w?.title ?? "").trim() || "(Untitled)"}</p>
-                                  <span className="text-[11px] text-muted-foreground">
-                                    {owner}{dueTxt ? ` • due ${dueTxt}` : ""}{status ? ` • ${status}` : ""}
-                                  </span>
-                                </div>
-                              </div>
-                            );
-                          })}
-                          {open.length > 8 ? (
-                            <p className="text-[11px] text-muted-foreground">Showing 8 of {open.length}. Open the Bid Room to see all.</p>
-                          ) : null}
-                        </div>
-                      );
-                    })()}
-                  </div>
-
-                  <div className="rounded-lg bg-white/60 dark:bg-zinc-950/40 p-3 space-y-2">
-                    <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                      <div>
-                        <p className="text-xs font-semibold text-foreground/90">Target decision date</p>
-                        <p className="mt-1 text-xs text-muted-foreground">Set a realistic date for the Go/No-Go decision once unblock actions are completed.</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="datetime-local"
-                          className="rounded-xl"
-                          value={metaDraft.targetDecisionLocal}
-                          onChange={(e) => setMetaDraft((s) => ({ ...s, targetDecisionLocal: e.target.value }))}
-                        />
-                        <Button className="rounded-full" onClick={saveJobMetadata} disabled={savingMeta}>
-                          {savingMeta ? "Saving…" : "Save"}
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {(mustItems ?? []).length > 0 ? (
-                    <div className="pt-1">
-                      <Button className="rounded-full" onClick={openRequirementsForVerification}>
-                        Review MUST items
-                      </Button>
+                  {verdictState === "hold" && (mustItems ?? []).length ? (
+                    <div className="rounded-2xl border border-rose-100 bg-rose-50/50 p-4">
+                      <p className="text-xs font-semibold text-rose-900">Top blockers</p>
+                      <ul className="mt-2 space-y-2 text-sm text-rose-950/90">
+                        {(mustItems ?? []).slice(0, 3).map((t, i) => (
+                          <li key={i} className="leading-relaxed">• {t}</li>
+                        ))}
+                      </ul>
                     </div>
                   ) : null}
                 </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="hidden md:block" />
-          )}
+              )}
+            </div>
 
-          <Card className="rounded-2xl">
-            <CardContent className="p-5 space-y-3">
-              <div className="space-y-1">
-                                      <p className="text-xs font-semibold text-foreground/90">Document review</p>
+            <div className="flex shrink-0 items-center gap-2">
+              <Button asChild className="rounded-full">
+                <Link href={`/app/jobs/${jobId}/bid-room`}>Open Workspace</Link>
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-                                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                                        <span>
-                                          Source text processed:{" "}
-                                          <span className="text-foreground/90">
-                                            {coverage === "full"
-                                              ? "Complete"
-                                              : coverage === "partial"
-                                              ? "Mostly complete"
-                                              : "Partial"}
-                                          </span>
-                                        </span>
-
-                                        <span className="text-muted-foreground">•</span>
-
-                                        <span title={confidence === "high" ? "Strong evidence coverage" : confidence === "medium" ? "Some items need verification" : "Evidence coverage is limited"}>
-                                          Confidence:{" "}
-                                          <span className="text-foreground/90">
-                                            {confidence === "high"
-                                              ? "High"
-                                              : confidence === "medium"
-                                              ? "Medium"
-                                              : "Low"}
-                                          </span>
-                                        </span>
-                                      </div>
-
-                                      <p className="text-xs text-muted-foreground">
-                                        Where to verify (manual checks): tender portal / e-proc platform (deadlines, submission method, mandatory forms); “Instructions to Tenderers” (format, signatures, upload steps); annexes / templates (declarations, pricing, required forms).
-                                      </p>
-
-                                      {coverage !== "full" ? (
-                                        <p className="text-xs text-muted-foreground">
-                                          Some content may be missing from this review. Treat this decision as provisional until you verify the key gate-checks in the original tender.
-                                        </p>
-                                      ) : null}
-                                    </div>
-
-                                    {evidenceCoverage.mustTotal > 0 && evidenceCoverage.mustCovered < evidenceCoverage.mustTotal ? (
-                                      <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
-                                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                                          <div className="space-y-1">
-                                            <p className="text-xs font-semibold text-amber-900">Some MUST requirements need verification</p>
-                                            <p className="text-xs text-amber-900/80">
-                                              MUST evidence coverage is {evidenceCoverage.mustCovered}/{evidenceCoverage.mustTotal}. Review the MUST items marked “Needs verification” before committing.
-                                            </p>
-                                          </div>
-                                          <Button className="rounded-full" onClick={openRequirementsForVerification}>
-                                            Review MUST items
-                                          </Button>
-                                        </div>
-                                      </div>
-                                    ) : null}
-            </CardContent>
-          </Card>
-        </div>
-      ) : null}
-{/* What blocks us right now — actions (only when ready) */}
       {showReady && !showFailed && !finalizingResults ? (
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <Card className="rounded-2xl">
-            <CardContent className="p-5 space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="text-sm font-semibold">Action plan (next steps)</div>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Ordered by priority. Start with blockers that could invalidate the bid. Evidence snippets are authoritative; “Locate in source” is a best-effort pointer only.
-                  </p>
-                </div>
+        <Card className="rounded-3xl border border-black/5 bg-white shadow-sm">
+          <CardContent className="p-6 md:p-8">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold">Decision drivers</p>
+                <p className="mt-1 text-xs text-muted-foreground">Structured drivers only. Verify using Evidence & Source.</p>
               </div>
-
-              <Separator />
-
-              <div className="space-y-2">
-                {nextActionsForUi.map((a: any, i: number) => (
-                  <div
-                    key={`${i}-${a.target}-${a.text}`}
-                    className="rounded-xl border bg-background/60 p-3"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold text-muted-foreground">
-                        {i + 1}
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-foreground">{a.text}</p>
-
-                        <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-                          <span className="rounded-full border bg-background px-2 py-0.5">{a.label}</span>
-                          <span>•</span>
-                          <span>{a.owner}</span>
-                          <span>•</span>
-                          <span>{a.eta}</span>
-                        </div>
-
-                        {a.dueMoment ? (
-                          <p className="mt-1 text-[11px] text-muted-foreground">{a.dueMoment}</p>
-                        ) : null}
-
-                        <p className="mt-2 text-xs text-muted-foreground">{a.why}</p>
-                        {a.doneWhen ? (
-                          <p className="mt-2 text-xs text-muted-foreground">{a.doneWhen}</p>
-                        ) : null}
-
-                        {a.evidencePreview ? (
-                          <p className="mt-2 text-xs text-muted-foreground">
-                            Evidence: <span className="text-foreground/70">{a.evidencePreview}</span>
-                          </p>
-                        ) : null}
-                      </div>
-
-                      <div className="flex flex-col gap-2">
-                        <Button
-                          variant="outline"
-                          className="rounded-full"
-                          onClick={() => openTabAndScroll(a.target)}
-                        >
-                          Open section
-                        </Button>
-                        <Button
-                          variant="outline"
-                          className="rounded-full"
-                          onClick={() => onJumpToSource(a.evidenceQuery)}
-                          disabled={!extractedText}
-                        >
-                          Locate in source
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <p className="text-xs text-muted-foreground">
-                Tip: start with blockers and submission rules. Then validate risks and unknowns.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="rounded-2xl">
-            <CardContent className="p-5 space-y-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold">Secondary risks to validate</p>
-                  <p className="mt-1 text-xs text-muted-foreground">Items that can change effort, feasibility, or risk.</p>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-2">
-                <button
-                  type="button"
-                  onClick={() => setShowRisksSection((v) => !v)}
-                  className="w-full rounded-xl border bg-background/60 p-3 text-left"
-                >
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">Other risks</p>
-                    <p className="text-xs text-muted-foreground">{risks.length}</p>
-                  </div>
-                  <p className="mt-1 text-xs text-muted-foreground">Delivery, commercial, legal, or scope risks to validate.</p>
-                </button>
-
-                {showRisksSection ? (
-                  <div className="rounded-xl border bg-background p-3 space-y-2">
-                    {(topRisksForPanel.length ? topRisksForPanel : risks.slice(0, 5)).map((r: any, i: number) => {
-                      const title = String(r?.title ?? r?.risk ?? r?.text ?? "").trim();
-                      const detail = String(r?.detail ?? r?.description ?? "").trim();
-                      const jumpText = detail ? `${title}\n${detail}` : title;
-                      if (!title) return null;
-                      return (
-                        <div key={i} className="flex items-start justify-between gap-3 rounded-lg border bg-background p-3">
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium">{title}</p>
-                            {detail ? <p className="mt-1 text-xs text-muted-foreground">{detail}</p> : null}
-                          </div>
-                          <div className="flex flex-col gap-2 shrink-0">
-                          {(() => {
-                            const ids = (r as any)?.evidence_ids;
-                            if (Array.isArray(ids) && ids.length) {
-                              return (
-                                <Button
-                                  variant="outline"
-                                  className="rounded-full"
-                                  onClick={() => showEvidenceByIds(ids, jumpText)}
-                                >
-                                 Open evidence excerpt
-                                </Button>
-                              );
-                            }
-                            return null;
-                          })()}
-                          <Button
-                            variant="outline"
-                            className="rounded-full"
-                            onClick={() => onJumpToSource(jumpText)}
-                            disabled={!extractedText}
-                          >
-                            Locate in source
-                          </Button>
-                        </div>
-                        </div>
-                      );
-                    })}
-                    <div className="flex justify-end">
-                      <Button variant="outline" className="rounded-full" onClick={() => openTabAndScroll("risks")}>
-                        Open all risks
-                      </Button>
-                    </div>
-                  </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {(mustItems ?? []).length ? (
+                  <Button variant="outline" className="rounded-full" onClick={openRequirementsForVerification}>
+                    Review MUST items
+                  </Button>
                 ) : null}
+                <Button asChild variant="outline" className="rounded-full">
+                  <Link href={`/app/jobs/${jobId}/bid-room`}>Work in Workspace</Link>
+                </Button>
+              </div>
+            </div>
 
-                <button
-                  type="button"
-                  onClick={() => setShowUnknownsSection((v) => !v)}
-                  className="w-full rounded-xl border bg-background/60 p-3 text-left"
-                >
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">Missing or unclear information</p>
-                    <p className="text-xs text-muted-foreground">{questions.length}</p>
+            <div className="mt-5 grid gap-4 md:grid-cols-3">
+              <div className="rounded-2xl border bg-background p-4">
+                <p className="text-xs font-semibold">Blockers</p>
+                {(mustItems ?? []).length ? (
+                  <div className="mt-3 space-y-2">
+                    {(mustItems ?? []).slice(0, 5).map((t, i) => (
+                      <div key={i} className="flex items-start justify-between gap-3 rounded-xl border bg-background p-3">
+                        <p className="text-sm text-foreground/80 leading-relaxed">• {t}</p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-full shrink-0"
+                          onClick={() => showEvidenceByIds(mustEvidenceIdsByText.get(t) ?? undefined, t)}
+                          disabled={((mustEvidenceIdsByText.get(t)?.length ?? 0) === 0) && !extractedText}
+                        >
+                          Evidence
+                        </Button>
+                      </div>
+                    ))}
                   </div>
-                  <p className="mt-1 text-xs text-muted-foreground">Ambiguities and buyer questions to resolve before submission. Not blockers by themselves unless a P1 gate-check fails.</p>
-                </button>
+                ) : (
+                  <p className="mt-3 text-sm text-muted-foreground">None detected.</p>
+                )}
+              </div>
 
-                {showUnknownsSection ? (
+              <div className="rounded-2xl border bg-background p-4">
+                <p className="text-xs font-semibold">Strategic risks</p>
+                {(executive?.topRisks ?? []).length ? (
+                  <ul className="mt-3 space-y-2 text-sm text-foreground/80">
+                    {(executive?.topRisks ?? []).slice(0, 5).map((r: any, i: number) => (
+                      <li key={i} className="leading-relaxed">• {String(r?.title ?? "").trim()}{r?.detail ? ` — ${String(r.detail).trim()}` : ""}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-3 text-sm text-muted-foreground">No strategic risks detected.</p>
+                )}
+              </div>
+
+              <div className="rounded-2xl border bg-background p-4">
+                <p className="text-xs font-semibold">Immediate actions</p>
+                {(nextActionsForUi ?? []).length ? (
+                  <ul className="mt-3 space-y-2 text-sm text-foreground/80">
+                    {(nextActionsForUi ?? []).slice(0, 5).map((a: any, i: number) => (
+                      <li key={i} className="leading-relaxed">• {String(a?.text ?? "").trim()}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="mt-3 text-sm text-muted-foreground">No actions detected.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-5">
+{showUnknownsSection ? (
                   <div className="rounded-xl border bg-background p-3 space-y-2">
                     {(questions ?? []).slice(0, 5).map((q, i) => (
                       <div key={i} className="flex items-start justify-between gap-3 rounded-lg border bg-background p-3">
@@ -3859,169 +3485,52 @@ async function saveJobMetadata() {
                       </div>
                     ))}
                     <div className="flex justify-end">
-                      <Button variant="outline" className="rounded-full" onClick={() => openTabAndScroll("questions")}>
-                        Open clarifications
-                      </Button>
+                     <Button asChild variant="outline" className="rounded-full">
+					  <Link href={`/app/jobs/${jobId}/bid-room`}>Open in Workspace</Link>
+					</Button>
+
                     </div>
                   </div>
                 ) : null}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+          </CardContent>
+        </Card>
       ) : null}
 
-            {/* Decision drivers — only when ready */}
-            {showReady && !showFailed && !finalizingResults ? (
-              <>
-                {/* Executive summary — decision in 10 seconds */}
-                <div className="mt-6 rounded-2xl border bg-background/60 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold">Executive summary</p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-						  Stakeholder context and recommended focus while on Hold.
-						</p>
-
-                    </div>
-                  </div>
-
-                  <div className="mt-3 space-y-3">
-                    
-<div className="rounded-xl border bg-background p-3">
-                      <p className="text-xs font-semibold">Key considerations</p>
-                      {rationaleDrivers?.length ? (
-                        <ul className="mt-2 list-disc pl-5 space-y-1 text-sm text-foreground/80">
-                          {rationaleDrivers.map((t, i) => (
-                            <li key={i}>{t}</li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="mt-2 text-sm text-muted-foreground">No decision drivers detected.</p>
-                      )}
-                    </div>
-
-                    <div className="rounded-xl border bg-background p-3">
-                     <p className="text-xs font-semibold">Recommended focus now</p>
-                      <p className="mt-2 text-sm text-foreground/80">
-                        {verdictState === "hold"
-                          ? "Verify mandatory requirements and submission conditions to unblock the Go/No-Go decision."
-                          : verdictState === "caution"
-                          ? "Proceed, but validate the risks and any missing information before committing resources."
-                          : "Proceed to bid. Confirm the deadline and submission method, then start drafting."}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-6 space-y-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold">Why this decision</p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      This decision is driven primarily by submission method, compliance requirements, and document completeness. Use “Evidence” to highlight the matching passage in the Source text tab, then confirm in the original PDF (especially tender portal rules, submission instructions, and annexes/templates).
-                    </p>
-                  </div>
-
-                  <Button
-                    variant="outline"
-                    className="rounded-full"
-                    onClick={() => setShowAllDrivers((v) => !v)}
-                    disabled={!showReady}
-                  >
-                    {showAllDrivers ? "Show less" : "Show all blockers"}
-                  </Button>
-                </div>
-
-                <div className="rounded-2xl border bg-background/60 p-4">
-                  <p className="text-xs font-semibold">Mandatory blockers</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {mustItems.length ? `Showing ${Math.min(showAllDrivers ? mustItems.length : 3, mustItems.length)} of ${mustItems.length}.` : "None detected."}
-                  </p>
-
-                  <div className="mt-3 space-y-2">
-                    {(mustItems ?? [])
-                      .slice(0, showAllDrivers ? 12 : 3)
-                      .map((t, i) => (
-                        <div key={i} className="flex items-start justify-between gap-3 rounded-xl border bg-background p-3">
-                          <div className="min-w-0">
-                            <p className="text-sm text-foreground/90 leading-relaxed">{t}</p>
-                            <p className="mt-1 text-[11px] text-muted-foreground">{classifyBlocker(t).hint}</p>
-                            {blockerEvidence.get(t) ? (
-                              <div className="mt-2 rounded-lg border bg-muted/30 dark:bg-white/5 p-2">
-                                <p className="text-[11px] font-semibold text-muted-foreground">Excerpt</p>
-                                <p className="mt-1 text-xs text-foreground/80 line-clamp-3">
-                                  {blockerEvidence.get(t)}
-                                </p>
-                                <p className="mt-1 text-[11px] text-muted-foreground">
-                                  Pointer only: use this excerpt to locate the clause in the original PDF (Ctrl+F), then confirm in the portal rules, “Instructions to Tenderers”, and relevant annexes/templates.
-                                </p>
-                              </div>
-                            ) : null}
-                          </div>
-                          <Button
-                            variant="outline"
-                            className="rounded-full shrink-0"
-                            onClick={() => showEvidenceByIds(mustEvidenceIdsByText.get(t) ?? undefined, t)}
-                            disabled={((mustEvidenceIdsByText.get(t)?.length ?? 0) === 0) && !extractedText}
-                          >
-                            Evidence
-                          </Button>
-                        </div>
-                      ))}
-                  </div>
-
-                  {!mustItems?.length ? (
-                    <p className="mt-3 text-sm text-muted-foreground">
-                      No MUST blockers detected. Still verify eligibility and submission format in the tender portal and submission instructions.
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-              </>
-            ) : null}
+      <Card className="rounded-3xl border border-black/5 bg-white shadow-sm">
+        <CardContent className="p-6 md:p-8">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-semibold">Evidence & Source</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                AI extraction complete. Manual verification recommended for portal rules, annexes/templates, and pricing forms.
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Explore — reference mode (tabs) */}
+{/* Explore — reference mode (tabs) */}
       <div className="pt-2" ref={tabsTopRef}>
         <div className="flex items-end justify-between gap-3">
           <div>
-            <p className="text-sm font-semibold">Explore the tender</p>
+			<p className="text-sm font-semibold">Source text</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Reference view. Use this to verify details, export text, and inspect all extracted items.
+			Reference view. Use this to validate clauses (best-effort highlight) and then confirm in the original PDF.
             </p>
           </div>
-          <div className="text-xs text-muted-foreground">{showReady ? "Click a section to open it." : null}</div>
+         
         </div>
       </div>
 
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as any)} className="space-y-4">
-        <TabsList className="rounded-full">
-          <TabsTrigger value="checklist" className="rounded-full">
-            Requirements
-          </TabsTrigger>
-          <TabsTrigger value="risks" className="rounded-full">
-            Risks
-          </TabsTrigger>
-          <TabsTrigger value="questions" className="rounded-full">
-            Clarifications
-          </TabsTrigger>
-          <TabsTrigger value="draft" className="rounded-full">
-            Tender Outline
-          </TabsTrigger>
-          <TabsTrigger value="work" className="rounded-full">
-            Bid room (work)
-          </TabsTrigger>
-          <TabsTrigger value="compliance" className="rounded-full">
-            Compliance (audit)
-          </TabsTrigger>
-          <TabsTrigger value="text" className="rounded-full">
-            Source text
-          </TabsTrigger>
-        </TabsList>
+      <Tabs value={tab} onValueChange={(v) => setTab(v as AnalysisTab)} className="space-y-4">
+		<TabsList className="rounded-full">
+		  <TabsTrigger value="text" className="rounded-full">
+			Reference text
+		  </TabsTrigger>
+		</TabsList>
+
 
         
 		  {showReady && !finalizingResults ? (
@@ -4040,291 +3549,7 @@ async function saveJobMetadata() {
 			</div>
 		  ) : null}
 
-			<TabsContent value="checklist">
-          <div className="mt-3">
-            {showFailed ? (
-              <Card className="rounded-2xl">
-                <CardContent className="p-6">
-                  <p className="text-sm font-semibold">Analysis failed</p>
-                  <p className="mt-1 text-sm text-muted-foreground">This tender review could not be completed. Please re-upload the document or try again.</p>
-                </CardContent>
-              </Card>
-            ) : !showReady ? (
-              <Card className="rounded-2xl">
-                <CardContent className="p-6">
-                  <p className="text-sm font-semibold">Requirements are being extracted</p>
-                  <p className="mt-1 text-sm text-muted-foreground">We&apos;re scanning the tender for MUST/SHOULD/INFO items. This section will populate automatically.</p>
-                </CardContent>
-              </Card>
-            ) : finalizingResults ? (
-              <Card className="rounded-2xl">
-                <CardContent className="p-6">
-                  <p className="text-sm font-semibold">Finalizing results…</p>
-                  <p className="mt-1 text-sm text-muted-foreground">The job is marked as done, but results are still being written. Please wait a few seconds or refresh.</p>
-                </CardContent>
-              </Card>
-            ) : checklist.length ? (
-              <Checklist
-                checklist={checklist}
-                extractedText={extractedText}
-                onJumpToSource={onJumpToSource}
-                onShowEvidence={showEvidenceByIds}
-                knownEvidenceIds={knownEvidenceIds}
-              evidenceById={evidenceById}
-              />
-            ) : (
-              <Card className="rounded-2xl">
-                <CardContent className="p-6">
-                  <p className="text-sm font-semibold">No requirements extracted</p>
-                  <p className="mt-1 text-sm text-muted-foreground">We didn&apos;t detect explicit MUST/SHOULD/INFO items. Verify the source text, or try re-uploading a cleaner PDF.</p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="risks">
-          <div className="flex items-center justify-end">
-            <Button variant="outline" className="rounded-full" onClick={() => copySection("risks")} disabled={!canDownload}>
-              {copiedSection === "risks" ? "Copied" : "Copy section"}
-            </Button>
-          </div>
-
-          <div className="mt-3">
-            {showFailed ? (
-              <Card className="rounded-2xl">
-                <CardContent className="p-6">
-                  <p className="text-sm font-semibold">Analysis failed</p>
-                  <p className="mt-1 text-sm text-muted-foreground">This tender review could not be completed. Please re-upload the document or try again.</p>
-                </CardContent>
-              </Card>
-            ) : !showReady ? (
-              <Card className="rounded-2xl">
-                <CardContent className="p-6">
-                  <p className="text-sm font-semibold">Identifying key risks</p>
-                  <p className="mt-1 text-sm text-muted-foreground">We&apos;re highlighting technical, legal, commercial, and delivery risks from the tender.</p>
-                </CardContent>
-              </Card>
-            ) : finalizingResults ? (
-              <Card className="rounded-2xl">
-                <CardContent className="p-6">
-                  <p className="text-sm font-semibold">Finalizing results…</p>
-                  <p className="mt-1 text-sm text-muted-foreground">The job is marked as done, but results are still being written. Please wait a few seconds or refresh.</p>
-                </CardContent>
-              </Card>
-            ) : risks.length ? (
-              <Risks
-                risks={risks}
-                extractedText={extractedText}
-                onJumpToSource={onJumpToSource}
-                onShowEvidence={showEvidenceByIds}
-                knownEvidenceIds={knownEvidenceIds}
-              />
-            ) : (
-              <Card className="rounded-2xl">
-                <CardContent className="p-6">
-                  <p className="text-sm font-semibold">No major risks detected</p>
-                  <p className="mt-1 text-sm text-muted-foreground">We didn&apos;t flag high-impact risks. Still verify deadlines, eligibility, and mandatory deliverables in the source text.</p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </TabsContent>
-
-       <TabsContent value="questions">
-		  <div className="mt-3">
-			{showFailed ? (
-			  <Card className="rounded-2xl">
-				<CardContent className="p-6">
-				  <p className="text-sm font-semibold">Analysis failed</p>
-				  <p className="mt-1 text-sm text-muted-foreground">
-					This tender review could not be completed. Please re-upload the document or try again.
-				  </p>
-				</CardContent>
-			  </Card>
-			) : !showReady ? (
-			  <Card className="rounded-2xl">
-				<CardContent className="p-6">
-				  <p className="text-sm font-semibold">Generating clarifications</p>
-				  <p className="mt-1 text-sm text-muted-foreground">
-					We&apos;re listing buyer questions and ambiguities to resolve before submission. These are not disqualifiers
-					by themselves unless a P1 gate-check fails (eligibility/submission).
-				  </p>
-				</CardContent>
-			  </Card>
-			) : finalizingResults ? (
-			  <Card className="rounded-2xl">
-				<CardContent className="p-6">
-				  <p className="text-sm font-semibold">Finalizing results…</p>
-				  <p className="mt-1 text-sm text-muted-foreground">
-					The job is marked as done, but results are still being written. Please wait a few seconds or refresh.
-				  </p>
-				</CardContent>
-			  </Card>
-			) : questions.length ? (
-			  <BuyerQuestions
-				checklist={checklist}
-				risks={risks}
-				extractedText={extractedText}
-				onJumpToSource={onJumpToSource}
-				questions={questions}
-				tenderName={String(displayName || job?.file_name || "Tender").trim()}
-			  />
-			) : (
-			  <Card className="rounded-2xl">
-				<CardContent className="p-6">
-				  <p className="text-sm font-semibold">No clarifications identified</p>
-				  <p className="mt-1 text-sm text-muted-foreground">
-					We didn&apos;t detect explicit buyer questions or ambiguities. Still verify eligibility, deadlines, and
-					submission format in the tender source (often in annexes or the portal instructions).
-				  </p>
-				</CardContent>
-			  </Card>
-			)}
-		  </div>
-		</TabsContent>
-
-
-        <TabsContent value="draft">
-          <Card className="rounded-2xl">
-            <CardContent className="p-6">
-              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                <div>
-                  <p className="text-sm font-semibold">Tender  outline</p>
-                  <p className="mt-1 text-sm text-muted-foreground"> A structured outline based on the tender text. <span className="font-medium text-foreground">Not a full quotation.</span> Use it to start your tender response, then tailor and verify.</p>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button variant="outline" className="rounded-full" onClick={() => copySection("draft")} disabled={!canDownload}>
-                    {copiedSection === "draft" ? "Copied" : "Copy section"}
-                  </Button>
-                </div>
-              </div>
-
-              <Separator className="my-4" />
-
-              {showFailed ? (
-                <p className="text-sm text-muted-foreground">This tender review could not be completed. Please re-upload the document or try again.</p>
-              ) : !showReady ? (
-                <p className="text-sm text-muted-foreground">Preparing a tender draft outline…</p>
-              ) : finalizingResults ? (
-                <p className="text-sm text-muted-foreground">Finalizing results… this should take only a few seconds. If it doesn&apos;t, refresh the page.</p>
-              ) : hasDraftForUi ? (
-                (() => {
-                  const sections =
-                    typeof draftForUi === "object" &&
-                    draftForUi &&
-                    Array.isArray((draftForUi as any).sections)
-                      ? (((draftForUi as any).sections as any[]) ?? [])
-                      : null;
-
-                  if (sections && sections.length) {
-                    return (
-                      <div className="space-y-4">
-                        {sections.map((s: any, idx: number) => {
-                          const title = String(s?.title ?? "").trim();
-                          const bullets = Array.isArray(s?.bullets) ? s.bullets : [];
-                          const payloadLines = [
-                            title || `Section ${idx + 1}`,
-                            ...bullets
-                              .map((b: any) => String(b ?? "").trim())
-                              .filter(Boolean)
-                              .map((b: string) => `- ${b}`),
-                          ].filter(Boolean);
-
-                          const payload = payloadLines.join("\n").trim();
-                          if (!payload) return null;
-
-                          return (
-                            <div key={idx} className="rounded-xl border bg-background/60 p-4">
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                  <p className="text-sm font-semibold">{title || `Section ${idx + 1}`}</p>
-                                  <p className="mt-1 text-xs text-muted-foreground">
-                                    Copy a section brief to assign writing work. Tailor and verify against the tender source.
-                                  </p>
-                                </div>
-
-                                <Button
-                                  variant="outline"
-                                  className="rounded-full shrink-0"
-                                  onClick={async () => {
-                                    const ok = await safeCopy(payload);
-                                    if (ok) {
-                                      setCopiedSection(`draftbrief_${idx}`);
-                                      window.setTimeout(() => setCopiedSection(null), 1200);
-                                    }
-                                  }}
-                                >
-                                  {copiedSection === `draftbrief_${idx}` ? "Copied" : "Copy section brief"}
-                                </Button>
-                              </div>
-
-                              {bullets.length ? (
-                                <ul className="mt-3 list-disc pl-5 space-y-1 text-sm text-foreground/80">
-                                  {bullets
-                                    .map((b: any) => String(b ?? "").trim())
-                                    .filter(Boolean)
-                                    .map((b: string, i2: number) => (
-                                      <li key={i2}>{b}</li>
-                                    ))}
-                                </ul>
-                              ) : (
-                                <p className="mt-3 text-sm text-muted-foreground">No bullet points detected for this section.</p>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    );
-                  }
-
-                  return <pre className="text-sm whitespace-pre-wrap">{draftLinesForUi.join("\n")}</pre>;
-                })()
-              ) : (
-                <p className="text-sm text-muted-foreground">No draft outline was generated. Try re-uploading the PDF or verify the source text tab.</p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="work">
-          <BidRoomPanel
-            jobId={jobId}
-            checklist={checklist}
-            risks={risks}
-            questions={questions}
-            outlineSections={outlineSections}
-            canDownload={canDownload}
-          />
-        </TabsContent>
-
-        <TabsContent value="compliance">
-          <Card className="rounded-2xl">
-            <CardContent className="p-5 space-y-3">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold">Compliance matrix (audit lens)</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Requirements-only view to mark compliance status and where each requirement is addressed in the proposal. This does not change AI results.
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button asChild variant="outline" className="rounded-full">
-                    <Link href={`/app/jobs/${jobId}/bid-room`}>Open bid room</Link>
-                  </Button>
-                  <Button asChild className="rounded-full">
-                    <Link href={`/app/jobs/${jobId}/compliance`}>Open compliance matrix</Link>
-                  </Button>
-                </div>
-              </div>
-
-              <p className="text-xs text-muted-foreground">
-                Evidence IDs are derived from extraction. Use the Job page evidence viewer to open authoritative excerpts (Locate in source is best-effort).
-              </p>
-            </CardContent>
-          </Card>
-        </TabsContent>
+		       
 
         <TabsContent value="text">
           {evidenceFocus ? (
@@ -4392,7 +3617,7 @@ async function saveJobMetadata() {
                                     : prev
                                 );
 
-                                openTabAndScroll("text");
+                                openTabAndScroll();
                                 if (ex) window.setTimeout(() => onJumpToSource(ex), 0);
                               }}
                             >
@@ -4518,6 +3743,53 @@ async function saveJobMetadata() {
               </CardContent>
             </Card>
           ) : null}
+          {!showReferenceText ? (
+            <Card className="mt-4 rounded-2xl border-dashed">
+              <CardContent className="p-5">
+                <p className="text-sm font-medium">Reference text is hidden</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Open it only when you need to verify exact wording or cross-check an excerpt.
+                </p>
+                <div className="mt-4 flex flex-wrap items-center gap-2">
+                  <Button className="rounded-full" onClick={() => setShowReferenceText(true)}>
+                    Open reference text
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold">Search within reference text</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Best-effort highlight. Always confirm in the original PDF for legal wording.
+                  </p>
+                </div>
+                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+                  <input
+                    value={sourceQuery}
+                    onChange={(e) => setSourceQuery(e.target.value)}
+                    placeholder="Search phrase…"
+                    className="w-full min-w-[260px] rounded-full border bg-background px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-ring sm:w-[320px]"
+                  />
+                  <Button
+                    type="button"
+                    className="rounded-full"
+                    variant="outline"
+                    onClick={() => {
+                      const q = String(sourceQuery ?? "").trim();
+                      if (!q) return;
+                      openTabAndScroll();
+                      window.setTimeout(() => onJumpToSource(q), 0);
+                    }}
+                    disabled={!extractedText}
+                  >
+                    Find
+                  </Button>
+                </div>
+              </div>
+
 
           {(() => {
             const fullText = extractedText || "";
@@ -4585,9 +3857,12 @@ async function saveJobMetadata() {
             );
           })()}
 
+            </>
+          )}
+
           <Separator className="my-4" />
           <p className="text-xs text-muted-foreground">
-            This is drafting support. Always verify requirements and legal language against the original tender document.
+            Verification support only. Always confirm requirements and legal language against the original tender document.
           </p>
         </TabsContent>
       </Tabs>

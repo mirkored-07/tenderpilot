@@ -28,7 +28,7 @@ export function SideNav() {
       {/* TOP SECTION: Navigation */}
       <div className="flex-1 space-y-4">
         <div>
-          <p className="px-3 pb-2 text-xs font-medium text-muted-foreground">
+          <p className="px-3 pb-2 text-xs font-medium text-white/70">
             Workspace
           </p>
 
@@ -43,10 +43,10 @@ export function SideNav() {
                   href={item.href}
                   className={cn(
                     "flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition-all",
-                    "hover:bg-muted/60 hover:text-foreground",
+                    "hover:bg-white/10 hover:text-white",
                     active
                       ? "bg-muted text-foreground shadow-sm ring-1 ring-border"
-                      : "text-muted-foreground"
+                      : "text-white/70"
                   )}
                 >
                   <span>{item.label}</span>
@@ -58,9 +58,9 @@ export function SideNav() {
       </div>
 
       {/* BOTTOM SECTION: Footer with Toggle */}
-      <div className="mt-auto border-t pt-4">
+      <div className="mt-auto border-t border-white/15 pt-4">
         <div className="flex w-full items-center justify-between px-2">
-          <span className="text-xs font-medium text-muted-foreground">Theme</span>
+          <span className="text-xs font-medium text-white/70">Theme</span>
           <ModeToggle />
         </div>
       </div>
