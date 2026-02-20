@@ -1315,13 +1315,12 @@ const [savingMeta, setSavingMeta] = useState(false);
 
   // Bid room overlay is handled via BidRoomPanel (job-level route + optional tab).
 
-  function openRequirementsForVerification() {
-    setTab("checklist");
-    // Defer one tick so the tab state + DOM are ready before scrolling
-    window.setTimeout(() => {
-      tabsTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 0);
-  }
+function openRequirementsForVerification() {
+  setTab("text");
+  window.setTimeout(() => {
+    tabsTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 0);
+}
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
 
   const [displayName, setDisplayNameState] = useState<string>("");
