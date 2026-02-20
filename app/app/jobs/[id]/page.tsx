@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 type JobStatus = "queued" | "processing" | "done" | "failed";
 
@@ -1315,12 +1315,7 @@ const [savingMeta, setSavingMeta] = useState(false);
 
   // Bid room overlay is handled via BidRoomPanel (job-level route + optional tab).
 
-function openRequirementsForVerification() {
-  setTab("text");
-  window.setTimeout(() => {
-    tabsTopRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }, 0);
-}
+
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
 
   const [displayName, setDisplayNameState] = useState<string>("");
@@ -1338,6 +1333,7 @@ function openRequirementsForVerification() {
   const [showFullSourceText, setShowFullSourceText] = useState(false);
 
   const [showReferenceText, setShowReferenceText] = useState(false);
+  const [showEvidenceExcerpt, setShowEvidenceExcerpt] = useState(true);
 
   const [exporting, setExporting] = useState<null | "summary" | "brief" | "xlsx">(null);
 
@@ -1349,6 +1345,7 @@ function openRequirementsForVerification() {
   const mountedRef = useRef(true);
   const sourceAnchorRef = useRef<HTMLSpanElement | null>(null);
   const tabsTopRef = useRef<HTMLDivElement | null>(null);
+  const evidenceExcerptRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -1854,7 +1851,8 @@ function showEvidenceByIds(evidenceIds: string[] | undefined, fallbackQuery: str
       allIds: ids.length ? ids : null,
     });
 
-    // Evidence-first UX:
+    setShowEvidenceExcerpt(true);
+// Evidence-first UX:
     // Open Source text AND immediately jump/highlight using the candidate excerpt (deterministic).
     openTabAndScroll();
 
@@ -3183,43 +3181,48 @@ async function saveJobMetadata() {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="rounded-full" disabled={!canDownload || exporting !== null}>
-                Exports
+              <Button variant="outline" className="rounded-full" disabled={exporting !== null}>
+                Actions
               </Button>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end">
-						  <DropdownMenuItem
-				onSelect={async (e) => {
-				  e.preventDefault();
-				  if (!canDownload || exporting !== null) return;
-				  setExporting("brief");
-				  try {
-					await exportTenderBriefPdf();
-				  } finally {
-					setExporting(null);
-				  }
-				}}
-			  >
-				{exporting === "brief" ? "Preparing…" : "Export tender brief PDF"}
-			  </DropdownMenuItem>
-
-			  <DropdownMenuItem
-				onSelect={async (e) => {
-				  e.preventDefault();
-				  if (!canDownload || exporting !== null) return;
-				  setExporting("xlsx");
-				  try {
-					await exportBidPackXlsx();
-				  } finally {
-					setExporting(null);
-				  }
-				}}
-			  >
-				{exporting === "xlsx" ? "Preparing…" : "Export Bid Pack (Excel)"}
-			  </DropdownMenuItem>
+            <DropdownMenuContent align="end" className="min-w-[240px]">
+              <DropdownMenuItem
+                disabled={!canDownload || exporting !== null}
+                onSelect={async (e) => {
+                  e.preventDefault();
+                  if (!canDownload || exporting !== null) return;
+                  setExporting("brief");
+                  try {
+                    await exportTenderBriefPdf();
+                  } finally {
+                    setExporting(null);
+                  }
+                }}
+              >
+                {exporting === "brief" ? "Preparing…" : "Export tender brief PDF"}
+              </DropdownMenuItem>
 
               <DropdownMenuItem
+                disabled={!canDownload || exporting !== null}
+                onSelect={async (e) => {
+                  e.preventDefault();
+                  if (!canDownload || exporting !== null) return;
+                  setExporting("xlsx");
+                  try {
+                    await exportBidPackXlsx();
+                  } finally {
+                    setExporting(null);
+                  }
+                }}
+              >
+                {exporting === "xlsx" ? "Preparing…" : "Export Bid Pack (Excel)"}
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+
+              <DropdownMenuItem
+                disabled={!canDownload}
                 onSelect={(e) => {
                   e.preventDefault();
                   exportCsv("overview");
@@ -3227,8 +3230,8 @@ async function saveJobMetadata() {
               >
                 Overview (CSV)
               </DropdownMenuItem>
-
               <DropdownMenuItem
+                disabled={!canDownload}
                 onSelect={(e) => {
                   e.preventDefault();
                   exportCsv("requirements");
@@ -3236,8 +3239,8 @@ async function saveJobMetadata() {
               >
                 Requirements (CSV)
               </DropdownMenuItem>
-
               <DropdownMenuItem
+                disabled={!canDownload}
                 onSelect={(e) => {
                   e.preventDefault();
                   exportCsv("risks");
@@ -3245,8 +3248,8 @@ async function saveJobMetadata() {
               >
                 Risks (CSV)
               </DropdownMenuItem>
-
               <DropdownMenuItem
+                disabled={!canDownload}
                 onSelect={(e) => {
                   e.preventDefault();
                   exportCsv("clarifications");
@@ -3254,8 +3257,8 @@ async function saveJobMetadata() {
               >
                 Clarifications (CSV)
               </DropdownMenuItem>
-
               <DropdownMenuItem
+                disabled={!canDownload}
                 onSelect={(e) => {
                   e.preventDefault();
                   exportCsv("outline");
@@ -3263,28 +3266,40 @@ async function saveJobMetadata() {
               >
                 Outline (CSV)
               </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+
+              <DropdownMenuItem
+                disabled={!canDownload || exporting !== null}
+                onSelect={async (e) => {
+                  e.preventDefault();
+                  if (!canDownload || exporting !== null) return;
+                  setExporting("summary");
+                  try {
+                    await exportSummaryTxt();
+                  } finally {
+                    setExporting(null);
+                  }
+                }}
+              >
+                {exporting === "summary" ? "Preparing…" : "Download summary"}
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+
+              <DropdownMenuItem
+                disabled={!canDelete}
+                className="text-red-600 focus:text-red-600"
+                onSelect={(e) => {
+                  e.preventDefault();
+                  if (!canDelete) return;
+                  handleDelete();
+                }}
+              >
+                Delete
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-
-          <Button
-            className="rounded-full"
-            onClick={async () => {
-              if (!canDownload) return;
-              setExporting("summary");
-              try {
-                await exportSummaryTxt();
-              } finally {
-                setExporting(null);
-              }
-            }}
-            disabled={!canDownload || exporting !== null}
-          >
-            {exporting === "summary" ? "Preparing…" : "Download summary"}
-          </Button>
-
-          <Button variant="destructive" className="rounded-full" onClick={handleDelete} disabled={!canDelete}>
-            Delete
-          </Button>
         </div>
       </div>
 
@@ -3378,7 +3393,7 @@ async function saveJobMetadata() {
       </Card>
 
       {showReady && !showFailed && !finalizingResults ? (
-        <Card className="rounded-3xl border border-black/5 bg-white shadow-sm">
+        <Card id="decision-drivers" className="rounded-3xl border border-black/5 bg-white shadow-sm">
           <CardContent className="p-6 md:p-8">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -3386,12 +3401,7 @@ async function saveJobMetadata() {
                 <p className="mt-1 text-xs text-muted-foreground">Structured drivers only. Verify using Evidence & Source.</p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                {(mustItems ?? []).length ? (
-                  <Button variant="outline" className="rounded-full" onClick={openRequirementsForVerification}>
-                    Review MUST items
-                  </Button>
-                ) : null}
-                <Button asChild variant="outline" className="rounded-full">
+                 <Button asChild variant="outline" className="rounded-full">
                   <Link href={`/app/jobs/${jobId}/bid-room`}>Work in Workspace</Link>
                 </Button>
               </div>
@@ -3403,17 +3413,19 @@ async function saveJobMetadata() {
                 {(mustItems ?? []).length ? (
                   <div className="mt-3 space-y-2">
                     {(mustItems ?? []).slice(0, 5).map((t, i) => (
-                      <div key={i} className="flex items-start justify-between gap-3 rounded-xl border bg-background p-3">
+                      <div key={i} className="rounded-xl border bg-background p-3">
                         <p className="text-sm text-foreground/80 leading-relaxed">• {t}</p>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="rounded-full shrink-0"
-                          onClick={() => showEvidenceByIds(mustEvidenceIdsByText.get(t) ?? undefined, t)}
-                          disabled={((mustEvidenceIdsByText.get(t)?.length ?? 0) === 0) && !extractedText}
-                        >
-                          Evidence
-                        </Button>
+                        <div className="mt-2 flex justify-end">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-full"
+                            onClick={() => showEvidenceByIds(mustEvidenceIdsByText.get(t) ?? undefined, t)}
+                            disabled={((mustEvidenceIdsByText.get(t)?.length ?? 0) === 0) && !extractedText}
+                          >
+                            Open evidence
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -3478,7 +3490,7 @@ async function saveJobMetadata() {
                           onClick={() => onJumpToSource(q)}
                           disabled={!extractedText}
                         >
-                          Locate in source
+                          Locate in source (best-effort)
                         </Button>
                       </div>
                       </div>
@@ -3513,9 +3525,9 @@ async function saveJobMetadata() {
       <div className="pt-2" ref={tabsTopRef}>
         <div className="flex items-end justify-between gap-3">
           <div>
-			<p className="text-sm font-semibold">Source text</p>
+			<p className="text-sm font-semibold">Reference text (verification only)</p>
             <p className="mt-1 text-xs text-muted-foreground">
-			Reference view. Use this to validate clauses (best-effort highlight) and then confirm in the original PDF.
+			Verification-only reference. Use this to cross-check exact wording (best-effort highlight), then confirm in the original PDF.
             </p>
           </div>
          
@@ -3529,24 +3541,6 @@ async function saveJobMetadata() {
 			Reference text
 		  </TabsTrigger>
 		</TabsList>
-
-
-        
-		  {showReady && !finalizingResults ? (
-			<div className="mt-3 flex flex-wrap items-center gap-2">
-			  <Badge variant="outline" className="rounded-full">
-				MUST evidence coverage: {evidenceCoverage.mustCovered}/{evidenceCoverage.mustTotal}
-			  </Badge>
-			  <Badge variant="outline" className="rounded-full">
-				Overall evidence coverage: {evidenceCoverage.overallCovered}/{evidenceCoverage.overallTotal}
-			  </Badge>
-			  {evidenceCoverage.mustTotal > 0 && evidenceCoverage.mustCovered < evidenceCoverage.mustTotal ? (
-				<Badge variant="secondary" className="rounded-full">
-				  Some MUST items need verification
-				</Badge>
-			  ) : null}
-			</div>
-		  ) : null}
 
 		       
 
@@ -3616,6 +3610,7 @@ async function saveJobMetadata() {
                                     : prev
                                 );
 
+                                setShowEvidenceExcerpt(true);
                                 openTabAndScroll();
                                 if (ex) window.setTimeout(() => onJumpToSource(ex), 0);
                               }}
@@ -3636,21 +3631,15 @@ async function saveJobMetadata() {
                     )}
                   </div>
                   <div className="flex flex-col gap-2">
-                    {evidenceFocus.excerpt ? (
-                      <Button
-                        variant="outline"
-                        className="rounded-full"
-                        onClick={async () => {
-                          const ok = await safeCopy(evidenceFocus.excerpt);
-                          if (ok) {
-                            setCopiedSection("evidence");
-                            window.setTimeout(() => setCopiedSection(null), 1200);
-                          }
-                        }}
-                      >
-                        {copiedSection === "evidence" ? "Copied" : "Copy"}
-                      </Button>
-                    ) : null}
+                    <Button
+                      className="rounded-full"
+                      onClick={() => {
+                        setShowEvidenceExcerpt(true);
+                        window.setTimeout(() => evidenceExcerptRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
+                      }}
+                    >
+                      Open evidence excerpt
+                    </Button>
 
                     {evidenceFocus.excerpt ? (
                       <Button
@@ -3687,14 +3676,30 @@ async function saveJobMetadata() {
                       </Button>
                     ) : null}
 
+                    {evidenceFocus.excerpt ? (
+                      <Button
+                        variant="outline"
+                        className="rounded-full"
+                        onClick={async () => {
+                          const ok = await safeCopy(evidenceFocus.excerpt);
+                          if (ok) {
+                            setCopiedSection("evidence");
+                            window.setTimeout(() => setCopiedSection(null), 1200);
+                          }
+                        }}
+                      >
+                        {copiedSection === "evidence" ? "Copied" : "Copy excerpt"}
+                      </Button>
+                    ) : null}
+
                     <Button variant="outline" className="rounded-full" onClick={() => setEvidenceFocus(null)}>
                       Close
                     </Button>
                   </div>
                 </div>
 
-                {evidenceFocus.excerpt ? (
-                  <div className="mt-4 rounded-2xl border bg-muted/20 p-4">
+                {showEvidenceExcerpt && evidenceFocus.excerpt ? (
+                  <div ref={evidenceExcerptRef} className="mt-4 rounded-2xl border bg-muted/20 p-4">
                     <p className="text-sm text-muted-foreground leading-relaxed">{evidenceFocus.excerpt}</p>
                   </div>
                 ) : null}
@@ -3731,7 +3736,7 @@ async function saveJobMetadata() {
                     </Button>
 
                     <Button variant="outline" className="rounded-full" onClick={() => setSourceFocus(null)}>
-                      Close excerpt
+                      Close locate view
                     </Button>
                   </div>
                 </div>
