@@ -107,11 +107,12 @@ export default function UploadForm() {
   }
 
   function phaseLabel(p: UploadPhase) {
-    if (p === "checking_session") return "Checking your session…";
-    if (p === "uploading") return "Uploading your file…";
-    if (p === "creating_job") return "Creating your tender review…";
-    if (p === "extracting_text") return "Extracting text (fast)…";
-    if (p === "redirecting") return "Redirecting to your tender kit…";
+    // Keep button labels short so the primary action stays visually strong.
+    if (p === "checking_session") return "Checking…";
+    if (p === "uploading") return "Uploading…";
+    if (p === "creating_job") return "Creating…";
+    if (p === "extracting_text") return "Extracting…";
+    if (p === "redirecting") return "Redirecting…";
     return "";
   }
 
@@ -202,7 +203,7 @@ export default function UploadForm() {
     }
   }
 
-  const primaryCtaLabel = loading ? phaseLabel(phase) || "Preparing…" : "Create tender review";
+  const primaryCtaLabel = loading ? phaseLabel(phase) || "Preparing…" : "Create bid";
 
   return (
     <div className="space-y-4">
@@ -263,29 +264,16 @@ export default function UploadForm() {
               PDF or DOCX
             </Badge>
             <Badge variant="secondary" className="rounded-full">
-              One file per tender
-            </Badge>
-            <Badge variant="secondary" className="rounded-full">
               Up to {formatBytes(MAX_FILE_BYTES)}
             </Badge>
           </div>
 
           <div>
             <p className="text-sm font-semibold">Drag and drop your tender file here</p>
-            <p className="mt-1 text-sm text-muted-foreground">Or click to browse your computer.</p>
+            <p className="mt-1 text-xs text-muted-foreground">Or click to browse your computer.</p>
           </div>
 
-          {!file ? (
-            <div className="rounded-2xl border bg-background/70 p-4">
-              <p className="text-sm font-medium">What you will get</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Executive summary, requirements checklist, risks, clarifications, and a draft outline.
-              </p>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Drafting support only. Always verify requirements against the original tender documents.
-              </p>
-            </div>
-          ) : (
+          {file ? (
             <div className="rounded-2xl border bg-background/70 p-4">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
@@ -306,17 +294,15 @@ export default function UploadForm() {
                 </Button>
               </div>
             </div>
-          )}
-
-          {!file ? <div className="text-xs text-muted-foreground">Supported: .pdf, .docx</div> : null}
+          ) : null}
         </div>
       </Card>
 
       {needsSignIn && (
         <div className="rounded-2xl border bg-muted/40 p-4">
-          <p className="text-sm font-medium">Sign in to create your tender review</p>
+          <p className="text-sm font-medium">Sign in to create your bid</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Your file is ready. Sign in via magic link, then click “Create tender review”.
+            Your file is ready. Sign in via magic link, then click “Create bid”.
           </p>
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
             <Button asChild className="rounded-full">
@@ -351,8 +337,16 @@ export default function UploadForm() {
         </div>
       )}
 
+      {loading ? (
+        <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
+          <div className="h-full w-1/2 animate-pulse rounded-full bg-foreground/15" />
+        </div>
+      ) : null}
+
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs text-muted-foreground">You will be redirected to your tender kit after upload.</p>
+        <p className="text-xs text-muted-foreground">
+          {file ? "You’ll be redirected to the decision cockpit after upload." : "Select a file to continue."}
+        </p>
 
         <Button onClick={handleUpload} disabled={!file || loading || needsSignIn} className="rounded-full">
           {primaryCtaLabel}

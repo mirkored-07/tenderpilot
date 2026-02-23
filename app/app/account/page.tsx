@@ -36,6 +36,12 @@ type InitialSnapshot = {
   theme: "system" | "light" | "dark";
 };
 
+type UsageSnapshot = {
+  totalJobs: number;
+  doneJobs: number;
+  inProgressJobs: number;
+};
+
 function SectionTitle({
   title,
   subtitle,
@@ -105,6 +111,10 @@ export default function AccountPage() {
 
   const [userId, setUserId] = useState("");
   const [email, setEmail] = useState("");
+  const [authMethod, setAuthMethod] = useState<string>("Email");
+
+  const [usage, setUsage] = useState<UsageSnapshot | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const [fullName, setFullName] = useState("");
   const [company, setCompany] = useState("");
@@ -237,8 +247,22 @@ export default function AccountPage() {
       const uid = data.user.id;
       const mail = data.user.email ?? "";
 
+      const providerRaw = String((data.user as any)?.app_metadata?.provider ?? "").trim();
+      const provider = providerRaw || "email";
+      const providerLabel =
+        provider === "email"
+          ? "Email"
+          : provider === "google"
+          ? "Google"
+          : provider === "azure"
+          ? "Microsoft"
+          : provider === "github"
+          ? "GitHub"
+          : provider.charAt(0).toUpperCase() + provider.slice(1);
+
       setUserId(uid);
       setEmail(mail);
+      setAuthMethod(providerLabel);
 
       const profile = await ensureProfileRow(supabase, uid, mail);
       const settings = await ensureSettingsRow(supabase, uid);
@@ -267,6 +291,27 @@ export default function AccountPage() {
         uiDensity: nextDensity,
         theme: nextTheme,
       });
+
+      // Usage is optional UI context only. If it fails, keep placeholders.
+      try {
+        const { data: jobs, error: jobsErr } = await supabase
+          .from("jobs")
+          .select("status")
+          .order("created_at", { ascending: false })
+          .limit(500);
+        if (!jobsErr) {
+          const statuses = (jobs as any[]) ?? [];
+          const totalJobs = statuses.length;
+          const doneJobs = statuses.filter((j) => String((j as any)?.status ?? "") === "done").length;
+          const inProgressJobs = statuses.filter((j) => {
+            const s = String((j as any)?.status ?? "");
+            return s === "queued" || s === "processing";
+          }).length;
+          setUsage({ totalJobs, doneJobs, inProgressJobs });
+        }
+      } catch {
+        setUsage(null);
+      }
     } catch (e) {
       console.error("Account load failed", e);
       setStatusAutoClear({
@@ -365,9 +410,9 @@ export default function AccountPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Account</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Account</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Manage your profile, preferences, and security.
+            Profile, workspace defaults, plan, exports, and support.
           </p>
         </div>
 
@@ -394,41 +439,17 @@ export default function AccountPage() {
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <Card className="rounded-2xl">
           <CardHeader>
-            <CardTitle>Your account</CardTitle>
+            <CardTitle>Profile</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">Email</p>
-              <p className="text-sm font-medium">{email || "Unknown"}</p>
-            </div>
-
-            <Separator />
-
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground">User ID</p>
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm font-mono">{shortUserId}</p>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="rounded-full h-8 px-3"
-                  onClick={copyUserId}
-                >
-                  Copy
-                </Button>
-              </div>
-            </div>
-
-            <Separator />
-
             <div className="space-y-3">
               <SectionTitle
-                title="Profile"
-                subtitle="Used for internal labeling and future exports."
+                title="Identity"
+                subtitle="Used for labeling and future exports."
               />
 
               <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">Full name</p>
+                <p className="text-xs text-muted-foreground">Display name</p>
                 <Input
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
@@ -436,17 +457,59 @@ export default function AccountPage() {
                   className="rounded-xl"
                 />
               </div>
+            </div>
 
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">Company</p>
-                <Input
-                  value={company}
-                  onChange={(e) => setCompany(e.target.value)}
-                  placeholder="Company"
-                  className="rounded-xl"
-                />
+            <Separator />
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Email</p>
+                <p className="text-sm font-medium">{email || "Unknown"}</p>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Sign in method</p>
+                <p className="text-sm font-medium">{authMethod}</p>
               </div>
             </div>
+
+            <div className="flex items-center justify-between gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-full"
+                onClick={() => setShowAdvanced((v) => !v)}
+              >
+                {showAdvanced ? "Hide advanced" : "Show advanced"}
+              </Button>
+
+              <Button
+                variant="secondary"
+                onClick={signOut}
+                className="rounded-full"
+              >
+                Sign out
+              </Button>
+            </div>
+
+            {showAdvanced ? (
+              <div className="rounded-2xl border bg-muted/20 p-4">
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">User ID</p>
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-mono">{shortUserId}</p>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="rounded-full h-8 px-3"
+                      onClick={copyUserId}
+                    >
+                      Copy
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
 
@@ -480,35 +543,59 @@ export default function AccountPage() {
                   Selected: <span className="text-foreground">{pendingTheme}</span>
                 </p>
               </div>
+            </CardContent>
+          </Card>
 
-              <div className="space-y-2">
+          <Card className="rounded-2xl">
+            <CardHeader>
+              <CardTitle>Workspace</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="space-y-3">
                 <SectionTitle
-                  title="Default start page"
-                  subtitle="Choose where you land after login."
+                  title="Workspace name"
+                  subtitle="Shown in exports and future team views."
                 />
-                <SegmentedChoice
-                  value={defaultStartPage}
-                  onChange={setDefaultStartPage}
-                  options={[
-                    { value: "upload", label: "Upload" },
-                    { value: "jobs", label: "Jobs" },
-                  ]}
+                <Input
+                  value={company}
+                  onChange={(e) => setCompany(e.target.value)}
+                  placeholder="Workspace"
+                  className="rounded-xl"
                 />
               </div>
 
-              <div className="space-y-2">
+              <Separator />
+
+              <div className="space-y-3">
                 <SectionTitle
-                  title="UI density"
-                  subtitle="Compact shows more content per screen."
+                  title="Workflow defaults"
+                  subtitle="Applies to your account."
                 />
-                <SegmentedChoice
-                  value={uiDensity}
-                  onChange={setUiDensity}
-                  options={[
-                    { value: "comfortable", label: "Comfortable" },
-                    { value: "compact", label: "Compact" },
-                  ]}
-                />
+
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">Default start page</p>
+                  <SegmentedChoice
+                    value={defaultStartPage}
+                    onChange={setDefaultStartPage}
+                    options={[
+                      { value: "upload", label: "Upload" },
+                      { value: "jobs", label: "Jobs" },
+                    ]}
+                  />
+                </div>
+           
+              </div>
+
+              <Separator />
+
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium">Bid room</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Manage owners, status, due dates, and notes.</p>
+                </div>
+                <Button asChild variant="outline" className="rounded-full">
+                  <Link href="/app/bid-room">Open</Link>
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -518,39 +605,81 @@ export default function AccountPage() {
               <CardTitle>Plan</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
-              <p className="text-sm">
-                Plan: <span className="font-medium">Free</span>
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Billing and subscription management are coming soon.
-              </p>
-              <Button disabled className="rounded-full">
-                Manage subscription
-              </Button>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm">
+                  Plan: <span className="font-medium">Free</span>
+                </p>
+                <Badge variant="secondary" className="rounded-full">Active</Badge>
+              </div>
+
+              <div className="rounded-2xl border bg-muted/20 p-4">
+                <p className="text-xs text-muted-foreground">Usage</p>
+                <div className="mt-2 grid grid-cols-3 gap-3">
+                  <div>
+                    <p className="text-sm font-semibold">{usage ? usage.totalJobs : "–"}</p>
+                    <p className="text-xs text-muted-foreground">Tenders</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold">{usage ? usage.doneJobs : "–"}</p>
+                    <p className="text-xs text-muted-foreground">Processed</p>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold">{usage ? usage.inProgressJobs : "–"}</p>
+                    <p className="text-xs text-muted-foreground">In progress</p>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-muted-foreground">Billing and subscription management are coming soon.</p>
+
+              <Button disabled className="rounded-full">Manage subscription</Button>
             </CardContent>
           </Card>
 
           <Card className="rounded-2xl">
             <CardHeader>
-              <CardTitle>Security</CardTitle>
+              <CardTitle>Data and exports</CardTitle>
             </CardHeader>
-            <CardContent className="flex items-center justify-between gap-4">
-              <p className="text-sm text-muted-foreground">Sign out on this device.</p>
-              <Button
-                variant="secondary"
-                onClick={signOut}
-                className="rounded-full"
-              >
-                Sign out
-              </Button>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Exports live inside each job so they always stay consistent with evidence.
+              </p>
+
+              <div className="space-y-2 text-sm">
+                <p>
+                  <span className="font-medium">Analysis</span> includes Bid Pack (Excel), Tender brief PDF, and CSV exports.
+                </p>
+                <p>
+                  <span className="font-medium">Proposal coverage</span> includes Export CSV from the compliance matrix.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Button asChild className="rounded-full">
+                  <Link href="/app/jobs">Open jobs</Link>
+                </Button>
+                <Button asChild variant="outline" className="rounded-full">
+                  <Link href="/app/upload">New tender</Link>
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
           <Card className="rounded-2xl">
             <CardHeader>
-              <CardTitle>Support and legal</CardTitle>
+              <CardTitle>Support</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
+              <div className="text-sm">
+                <Link
+                  href="/how-it-works"
+                  className="text-foreground underline underline-offset-4"
+                >
+                  How it works
+                </Link>
+                <p className="text-xs text-muted-foreground">A quick overview of the workflow.</p>
+              </div>
+
               <div className="text-sm">
                 <Link
                   href="/privacy"

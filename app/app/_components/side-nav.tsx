@@ -12,10 +12,10 @@ type NavItem = {
 };
 
 const nav: NavItem[] = [
-  { href: "/app/upload", label: "New bid review" },
+  { href: "/app/upload", label: "New bid" },
+   { href: "/app/jobs", label: "Jobs" },
   { href: "/app/dashboard", label: "Dashboard" },
-  { href: "/app/jobs", label: "Jobs" },
-  { href: "/app/account", label: "Account" },
+   { href: "/app/account", label: "Account" },
 ];
 
 export function SideNav() {

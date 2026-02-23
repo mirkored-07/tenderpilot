@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { MoreHorizontal, RefreshCw } from "lucide-react";
 
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { getJobDisplayName } from "@/lib/pilot-job-names";
@@ -9,6 +10,15 @@ import { getJobDisplayName } from "@/lib/pilot-job-names";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 
 type JobStatus = "queued" | "processing" | "done" | "failed";
@@ -160,7 +170,14 @@ function DonutChart({
   const r = (size - strokeWidth) / 2;
   const c = 2 * Math.PI * r;
 
-  const classes = ["text-foreground/90", "text-foreground/65", "text-foreground/45", "text-foreground/25"];
+  const classes = [
+    // Semantic, premium palette: positive (teal/cyan), caution (amber), risk (rose), neutral (slate)
+    "text-teal-600/85 dark:text-teal-400/85",
+    "text-amber-500/85 dark:text-amber-400/85",
+    "text-rose-600/85 dark:text-rose-400/85",
+    "text-slate-600/45 dark:text-slate-400/45",
+    "text-cyan-500/70 dark:text-cyan-400/70",
+  ];
   let acc = 0;
 
   return (
@@ -674,37 +691,76 @@ return {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 py-8">
+
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Bid manager dashboard</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Decision readiness, deadlines, and team execution.</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+          <p className="mt-1 text-sm text-muted-foreground">High-signal triage for decisions, deadlines, and execution.</p>
         </div>
+
         <div className="flex flex-wrap items-center gap-2">
-          <Button asChild variant="outline" className="rounded-full">
-            <Link href="/app/jobs">Jobs</Link>
+          <Button asChild className="rounded-full">
+            <Link href="/app/upload">New bid</Link>
           </Button>
 
-          <Button asChild variant="outline" className="rounded-full">
-            <Link href="/app/bid-room">Global bid room (work)</Link>
-          </Button>
-
-          <button
-            type="button"
-            className="h-9 rounded-full border bg-background px-3 text-sm"
-            onClick={() => setStandupMode((v) => !v)}
-            aria-pressed={standupMode}
-            title="Show only KPI + Daily standup + Needs attention"
+          <Button
+            variant="ghost"
+            size="icon"
+            className="hidden h-9 w-9 rounded-full sm:inline-flex"
+            onClick={loadAll}
+            aria-label="Refresh"
+            title="Refresh"
           >
-            {standupMode ? "Standup mode: On" : "Standup mode: Off"}
-          </button>
-
-          <Button variant="outline" className="rounded-full" onClick={loadAll}>
-            Refresh
+            <RefreshCw className="h-4 w-4" />
           </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 rounded-full"
+                aria-label="Dashboard menu"
+                title="Menu"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem asChild>
+                <Link href="/app/jobs">Open jobs</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/app/bid-room">Open global bid room</Link>
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+
+              <DropdownMenuRadioGroup
+                value={standupMode ? "focused" : "full"}
+                onValueChange={(v) => setStandupMode(v === "focused")}
+              >
+                <DropdownMenuRadioItem value="focused">Focused view</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="full">Full view</DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+
+              <DropdownMenuSeparator />
+
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  loadAll();
+                }}
+              >
+                Refresh
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
       {error ? (
+
         <Card className="rounded-2xl border-red-200 bg-red-50">
           <CardContent className="p-4">
             <p className="text-sm font-semibold text-red-700">Dashboard error</p>
@@ -714,7 +770,7 @@ return {
       ) : null}
 
       {/* KPI row */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="rounded-2xl">
           <CardContent className="p-4">
             <p className="text-sm font-semibold">Portfolio</p>
@@ -759,6 +815,58 @@ return {
                   <p className="mt-3 text-xs text-muted-foreground">
                     Ready {ready} • Missing decision {missDecision} • Missing deadline {missDeadline}
                   </p>
+                </>
+              );
+            })()}
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-2xl">
+          <CardContent className="p-4">
+            <p className="text-sm font-semibold">Deadlines</p>
+
+            {(() => {
+              const overdue = deadlineHistogram[0]?.value || 0;
+              const next7 = deadlineHistogram[1]?.value || 0;
+              const next30 = deadlineHistogram[2]?.value || 0;
+              const next90 = deadlineHistogram[3]?.value || 0;
+              const unknown = deadlineHistogram[4]?.value || 0;
+
+              const total = overdue + next7 + next30 + next90 + unknown;
+              const urgent = overdue + next7;
+              const urgentPct = total > 0 ? Math.round((urgent / total) * 100) : 0;
+
+              return (
+                <>
+                  <div className="mt-3 flex items-center gap-4">
+                    <DonutChart
+                      parts={[
+                        { label: "Overdue", value: overdue },
+                        { label: "0-7d", value: next7 },
+                        { label: "8-30d", value: next30 },
+                        { label: "31-90d", value: next90 },
+                        { label: "Unknown", value: unknown },
+                      ]}
+                      size={72}
+                      strokeWidth={10}
+                    />
+
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted-foreground">% urgent</p>
+                      <p className="text-2xl font-semibold leading-none">{urgentPct}%</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {urgent} urgent • {unknown} unknown
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3">
+                    <SegmentedBar parts={deadlineHistogram} />
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Overdue {overdue} • 0-7d {next7} • 8-30d {next30} • 31-90d {next90}
+                      {unknown ? ` • Unknown ${unknown}` : ""}
+                    </p>
+                  </div>
                 </>
               );
             })()}
@@ -904,14 +1012,14 @@ return {
         </div>
       </div>
 
-      {/* Daily standup (hero) */}
+      {/* Operational queues */}
       <Card className="rounded-2xl">
         <CardContent className="p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold">Daily standup</p>
+              <p className="text-sm font-semibold">Operational queues</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Actionable queues. Works even when the tender PDF has no deadline or decision.
+                Actionable queues for daily delivery. Works even when the tender PDF has no deadline or decision.
               </p>
             </div>
 
@@ -1210,7 +1318,13 @@ return {
             </div>
           </div>
           ) : (
-            <p className="mt-3 text-xs text-muted-foreground">Collapsed.</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Badge variant="outline" className="rounded-full">Needs triage {standupQueues.needsTriage.length}</Badge>
+              <Badge variant="outline" className="rounded-full">Deadline unknown {standupQueues.deadlineUnknown.length}</Badge>
+              <Badge variant="outline" className="rounded-full">Due next 7d {standupQueues.dueNext7.length}</Badge>
+              <Badge variant="outline" className="rounded-full">Overdue items {standupQueues.overdueWorkItems.length}</Badge>
+              <Badge variant="outline" className="rounded-full">Blocked {standupQueues.blockedItems.length}</Badge>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -1281,7 +1395,7 @@ return {
               </Card>
 
 
-      {/* Needs attention (expanded by default; Top 5 when collapsed) */}
+      {/* Needs attention (Top 8 when collapsed) */}
       <Card className="rounded-2xl">
         <CardContent className="p-4">
           <div className="flex items-start justify-between gap-3">
@@ -1297,7 +1411,7 @@ return {
               className="text-xs text-muted-foreground underline-offset-2 hover:underline"
               onClick={() => setOpenSections((s) => ({ ...s, attention: !s.attention }))}
             >
-              {openSections.attention ? "Collapse" : "Expand"}
+              {openSections.attention ? "Show less" : "Show more"}
             </button>
           </div>
 
@@ -1307,40 +1421,69 @@ return {
             ) : (
               (() => {
                 const expanded = openSections.attention;
-                const rows = expanded ? attentionBids : attentionBids.slice(0, 5);
+                const rows = expanded ? attentionBids : attentionBids.slice(0, 8);
 
                 return (
                   <>
                     {rows.map((r: any) => (
-                      <div key={r.job.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3">
+                      <div
+                        key={r.job.id}
+                        className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background/60 p-3"
+                      >
                         <div className="min-w-0">
                           <Link href={`/app/jobs/${r.job.id}`} className="text-sm font-semibold hover:underline">
                             {r.displayName}
                           </Link>
+
                           <p className="mt-1 text-xs text-muted-foreground">
-                            {r.missingDecision ? "Decision missing" : r.decisionText || "Decision unknown"}
+                            {r.missingDecision ? "Decision: unset" : `Decision: ${r.decisionBucket.toUpperCase()}`}
                             {" • "}
-                            {r.missingDeadline ? "Deadline missing" : r.deadlineText || "Deadline unknown"}
+                            {r.missingDeadline
+                              ? "Deadline: unset"
+                              : r.deadline
+                                ? `Deadline: ${new Date(r.deadline).toLocaleDateString()}`
+                                : `Deadline: ${String(r.deadlineText || "unknown")}`}
                             {" • "}
-                            {r.blocked > 0 ? `${r.blocked} blocked` : "No blockers"}
+                            {r.total > 0 ? `${Math.max(0, r.total - r.done)} open work item${r.total - r.done === 1 ? "" : "s"}` : "No work items"}
+                            {r.blocked > 0 ? ` • ${r.blocked} blocked` : ""}
                           </p>
                         </div>
-                        <div className="flex items-center gap-2">
+
+                        <div className="flex flex-wrap items-center gap-2">
                           <DecisionBadge raw={r.decisionText} />
+
                           {r.dueSoon !== null ? (
                             <Badge variant={r.dueSoon < 0 ? "destructive" : "outline"} className="rounded-full">
-                              {r.dueSoon < 0 ? `${Math.abs(r.dueSoon)}d overdue` : `${r.dueSoon}d`}
+                              {r.dueSoon < 0 ? `${Math.abs(r.dueSoon)}d overdue` : `Due in ${r.dueSoon}d`}
                             </Badge>
                           ) : (
                             <Badge variant="outline" className="rounded-full">
                               No deadline
                             </Badge>
                           )}
+
+                          {r.total > 0 ? (
+                            <Badge variant="outline" className="rounded-full">
+                              {r.done}/{r.total} done
+                            </Badge>
+                          ) : null}
+
+                          <div className="ml-1 flex items-center gap-2">
+                            <Button asChild size="sm" variant="outline" className="rounded-full">
+                              <Link href={`/app/jobs/${r.job.id}`}>Open</Link>
+                            </Button>
+                            <Button asChild size="sm" variant="outline" className="rounded-full">
+                              <Link href={`/app/jobs/${r.job.id}/bid-room`}>Bid room</Link>
+                            </Button>
+                            <Button asChild size="sm" variant="outline" className="rounded-full">
+                              <Link href={`/app/jobs/${r.job.id}/compliance`}>Coverage</Link>
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ))}
 
-                    {attentionBids.length > 5 ? (
+                    {attentionBids.length > 8 ? (
                       <button
                         type="button"
                         className="mt-2 text-xs text-muted-foreground underline-offset-2 hover:underline"
