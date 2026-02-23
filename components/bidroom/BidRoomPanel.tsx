@@ -14,10 +14,34 @@ import { Separator } from "@/components/ui/separator";
 
 type WorkItemType = "requirement" | "risk" | "clarification" | "outline";
 
-type WorkBaseRow = { type: WorkItemType; ref_key: string; title: string; meta?: string };
+type EvidenceCandidateUi = {
+  id: string;
+  excerpt?: string | null;
+  page?: number | null;
+  anchor?: string | null;
+};
+
+type WorkBaseRow = {
+  type: WorkItemType;
+  ref_key: string;
+  title: string;
+  meta?: string;
+  evidenceIds?: string[];
+};
+
+type EvidenceFocus = {
+  id: string;
+  excerpt: string;
+  page: number | null;
+  anchor: string | null;
+  note: string | null;
+  allIds: string[] | null;
+};
 
 export function BidRoomPanel(props: {
   jobId: string;
+  jobFilePath?: string | null;
+  evidenceCandidates?: any[];
   checklist: any[];
   risks: any[];
   questions: string[];
@@ -33,6 +57,93 @@ export function BidRoomPanel(props: {
   const [workItems, setWorkItems] = useState<any[]>([]);
   const [workError, setWorkError] = useState<string | null>(null);
   const [workSaving, setWorkSaving] = useState<string | null>(null);
+
+  const [query, setQuery] = useState<string>("");
+  const [typeFilter, setTypeFilter] = useState<"all" | WorkItemType>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "todo" | "doing" | "blocked" | "done">("all");
+  const [hideDone, setHideDone] = useState<boolean>(true);
+
+  const [evidenceOpen, setEvidenceOpen] = useState(false);
+  const [evidenceFocus, setEvidenceFocus] = useState<EvidenceFocus | null>(null);
+  const [notesOpen, setNotesOpen] = useState<Set<string>>(() => new Set());
+
+  const evidenceById = useMemo(() => {
+    const map = new Map<string, EvidenceCandidateUi>();
+    const candidates = Array.isArray(props.evidenceCandidates) ? props.evidenceCandidates : [];
+    for (const c of candidates) {
+      const id = String((c as any)?.id ?? "").trim();
+      if (!id) continue;
+      map.set(id, c as EvidenceCandidateUi);
+    }
+    return map;
+  }, [props.evidenceCandidates]);
+
+  function extractEvidenceIds(obj: any): string[] {
+    const raw = (obj as any)?.evidence_ids ?? (obj as any)?.evidenceIds ?? (obj as any)?.evidence ?? null;
+    return Array.isArray(raw) ? raw.map((x: any) => String(x ?? "").trim()).filter(Boolean) : [];
+  }
+
+  async function openPdfAt(args?: { page?: number | null }) {
+    setWorkError(null);
+    const filePath = String(props.jobFilePath ?? "").trim();
+    if (!filePath) {
+      setWorkError("Original PDF is not available for this job.");
+      return;
+    }
+
+    try {
+      const supabase = supabaseBrowser();
+      const { data, error } = await supabase.storage.from("uploads").createSignedUrl(filePath, 60 * 10);
+      if (error || !data?.signedUrl) throw error || new Error("No signed URL");
+      const p = typeof args?.page === "number" && Number.isFinite(args.page) ? Math.max(1, Math.floor(args.page)) : null;
+      const url = p ? `${data.signedUrl}#page=${p}` : data.signedUrl;
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      console.warn(e);
+      setWorkError("Could not open the original PDF.");
+    }
+  }
+
+  function showEvidenceByIds(evidenceIds: string[] | undefined) {
+    const ids = Array.isArray(evidenceIds) ? evidenceIds.map((x) => String(x ?? "").trim()).filter(Boolean) : [];
+    const primary = ids.find((id) => evidenceById.has(id)) || ids[0] || "";
+    const cand = primary ? evidenceById.get(primary) : null;
+
+    if (cand) {
+      setEvidenceFocus({
+        id: String(cand.id),
+        excerpt: String(cand.excerpt ?? "").trim(),
+        page: typeof cand.page === "number" ? cand.page : null,
+        anchor: cand.anchor ? String(cand.anchor) : null,
+        note: null,
+        allIds: ids.length ? ids : null,
+      });
+      setEvidenceOpen(true);
+      return;
+    }
+
+    if (primary) {
+      setEvidenceFocus({
+        id: primary,
+        excerpt: "",
+        page: null,
+        anchor: null,
+        note:
+          "Evidence id not found in the pipeline evidence map. This can happen if the pipeline evidence was generated with a different version or was trimmed. Verify in the original PDF.",
+        allIds: ids.length ? ids : null,
+      });
+    } else {
+      setEvidenceFocus({
+        id: "",
+        excerpt: "",
+        page: null,
+        anchor: null,
+        note: "No evidence id is available for this item. Verify in the original PDF.",
+        allIds: null,
+      });
+    }
+    setEvidenceOpen(true);
+  }
 
   useEffect(() => {
     const supabase = supabaseBrowser();
@@ -69,7 +180,7 @@ export function BidRoomPanel(props: {
       const text = String((it as any)?.text ?? (it as any)?.requirement ?? "").trim();
       if (!text) continue;
       const ref = stableRefKey({ jobId, type: "requirement", text, extra: kind });
-      rows.push({ type: "requirement", ref_key: ref, title: text, meta: kind });
+      rows.push({ type: "requirement", ref_key: ref, title: text, meta: kind, evidenceIds: extractEvidenceIds(it) });
     }
 
     for (const r of risks ?? []) {
@@ -79,7 +190,7 @@ export function BidRoomPanel(props: {
       const text = title || detail;
       if (!text) continue;
       const ref = stableRefKey({ jobId, type: "risk", text, extra: sev });
-      rows.push({ type: "risk", ref_key: ref, title: title || detail, meta: sev });
+      rows.push({ type: "risk", ref_key: ref, title: title || detail, meta: sev, evidenceIds: extractEvidenceIds(r) });
     }
 
     for (const q of questions ?? []) {
@@ -107,6 +218,34 @@ export function BidRoomPanel(props: {
     }
     return m;
   }, [workItems]);
+
+  const filteredRows = useMemo(() => {
+    const q = String(query ?? "").trim().toLowerCase();
+    return (workBaseRows ?? []).filter((r) => {
+      if (typeFilter !== "all" && r.type !== typeFilter) return false;
+      const key = `${r.type}:${r.ref_key}`;
+      const w = workByKey.get(key);
+      const st = String(w?.status ?? "todo");
+      if (hideDone && st === "done") return false;
+      if (statusFilter !== "all" && st !== statusFilter) return false;
+      if (q) {
+        const hay = `${r.type} ${r.meta ?? ""} ${r.ref_key} ${r.title}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [workBaseRows, workByKey, query, typeFilter, statusFilter, hideDone]);
+
+  const groupedRows = useMemo(() => {
+    const groups: Record<WorkItemType, WorkBaseRow[]> = {
+      requirement: [],
+      risk: [],
+      clarification: [],
+      outline: [],
+    };
+    for (const r of filteredRows) groups[r.type].push(r);
+    return groups;
+  }, [filteredRows]);
 
   async function refreshWork() {
     const supabase = supabaseBrowser();
@@ -176,6 +315,15 @@ export function BidRoomPanel(props: {
               <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="outline"
+                  size="sm"
+                  className="rounded-full"
+                  onClick={() => openPdfAt()}
+                >
+                  Open original PDF
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
                   className="rounded-full"
                   onClick={async () => {
                     try {
@@ -213,7 +361,8 @@ export function BidRoomPanel(props: {
           </div>
         ) : null}
 
-        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <Badge variant="outline" className="rounded-full">
             Items: {workBaseRows.length}
           </Badge>
@@ -223,164 +372,301 @@ export function BidRoomPanel(props: {
           <Badge variant="outline" className="rounded-full">
             Blocked: {blockedCount}
           </Badge>
-        </div>
-
-        <div className="rounded-xl border bg-background/60">
-          <div className="grid grid-cols-12 gap-2 border-b bg-background/60 p-2 text-[11px] font-medium text-muted-foreground">
-            <div className="col-span-2">Type</div>
-            <div className="col-span-5">Item</div>
-            <div className="col-span-2">Owner</div>
-            <div className="col-span-1">Status</div>
-            <div className="col-span-1">Due</div>
-            <div className="col-span-1">Notes</div>
           </div>
 
-          <ScrollArea className="h-[520px]">
-            <div className="divide-y">
-              {workBaseRows.map((r) => {
-                const key = `${r.type}:${r.ref_key}`;
-                const w = workByKey.get(key);
-                const status = String(w?.status ?? "todo");
-                const owner = String(w?.owner_label ?? "");
-                const due = w?.due_at ? String(w.due_at).slice(0, 10) : "";
-                const notes = String(w?.notes ?? "");
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search items…"
+              className="h-9 w-[240px] rounded-full"
+            />
 
+            <select
+              className="h-9 rounded-full border bg-background px-3 text-xs"
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value as any)}
+            >
+              <option value="all">All types</option>
+              <option value="requirement">Requirements</option>
+              <option value="risk">Risks</option>
+              <option value="clarification">Clarifications</option>
+              <option value="outline">Outline</option>
+            </select>
+
+            <select
+              className="h-9 rounded-full border bg-background px-3 text-xs"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as any)}
+            >
+              <option value="all">All status</option>
+              <option value="todo">Todo</option>
+              <option value="doing">Doing</option>
+              <option value="blocked">Blocked</option>
+              <option value="done">Done</option>
+            </select>
+
+            <Button
+              type="button"
+              variant={hideDone ? "secondary" : "outline"}
+              size="sm"
+              className="rounded-full"
+              onClick={() => setHideDone((v) => !v)}
+            >
+              {hideDone ? "Hiding done" : "Showing done"}
+            </Button>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border bg-card/30">
+          <div className="flex items-center justify-between gap-3 border-b p-3">
+            <p className="text-xs font-semibold text-muted-foreground">Work items</p>
+            <p className="text-xs text-muted-foreground">Operational overlay only. This does not change the AI decision.</p>
+          </div>
+
+          <ScrollArea className="h-[560px]">
+            <div className="p-3 space-y-6">
+              {filteredRows.length === 0 ? (
+                <div className="rounded-2xl border bg-background p-6 text-center">
+                  <p className="text-sm font-medium">No items match your filters.</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Try clearing filters or searching for a different keyword.</p>
+                  <div className="mt-4 flex items-center justify-center gap-2">
+                    <Button variant="outline" size="sm" className="rounded-full" onClick={() => setQuery("")}>Clear search</Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-full"
+                      onClick={() => {
+                        setTypeFilter("all");
+                        setStatusFilter("all");
+                        setHideDone(false);
+                      }}
+                    >
+                      Reset filters
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
+              {(
+                [
+                  { key: "requirement" as const, label: "Requirements" },
+                  { key: "risk" as const, label: "Risks" },
+                  { key: "clarification" as const, label: "Clarifications" },
+                  { key: "outline" as const, label: "Outline" },
+                ] as const
+              ).map((g) => {
+                const rows = groupedRows[g.key] ?? [];
+                if (!rows.length) return null;
                 return (
-                  <div key={key} className="grid grid-cols-12 gap-2 p-2 text-sm">
-                    <div className="col-span-2">
-                      <p className="text-xs font-medium">
-                        {r.type}
-                        {r.meta ? <span className="text-muted-foreground"> • {r.meta}</span> : null}
-                      </p>
-                      <p className="mt-1 text-[10px] text-muted-foreground">{r.ref_key}</p>
+                  <div key={g.key} className="space-y-3">
+                    <div className="flex items-center justify-between px-1">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{g.label}</p>
+                      <p className="text-xs text-muted-foreground">{rows.length}</p>
                     </div>
 
-                    <div className="col-span-5 min-w-0">
-                      <p className="text-sm text-foreground/90 break-words">{r.title}</p>
-                    </div>
+                    <div className="space-y-3">
+                      {rows.map((r) => {
+                        const key = `${r.type}:${r.ref_key}`;
+                        const w = workByKey.get(key);
+                        const status = String(w?.status ?? "todo");
+                        const owner = String(w?.owner_label ?? "");
+                        const due = w?.due_at ? String(w.due_at).slice(0, 10) : "";
+                        const notes = String(w?.notes ?? "");
+                        const hasEvidence = Array.isArray(r.evidenceIds) && r.evidenceIds.length > 0;
+                        const notesIsOpen = notesOpen.has(key) || Boolean(notes);
 
-                    <div className="col-span-2">
-                      <Input
-                        value={owner}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setWorkItems((prev) => {
-                            const next = [...prev];
-                            const idx = next.findIndex((x) => `${x.type}:${x.ref_key}` === key);
-                            if (idx >= 0) next[idx] = { ...next[idx], owner_label: v };
-                            else next.unshift({ job_id: jobId, type: r.type, ref_key: r.ref_key, title: r.title, status, owner_label: v });
-                            return next;
-                          });
-                        }}
-                        onBlur={async (e) => {
-                          await upsertWorkItem({
-                            type: r.type,
-                            ref_key: r.ref_key,
-                            title: r.title,
-                            status,
-                            owner_label: e.target.value,
-                            due_at: due || null,
-                            notes,
-                          });
-                        }}
-                        placeholder="Owner"
-                        className="h-8"
-                        disabled={workSaving === key}
-                      />
-                    </div>
+                        const typeBadge = (() => {
+                          if (r.type === "requirement") return "Requirement";
+                          if (r.type === "risk") return "Risk";
+                          if (r.type === "clarification") return "Clarification";
+                          return "Outline";
+                        })();
 
-                    <div className="col-span-1">
-                      <select
-                        className="h-8 w-full rounded-md border bg-background px-2 text-xs"
-                        value={status}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setWorkItems((prev) => {
-                            const next = [...prev];
-                            const idx = next.findIndex((x) => `${x.type}:${x.ref_key}` === key);
-                            if (idx >= 0) next[idx] = { ...next[idx], status: v };
-                            else next.unshift({ job_id: jobId, type: r.type, ref_key: r.ref_key, title: r.title, status: v, owner_label: owner });
-                            return next;
-                          });
-                        }}
-                        onBlur={async (e) => {
-                          await upsertWorkItem({
-                            type: r.type,
-                            ref_key: r.ref_key,
-                            title: r.title,
-                            status: e.currentTarget.value,
-                            owner_label: owner,
-                            due_at: due || null,
-                            notes,
-                          });
-                        }}
-                        disabled={workSaving === key}
-                      >
-                        <option value="todo">todo</option>
-                        <option value="doing">doing</option>
-                        <option value="blocked">blocked</option>
-                        <option value="done">done</option>
-                      </select>
-                    </div>
+                        return (
+                          <div key={key} className="rounded-2xl border bg-background p-4 shadow-sm">
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <Badge variant="outline" className="rounded-full">{typeBadge}{r.meta ? ` • ${r.meta}` : ""}</Badge>
+                                  <span className="text-[11px] text-muted-foreground">{r.ref_key}</span>
+                                </div>
+                                <button
+                                  type="button"
+                                  className="mt-2 block w-full text-left text-sm font-medium leading-snug text-foreground hover:underline"
+                                  onClick={() => showEvidenceByIds(r.evidenceIds)}
+                                  disabled={!hasEvidence && evidenceById.size === 0}
+                                >
+                                  <span className="line-clamp-2 break-words">{r.title}</span>
+                                </button>
+                              </div>
 
-                    <div className="col-span-1">
-                      <Input
-                        type="date"
-                        value={due}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setWorkItems((prev) => {
-                            const next = [...prev];
-                            const idx = next.findIndex((x) => `${x.type}:${x.ref_key}` === key);
-                            if (idx >= 0) next[idx] = { ...next[idx], due_at: v || null };
-                            else next.unshift({ job_id: jobId, type: r.type, ref_key: r.ref_key, title: r.title, status, due_at: v || null });
-                            return next;
-                          });
-                        }}
-                        onBlur={async (e) => {
-                          await upsertWorkItem({
-                            type: r.type,
-                            ref_key: r.ref_key,
-                            title: r.title,
-                            status,
-                            owner_label: owner,
-                            due_at: e.target.value || null,
-                            notes,
-                          });
-                        }}
-                        className="h-8"
-                        disabled={workSaving === key}
-                      />
-                    </div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="rounded-full"
+                                  onClick={() => showEvidenceByIds(r.evidenceIds)}
+                                  disabled={!hasEvidence && evidenceById.size === 0}
+                                >
+                                  Open evidence
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="rounded-full"
+                                  onClick={() => {
+                                    const ids = Array.isArray(r.evidenceIds) ? r.evidenceIds : [];
+                                    const first = ids.find((id) => evidenceById.has(id));
+                                    const cand = first ? evidenceById.get(first) : null;
+                                    openPdfAt({ page: cand?.page ?? null });
+                                  }}
+                                >
+                                  Locate in PDF
+                                </Button>
+                              </div>
+                            </div>
 
-                    <div className="col-span-1">
-                      <Input
-                        value={notes}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setWorkItems((prev) => {
-                            const next = [...prev];
-                            const idx = next.findIndex((x) => `${x.type}:${x.ref_key}` === key);
-                            if (idx >= 0) next[idx] = { ...next[idx], notes: v };
-                            else next.unshift({ job_id: jobId, type: r.type, ref_key: r.ref_key, title: r.title, status, notes: v });
-                            return next;
-                          });
-                        }}
-                        onBlur={async (e) => {
-                          await upsertWorkItem({
-                            type: r.type,
-                            ref_key: r.ref_key,
-                            title: r.title,
-                            status,
-                            owner_label: owner,
-                            due_at: due || null,
-                            notes: e.target.value,
-                          });
-                        }}
-                        placeholder="Notes"
-                        className="h-8"
-                        disabled={workSaving === key}
-                      />
+                            <div className="mt-4 flex flex-wrap items-center gap-2">
+                              <Input
+                                value={owner}
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  setWorkItems((prev) => {
+                                    const next = [...prev];
+                                    const idx = next.findIndex((x) => `${x.type}:${x.ref_key}` === key);
+                                    if (idx >= 0) next[idx] = { ...next[idx], owner_label: v };
+                                    else next.unshift({ job_id: jobId, type: r.type, ref_key: r.ref_key, title: r.title, status, owner_label: v });
+                                    return next;
+                                  });
+                                }}
+                                onBlur={async (e) => {
+                                  await upsertWorkItem({
+                                    type: r.type,
+                                    ref_key: r.ref_key,
+                                    title: r.title,
+                                    status,
+                                    owner_label: e.target.value,
+                                    due_at: due || null,
+                                    notes,
+                                  });
+                                }}
+                                placeholder="Owner"
+                                className="h-9 w-[160px] rounded-full"
+                                disabled={workSaving === key}
+                              />
+
+                              <select
+                                className="h-9 rounded-full border bg-background px-3 text-xs"
+                                value={status}
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  setWorkItems((prev) => {
+                                    const next = [...prev];
+                                    const idx = next.findIndex((x) => `${x.type}:${x.ref_key}` === key);
+                                    if (idx >= 0) next[idx] = { ...next[idx], status: v };
+                                    else next.unshift({ job_id: jobId, type: r.type, ref_key: r.ref_key, title: r.title, status: v, owner_label: owner });
+                                    return next;
+                                  });
+                                }}
+                                onBlur={async (e) => {
+                                  await upsertWorkItem({
+                                    type: r.type,
+                                    ref_key: r.ref_key,
+                                    title: r.title,
+                                    status: e.currentTarget.value,
+                                    owner_label: owner,
+                                    due_at: due || null,
+                                    notes,
+                                  });
+                                }}
+                                disabled={workSaving === key}
+                              >
+                                <option value="todo">Todo</option>
+                                <option value="doing">Doing</option>
+                                <option value="blocked">Blocked</option>
+                                <option value="done">Done</option>
+                              </select>
+
+                              <Input
+                                type="date"
+                                value={due}
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  setWorkItems((prev) => {
+                                    const next = [...prev];
+                                    const idx = next.findIndex((x) => `${x.type}:${x.ref_key}` === key);
+                                    if (idx >= 0) next[idx] = { ...next[idx], due_at: v || null };
+                                    else next.unshift({ job_id: jobId, type: r.type, ref_key: r.ref_key, title: r.title, status, due_at: v || null });
+                                    return next;
+                                  });
+                                }}
+                                onBlur={async (e) => {
+                                  await upsertWorkItem({
+                                    type: r.type,
+                                    ref_key: r.ref_key,
+                                    title: r.title,
+                                    status,
+                                    owner_label: owner,
+                                    due_at: e.target.value || null,
+                                    notes,
+                                  });
+                                }}
+                                className="h-9 w-[150px] rounded-full"
+                                disabled={workSaving === key}
+                              />
+
+                              {notesIsOpen ? (
+                                <Input
+                                  value={notes}
+                                  onChange={(e) => {
+                                    const v = e.target.value;
+                                    setWorkItems((prev) => {
+                                      const next = [...prev];
+                                      const idx = next.findIndex((x) => `${x.type}:${x.ref_key}` === key);
+                                      if (idx >= 0) next[idx] = { ...next[idx], notes: v };
+                                      else next.unshift({ job_id: jobId, type: r.type, ref_key: r.ref_key, title: r.title, status, notes: v });
+                                      return next;
+                                    });
+                                  }}
+                                  onBlur={async (e) => {
+                                    await upsertWorkItem({
+                                      type: r.type,
+                                      ref_key: r.ref_key,
+                                      title: r.title,
+                                      status,
+                                      owner_label: owner,
+                                      due_at: due || null,
+                                      notes: e.target.value,
+                                    });
+                                  }}
+                                  placeholder="Notes (short, actionable)"
+                                  className="h-9 flex-1 min-w-[220px] rounded-full"
+                                  disabled={workSaving === key}
+                                />
+                              ) : (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="rounded-full"
+                                  onClick={() =>
+                                    setNotesOpen((prev) => {
+                                      const next = new Set(prev);
+                                      next.add(key);
+                                      return next;
+                                    })
+                                  }
+                                >
+                                  Add note
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 );
@@ -388,6 +674,85 @@ export function BidRoomPanel(props: {
             </div>
           </ScrollArea>
         </div>
+
+        {evidenceOpen ? (
+          <div className="fixed inset-0 z-50">
+            <div className="absolute inset-0 bg-black/40" onClick={() => setEvidenceOpen(false)} />
+            <div className="absolute right-0 top-0 h-full w-full max-w-xl bg-background shadow-2xl border-l">
+              <div className="flex items-start justify-between gap-3 p-5 border-b">
+                <div>
+                  <p className="text-sm font-semibold">Evidence excerpt</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Excerpt is authoritative. “Locate in PDF” is best-effort.
+                  </p>
+                </div>
+                <Button variant="outline" size="sm" className="rounded-full" onClick={() => setEvidenceOpen(false)}>
+                  Close
+                </Button>
+              </div>
+
+              <div className="p-5 space-y-4">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                  <Badge variant="outline" className="rounded-full">ID: {evidenceFocus?.id || "—"}</Badge>
+                  {typeof evidenceFocus?.page === "number" ? (
+                    <Badge variant="outline" className="rounded-full">Page: {evidenceFocus?.page}</Badge>
+                  ) : null}
+                  {evidenceFocus?.anchor ? (
+                    <Badge variant="outline" className="rounded-full">Anchor: {evidenceFocus.anchor}</Badge>
+                  ) : null}
+                </div>
+
+                {evidenceFocus?.note ? (
+                  <div className="rounded-xl border bg-muted/40 p-3">
+                    <p className="text-sm text-muted-foreground">{evidenceFocus.note}</p>
+                  </div>
+                ) : null}
+
+                <div className="rounded-2xl border bg-card/30 p-4">
+                  {evidenceFocus?.excerpt ? (
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed">{evidenceFocus.excerpt}</p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No excerpt text available for this evidence id.</p>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full"
+                    onClick={() => openPdfAt({ page: evidenceFocus?.page ?? null })}
+                  >
+                    Locate in PDF (best-effort)
+                  </Button>
+                  <Button variant="outline" size="sm" className="rounded-full" onClick={() => openPdfAt()}>
+                    Open PDF
+                  </Button>
+                </div>
+
+                {evidenceFocus?.allIds?.length ? (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">Other evidence ids</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {evidenceFocus.allIds.slice(0, 12).map((id) => (
+                        <Button
+                          key={id}
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="rounded-full"
+                          onClick={() => showEvidenceByIds([id])}
+                        >
+                          {id}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );

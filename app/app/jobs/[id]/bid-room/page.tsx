@@ -197,6 +197,11 @@ const [metaDraft, setMetaDraft] = useState<{
   const status: JobStatus = useMemo(() => String(job?.status ?? "queued") as JobStatus, [job]);
   const canDownload = useMemo(() => Boolean(job && status === "done"), [job, status]);
 
+  const evidenceCandidates = useMemo(() => {
+    const c = (job as any)?.pipeline?.evidence?.candidates;
+    return Array.isArray(c) ? c : [];
+  }, [job]);
+
   const checklist = useMemo(() => normalizeChecklist(result?.checklist), [result]);
   const risks = useMemo(() => normalizeRisks(result?.risks), [result]);
   const questions = useMemo(() => normalizeQuestions(result?.clarifications), [result]);
@@ -204,7 +209,7 @@ const [metaDraft, setMetaDraft] = useState<{
 
   return (
     <div className="mx-auto max-w-6xl space-y-4 p-4 md:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-lg font-semibold">Bid room</p>
           <p className="mt-1 text-sm text-muted-foreground">Work view: assign owners, track tasks, and coordinate the bid.</p>
@@ -218,6 +223,7 @@ const [metaDraft, setMetaDraft] = useState<{
             )}
           </p>
         </div>
+
         <div className="flex flex-wrap items-center gap-2">
           <Button asChild variant="outline" className="rounded-full">
             <Link href={`/app/jobs/${jobId}/compliance`}>Compliance matrix</Link>
@@ -226,92 +232,115 @@ const [metaDraft, setMetaDraft] = useState<{
             <Link href={`/app/jobs/${jobId}`}>Back to job</Link>
           </Button>
         </div>
-<Card className="rounded-2xl border border-black/5 bg-white shadow-sm">
-  <CardContent className="p-4">
-    <div className="flex flex-wrap items-start justify-between gap-3">
-      <button type="button" className="text-left" onClick={() => setMetaOpen((v) => !v)} aria-expanded={metaOpen}>
-        <p className="text-sm font-medium flex items-center gap-2">
-          Bid metadata
-          <span className="text-xs text-muted-foreground">{metaOpen ? "▲" : "▼"}</span>
-        </p>
-
-        <div className="mt-1 text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-1">
-          <span>
-            Deadline:{" "}
-            {jobMeta?.deadline_override ? new Date(jobMeta.deadline_override).toLocaleString() : metaDraft.deadlineLocal ? "(unsaved)" : "Unknown"}
-          </span>
-          <span>
-            Decision:{" "}
-            {metaDraft.decision_override ? metaDraft.decision_override : jobMeta?.decision_override ? jobMeta.decision_override : "Extracted"}
-          </span>
-          <span>
-            Owner:{" "}
-            {metaDraft.owner_label?.trim() ? metaDraft.owner_label.trim() : jobMeta?.owner_label?.trim() ? jobMeta.owner_label.trim() : "—"}
-          </span>
-          <span>Portal: {(metaDraft.portal_url?.trim() || jobMeta?.portal_url?.trim()) ? "set" : "—"}</span>
-        </div>
-
-        <p className="mt-1 text-xs text-muted-foreground">
-          Operational context only. Does not change evidence-first results.
-        </p>
-      </button>
-
-      <Button variant="outline" className="rounded-full" onClick={saveJobMetadata} disabled={savingMeta}>
-        {savingMeta ? "Saving…" : "Save"}
-      </Button>
-    </div>
-
-    {metaOpen ? (
-      <div className="mt-4 grid gap-3 md:grid-cols-2">
-        <div className="space-y-1">
-          <p className="text-xs text-muted-foreground">Submission deadline override</p>
-          <Input type="datetime-local" value={metaDraft.deadlineLocal} onChange={(e) => setMetaDraft((s) => ({ ...s, deadlineLocal: e.target.value }))} />
-        </div>
-
-        <div className="space-y-1">
-          <p className="text-xs text-muted-foreground">Decision override</p>
-          <select
-            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-            value={metaDraft.decision_override}
-            onChange={(e) => setMetaDraft((s) => ({ ...s, decision_override: e.target.value }))}
-          >
-            <option value="">(use extracted decision)</option>
-            <option value="Go">Go</option>
-            <option value="Hold">Hold</option>
-            <option value="No-Go">No-Go</option>
-          </select>
-        </div>
-
-        <div className="space-y-1">
-          <p className="text-xs text-muted-foreground">Portal / tender link</p>
-          <Input value={metaDraft.portal_url} onChange={(e) => setMetaDraft((s) => ({ ...s, portal_url: e.target.value }))} placeholder="https://…" />
-        </div>
-
-        <div className="space-y-1">
-          <p className="text-xs text-muted-foreground">Internal bid id</p>
-          <Input value={metaDraft.internal_bid_id} onChange={(e) => setMetaDraft((s) => ({ ...s, internal_bid_id: e.target.value }))} placeholder="e.g. BID-2026-014" />
-        </div>
-
-        <div className="space-y-1">
-          <p className="text-xs text-muted-foreground">Owner</p>
-          <Input value={metaDraft.owner_label} onChange={(e) => setMetaDraft((s) => ({ ...s, owner_label: e.target.value }))} placeholder="e.g. Maria" />
-        </div>
-
-        <div className="space-y-1">
-          <p className="text-xs text-muted-foreground">Target decision date</p>
-          <Input type="datetime-local" value={metaDraft.targetDecisionLocal} onChange={(e) => setMetaDraft((s) => ({ ...s, targetDecisionLocal: e.target.value }))} />
-        </div>
-
-        <div className="md:col-span-2">
-          <p className="text-xs text-muted-foreground">Last saved: {jobMeta?.updated_at ? new Date(jobMeta.updated_at).toLocaleString() : "—"}</p>
-        </div>
       </div>
-    ) : null}
-  </CardContent>
-</Card>
 
+      <Card className="rounded-2xl">
+        <CardContent className="p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <button type="button" className="text-left" onClick={() => setMetaOpen((v) => !v)} aria-expanded={metaOpen}>
+              <p className="text-sm font-medium flex items-center gap-2">
+                Bid metadata
+                <span className="text-xs text-muted-foreground">{metaOpen ? "▲" : "▼"}</span>
+              </p>
 
-      </div>
+              <div className="mt-1 text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-1">
+                <span>
+                  Deadline:{" "}
+                  {jobMeta?.deadline_override
+                    ? new Date(jobMeta.deadline_override).toLocaleString()
+                    : metaDraft.deadlineLocal
+                      ? "(unsaved)"
+                      : "Add deadline"}
+                </span>
+                <span>
+                  Owner:{" "}
+                  {metaDraft.owner_label?.trim() ? metaDraft.owner_label.trim() : jobMeta?.owner_label?.trim() ? jobMeta.owner_label.trim() : "Add owner"}
+                </span>
+                <span>Portal: {(metaDraft.portal_url?.trim() || jobMeta?.portal_url?.trim()) ? "set" : "Add portal"}</span>
+              </div>
+
+              <p className="mt-1 text-xs text-muted-foreground">Operational context (does not affect AI decision).</p>
+            </button>
+
+            {metaOpen ? (
+              <Button variant="outline" className="rounded-full" onClick={saveJobMetadata} disabled={savingMeta}>
+                {savingMeta ? "Saving…" : "Save"}
+              </Button>
+            ) : (
+              <Button variant="outline" className="rounded-full" onClick={() => setMetaOpen(true)}>
+                Edit
+              </Button>
+            )}
+          </div>
+
+          {metaOpen ? (
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Submission deadline override</p>
+                <Input
+                  type="datetime-local"
+                  value={metaDraft.deadlineLocal}
+                  onChange={(e) => setMetaDraft((s) => ({ ...s, deadlineLocal: e.target.value }))}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Decision override</p>
+                <select
+                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                  value={metaDraft.decision_override}
+                  onChange={(e) => setMetaDraft((s) => ({ ...s, decision_override: e.target.value }))}
+                >
+                  <option value="">(use extracted decision)</option>
+                  <option value="Go">Go</option>
+                  <option value="Hold">Hold</option>
+                  <option value="No-Go">No-Go</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Portal / tender link</p>
+                <Input
+                  value={metaDraft.portal_url}
+                  onChange={(e) => setMetaDraft((s) => ({ ...s, portal_url: e.target.value }))}
+                  placeholder="https://…"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Internal bid id</p>
+                <Input
+                  value={metaDraft.internal_bid_id}
+                  onChange={(e) => setMetaDraft((s) => ({ ...s, internal_bid_id: e.target.value }))}
+                  placeholder="e.g. BID-2026-014"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Owner</p>
+                <Input
+                  value={metaDraft.owner_label}
+                  onChange={(e) => setMetaDraft((s) => ({ ...s, owner_label: e.target.value }))}
+                  placeholder="e.g. Maria"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">Target decision date</p>
+                <Input
+                  type="datetime-local"
+                  value={metaDraft.targetDecisionLocal}
+                  onChange={(e) => setMetaDraft((s) => ({ ...s, targetDecisionLocal: e.target.value }))}
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <p className="text-xs text-muted-foreground">Last saved: {jobMeta?.updated_at ? new Date(jobMeta.updated_at).toLocaleString() : "—"}</p>
+              </div>
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
 
       {error ? (
         <Card className="rounded-2xl">
@@ -337,6 +366,8 @@ const [metaDraft, setMetaDraft] = useState<{
       ) : (
         <BidRoomPanel
           jobId={jobId}
+          jobFilePath={(job as any)?.file_path ?? null}
+          evidenceCandidates={evidenceCandidates}
           checklist={checklist}
           risks={risks}
           questions={questions}
