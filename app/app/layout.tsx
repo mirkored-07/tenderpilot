@@ -12,41 +12,60 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { SideNav } from "./_components/side-nav";
 import { TelemetryInit } from "./_components/telemetry-init";
+import { ModeToggle } from "@/components/mode-toggle";
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen aurora-bg overflow-x-hidden">
+    <div className="h-dvh aurora-bg overflow-hidden">
       <TelemetryInit />
-      <div className="grid min-h-screen grid-cols-1 md:grid-cols-[280px_1fr]">
-        <aside className="hidden md:flex flex-col bg-gradient-to-b from-teal-600 via-cyan-700 to-sky-800 text-white">
+
+      <div className="flex h-dvh min-w-0">
+        {/* Sidebar: fixed, never scrolls with page */}
+        <aside className="hidden md:flex fixed inset-y-0 left-0 w-[280px] z-40 flex-col bg-gradient-to-b from-teal-600 via-cyan-700 to-sky-800 text-white">
           <div className="h-16 px-6 flex items-center justify-between">
-            <Link href="/app/jobs" className="font-semibold text-lg tracking-tight">
+            <Link
+              href="/app/jobs"
+              className="font-semibold text-lg tracking-tight"
+            >
               TenderPilot
             </Link>
           </div>
 
           <Separator className="bg-white/15" />
 
-          <SideNav />
+          {/* Nav scrolls only inside sidebar, footer pinned */}
+          <div className="flex min-h-0 flex-1 flex-col">
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <SideNav />
+            </div>
 
-          <div className="mt-auto p-4">
-            <div className="rounded-2xl bg-white/10 p-4 ring-1 ring-white/15">
-              <p className="text-xs text-muted-foreground">Credits</p>
-              <div className="mt-2 flex items-center justify-between">
-                <Badge variant="secondary" className="rounded-full">
-                  2
-                </Badge>
-                <span className="text-xs text-muted-foreground">test</span>
+            <div className="border-t border-white/15 p-4 space-y-4">
+              <div className="rounded-2xl bg-white/12 p-4 ring-1 ring-white/15">
+                <p className="text-xs font-medium text-white/80">Credits</p>
+                <div className="mt-2 flex items-center justify-between">
+                  <Badge variant="secondary" className="rounded-full">
+                    2
+                  </Badge>
+                  <span className="text-xs font-medium text-white/80">test</span>
+                </div>
+                <p className="mt-3 text-xs text-white/75 leading-relaxed">
+                  Each tender review consumes 1 credit. Upgrade later via pricing.
+                </p>
               </div>
-              <p className="mt-3 text-xs text-muted-foreground leading-relaxed">
-                Each tender review consumes 1 credit. Upgrade later via pricing.
-              </p>
+
+              <div className="flex w-full items-center justify-between px-2">
+                <span className="text-xs font-medium text-white/80">Theme</span>
+                <div className="[&_button]:text-white [&_svg]:text-white">
+                  <ModeToggle />
+                </div>
+              </div>
             </div>
           </div>
         </aside>
 
-        <div className="flex flex-col">
-          <header className="h-16 border-b border-border bg-background/70 backdrop-blur flex items-center justify-between px-4 md:px-8">
+        {/* Main column: only this scrolls */}
+        <div className="flex min-w-0 flex-1 flex-col md:pl-[280px]">
+          <header className="h-16 sticky top-0 z-30 border-b border-border bg-background/70 backdrop-blur flex items-center justify-between px-4 md:px-8">
             <div className="flex items-center gap-3">
               <div className="md:hidden font-semibold">TenderPilot</div>
               <div>
@@ -77,8 +96,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             </DropdownMenu>
           </header>
 
-          <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
-			<div className="mx-auto max-w-7xl">
+          <main className="min-w-0 flex-1 overflow-y-auto px-4 py-6 md:px-8 md:py-8">
+            <div className="mx-auto max-w-7xl">
               <AuthGate>{children}</AuthGate>
             </div>
           </main>

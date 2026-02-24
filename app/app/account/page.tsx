@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 
 import { useTheme } from "next-themes";
+import { X, Pencil } from "lucide-react";
 
 type ProfileRow = {
   id: string;
@@ -39,23 +40,6 @@ type UsageSnapshot = {
   doneJobs: number;
   inProgressJobs: number;
 };
-
-function SectionTitle({
-  title,
-  subtitle,
-}: {
-  title: string;
-  subtitle?: string;
-}) {
-  return (
-    <div>
-      <p className="text-sm font-medium leading-none">{title}</p>
-      {subtitle ? (
-        <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>
-      ) : null}
-    </div>
-  );
-}
 
 function SegmentedChoice<T extends string>({
   value,
@@ -103,14 +87,6 @@ type WorkspacePlaybook = {
   typical_lead_time_weeks: number | null;
   certifications: string[];
   non_negotiables: string[];
-};
-
-type WorkspacePlaybookRow = {
-  workspace_id: string;
-  playbook: any;
-  version: number | null;
-  updated_at: string | null;
-  updated_by: string | null;
 };
 
 const EMPTY_PLAYBOOK: WorkspacePlaybook = {
@@ -252,10 +228,335 @@ function ChipsInput({
   );
 }
 
+function MiniChip({ text }: { text: string }) {
+  return (
+    <span className="inline-flex items-center rounded-full border bg-card px-2.5 py-1 text-xs text-foreground/80">
+      {text}
+    </span>
+  );
+}
+
+function PlaybookModal({
+  open,
+  onClose,
+  playbookEnabled,
+  playbookStatus,
+  playbook,
+  setPlaybook,
+  playbookVersion,
+  playbookUpdatedAt,
+  playbookSaving,
+  playbookIsDirty,
+  onSave,
+}: {
+  open: boolean;
+  onClose: () => void;
+  playbookEnabled: boolean;
+  playbookStatus: { kind: "ok" | "err"; text: string } | null;
+  playbook: WorkspacePlaybook;
+  setPlaybook: React.Dispatch<React.SetStateAction<WorkspacePlaybook>>;
+  playbookVersion: number;
+  playbookUpdatedAt: string | null;
+  playbookSaving: boolean;
+  playbookIsDirty: boolean;
+  onSave: () => Promise<void>;
+}) {
+  const [more, setMore] = useState(false);
+  const firstInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    const t = window.setTimeout(() => firstInputRef.current?.focus(), 50);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.clearTimeout(t);
+    };
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50">
+      <div
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
+      <div className="absolute left-1/2 top-1/2 w-[min(92vw,860px)] max-h-[86vh] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl border bg-background shadow-2xl">
+        <div className="flex items-start justify-between gap-3 border-b px-6 py-4">
+          <div className="min-w-0">
+            <p className="text-sm text-muted-foreground">Bid Playbook</p>
+            <h2 className="text-lg font-semibold tracking-tight">
+              Edit playbook rules
+            </h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              These rules shape Go / Hold / No Go. They are not used as evidence.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {playbookStatus ? (
+              <Badge
+                variant={
+                  playbookStatus.kind === "ok" ? "secondary" : "destructive"
+                }
+                className="rounded-full"
+              >
+                {playbookStatus.text}
+              </Badge>
+            ) : null}
+
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full h-9 px-3"
+              onClick={onClose}
+              aria-label="Close"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        <div className="overflow-y-auto px-6 py-5">
+          {!playbookEnabled ? (
+            <div className="rounded-2xl border bg-muted/20 p-4">
+              <p className="text-sm text-muted-foreground">
+                Playbook storage is not enabled yet. Apply the migration and
+                refresh.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">What you do</p>
+                <Input
+                  ref={firstInputRef}
+                  value={playbook.offerings_summary}
+                  onChange={(e) =>
+                    setPlaybook((p) => ({
+                      ...p,
+                      offerings_summary: e.target.value,
+                    }))
+                  }
+                  placeholder="One sentence summary"
+                  className="rounded-xl"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Keep it short. This reduces generic noise.
+                </p>
+              </div>
+
+              <div className="grid gap-5 md:grid-cols-2">
+                <ChipsInput
+                  label="Industries"
+                  values={playbook.industry_tags}
+                  onChange={(next) =>
+                    setPlaybook((p) => ({ ...p, industry_tags: next }))
+                  }
+                  placeholder="Public sector, IT, healthcare"
+                />
+
+                <ChipsInput
+                  label="Regions"
+                  values={playbook.delivery_geographies}
+                  onChange={(next) =>
+                    setPlaybook((p) => ({ ...p, delivery_geographies: next }))
+                  }
+                  placeholder="Austria, DACH, EU"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">Work mode</p>
+                <div className="flex flex-wrap items-center gap-4">
+                  {(["remote", "hybrid", "onsite"] as const).map((m) => {
+                    const checked = (playbook.delivery_modes ?? []).includes(m);
+                    const label =
+                      m === "onsite"
+                        ? "Onsite"
+                        : m === "hybrid"
+                        ? "Hybrid"
+                        : "Remote";
+                    return (
+                      <label
+                        key={m}
+                        className="inline-flex items-center gap-2 text-sm text-foreground/80"
+                      >
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 rounded border-border"
+                          checked={checked}
+                          onChange={() => {
+                            setPlaybook((p) => {
+                              const cur = p.delivery_modes ?? [];
+                              const next = checked
+                                ? cur.filter((x) => x !== m)
+                                : [...cur, m];
+                              return { ...p, delivery_modes: next };
+                            });
+                          }}
+                        />
+                        {label}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  Hard rules (max 10)
+                </p>
+                <textarea
+                  value={(playbook.non_negotiables ?? []).join("\n")}
+                  onChange={(e) => {
+                    const lines = String(e.target.value ?? "")
+                      .split(/\r?\n/)
+                      .map((l) => l.trim())
+                      .filter(Boolean)
+                      .slice(0, 10);
+                    setPlaybook((p) => ({ ...p, non_negotiables: lines }));
+                  }}
+                  placeholder={
+                    "No onsite work\nISO 27001 required\nNo fixed price contracts"
+                  }
+                  className="min-h-[130px] w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-muted"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  If a rule influences the decision, it will appear as a playbook
+                  trigger in the cockpit.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setMore((v) => !v)}
+                  className="text-xs font-medium text-muted-foreground hover:text-foreground"
+                >
+                  {more ? "Hide options" : "More options"}
+                </button>
+
+                <div className="text-[11px] text-muted-foreground">
+                  v{playbookVersion}
+                  {playbookUpdatedAt ? (
+                    <>
+                      {" "}
+                      • Updated{" "}
+                      <span className="text-foreground">
+                        {new Date(playbookUpdatedAt).toLocaleString()}
+                      </span>
+                    </>
+                  ) : null}
+                </div>
+              </div>
+
+              {more ? (
+                <div className="space-y-5 rounded-2xl border bg-muted/10 p-4">
+                  <div className="grid gap-5 md:grid-cols-2">
+                    <ChipsInput
+                      label="Languages"
+                      values={playbook.languages_supported}
+                      onChange={(next) =>
+                        setPlaybook((p) => ({
+                          ...p,
+                          languages_supported: next,
+                        }))
+                      }
+                      placeholder="EN, DE, IT"
+                    />
+                    <ChipsInput
+                      label="Certifications"
+                      values={playbook.certifications}
+                      onChange={(next) =>
+                        setPlaybook((p) => ({ ...p, certifications: next }))
+                      }
+                      placeholder="ISO 27001, TISAX"
+                    />
+                  </div>
+
+                  <div className="grid gap-5 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <p className="text-xs text-muted-foreground">Capacity</p>
+                      <SegmentedChoice
+                        value={playbook.capacity_band}
+                        onChange={(v) =>
+                          setPlaybook((p) => ({
+                            ...p,
+                            capacity_band: v as any,
+                          }))
+                        }
+                        options={[
+                          { value: "low", label: "Low" },
+                          { value: "medium", label: "Medium" },
+                          { value: "high", label: "High" },
+                        ]}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <p className="text-xs text-muted-foreground">
+                        Typical lead time (weeks)
+                      </p>
+                      <Input
+                        type="number"
+                        inputMode="numeric"
+                        min={1}
+                        value={playbook.typical_lead_time_weeks ?? ""}
+                        onChange={(e) => {
+                          const raw = e.target.value;
+                          const n = raw === "" ? null : Number(raw);
+                          setPlaybook((p) => ({
+                            ...p,
+                            typical_lead_time_weeks:
+                              Number.isFinite(n as any) && (n as any) > 0
+                                ? Math.round(n as any)
+                                : null,
+                          }));
+                        }}
+                        placeholder="4"
+                        className="rounded-xl"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between gap-3 border-t px-6 py-4">
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-full"
+            onClick={onClose}
+          >
+            Cancel
+          </Button>
+
+          <Button
+            type="button"
+            className="rounded-full"
+            onClick={onSave}
+            disabled={!playbookEnabled || playbookSaving || !playbookIsDirty}
+          >
+            {playbookSaving ? "Saving…" : "Save playbook"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AccountPage() {
   const router = useRouter();
 
-  // next-themes: stage changes, apply only on Save
   const { setTheme } = useTheme();
   const [themeMounted, setThemeMounted] = useState(false);
   const [pendingTheme, setPendingTheme] = useState<"system" | "light" | "dark">(
@@ -299,6 +600,7 @@ export default function AccountPage() {
     kind: "ok" | "err";
     text: string;
   } | null>(null);
+  const [playbookOpen, setPlaybookOpen] = useState(false);
 
   const playbookNormalized = useMemo(
     () => normalizePlaybook(playbook),
@@ -315,9 +617,11 @@ export default function AccountPage() {
 
   const [initial, setInitial] = useState<InitialSnapshot | null>(null);
 
-  const [status, setStatus] = useState<{ kind: "ok" | "err"; text: string } | null>(
-    null
-  );
+  const [status, setStatus] = useState<{
+    kind: "ok" | "err";
+    text: string;
+  } | null>(null);
+
   const statusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const shortUserId = useMemo(() => {
@@ -355,7 +659,7 @@ export default function AccountPage() {
       statusTimer.current = setTimeout(() => {
         setStatus(null);
         statusTimer.current = null;
-      }, 2500);
+      }, 2200);
     }
   }
 
@@ -432,7 +736,9 @@ export default function AccountPage() {
       const uid = data.user.id;
       const mail = data.user.email ?? "";
 
-      const providerRaw = String((data.user as any)?.app_metadata?.provider ?? "").trim();
+      const providerRaw = String(
+        (data.user as any)?.app_metadata?.provider ?? ""
+      ).trim();
       const provider = providerRaw || "email";
       const providerLabel =
         provider === "email"
@@ -452,7 +758,6 @@ export default function AccountPage() {
       const profile = await ensureProfileRow(supabase, uid, mail);
       const settings = await ensureSettingsRow(supabase, uid);
 
-      // Workspace bid playbook (best-effort). If the table is not deployed yet, the app must still work.
       try {
         const { data: pbRow, error: pbErr } = await supabase
           .from("workspace_playbooks")
@@ -464,7 +769,8 @@ export default function AccountPage() {
 
         const norm = normalizePlaybook((pbRow as any)?.playbook ?? {});
         const verRaw = Number((pbRow as any)?.version ?? 1);
-        const ver = Number.isFinite(verRaw) && verRaw > 0 ? Math.round(verRaw) : 1;
+        const ver =
+          Number.isFinite(verRaw) && verRaw > 0 ? Math.round(verRaw) : 1;
 
         setPlaybookEnabled(true);
         setPlaybook(norm);
@@ -480,7 +786,6 @@ export default function AccountPage() {
           msg.toLowerCase().includes("workspace_playbooks") &&
           msg.toLowerCase().includes("does not exist");
 
-        // Do not block Account when playbook storage is not enabled.
         setPlaybook({ ...EMPTY_PLAYBOOK });
         setPlaybookVersion(1);
         setPlaybookUpdatedAt(null);
@@ -488,23 +793,27 @@ export default function AccountPage() {
 
         if (looksMissing) {
           setPlaybookEnabled(false);
-          setPlaybookStatus({ kind: "err", text: "Playbook not enabled" });
+          setPlaybookStatus({ kind: "err", text: "Setup required" });
         } else {
           setPlaybookEnabled(true);
-          setPlaybookStatus({ kind: "err", text: "Playbook load failed" });
+          setPlaybookStatus({ kind: "err", text: "Couldn’t load" });
         }
       }
 
       const nextFullName = profile.full_name ?? "";
       const nextCompany = profile.company ?? "";
-      const nextStart = (settings.default_start_page ?? "upload") as "upload" | "jobs";
-      const nextTheme = (settings.theme ?? "system") as "system" | "light" | "dark";
+      const nextStart = (settings.default_start_page ?? "upload") as
+        | "upload"
+        | "jobs";
+      const nextTheme = (settings.theme ?? "system") as
+        | "system"
+        | "light"
+        | "dark";
 
       setFullName(nextFullName);
       setCompany(nextCompany);
       setDefaultStartPage(nextStart);
 
-      // stage theme + apply stored theme on load
       setPendingTheme(nextTheme);
       setTheme(nextTheme);
 
@@ -515,13 +824,13 @@ export default function AccountPage() {
         theme: nextTheme,
       });
 
-      // Usage is optional UI context only. If it fails, keep placeholders.
       try {
         const { data: jobs, error: jobsErr } = await supabase
           .from("jobs")
           .select("status")
           .order("created_at", { ascending: false })
           .limit(500);
+
         if (!jobsErr) {
           const statuses = (jobs as any[]) ?? [];
           const totalJobs = statuses.length;
@@ -541,7 +850,7 @@ export default function AccountPage() {
       console.error("Account load failed", e);
       setStatusAutoClear({
         kind: "err",
-        text: "Account data could not be loaded. Please refresh the page.",
+        text: "Couldn’t load settings. Refresh and try again.",
       });
     } finally {
       setLoading(false);
@@ -588,14 +897,12 @@ export default function AccountPage() {
       );
       if (settingsRes.error) throw settingsRes.error;
 
-      // Apply theme ONLY after successful save
       setTheme(normalizedCurrent.theme);
-
       setInitial({ ...normalizedCurrent });
       setStatusAutoClear({ kind: "ok", text: "Saved" });
     } catch (e) {
       console.error("Account save failed", e);
-      setStatusAutoClear({ kind: "err", text: "Save failed. Please try again." });
+      setStatusAutoClear({ kind: "err", text: "Couldn’t save. Try again." });
     } finally {
       setSaving(false);
     }
@@ -616,7 +923,7 @@ export default function AccountPage() {
       }
 
       if (!playbookEnabled) {
-        setPlaybookStatus({ kind: "err", text: "Playbook not enabled" });
+        setPlaybookStatus({ kind: "err", text: "Setup required" });
         return;
       }
 
@@ -641,10 +948,11 @@ export default function AccountPage() {
       setPlaybookUpdatedAt(nowIso);
       setPlaybookInitialFp(fingerprintPlaybook(norm));
       setPlaybookStatus({ kind: "ok", text: "Saved" });
-      window.setTimeout(() => setPlaybookStatus(null), 2500);
+      window.setTimeout(() => setPlaybookStatus(null), 2200);
+      setPlaybookOpen(false);
     } catch (e) {
       console.error("Playbook save failed", e);
-      setPlaybookStatus({ kind: "err", text: "Save failed" });
+      setPlaybookStatus({ kind: "err", text: "Couldn’t save" });
     } finally {
       setPlaybookSaving(false);
     }
@@ -666,17 +974,34 @@ export default function AccountPage() {
     }
   }
 
+  const playbookSummary = useMemo(() => {
+    const pb = playbookNormalized;
+    const modes = pb.delivery_modes.length
+      ? pb.delivery_modes.map((m) => (m === "onsite" ? "Onsite" : m === "hybrid" ? "Hybrid" : "Remote"))
+      : [];
+    const rulesCount = pb.non_negotiables.length;
+
+    return {
+      what: pb.offerings_summary || "Add one sentence about what you deliver",
+      industries: pb.industry_tags.slice(0, 3),
+      regions: pb.delivery_geographies.slice(0, 3),
+      modes,
+      rulesCount,
+    };
+  }, [playbookNormalized]);
+
   if (loading) {
     return <div className="py-16 text-sm text-muted-foreground">Loading…</div>;
   }
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Account</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Profile, workspace defaults, plan, exports, and support.
+            Profile, workspace, and preferences.
           </p>
         </div>
 
@@ -695,35 +1020,31 @@ export default function AccountPage() {
             disabled={saving || !isDirty}
             className="rounded-full"
           >
-            {saving ? "Saving…" : "Save"}
+            {saving ? "Saving…" : "Save changes"}
           </Button>
         </div>
       </div>
 
-      {/* 3-column layout on desktop for balanced rhythm */}
+      {/* Premium: balanced 3-column grid */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        {/* Column A: personal */}
+        {/* Column A */}
         <div className="space-y-6 lg:col-span-4">
           <Card className="rounded-2xl">
             <CardHeader className="pb-3">
               <CardTitle>Profile</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
-              <div className="space-y-3">
-                <SectionTitle
-                  title="Identity"
-                  subtitle="Used for labeling and future exports."
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">Name</p>
+                <Input
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Your name"
+                  className="rounded-xl"
                 />
-
-                <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground">Display name</p>
-                  <Input
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Your name"
-                    className="rounded-xl"
-                  />
-                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Used on exports and reports.
+                </p>
               </div>
 
               <Separator />
@@ -735,7 +1056,7 @@ export default function AccountPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Sign in method</p>
+                  <p className="text-xs text-muted-foreground">Sign in</p>
                   <p className="text-sm font-medium">{authMethod}</p>
                 </div>
               </div>
@@ -747,7 +1068,7 @@ export default function AccountPage() {
                   className="rounded-full"
                   onClick={() => setShowAdvanced((v) => !v)}
                 >
-                  {showAdvanced ? "Hide advanced" : "Show advanced"}
+                  {showAdvanced ? "Hide details" : "More"}
                 </Button>
 
                 <Button
@@ -782,88 +1103,74 @@ export default function AccountPage() {
 
           <Card className="rounded-2xl">
             <CardHeader className="pb-3">
-              <CardTitle>Preferences</CardTitle>
+              <CardTitle>Appearance</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <SectionTitle
-                  title="Appearance"
-                  subtitle="Choose light, dark, or follow your system setting."
+            <CardContent className="space-y-3">
+              {themeMounted ? (
+                <SegmentedChoice
+                  value={pendingTheme}
+                  onChange={setPendingTheme}
+                  options={[
+                    { value: "system", label: "System" },
+                    { value: "light", label: "Light" },
+                    { value: "dark", label: "Dark" },
+                  ]}
                 />
+              ) : (
+                <div className="h-9 w-[260px] rounded-xl border bg-muted/30" />
+              )}
 
-                {themeMounted ? (
-                  <SegmentedChoice
-                    value={pendingTheme}
-                    onChange={setPendingTheme}
-                    options={[
-                      { value: "system", label: "System" },
-                      { value: "light", label: "Light" },
-                      { value: "dark", label: "Dark" },
-                    ]}
-                  />
-                ) : (
-                  <div className="h-9 w-[260px] rounded-xl border bg-muted/30" />
-                )}
-
-                <p className="text-xs text-muted-foreground">
-                  Selected:{" "}
-                  <span className="text-foreground">{pendingTheme}</span>
-                </p>
-              </div>
+              <p className="text-xs text-muted-foreground">
+                Current:{" "}
+                <span className="text-foreground capitalize">
+                  {pendingTheme}
+                </span>
+              </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Column B: workspace core */}
+        {/* Column B */}
         <div className="space-y-6 lg:col-span-5">
           <Card className="rounded-2xl">
             <CardHeader className="pb-3">
               <CardTitle>Workspace</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
-              <div className="space-y-3">
-                <SectionTitle
-                  title="Workspace name"
-                  subtitle="Shown in exports and future team views."
-                />
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">Workspace name</p>
                 <Input
                   value={company}
                   onChange={(e) => setCompany(e.target.value)}
                   placeholder="Workspace"
                   className="rounded-xl"
                 />
+                <p className="text-[11px] text-muted-foreground">
+                  Shown on exports and (later) for teams.
+                </p>
               </div>
 
               <Separator />
 
-              <div className="space-y-3">
-                <SectionTitle
-                  title="Workflow defaults"
-                  subtitle="Applies to your account."
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">Start page</p>
+                <SegmentedChoice
+                  value={defaultStartPage}
+                  onChange={setDefaultStartPage}
+                  options={[
+                    { value: "upload", label: "New bid" },
+                    { value: "jobs", label: "Jobs" },
+                  ]}
                 />
-
-                <div className="space-y-2">
-                  <p className="text-xs text-muted-foreground">
-                    Default start page
-                  </p>
-                  <SegmentedChoice
-                    value={defaultStartPage}
-                    onChange={setDefaultStartPage}
-                    options={[
-                      { value: "upload", label: "Upload" },
-                      { value: "jobs", label: "Jobs" },
-                    ]}
-                  />
-                </div>
               </div>
 
               <Separator />
 
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm font-medium">Bid room</p>
+                  <p className="text-sm font-medium">Bid Room</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Manage owners, status, due dates, and notes.
+                    Track owners, status, and due dates.
                   </p>
                 </div>
                 <Button asChild variant="outline" className="rounded-full">
@@ -873,268 +1180,88 @@ export default function AccountPage() {
             </CardContent>
           </Card>
 
+          {/* Premium: playbook is a summary card + modal */}
           <Card className="rounded-2xl">
             <CardHeader className="pb-3">
-              <CardTitle>Workspace Bid Playbook</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm text-muted-foreground">
-                    Company-aware constraints used as policy (not evidence). If
-                    they influence Go or Hold, you will see policy triggers in
-                    the decision cockpit.
-                  </p>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Keep it short. Target setup time: 10 minutes.
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <CardTitle>Bid Playbook</CardTitle>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Rules that shape Go / Hold / No Go. Not evidence.
                   </p>
                 </div>
 
-                {playbookStatus ? (
+                <div className="flex items-center gap-2">
+                  {!playbookEnabled ? (
+                    <Badge variant="destructive" className="rounded-full">
+                      Setup required
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary" className="rounded-full">
+                      Policy
+                    </Badge>
+                  )}
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-full"
+                    onClick={() => setPlaybookOpen(true)}
+                  >
+                    <Pencil className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              {playbookStatus ? (
+                <div className="flex items-center justify-end">
                   <Badge
                     variant={
-                      playbookStatus.kind === "ok"
-                        ? "secondary"
-                        : "destructive"
+                      playbookStatus.kind === "ok" ? "secondary" : "destructive"
                     }
-                    className="rounded-full shrink-0"
+                    className="rounded-full"
                   >
                     {playbookStatus.text}
                   </Badge>
-                ) : null}
+                </div>
+              ) : null}
+
+              <div className="rounded-2xl border bg-muted/10 p-4">
+                <p className="text-sm font-medium">What you do</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {playbookSummary.what}
+                </p>
+
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {playbookSummary.industries.map((x) => (
+                    <MiniChip key={`i:${x}`} text={x} />
+                  ))}
+                  {playbookSummary.regions.map((x) => (
+                    <MiniChip key={`r:${x}`} text={x} />
+                  ))}
+                  {playbookSummary.modes.map((x) => (
+                    <MiniChip key={`m:${x}`} text={x} />
+                  ))}
+                  <MiniChip
+                    text={`${playbookSummary.rulesCount} rule${
+                      playbookSummary.rulesCount === 1 ? "" : "s"
+                    }`}
+                  />
+                </div>
               </div>
 
-              {!playbookEnabled ? (
-                <div className="rounded-2xl border bg-muted/20 p-4">
-                  <p className="text-sm text-muted-foreground">
-                    Playbook storage is not enabled yet. Apply the workspace
-                    playbook migration, then refresh this page.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-5">
-                  <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground">
-                      Offerings summary
-                    </p>
-                    <Input
-                      value={playbook.offerings_summary}
-                      onChange={(e) =>
-                        setPlaybook((p) => ({
-                          ...p,
-                          offerings_summary: e.target.value,
-                        }))
-                      }
-                      placeholder="What you deliver in 1 sentence"
-                      className="rounded-xl"
-                    />
-                    <p className="text-[11px] text-muted-foreground">
-                      Max 240 characters. This improves fit and de-noises generic
-                      findings.
-                    </p>
-                  </div>
-
-                  <div className="grid gap-5 md:grid-cols-2">
-                    <ChipsInput
-                      label="Industry tags"
-                      values={playbook.industry_tags}
-                      onChange={(next) =>
-                        setPlaybook((p) => ({ ...p, industry_tags: next }))
-                      }
-                      placeholder="Public sector, IT, healthcare"
-                    />
-
-                    <ChipsInput
-                      label="Delivery geographies"
-                      values={playbook.delivery_geographies}
-                      onChange={(next) =>
-                        setPlaybook((p) => ({
-                          ...p,
-                          delivery_geographies: next,
-                        }))
-                      }
-                      placeholder="Austria, DACH, EU"
-                    />
-
-                    <ChipsInput
-                      label="Languages supported"
-                      values={playbook.languages_supported}
-                      onChange={(next) =>
-                        setPlaybook((p) => ({
-                          ...p,
-                          languages_supported: next,
-                        }))
-                      }
-                      placeholder="EN, DE, IT"
-                    />
-
-                    <ChipsInput
-                      label="Certifications"
-                      values={playbook.certifications}
-                      onChange={(next) =>
-                        setPlaybook((p) => ({ ...p, certifications: next }))
-                      }
-                      placeholder="ISO 27001, TISAX"
-                    />
-                  </div>
-
-                  <Separator />
-
-                  <div className="grid gap-5 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <p className="text-xs text-muted-foreground">
-                        Delivery modes
-                      </p>
-                      <div className="flex flex-wrap items-center gap-4">
-                        {(["remote", "hybrid", "onsite"] as const).map((m) => {
-                          const checked = (playbook.delivery_modes ?? []).includes(
-                            m
-                          );
-                          const label =
-                            m === "onsite"
-                              ? "Onsite"
-                              : m === "hybrid"
-                              ? "Hybrid"
-                              : "Remote";
-                          return (
-                            <label
-                              key={m}
-                              className="inline-flex items-center gap-2 text-sm text-foreground/80"
-                            >
-                              <input
-                                type="checkbox"
-                                className="h-4 w-4 rounded border-border"
-                                checked={checked}
-                                onChange={() => {
-                                  setPlaybook((p) => {
-                                    const cur = p.delivery_modes ?? [];
-                                    const next = checked
-                                      ? cur.filter((x) => x !== m)
-                                      : [...cur, m];
-                                    return { ...p, delivery_modes: next };
-                                  });
-                                }}
-                              />
-                              {label}
-                            </label>
-                          );
-                        })}
-                      </div>
-                      <p className="text-[11px] text-muted-foreground">
-                        Used to flag conflicts (for example remote-only vs onsite
-                        required).
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <p className="text-xs text-muted-foreground">
-                        Capacity band
-                      </p>
-                      <SegmentedChoice
-                        value={playbook.capacity_band}
-                        onChange={(v) =>
-                          setPlaybook((p) => ({
-                            ...p,
-                            capacity_band: v as any,
-                          }))
-                        }
-                        options={[
-                          { value: "low", label: "Low" },
-                          { value: "medium", label: "Medium" },
-                          { value: "high", label: "High" },
-                        ]}
-                      />
-                      <p className="text-[11px] text-muted-foreground">
-                        Used to surface workload or ramp-up concerns early.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-5 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <p className="text-xs text-muted-foreground">
-                        Typical lead time (weeks)
-                      </p>
-                      <Input
-                        type="number"
-                        inputMode="numeric"
-                        min={1}
-                        value={playbook.typical_lead_time_weeks ?? ""}
-                        onChange={(e) => {
-                          const raw = e.target.value;
-                          const n = raw === "" ? null : Number(raw);
-                          setPlaybook((p) => ({
-                            ...p,
-                            typical_lead_time_weeks:
-                              Number.isFinite(n as any) && (n as any) > 0
-                                ? Math.round(n as any)
-                                : null,
-                          }));
-                        }}
-                        placeholder="4"
-                        className="rounded-xl"
-                      />
-                      <p className="text-[11px] text-muted-foreground">
-                        Used when the tender timeline is tight.
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <p className="text-xs text-muted-foreground">
-                        Non negotiables (max 10 lines)
-                      </p>
-                      <textarea
-                        value={(playbook.non_negotiables ?? []).join("\n")}
-                        onChange={(e) => {
-                          const lines = String(e.target.value ?? "")
-                            .split(/\r?\n/)
-                            .map((l) => l.trim())
-                            .filter(Boolean)
-                            .slice(0, 10);
-                          setPlaybook((p) => ({ ...p, non_negotiables: lines }));
-                        }}
-                        placeholder={
-                          "Example\nNo onsite work\nISO 27001 required\nNo fixed price contracts"
-                        }
-                        className="min-h-[110px] w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-muted"
-                      />
-                      <p className="text-[11px] text-muted-foreground">
-                        These are treated as policy constraints. Tender
-                        requirements still must be supported by evidence IDs.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="text-xs text-muted-foreground">
-                      Version{" "}
-                      <span className="text-foreground">{playbookVersion}</span>
-                      {playbookUpdatedAt ? (
-                        <>
-                          {" "}
-                          • Updated{" "}
-                          <span className="text-foreground">
-                            {new Date(playbookUpdatedAt).toLocaleString()}
-                          </span>
-                        </>
-                      ) : null}
-                    </div>
-
-                    <Button
-                      onClick={savePlaybook}
-                      disabled={playbookSaving || !playbookIsDirty}
-                      className="rounded-full"
-                    >
-                      {playbookSaving ? "Saving…" : "Save playbook"}
-                    </Button>
-                  </div>
-                </div>
-              )}
+              <p className="text-[11px] text-muted-foreground">
+                If a playbook rule influences a decision, TenderRay will show it
+                as a trigger in the cockpit.
+              </p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Column C: secondary */}
+        {/* Column C */}
         <div className="space-y-6 lg:col-span-3">
           <Card className="rounded-2xl">
             <CardHeader className="pb-3">
@@ -1143,7 +1270,8 @@ export default function AccountPage() {
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between gap-3">
                 <p className="text-sm">
-                  Plan: <span className="font-medium">Free</span>
+                  <span className="text-muted-foreground">Current</span>{" "}
+                  <span className="font-medium">Free</span>
                 </p>
                 <Badge variant="secondary" className="rounded-full">
                   Active
@@ -1174,43 +1302,28 @@ export default function AccountPage() {
                 </div>
               </div>
 
-              <p className="text-xs text-muted-foreground">
-                Billing and subscription management are coming soon.
-              </p>
-
               <Button disabled className="rounded-full">
-                Manage subscription
+                Manage plan (soon)
               </Button>
             </CardContent>
           </Card>
 
           <Card className="rounded-2xl">
             <CardHeader className="pb-3">
-              <CardTitle>Data and exports</CardTitle>
+              <CardTitle>Exports</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Exports live inside each job so they always stay consistent with
+                Export from inside a job to keep everything consistent with
                 evidence.
               </p>
-
-              <div className="space-y-2 text-sm">
-                <p>
-                  <span className="font-medium">Analysis</span> includes Bid Pack
-                  (Excel), Tender brief PDF, and CSV exports.
-                </p>
-                <p>
-                  <span className="font-medium">Proposal coverage</span> includes
-                  Export CSV from the compliance matrix.
-                </p>
-              </div>
 
               <div className="flex flex-wrap items-center gap-2">
                 <Button asChild className="rounded-full">
                   <Link href="/app/jobs">Open jobs</Link>
                 </Button>
                 <Button asChild variant="outline" className="rounded-full">
-                  <Link href="/app/upload">New tender</Link>
+                  <Link href="/app/upload">New bid</Link>
                 </Button>
               </div>
             </CardContent>
@@ -1218,7 +1331,7 @@ export default function AccountPage() {
 
           <Card className="rounded-2xl">
             <CardHeader className="pb-3">
-              <CardTitle>Support</CardTitle>
+              <CardTitle>Help</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="text-sm">
@@ -1229,7 +1342,7 @@ export default function AccountPage() {
                   How it works
                 </Link>
                 <p className="text-xs text-muted-foreground">
-                  A quick overview of the workflow.
+                  Quick overview of the workflow.
                 </p>
               </div>
 
@@ -1238,11 +1351,8 @@ export default function AccountPage() {
                   href="/privacy"
                   className="text-foreground underline underline-offset-4"
                 >
-                  Privacy policy
+                  Privacy
                 </Link>
-                <p className="text-xs text-muted-foreground">
-                  Read how data is handled.
-                </p>
               </div>
 
               <div className="text-sm">
@@ -1250,22 +1360,37 @@ export default function AccountPage() {
                   href="/terms"
                   className="text-foreground underline underline-offset-4"
                 >
-                  Terms of service
+                  Terms
                 </Link>
                 <p className="text-xs text-muted-foreground">
-                  Drafting support, not advice.
+                  Drafting support only. Always verify against the source.
                 </p>
               </div>
 
               <div className="pt-1">
                 <Button disabled variant="secondary" className="rounded-full">
-                  Contact support (coming soon)
+                  Contact support (soon)
                 </Button>
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      {/* Modal */}
+      <PlaybookModal
+        open={playbookOpen}
+        onClose={() => setPlaybookOpen(false)}
+        playbookEnabled={playbookEnabled}
+        playbookStatus={playbookStatus}
+        playbook={playbook}
+        setPlaybook={setPlaybook}
+        playbookVersion={playbookVersion}
+        playbookUpdatedAt={playbookUpdatedAt}
+        playbookSaving={playbookSaving}
+        playbookIsDirty={playbookIsDirty}
+        onSave={savePlaybook}
+      />
     </div>
   );
 }

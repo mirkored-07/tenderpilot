@@ -98,12 +98,24 @@ const SOURCE_TEXT_PREVIEW_LIMIT = 20_000;
 function VerdictBadge({ state }: { state: VerdictState }) {
   const base = "inline-flex items-center rounded-full border px-3 py-1 text-xs";
   if (state === "proceed") {
-    return <span className={`${base} border-green-200 bg-green-50 text-green-800`}>Proceed</span>;
+    return (
+      <span className={`${base} border-green-200 bg-green-50 text-green-800 dark:border-emerald-500/25 dark:bg-emerald-500/15 dark:text-emerald-200`}>
+        Proceed
+      </span>
+    );
   }
   if (state === "hold") {
-    return <span className={`${base} border-red-200 bg-red-50 text-red-800`}>Hold — resolve blockers to bid</span>;
+    return (
+      <span className={`${base} border-red-200 bg-red-50 text-red-800 dark:border-rose-500/25 dark:bg-rose-500/15 dark:text-rose-200`}>
+        Hold — resolve blockers to bid
+      </span>
+    );
   }
-  return <span className={`${base} border-amber-200 bg-amber-50 text-amber-900`}>Proceed with caution</span>;
+  return (
+    <span className={`${base} border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-500/25 dark:bg-amber-500/15 dark:text-amber-200`}>
+      Proceed with caution
+    </span>
+  );
 }
 
 function verdictMicrocopy(state: VerdictState) {
@@ -1915,44 +1927,6 @@ const executive = useMemo(() => {
 	}, [result]);
 
 
-  const policyTriggers = useMemo(() => {
-    const raw = (result as any)?.policy_triggers;
-    const arr = Array.isArray(raw) ? raw : [];
-
-    return arr
-      .map((t: any) => ({
-        key: String(t?.key ?? "").trim(),
-        impact: String(t?.impact ?? "").trim(),
-        note: String(t?.note ?? "").trim(),
-      }))
-      .filter((t: any) => t.key && t.note)
-      .slice(0, 10);
-  }, [result]);
-
-  function playbookKeyLabel(key: string) {
-    const k = String(key ?? "").trim();
-    if (k === "industry_tags") return "Industry";
-    if (k === "offerings_summary") return "Offerings";
-    if (k === "delivery_geographies") return "Geographies";
-    if (k === "languages_supported") return "Languages";
-    if (k === "delivery_modes") return "Delivery mode";
-    if (k === "capacity_band") return "Capacity";
-    if (k === "typical_lead_time_weeks") return "Lead time";
-    if (k === "certifications") return "Certifications";
-    if (k === "non_negotiables") return "Non negotiables";
-    return k.replaceAll("_", " ");
-  }
-
-  function playbookImpactLabel(impact: string) {
-    const i = String(impact ?? "").trim();
-    if (i === "blocks") return "Blocker";
-    if (i === "increases_risk") return "Risk";
-    if (i === "decreases_fit") return "Lower fit";
-    if (i === "requires_clarification") return "Clarify";
-    return i || "Policy";
-  }
-
-
 	const draftForUi = useMemo(() => {
 	  return (result as any)?.proposal_draft ?? null;
 	}, [result]);
@@ -2347,11 +2321,11 @@ const executive = useMemo(() => {
 	  const neutral =
 		"border-muted/60 bg-muted/20 text-muted-foreground hover:bg-background hover:text-foreground";
 	  const critical =
-		"border-red-200 bg-background text-red-800 hover:border-red-300 hover:bg-red-50/40";
+		"border-red-200 bg-background text-red-800 hover:border-red-300 hover:bg-red-50/40 dark:border-red-500/25 dark:text-red-200 dark:hover:border-red-500/35 dark:hover:bg-red-500/10";
 	  const warn =
-		"border-amber-200 bg-background text-amber-900 hover:border-amber-300 hover:bg-amber-50/40";
+		"border-amber-200 bg-background text-amber-900 hover:border-amber-300 hover:bg-amber-50/40 dark:border-amber-500/25 dark:text-amber-200 dark:hover:border-amber-500/35 dark:hover:bg-amber-500/10";
 	  const info =
-		"border-sky-200 bg-background text-sky-900 hover:border-sky-300 hover:bg-sky-50/40";
+		"border-sky-200 bg-background text-sky-900 hover:border-sky-300 hover:bg-sky-50/40 dark:border-sky-500/25 dark:text-sky-200 dark:hover:border-sky-500/35 dark:hover:bg-sky-500/10";
 
 	  if (kind === "blockers") {
 		// If HOLD, keep border red even on hover (no “second red fill” needed)
@@ -2363,13 +2337,15 @@ const executive = useMemo(() => {
 	  if (kind === "risks") {
 		if (isCaution) return warn;
 		if (r >= 3) return warn;
-		if (r > 0) return "border-amber-200/60 bg-background text-amber-900 hover:border-amber-300 hover:bg-amber-50/30";
+		if (r > 0)
+		  return "border-amber-200/60 bg-background text-amber-900 hover:border-amber-300 hover:bg-amber-50/30 dark:border-amber-500/25 dark:text-amber-200 dark:hover:border-amber-500/35 dark:hover:bg-amber-500/10";
 		return neutral;
 	  }
 
 	  if (kind === "questions") {
 		if (q >= 5) return info;
-		if (q > 0) return "border-sky-200/60 bg-background text-sky-900 hover:border-sky-300 hover:bg-sky-50/30";
+		if (q > 0)
+		  return "border-sky-200/60 bg-background text-sky-900 hover:border-sky-300 hover:bg-sky-50/30 dark:border-sky-500/25 dark:text-sky-200 dark:hover:border-sky-500/35 dark:hover:bg-sky-500/10";
 		return neutral;
 	  }
 
@@ -2391,9 +2367,9 @@ const executive = useMemo(() => {
 	  const isCaution = verdictState === "caution";
 
 	  const neutral = "border-muted/60 text-foreground";
-	  const critical = "border-red-200 text-red-800";
-	  const warn = "border-amber-200 text-amber-900";
-	  const info = "border-sky-200 text-sky-900";
+	  const critical = "border-red-200 text-red-800 dark:border-red-500/25 dark:text-red-200";
+	  const warn = "border-amber-200 text-amber-900 dark:border-amber-500/25 dark:text-amber-200";
+	  const info = "border-sky-200 text-sky-900 dark:border-sky-500/25 dark:text-sky-200";
 
 	  if (kind === "blockers") {
 		if (isHold) return critical;
@@ -3088,7 +3064,7 @@ async function saveJobMetadata() {
           <div>
             <p className="text-sm font-semibold">Tender review</p>
             <p className="mt-1 text-sm text-muted-foreground">Your tender review will appear here.</p>
-            <p className="mt-2 text-sm text-red-600">This tender link is invalid. Return to your jobs and open it again.</p>
+            <p className="mt-2 text-sm text-red-600 dark:text-red-300">This tender link is invalid. Return to your jobs and open it again.</p>
           </div>
 
           <div className="flex items-center gap-2">
@@ -3337,7 +3313,7 @@ async function saveJobMetadata() {
 
               <DropdownMenuItem
                 disabled={!canDelete}
-                className="text-red-600 focus:text-red-600"
+                className="text-red-600 focus:text-red-600 dark:text-red-300 dark:focus:text-red-300"
                 onSelect={(e) => {
                   e.preventDefault();
                   if (!canDelete) return;
@@ -3352,9 +3328,9 @@ async function saveJobMetadata() {
       </div>
 
 {error ? (
-        <Card className="rounded-2xl border-red-200 bg-red-50">
+        <Card className="rounded-2xl border-red-200 bg-red-50 dark:border-red-500/25 dark:bg-red-500/10">
           <CardContent className="p-4">
-            <p className="text-sm text-red-700">{error}</p>
+            <p className="text-sm text-red-700 dark:text-red-200">{error}</p>
           </CardContent>
         </Card>
       ) : null}
@@ -3373,7 +3349,7 @@ async function saveJobMetadata() {
 
               {showFailed ? (
                 <div className="mt-3">
-                  <div className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-800">
+                  <div className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-800 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-200">
                     FAILED
                   </div>
                   <p className="mt-3 text-sm text-muted-foreground">This tender review could not be completed. Re-upload the document or retry processing.</p>
@@ -3400,10 +3376,10 @@ async function saveJobMetadata() {
                         className={[
                           "inline-flex items-center rounded-2xl px-4 py-2 text-sm font-semibold tracking-wide",
                           verdictState === "proceed"
-                            ? "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200"
+                            ? "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-200 dark:ring-emerald-500/25"
                             : verdictState === "hold"
-                            ? "bg-rose-50 text-rose-800 ring-1 ring-rose-200"
-                            : "bg-amber-50 text-amber-900 ring-1 ring-amber-200",
+                            ? "bg-rose-50 text-rose-800 ring-1 ring-rose-200 dark:bg-rose-500/15 dark:text-rose-200 dark:ring-rose-500/25"
+                            : "bg-amber-50 text-amber-900 ring-1 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-200 dark:ring-amber-500/25",
                         ].join(" ")}
                       >
                         {verdictState === "proceed" ? "GO" : verdictState === "hold" ? "HOLD" : "GO (CAUTION)"}
@@ -3415,35 +3391,12 @@ async function saveJobMetadata() {
                     </div>
 
                     <p className="text-sm text-foreground/80">{verdictDriverLine}</p>
-
-
-                  {policyTriggers.length ? (
-                    <div className="rounded-2xl border border-border bg-muted/30 p-4">
-                      <p className="text-xs font-semibold">Applied workspace playbook constraints</p>
-                      <p className="mt-1 text-xs text-muted-foreground">Policy triggers only. Tender-side claims must be verified via Evidence IDs.</p>
-                      <div className="mt-3 space-y-2">
-                        {policyTriggers.slice(0, 6).map((t: any, i: number) => (
-                          <div key={i} className="flex items-start justify-between gap-3 rounded-xl border border-border bg-card p-3">
-                            <div className="min-w-0">
-                              <p className="text-sm text-foreground/80 leading-relaxed">
-                                <span className="font-medium text-foreground">{playbookKeyLabel(t.key)}</span>
-                                {t.note ? ` — ${t.note}` : ""}
-                              </p>
-                            </div>
-                            <span className="shrink-0 rounded-full border border-border bg-muted px-2.5 py-1 text-[11px] text-muted-foreground">
-                              {playbookImpactLabel(t.impact)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : null}
                   </div>
 
                   {verdictState === "hold" && (mustItems ?? []).length ? (
-                    <div className="rounded-2xl border border-rose-200/40 bg-rose-500/5 p-4">
-                      <p className="text-xs font-semibold text-rose-900">Top blockers</p>
-                      <ul className="mt-2 space-y-2 text-sm text-rose-950/90">
+                    <div className="rounded-2xl border border-rose-200/40 bg-rose-500/5 p-4 dark:border-rose-500/20 dark:bg-rose-500/10">
+                      <p className="text-xs font-semibold text-rose-900 dark:text-rose-200">Top blockers</p>
+                      <ul className="mt-2 space-y-2 text-sm text-rose-950/90 dark:text-rose-100">
                         {(mustItems ?? []).slice(0, 3).map((t, i) => (
                           <li key={i} className="leading-relaxed">• {t}</li>
                         ))}
