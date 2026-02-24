@@ -54,6 +54,7 @@ type AiOutput = {
   }>;
   buyer_questions: string[];
   proposal_draft: string;
+  policy_triggers: Array<{ key: string; impact: "blocks" | "increases_risk" | "decreases_fit" | "requires_clarification"; note: string; rule?: string }>;
 };
 
 
@@ -225,6 +226,32 @@ async function logEvent(
     message,
     meta,
   });
+}
+
+async function loadWorkspacePlaybookAdmin(
+  supabaseAdmin: any,
+  workspaceId: string,
+): Promise<{ playbook: any | null; version: number | null }> {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("workspace_playbooks")
+      .select("playbook,version")
+      .eq("workspace_id", workspaceId)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    const pb = (data as any)?.playbook;
+    const playbook = pb && typeof pb === "object" ? pb : null;
+
+    const vRaw = Number((data as any)?.version ?? NaN);
+    const version = Number.isFinite(vRaw) && vRaw > 0 ? Math.round(vRaw) : null;
+
+    return { playbook, version };
+  } catch {
+    // Best-effort. If the table is not deployed yet, do not block processing.
+    return { playbook: null, version: null };
+  }
 }
 
 /**
@@ -570,6 +597,7 @@ function mockAiFixture(extractedText: string): AiOutput {
 
 Source preview
 ${preview}`,
+    policy_triggers: [],
   };
 }
 
@@ -605,8 +633,9 @@ async function runOpenAi(args: {
   evidenceCandidates: EvidenceCandidate[];
   maxOutputTokens: number;
   timeoutMs?: number;
+  workspacePlaybook?: { playbook: any; version: number | null } | null;
 }): Promise<AiOutput> {
-  const { apiKey, model, extractedText, evidenceCandidates, maxOutputTokens, timeoutMs } = args;
+  const { apiKey, model, extractedText, evidenceCandidates, maxOutputTokens, timeoutMs, workspacePlaybook } = args;
 
   const schema = {
     type: "object",
@@ -667,8 +696,39 @@ async function runOpenAi(args: {
       },
       buyer_questions: { type: "array", items: { type: "string" } },
       proposal_draft: { type: "string" },
+      policy_triggers: {
+        type: "array",
+        maxItems: 10,
+        items: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            key: {
+              type: "string",
+              enum: [
+                "industry_tags",
+                "offerings_summary",
+                "delivery_geographies",
+                "languages_supported",
+                "delivery_modes",
+                "capacity_band",
+                "typical_lead_time_weeks",
+                "certifications",
+                "non_negotiables",
+              ],
+            },
+            impact: {
+              type: "string",
+              enum: ["blocks", "increases_risk", "decreases_fit", "requires_clarification"],
+            },
+            note: { type: "string" },
+            rule: { type: "string" },
+          },
+          required: ["key", "impact", "note"],
+        },
+      },
     },
-    required: ["executive_summary", "checklist", "risks", "buyer_questions", "proposal_draft"],
+    required: ["executive_summary", "checklist", "risks", "buyer_questions", "proposal_draft", "policy_triggers"],
   };
 
   const instructions =
@@ -685,9 +745,28 @@ async function runOpenAi(args: {
     })
     .join("\n\n");
 
+  const playbookJson = (() => {
+    try {
+      const pb = workspacePlaybook?.playbook;
+      if (!pb || typeof pb !== "object") return "Not provided.";
+      const raw = JSON.stringify(pb, null, 2);
+      if (!raw) return "Not provided.";
+      const cap = 3500;
+      return raw.length > cap ? raw.slice(0, cap) + "\n[TRUNCATED]" : raw;
+    } catch {
+      return "Not provided.";
+    }
+  })();
+
+  const playbookVersionLabel = workspacePlaybook?.version ? String(workspacePlaybook.version) : "Not provided";
+
 
   const userPrompt = `Task
 Review the tender source text and produce a decision-first bid kit.
+
+Workspace Bid Playbook (policy constraints, NOT evidence)
+Version: ${playbookVersionLabel}
+${playbookJson}
 
 Strict rules
 1. Grounding. Use only the evidence snippets provided. Do not guess. If a detail is not present, write: Not found in extracted text.
@@ -699,8 +778,15 @@ Strict rules
    - For each risk: include at least one evidence id that supports it.
    - Do not invent clause numbers or cross-references (e.g., ITT 24.1). Cite only evidence ids.
    - If you cannot support a MUST or a risk with evidence, downgrade it to INFO and add a buyer question for manual verification.
-6. Deduplication. Do not repeat checklist items verbatim inside the executive summary.
-7. Missing info. Put ambiguities or missing info into buyer_questions.
+6. Playbook (STRICT). The playbook is policy, not evidence:
+   - Never cite the playbook as evidence.
+   - If the playbook influences decision, prioritization, or required actions, add entries to policy_triggers.
+   - When you claim a conflict with the playbook, cite evidence ids that support the tender-side requirement driving the conflict.
+7. Policy triggers output (REQUIRED):
+   - policy_triggers must be an array. If no playbook constraints apply, return an empty array.
+   - Each trigger must be one line, auditable, and map to a playbook key.
+8. Deduplication. Do not repeat checklist items verbatim inside the executive summary.
+9. Missing info. Put ambiguities or missing info into buyer_questions.
 
 Evidence snippets (use ONLY these; cite their ids in evidence_ids):
 ${evidenceList}
@@ -1362,6 +1448,7 @@ let extractedText = "";
     const maxUsdPerJob = parseNumberEnv("TP_MAX_USD_PER_JOB", 0.05);
 
     let aiOut: AiOutput;
+    let playbookVersion: number | null = null;
 
     if (useMockAi) {
       aiOut = mockAiFixture(extractedText);
@@ -1403,6 +1490,14 @@ let extractedText = "";
         });
       }
 
+      const workspacePlaybook = await loadWorkspacePlaybookAdmin(supabaseAdmin, job.user_id);
+      playbookVersion = workspacePlaybook.version;
+      if (workspacePlaybook.playbook) {
+        await logEvent(supabaseAdmin, job, "info", "Workspace playbook loaded", {
+          version: workspacePlaybook.version,
+        });
+      }
+
       await logEvent(supabaseAdmin, job, "info", "OpenAI started", { model, maxOutputTokens, remaining_ms: remaining });
 
       // Configurable OpenAI timeout cap (default 35s)
@@ -1417,7 +1512,7 @@ let extractedText = "";
         ),
       );
 
-      aiOut = await runOpenAi({ apiKey, model, extractedText: clipped, evidenceCandidates, maxOutputTokens, timeoutMs });
+      aiOut = await runOpenAi({ apiKey, model, extractedText: clipped, evidenceCandidates, maxOutputTokens, timeoutMs, workspacePlaybook });
       await logEvent(supabaseAdmin, job, "info", "OpenAI completed", { model, maxOutputTokens });
     }
 
@@ -1475,9 +1570,7 @@ let extractedText = "";
 
       aiOut = { ...aiOut, checklist, risks };
     }
-
-
-    const { error: upsertErr } = await supabaseAdmin.from("job_results").upsert({
+    const resultPayload: any = {
       job_id: job.id,
       user_id: job.user_id,
       extracted_text: extractedText,
@@ -1486,9 +1579,53 @@ let extractedText = "";
       risks: aiOut.risks,
       clarifications: aiOut.buyer_questions,
       proposal_draft: aiOut.proposal_draft,
-    });
+      policy_triggers: Array.isArray((aiOut as any).policy_triggers) ? (aiOut as any).policy_triggers : [],
+    };
+
+    if (playbookVersion !== null) {
+      resultPayload.playbook_version = playbookVersion;
+    }
+
+    let upsertErr: any = null;
+
+    {
+      const { error } = await supabaseAdmin.from("job_results").upsert(resultPayload);
+      upsertErr = error ?? null;
+    }
+
+    // Backwards-compatible fallback if the migration has not been applied yet.
+    if (upsertErr) {
+      const msg = String((upsertErr as any)?.message ?? "");
+      const migrationMissing =
+        msg.includes("policy_triggers") ||
+        msg.includes("playbook_version") ||
+        msg.toLowerCase().includes("could not find") ||
+        (msg.toLowerCase().includes("column") &&
+          (msg.includes("policy_triggers") || msg.includes("playbook_version")));
+
+      if (migrationMissing) {
+        const legacyPayload: any = {
+          job_id: job.id,
+          user_id: job.user_id,
+          extracted_text: extractedText,
+          executive_summary: aiOut.executive_summary,
+          checklist: aiOut.checklist,
+          risks: aiOut.risks,
+          clarifications: aiOut.buyer_questions,
+          proposal_draft: aiOut.proposal_draft,
+        };
+
+        const { error: retryErr } = await supabaseAdmin.from("job_results").upsert(legacyPayload);
+        upsertErr = retryErr ?? null;
+
+        if (!upsertErr) {
+          await logEvent(supabaseAdmin, job, "warn", "Job results saved without playbook columns (migration missing)");
+        }
+      }
+    }
 
     if (upsertErr) {
+
       await logEvent(supabaseAdmin, job, "error", "Saving results failed", { error: upsertErr.message });
       await supabaseAdmin.from("jobs").update({ status: "failed" }).eq("id", job.id);
       return new Response("Result save failed", { status: 500 });

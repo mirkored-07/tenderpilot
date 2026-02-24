@@ -1915,6 +1915,44 @@ const executive = useMemo(() => {
 	}, [result]);
 
 
+  const policyTriggers = useMemo(() => {
+    const raw = (result as any)?.policy_triggers;
+    const arr = Array.isArray(raw) ? raw : [];
+
+    return arr
+      .map((t: any) => ({
+        key: String(t?.key ?? "").trim(),
+        impact: String(t?.impact ?? "").trim(),
+        note: String(t?.note ?? "").trim(),
+      }))
+      .filter((t: any) => t.key && t.note)
+      .slice(0, 10);
+  }, [result]);
+
+  function playbookKeyLabel(key: string) {
+    const k = String(key ?? "").trim();
+    if (k === "industry_tags") return "Industry";
+    if (k === "offerings_summary") return "Offerings";
+    if (k === "delivery_geographies") return "Geographies";
+    if (k === "languages_supported") return "Languages";
+    if (k === "delivery_modes") return "Delivery mode";
+    if (k === "capacity_band") return "Capacity";
+    if (k === "typical_lead_time_weeks") return "Lead time";
+    if (k === "certifications") return "Certifications";
+    if (k === "non_negotiables") return "Non negotiables";
+    return k.replaceAll("_", " ");
+  }
+
+  function playbookImpactLabel(impact: string) {
+    const i = String(impact ?? "").trim();
+    if (i === "blocks") return "Blocker";
+    if (i === "increases_risk") return "Risk";
+    if (i === "decreases_fit") return "Lower fit";
+    if (i === "requires_clarification") return "Clarify";
+    return i || "Policy";
+  }
+
+
 	const draftForUi = useMemo(() => {
 	  return (result as any)?.proposal_draft ?? null;
 	}, [result]);
@@ -3377,6 +3415,29 @@ async function saveJobMetadata() {
                     </div>
 
                     <p className="text-sm text-foreground/80">{verdictDriverLine}</p>
+
+
+                  {policyTriggers.length ? (
+                    <div className="rounded-2xl border border-border bg-muted/30 p-4">
+                      <p className="text-xs font-semibold">Applied workspace playbook constraints</p>
+                      <p className="mt-1 text-xs text-muted-foreground">Policy triggers only. Tender-side claims must be verified via Evidence IDs.</p>
+                      <div className="mt-3 space-y-2">
+                        {policyTriggers.slice(0, 6).map((t: any, i: number) => (
+                          <div key={i} className="flex items-start justify-between gap-3 rounded-xl border border-border bg-card p-3">
+                            <div className="min-w-0">
+                              <p className="text-sm text-foreground/80 leading-relaxed">
+                                <span className="font-medium text-foreground">{playbookKeyLabel(t.key)}</span>
+                                {t.note ? ` — ${t.note}` : ""}
+                              </p>
+                            </div>
+                            <span className="shrink-0 rounded-full border border-border bg-muted px-2.5 py-1 text-[11px] text-muted-foreground">
+                              {playbookImpactLabel(t.impact)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                   </div>
 
                   {verdictState === "hold" && (mustItems ?? []).length ? (
