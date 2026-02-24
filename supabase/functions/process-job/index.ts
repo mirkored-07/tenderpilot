@@ -54,7 +54,8 @@ type AiOutput = {
   }>;
   buyer_questions: string[];
   proposal_draft: string;
-  policy_triggers: Array<{ key: string; impact: "blocks" | "increases_risk" | "decreases_fit" | "requires_clarification"; note: string; rule?: string }>;
+  // Note: OpenAI strict schema requires `rule` to be present; we allow null when unavailable.
+  policy_triggers: Array<{ key: string; impact: "blocks" | "increases_risk" | "decreases_fit" | "requires_clarification"; note: string; rule: string | null }>;
 };
 
 
@@ -722,9 +723,11 @@ async function runOpenAi(args: {
               enum: ["blocks", "increases_risk", "decreases_fit", "requires_clarification"],
             },
             note: { type: "string" },
-            rule: { type: "string" },
+            // OpenAI strict JSON schema requires every property to be listed in `required`.
+            // Keep `rule` nullable so the model can return null when it cannot provide a stable rule id.
+            rule: { type: ["string", "null"] },
           },
-          required: ["key", "impact", "note"],
+          required: ["key", "impact", "note", "rule"],
         },
       },
     },

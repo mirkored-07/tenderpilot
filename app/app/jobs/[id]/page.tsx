@@ -36,6 +36,10 @@ type DbJobResult = {
   user_id: string;
   extracted_text: string | null;
 
+  // Playbook (workspace policy) signals written by process-job (if configured)
+  playbook_version: number | null;
+  policy_triggers: any | null;
+
   // These columns are written by the Edge function (process-job)
   executive_summary: any | null;
   clarifications: any | null;
@@ -274,6 +278,23 @@ function formatDate(iso?: string | null) {
     return String(iso);
   }
 }
+
+
+
+function summarizeEventMessage(msg?: string | null) {
+  const raw = String(msg ?? "").trim();
+  if (!raw) return "";
+  // Remove overly-technical prefixes if present
+  const cleaned = raw
+    .replace(/^process-job\s*:?\s*/i, "")
+    .replace(/^jobs\.pipeline\.[^:]+:\s*/i, "")
+    .replace(/^pipeline\s*:?\s*/i, "")
+    .trim();
+  // Keep it short and UI-friendly
+  if (cleaned.length > 160) return cleaned.slice(0, 160).trimEnd() + "…";
+  return cleaned;
+}
+
 
 function toSafeFileBaseName(input: string) {
   const raw = String(input ?? "").trim() || "tender_brief";
@@ -617,6 +638,118 @@ function normalizeQuestions(raw: any): string[] {
   if (Array.isArray(raw?.items)) return raw.items.map((x: any) => String(x ?? "").trim()).filter(Boolean);
   if (Array.isArray(raw?.questions)) return raw.questions.map((x: any) => String(x ?? "").trim()).filter(Boolean);
   return [];
+}
+
+type PolicyTriggerUi = {
+  key: string;
+  impact: string;
+  note: string;
+  rule?: string | null;
+  timestamp?: string | null;
+};
+
+function normalizePolicyTriggers(raw: any): PolicyTriggerUi[] {
+  if (!raw) return [];
+
+  let v: any = raw;
+
+  // Some environments store JSON as a string — tolerate it.
+  if (typeof v === "string") {
+    const s = v.trim();
+    if (!s) return [];
+    try {
+      v = JSON.parse(s);
+    } catch {
+      return [];
+    }
+  }
+
+  const arr: any[] = Array.isArray(v) ? v : Array.isArray(v?.items) ? v.items : [];
+
+  return (Array.isArray(arr) ? arr : [])
+    .map((t: any) => {
+      const key = String(t?.key ?? t?.id ?? "").trim();
+      const impact = String(t?.impact ?? t?.severity ?? t?.level ?? "").trim();
+      const note = String(t?.note ?? t?.detail ?? t?.text ?? "").trim();
+      const rule = t?.rule != null ? String(t.rule).trim() : null;
+      const timestamp =
+        t?.timestamp != null
+          ? String(t.timestamp).trim()
+          : t?.created_at != null
+          ? String(t.created_at).trim()
+          : null;
+
+      return { key, impact, note, rule, timestamp } as PolicyTriggerUi;
+    })
+    .filter((t: PolicyTriggerUi) => Boolean(t.key || t.note));
+}
+
+function policyKeyLabel(key: string) {
+  const k = String(key ?? "").trim();
+  if (!k) return "Policy";
+
+  const map: Record<string, string> = {
+    industry_tags: "Industry fit",
+    offerings_summary: "Offerings fit",
+    delivery_geographies: "Delivery geographies",
+    languages_supported: "Languages supported",
+    delivery_modes: "Delivery modes",
+    capacity_band: "Capacity / sizing",
+    typical_lead_time_weeks: "Lead time",
+    certifications: "Certifications",
+    non_negotiables: "Non-negotiables",
+  };
+
+  const hit = map[k];
+  if (hit) return hit;
+
+  return k
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (m) => m.toUpperCase());
+}
+
+function policyImpactMeta(impact: string) {
+  const v = String(impact ?? "").trim().toLowerCase();
+  const base = "inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold";
+
+  if (v === "blocks") {
+    return {
+      label: "Blocker",
+      className: `${base} border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-500/25 dark:bg-rose-500/15 dark:text-rose-200`,
+    };
+  }
+
+  if (v === "increases_risk") {
+    return {
+      label: "Risk",
+      className: `${base} border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-500/25 dark:bg-amber-500/15 dark:text-amber-200`,
+    };
+  }
+
+  if (v === "requires_clarification") {
+    return {
+      label: "Clarify",
+      className: `${base} border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-500/25 dark:bg-sky-500/15 dark:text-sky-200`,
+    };
+  }
+
+  if (v === "decreases_fit") {
+    return {
+      label: "Fit",
+      className: `${base} border-slate-200 bg-slate-50 text-slate-800 dark:border-slate-500/25 dark:bg-slate-500/15 dark:text-slate-200`,
+    };
+  }
+
+  return {
+    label: impact ? policyKeyLabel(impact) : "Info",
+    className: `${base} border-border bg-muted/30 text-foreground/80`,
+  };
+}
+
+function policyTriggerTitle(t: PolicyTriggerUi) {
+  const rule = String(t?.rule ?? "").trim();
+  if (rule && rule.length <= 80) return rule;
+  return policyKeyLabel(String(t?.key ?? ""));
 }
 
 function toExecutiveModel(args: { raw: any }) {
@@ -1347,6 +1480,7 @@ const [savingMeta, setSavingMeta] = useState(false);
   const [exporting, setExporting] = useState<null | "summary" | "brief" | "xlsx">(null);
 
   const [showAllDrivers, setShowAllDrivers] = useState(false);
+  const [showAllPolicyTriggers, setShowAllPolicyTriggers] = useState(false);
   const [showRisksSection, setShowRisksSection] = useState(false);
   const [showUnknownsSection, setShowUnknownsSection] = useState(false);
 
@@ -1645,6 +1779,17 @@ setWorkItems((wiRows as any[]) ?? []);
     return s === "queued" || s === "processing";
   }, [job]);
 
+
+  const lastProgressEvent = useMemo(() => {
+    if (!events || events.length === 0) return null;
+    // events are fetched with newest first
+    const first = events[0];
+    const msg = summarizeEventMessage(first?.message);
+    if (!msg) return null;
+    return { message: msg, created_at: first?.created_at ?? null, level: first?.level ?? "info" } as const;
+  }, [events]);
+
+
   const showReady = useMemo(() => job?.status === "done", [job]);
   const showFailed = useMemo(() => job?.status === "failed", [job]);
 
@@ -1652,6 +1797,24 @@ setWorkItems((wiRows as any[]) ?? []);
   const canDelete = Boolean(job) && !showProgress;
 
   const extractedText = useMemo(() => String(result?.extracted_text ?? "").trim(), [result]);
+
+  const playbookVersion = useMemo(() => {
+    const v = (result as any)?.playbook_version;
+    if (v === null || v === undefined) return null;
+    const s = String(v).trim();
+    return s ? s : null;
+  }, [result]);
+
+  const policyTriggers = useMemo(() => normalizePolicyTriggers((result as any)?.policy_triggers), [result]);
+
+  const hasPlaybookConfigured = useMemo(() => playbookVersion !== null, [playbookVersion]);
+
+  const hasPlaybookSignal = useMemo(() => {
+    if (playbookVersion !== null) return true;
+    // Edge case tolerance: if triggers exist but version is missing, still render them.
+    return policyTriggers.length > 0;
+  }, [playbookVersion, policyTriggers]);
+
 
   const pipelineEvidenceCandidates: EvidenceCandidateUi[] = useMemo(() => {
     const c = (job as any)?.pipeline?.evidence?.candidates;
@@ -3167,10 +3330,21 @@ async function saveJobMetadata() {
 
           <p className="mt-1 text-sm text-muted-foreground">
             {showProgress
-              ? "Your tender review is being prepared. This page updates automatically."
+              ? "Your tender review is being prepared. This page updates automatically. Large documents can take ~1–5 minutes."
               : showFailed
               ? "This tender review needs attention."
               : "Your tender review is ready."}
+
+          {showProgress && lastProgressEvent && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              <span className="font-medium">Last update:</span>{" "}
+              <span>{lastProgressEvent.message}</span>
+              {lastProgressEvent.created_at ? (
+                <span className="ml-2">({formatDate(lastProgressEvent.created_at)})</span>
+              ) : null}
+            </p>
+          )}
+
           </p>
 
           <p className="mt-2 text-sm text-muted-foreground">Drafting support only. Always verify against the original tender document.</p>
@@ -3182,6 +3356,23 @@ async function saveJobMetadata() {
               <ArrowLeft className="h-4 w-4" />
               <span>Back</span>
             </Link>
+          </Button>
+
+
+          <Button
+            className="h-9 rounded-full px-4"
+            disabled={!canDownload || exporting !== null}
+            onClick={async () => {
+              if (!canDownload || exporting !== null) return;
+              setExporting("xlsx");
+              try {
+                await exportBidPackXlsx();
+              } finally {
+                setExporting(null);
+              }
+            }}
+          >
+            {exporting === "xlsx" ? "Preparing…" : "Download Bid Pack (Excel)"}
           </Button>
 
           <DropdownMenu>
@@ -3416,6 +3607,8 @@ async function saveJobMetadata() {
         </CardContent>
       </Card>
 
+      
+
       {showReady && !showFailed && !finalizingResults ? (
         <Card id="decision-drivers" className="rounded-3xl border border-border bg-card/80 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/70">
           <CardContent className="p-7 md:p-10">
@@ -3529,7 +3722,90 @@ async function saveJobMetadata() {
           </CardContent>
         </Card>
       ) : null}
+{showReady && !showFailed && !finalizingResults ? (
+        <Card className="rounded-3xl border border-border bg-card/80 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/70">
+          <CardContent className="p-7 md:p-10">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold">Policy triggers</p>
+                <p className="mt-1 text-xs text-muted-foreground">Policy triggers are derived from your playbook configuration.</p>
+              </div>
 
+              {hasPlaybookConfigured ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  {playbookVersion ? (
+                    <span className="inline-flex items-center rounded-full border border-border bg-muted/30 px-3 py-1 text-xs font-medium text-foreground/80">
+                      Playbook v{playbookVersion}
+                    </span>
+                  ) : null}
+
+                  <Button asChild variant="outline" size="sm" className="rounded-full">
+                    <Link href="/app/account">Open Playbook settings</Link>
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="mt-5">
+              {!hasPlaybookSignal ? (
+                <div className="rounded-2xl border border-border bg-muted/30 p-4">
+                  <p className="text-sm font-medium text-foreground/90">No playbook configured for this workspace</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Configure a playbook to apply your company policy to this review.</p>
+                  <div className="mt-3">
+                    <Button asChild className="rounded-full">
+                      <Link href="/app/account">Configure Playbook</Link>
+                    </Button>
+                  </div>
+                </div>
+              ) : policyTriggers.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No policy triggers fired.</p>
+              ) : (
+                <div className="space-y-3">
+                  {(showAllPolicyTriggers ? policyTriggers : policyTriggers.slice(0, 3)).map((t, i) => {
+                    const meta = policyImpactMeta(t.impact);
+                    return (
+                      <div key={`${t.key || "trigger"}_${i}`} className="rounded-2xl border border-border bg-muted/30 p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className={meta.className}>{meta.label}</span>
+                              <p className="text-sm font-semibold text-foreground/90">{policyTriggerTitle(t)}</p>
+                            </div>
+
+                            {t.note ? (
+                              <p className="mt-2 text-sm text-foreground/80 leading-relaxed">{t.note}</p>
+                            ) : (
+                              <p className="mt-2 text-sm text-muted-foreground">No details provided.</p>
+                            )}
+
+                            <p className="mt-2 text-[11px] text-muted-foreground">
+                              Key: <span className="font-medium text-foreground/80">{t.key || "—"}</span>
+                              {t.timestamp ? <> • {formatDate(t.timestamp)}</> : null}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {policyTriggers.length > 3 ? (
+                    <div className="flex justify-end">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="rounded-full"
+                        onClick={() => setShowAllPolicyTriggers((s) => !s)}
+                      >
+                        {showAllPolicyTriggers ? "Show less" : `Show all (${policyTriggers.length})`}
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
       <Card className="rounded-3xl border border-border bg-card/80 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/70">
         <CardContent className="p-7 md:p-10">
           <div className="flex items-start justify-between gap-4">
