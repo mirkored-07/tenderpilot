@@ -155,6 +155,7 @@ export default function UploadForm() {
       }
 
       track("upload_storage_completed", { sourceType });
+      track("upload_completed", { sourceType, size: file.size });
 
       // Server action will create job (we handle redirect client-side to allow fast extraction)
       setPhase("creating_job");

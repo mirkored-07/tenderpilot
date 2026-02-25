@@ -18,7 +18,7 @@ export function SideNav() {
 
   return (
     <div className="px-3 py-4">
-      <p className="px-3 pb-2 text-xs font-medium text-white/80">Workspace</p>
+      <p className="px-3 pb-2 text-xs font-medium text-white/80">Menu</p>
 
       <nav className="space-y-1">
         {nav.map((item) => {

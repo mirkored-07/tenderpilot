@@ -262,32 +262,68 @@ export function BidRoomPanel(props: {
     type: WorkItemType;
     ref_key: string;
     title: string;
+    // NOTE: treat optional fields as PATCH fields.
+    // If a field is omitted, we must NOT overwrite the existing DB value.
     status?: string;
-    owner_label?: string;
+    owner_label?: string | null;
     due_at?: string | null;
-    notes?: string;
+    notes?: string | null;
   }) {
     setWorkError(null);
     setWorkSaving(`${input.type}:${input.ref_key}`);
 
     try {
       const supabase = supabaseBrowser();
-      const payload: any = {
-        job_id: jobId,
-        type: input.type,
-        ref_key: input.ref_key,
-        title: input.title,
-        status: input.status ?? "todo",
-        owner_label: input.owner_label ?? null,
-        due_at: input.due_at ? input.due_at : null,
-        notes: input.notes ?? null,
-      };
 
-      const { error } = await supabase.from("job_work_items").upsert(payload, { onConflict: "job_id,type,ref_key" });
-      if (error) throw error;
+      // Find existing row (do not rely on a specific unique constraint).
+      const { data: existing, error: exErr } = await supabase
+        .from("job_work_items")
+        .select("id,status,owner_label,due_at,notes")
+        .eq("job_id", jobId)
+        .eq("type", input.type)
+        .eq("ref_key", input.ref_key)
+        .maybeSingle();
+      if (exErr) throw exErr;
+
+      if (existing && (existing as any).id) {
+        // PATCH update: only write fields explicitly provided.
+        const patch: any = { title: input.title };
+        if (Object.prototype.hasOwnProperty.call(input, "status")) patch.status = input.status;
+        if (Object.prototype.hasOwnProperty.call(input, "owner_label")) patch.owner_label = input.owner_label;
+        if (Object.prototype.hasOwnProperty.call(input, "due_at")) patch.due_at = input.due_at;
+        if (Object.prototype.hasOwnProperty.call(input, "notes")) patch.notes = input.notes;
+
+        const { error } = await supabase.from("job_work_items").update(patch).eq("id", (existing as any).id);
+        if (error) throw error;
+      } else {
+        // INSERT: apply defaults for omitted fields.
+        const row: any = {
+          job_id: jobId,
+          type: input.type,
+          ref_key: input.ref_key,
+          title: input.title,
+          status: Object.prototype.hasOwnProperty.call(input, "status") ? input.status : "todo",
+          owner_label: Object.prototype.hasOwnProperty.call(input, "owner_label") ? input.owner_label : null,
+          due_at: Object.prototype.hasOwnProperty.call(input, "due_at") ? input.due_at : null,
+          notes: Object.prototype.hasOwnProperty.call(input, "notes") ? input.notes : null,
+        };
+
+        const { error } = await supabase.from("job_work_items").insert(row);
+        if (error) throw error;
+      }
+
       await refreshWork();
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      console.error("BidRoomPanel upsertWorkItem failed", {
+        type: typeof e,
+        asString: String(e),
+        message: e?.message,
+        details: e?.details,
+        hint: e?.hint,
+        code: e?.code,
+        status: e?.status,
+      });
+      console.error("BidRoomPanel upsertWorkItem raw", e);
       setWorkError("Could not save changes.");
     } finally {
       setWorkSaving(null);
@@ -306,7 +342,7 @@ export function BidRoomPanel(props: {
         {header ? (
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold">Bid room</p>
+			  <p className="text-sm font-semibold">Bid Room</p>
               <p className="mt-1 text-xs text-muted-foreground">
                 Assign owners, track status, and leave short notes. This overlays the evidence-first results (it does not change them).
               </p>
@@ -547,10 +583,7 @@ export function BidRoomPanel(props: {
                                     type: r.type,
                                     ref_key: r.ref_key,
                                     title: r.title,
-                                    status,
-                                    owner_label: e.target.value,
-                                    due_at: due || null,
-                                    notes,
+								  owner_label: e.target.value || null,
                                   });
                                 }}
                                 placeholder="Owner"
@@ -577,9 +610,6 @@ export function BidRoomPanel(props: {
                                     ref_key: r.ref_key,
                                     title: r.title,
                                     status: e.currentTarget.value,
-                                    owner_label: owner,
-                                    due_at: due || null,
-                                    notes,
                                   });
                                 }}
                                 disabled={workSaving === key}
@@ -608,10 +638,7 @@ export function BidRoomPanel(props: {
                                     type: r.type,
                                     ref_key: r.ref_key,
                                     title: r.title,
-                                    status,
-                                    owner_label: owner,
                                     due_at: e.target.value || null,
-                                    notes,
                                   });
                                 }}
                                 className="h-9 w-[150px] rounded-full"
@@ -636,10 +663,7 @@ export function BidRoomPanel(props: {
                                       type: r.type,
                                       ref_key: r.ref_key,
                                       title: r.title,
-                                      status,
-                                      owner_label: owner,
-                                      due_at: due || null,
-                                      notes: e.target.value,
+									  notes: e.target.value || null,
                                     });
                                   }}
                                   placeholder="Notes (short, actionable)"

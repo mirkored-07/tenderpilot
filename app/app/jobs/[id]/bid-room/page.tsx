@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 
 import { supabaseBrowser } from "@/lib/supabase/browser";
+import { track } from "@/lib/telemetry";
 
 import { BidRoomPanel } from "@/components/bidroom/BidRoomPanel";
 import { Button } from "@/components/ui/button";
@@ -82,6 +83,7 @@ const [metaDraft, setMetaDraft] = useState<{
 
   useEffect(() => {
     if (!jobId) return;
+    track("bid_room_opened", { jobId });
     const supabase = supabaseBrowser();
     let cancelled = false;
 
@@ -211,7 +213,7 @@ const [metaDraft, setMetaDraft] = useState<{
     <div className="mx-auto max-w-6xl space-y-4 p-4 md:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-lg font-semibold">Bid room</p>
+          <p className="text-lg font-semibold">Bid Room</p>
           <p className="mt-1 text-sm text-muted-foreground">Work view: assign owners, track tasks, and coordinate the bid.</p>
           <p className="mt-1 text-sm text-muted-foreground">
             {job?.file_name ? (

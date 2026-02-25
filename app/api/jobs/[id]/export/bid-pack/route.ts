@@ -35,6 +35,62 @@ function normalizeQuestions(raw: any): string[] {
   return [];
 }
 
+type PolicyTriggerExport = {
+  key: string;
+  impact: string;
+  note: string;
+};
+
+function normalizePolicyTriggers(raw: any): PolicyTriggerExport[] {
+  if (!raw) return [];
+
+  let v: any = raw;
+
+  // Some environments store JSON as a string — tolerate it.
+  if (typeof v === "string") {
+    const s = v.trim();
+    if (!s) return [];
+    try {
+      v = JSON.parse(s);
+    } catch {
+      return [];
+    }
+  }
+
+  const arr: any[] = Array.isArray(v) ? v : Array.isArray(v?.items) ? v.items : [];
+
+  return (Array.isArray(arr) ? arr : [])
+    .map((t: any) => {
+      const key = String(t?.key ?? t?.id ?? "").trim();
+      const impact = String(t?.impact ?? t?.severity ?? t?.level ?? "").trim();
+      const note = String(t?.note ?? t?.detail ?? t?.text ?? "").trim();
+      return { key, impact, note } as PolicyTriggerExport;
+    })
+    .filter((t: PolicyTriggerExport) => Boolean(t.key || t.note));
+}
+
+function policyKeyLabel(key: string) {
+  const k = String(key ?? "").trim();
+  if (!k) return "Policy";
+
+  const map: Record<string, string> = {
+    industry_tags: "Industry fit",
+    offerings_summary: "Offerings fit",
+    delivery_geographies: "Delivery geographies",
+    languages_supported: "Languages supported",
+    delivery_modes: "Delivery modes",
+    capacity_band: "Capacity / sizing",
+    typical_lead_time_weeks: "Lead time",
+    certifications: "Certifications",
+    non_negotiables: "Non-negotiables",
+  };
+
+  const hit = map[k];
+  if (hit) return hit;
+
+  return k.replaceAll("_", " ").replace(/\b\w/g, (m) => m.toUpperCase());
+}
+
 function buildOutlineItems(proposalDraft: any): Array<{ title: string; bullets?: string[] }> {
   if (!proposalDraft) return [];
   if (typeof proposalDraft === "object" && Array.isArray((proposalDraft as any).sections)) {
@@ -103,6 +159,9 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   const risks = normalizeRisks((result as any)?.risks);
   const clarifications = normalizeQuestions((result as any)?.clarifications ?? (result as any)?.buyer_questions);
   const outline = buildOutlineItems((result as any)?.proposal_draft);
+
+  const playbookVersion = (result as any)?.playbook_version ?? null;
+  const policyTriggers = normalizePolicyTriggers((result as any)?.policy_triggers);
 
   const wb = new ExcelJS.Workbook();
   wb.creator = "TenderPilot";
@@ -307,6 +366,30 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
         status: String(w?.status ?? "").trim(),
         due_at: w?.due_at ? String(w.due_at).slice(0, 10) : "",
         notes: String(w?.notes ?? "").trim(),
+      });
+    }
+  }
+
+
+
+  // ---- Policy Triggers ----
+  if ((policyTriggers ?? []).length) {
+    const ws = wb.addWorksheet("Policy Triggers");
+    ws.columns = [
+      { header: "trigger_id", key: "trigger_id", width: 20 },
+      { header: "impact", key: "impact", width: 16 },
+      { header: "title", key: "title", width: 32 },
+      { header: "detail", key: "detail", width: 90 },
+      { header: "playbook_version", key: "playbook_version", width: 16 },
+    ];
+
+    for (const t of policyTriggers) {
+      ws.addRow({
+        trigger_id: String(t.key ?? "").trim(),
+        impact: String(t.impact ?? "").trim(),
+        title: policyKeyLabel(String(t.key ?? "").trim()),
+        detail: String(t.note ?? "").trim(),
+        playbook_version: playbookVersion != null ? String(playbookVersion).trim() : "",
       });
     }
   }

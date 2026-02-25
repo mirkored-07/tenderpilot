@@ -445,9 +445,10 @@ export function ComplianceMatrix(props: {
   async function upsertCompliance(input: {
     cm_ref_key: string;
     title: string;
-    complianceStatus: ComplianceStatus;
-    proposalSection: string;
-    note: string;
+    // Treat these as PATCH fields so we don't overwrite other values with stale state.
+    complianceStatus?: ComplianceStatus;
+    proposalSection?: string;
+    note?: string;
   }) {
     setWorkError(null);
     setSavingKey(input.cm_ref_key);
@@ -455,8 +456,28 @@ export function ComplianceMatrix(props: {
     try {
       const supabase = supabaseBrowser();
 
+      const { data: existing, error: exErr } = await supabase
+        .from("job_work_items")
+        .select("id,notes")
+        .eq("job_id", jobId)
+        .eq("type", "requirement")
+        .eq("ref_key", input.cm_ref_key)
+        .maybeSingle();
+      if (exErr) throw exErr;
+
+      // PATCH merge into JSON notes to avoid overwriting other fields.
+      const current = parseJsonNotes((existing as any)?.notes);
+      const next: any = { ...current };
+      if (Object.prototype.hasOwnProperty.call(input, "complianceStatus")) next.complianceStatus = input.complianceStatus;
+      if (Object.prototype.hasOwnProperty.call(input, "proposalSection")) next.proposalSection = input.proposalSection;
+      if (Object.prototype.hasOwnProperty.call(input, "note")) next.note = input.note;
+
+      if (!next.complianceStatus) next.complianceStatus = current?.complianceStatus ?? "tbd";
+      if (typeof next.proposalSection !== "string") next.proposalSection = String(current?.proposalSection ?? "");
+      if (typeof next.note !== "string") next.note = String(current?.note ?? "");
+
       // Keep compliance data isolated from Bid room by using cm__-prefixed ref_key.
-      // Store compliance fields inside notes as JSON; keep status as "todo" to avoid any DB constraints on status values.
+      // Store compliance fields inside notes as JSON; keep status as "todo".
       const payload: any = {
         job_id: jobId,
         type: "requirement",
@@ -465,21 +486,34 @@ export function ComplianceMatrix(props: {
         status: "todo",
         owner_label: null,
         due_at: null,
-        notes: stringifyJsonNotes({
-          complianceStatus: input.complianceStatus,
-          proposalSection: input.proposalSection,
-          note: input.note,
-        }),
+        notes: stringifyJsonNotes(next),
       };
 
-      const { error } = await supabase.from("job_work_items").upsert(payload, { onConflict: "job_id,type,ref_key" });
-      if (error) throw error;
+      if (existing && (existing as any).id) {
+        const { error } = await supabase
+          .from("job_work_items")
+          .update({ title: payload.title, notes: payload.notes })
+          .eq("id", (existing as any).id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("job_work_items").insert(payload);
+        if (error) throw error;
+      }
 
       await refreshWork();
     } catch (e: any) {
       // Surface a useful error instead of {} when possible
       const msg = String(e?.message ?? e?.error_description ?? e?.details ?? "").trim();
-      console.error(e);
+      console.error("ComplianceMatrix upsertCompliance failed", {
+        type: typeof e,
+        asString: String(e),
+        message: e?.message,
+        details: e?.details,
+        hint: e?.hint,
+        code: e?.code,
+        status: e?.status,
+      });
+      console.error("ComplianceMatrix upsertCompliance raw", e);
       setWorkError(msg ? `Could not save changes: ${msg}` : "Could not save changes.");
     } finally {
       setSavingKey(null);
@@ -502,7 +536,7 @@ export function ComplianceMatrix(props: {
         <div className="flex items-center gap-2">
           {workHref ? (
             <Button asChild className="rounded-full">
-              <Link href={workHref}>Open bid room</Link>
+				  <Link href={workHref}>Open Bid Room</Link>
             </Button>
           ) : null}
 
@@ -720,8 +754,6 @@ export function ComplianceMatrix(props: {
                                   cm_ref_key: r.cm_ref_key,
                                   title: r.text,
                                   complianceStatus: e.currentTarget.value as ComplianceStatus,
-                                  proposalSection,
-                                  note,
                                 });
                               }}
                             >
@@ -755,9 +787,7 @@ export function ComplianceMatrix(props: {
                                 await upsertCompliance({
                                   cm_ref_key: r.cm_ref_key,
                                   title: r.text,
-                                  complianceStatus,
                                   proposalSection: e.target.value,
-                                  note,
                                 });
                               }}
                             />
@@ -785,8 +815,6 @@ export function ComplianceMatrix(props: {
                                 await upsertCompliance({
                                   cm_ref_key: r.cm_ref_key,
                                   title: r.text,
-                                  complianceStatus,
-                                  proposalSection,
                                   note: e.target.value,
                                 });
                               }}

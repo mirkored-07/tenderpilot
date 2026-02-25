@@ -760,11 +760,11 @@ export default function JobsPage() {
 
                         {r.totalItems > 0 ? (
                           <span className="text-muted-foreground">
-                            Bid room {r.openItems} open of {r.totalItems}
+                            Bid Room {r.openItems} open of {r.totalItems}
                             {r.overdueItems > 0 ? ` · ${r.overdueItems} overdue` : ""}
                           </span>
                         ) : (
-                          <span className="text-muted-foreground">Bid room not started</span>
+                          <span className="text-muted-foreground">Bid Room not started</span>
                         )}
                       </div>
 
@@ -778,7 +778,7 @@ export default function JobsPage() {
                             router.push(`/app/jobs/${job.id}/bid-room`);
                           }}
                         >
-                          Bid room
+                          Bid Room
                         </Button>
                         <Button
                           variant="outline"

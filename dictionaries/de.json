@@ -354,7 +354,7 @@
       "delete": "Löschen"
     },
     "workspace": {
-      "title": "Ihr Ausschreibungs-Workspace",
+      "title": "Ihr Ausschreibungsraum",
       "desc": "Dies ist ein statisches Beispiel zur Veranschaulichung der TenderPilot-Struktur. Prüfen Sie stets das Original-PDF."
     },
     "nextActions": {

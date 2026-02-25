@@ -6,7 +6,7 @@ export default function Loading() {
     <div className="mx-auto max-w-6xl">
       <Card className="rounded-2xl">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Preparing your workspace</CardTitle>
+          <CardTitle className="text-base">Setting things up</CardTitle>
           <p className="text-sm text-muted-foreground">
             Loading your tender review view.
           </p>

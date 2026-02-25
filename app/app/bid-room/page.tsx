@@ -149,7 +149,7 @@ export default function GlobalBidRoomPage() {
                           <Link href={`/app/jobs/${it.job_id}`}>Job</Link>
                         </Button>
                         <Button asChild size="sm" className="rounded-full">
-                          <Link href={`/app/jobs/${it.job_id}/bid-room`}>Bid room</Link>
+                          <Link href={`/app/jobs/${it.job_id}/bid-room`}>Bid Room</Link>
                         </Button>
                       </div>
                     </div>

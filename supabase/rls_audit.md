@@ -22,7 +22,8 @@ Tables that must be isolated by the authenticated user
 1. public.jobs
 2. public.job_results
 3. public.job_events if present
-4. bid room or work item tables if present
+4. public.job_work_items (bid room + compliance overlays)
+5. other bid room or work item tables if present
 5. any job metadata tables used by the cockpit if present
 
 Expected behavior
@@ -121,3 +122,10 @@ If storage allows cross user access
 
 1. Ensure storage.objects policies restrict access by owner
 2. Ensure list, read, and signed URL creation cannot be used to access other users
+
+
+### job_work_items write policies (required for Bid Room)
+
+If Bid Room changes do not save and you see an RLS error, ensure public.job_work_items has select/insert/update/delete policies scoped to the job owner (jobs.user_id = auth.uid()).
+
+See: supabase/rls_job_work_items.sql

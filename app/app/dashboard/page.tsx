@@ -1473,7 +1473,7 @@ return {
                               <Link href={`/app/jobs/${r.job.id}`}>Open</Link>
                             </Button>
                             <Button asChild size="sm" variant="outline" className="rounded-full">
-                              <Link href={`/app/jobs/${r.job.id}/bid-room`}>Bid room</Link>
+                              <Link href={`/app/jobs/${r.job.id}/bid-room`}>Bid Room</Link>
                             </Button>
                             <Button asChild size="sm" variant="outline" className="rounded-full">
                               <Link href={`/app/jobs/${r.job.id}/compliance`}>Coverage</Link>

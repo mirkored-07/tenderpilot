@@ -7,6 +7,8 @@ import { useParams, useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { getJobDisplayName, setJobDisplayName, clearJobDisplayName } from "@/lib/pilot-job-names";
 
+import { track } from "@/lib/telemetry";
+
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -396,7 +398,7 @@ function ProgressCard({
 
   const subtitle =
     status === "queued"
-      ? "Preparing your workspace…"
+      ? "Preparing your bid review…"
       : status === "processing"
       ? "Extracting requirements, risks, clarifications, and a short draft…"
       : isFailed
@@ -1484,6 +1486,8 @@ const [savingMeta, setSavingMeta] = useState(false);
   const [showRisksSection, setShowRisksSection] = useState(false);
   const [showUnknownsSection, setShowUnknownsSection] = useState(false);
 
+  const [showTrustOnboarding, setShowTrustOnboarding] = useState(false);
+
   const mountedRef = useRef(true);
   const sourceAnchorRef = useRef<HTMLSpanElement | null>(null);
   const tabsTopRef = useRef<HTMLDivElement | null>(null);
@@ -1793,10 +1797,68 @@ setWorkItems((wiRows as any[]) ?? []);
   const showReady = useMemo(() => job?.status === "done", [job]);
   const showFailed = useMemo(() => job?.status === "failed", [job]);
 
+  useEffect(() => {
+    if (!showReady || showFailed) return;
+
+    try {
+      const key = "tp_trust_onboarding_seen_v1";
+      if (window.localStorage.getItem(key)) {
+        setShowTrustOnboarding(false);
+        return;
+      }
+      setShowTrustOnboarding(true);
+    } catch {
+      // ignore (e.g., private mode)
+      setShowTrustOnboarding(true);
+    }
+  }, [showReady, showFailed]);
+
+  useEffect(() => {
+    if (!jobId) return;
+    const status = job?.status;
+    if (status !== "queued" && status !== "processing") return;
+
+    try {
+      const key = `tp_job_processing_started_${jobId}`;
+      if (window.localStorage.getItem(key)) return;
+      window.localStorage.setItem(key, "1");
+      track("job_processing_started", { jobId });
+    } catch {
+      track("job_processing_started", { jobId });
+    }
+  }, [jobId, job?.status]);
+
+  useEffect(() => {
+    if (!jobId) return;
+    if (job?.status !== "done") return;
+
+    try {
+      const key = `tp_job_completed_${jobId}`;
+      if (window.localStorage.getItem(key)) return;
+      window.localStorage.setItem(key, "1");
+      track("job_completed", { jobId });
+    } catch {
+      track("job_completed", { jobId });
+    }
+  }, [jobId, job?.status]);
+
   const canDownload = useMemo(() => Boolean(job && job.status === "done"), [job]);
   const canDelete = Boolean(job) && !showProgress;
 
   const extractedText = useMemo(() => String(result?.extracted_text ?? "").trim(), [result]);
+
+  const hasUsableExtractedText = useMemo(() => extractedText.length >= 500, [extractedText]);
+
+  const extractionBadge = useMemo(() => {
+    if (hasUsableExtractedText) {
+      return { label: "Text extracted", title: "Text extraction looks usable." };
+    }
+
+    return {
+      label: "Limited text extraction",
+		title: "If text extraction is limited, verify key clauses directly in the PDF.",
+    };
+  }, [hasUsableExtractedText]);
 
   const playbookVersion = useMemo(() => {
     const v = (result as any)?.playbook_version;
@@ -2437,6 +2499,18 @@ const executive = useMemo(() => {
   }, [extractedText, checklist.length, risks.length, questions.length, hasDraftForUi]);
 
   const finalizingResults = useMemo(() => showReady && !hasAnyResultsPayload, [showReady, hasAnyResultsPayload]);
+
+  useEffect(() => {
+    if (!showTrustOnboarding || !showReady || showFailed || finalizingResults) return;
+
+    try {
+      const key = "tp_trust_onboarding_seen_v1";
+      if (window.localStorage.getItem(key)) return;
+      window.localStorage.setItem(key, "1");
+    } catch {
+      // ignore
+    }
+  }, [showTrustOnboarding, showReady, showFailed, finalizingResults]);
 
   // Verdict (UI-only heuristic; no backend changes)
   const verdictState: VerdictState = useMemo(() => {
@@ -3326,6 +3400,12 @@ async function saveJobMetadata() {
             )}
 
             {statusBadge(job?.status ?? "queued")}
+
+            {(showReady || showFailed) ? (
+              <Badge variant="secondary" className="rounded-full" title={extractionBadge.title}>
+                {extractionBadge.label}
+              </Badge>
+            ) : null}
           </div>
 
           <p className="mt-1 text-sm text-muted-foreground">
@@ -3364,6 +3444,7 @@ async function saveJobMetadata() {
             disabled={!canDownload || exporting !== null}
             onClick={async () => {
               if (!canDownload || exporting !== null) return;
+              track("export_bid_pack_clicked", { jobId });
               setExporting("xlsx");
               try {
                 await exportBidPackXlsx();
@@ -3423,6 +3504,7 @@ async function saveJobMetadata() {
                 onSelect={async (e) => {
                   e.preventDefault();
                   if (!canDownload || exporting !== null) return;
+                  track("export_bid_pack_clicked", { jobId, source: "menu" });
                   setExporting("xlsx");
                   try {
                     await exportBidPackXlsx();
@@ -3531,6 +3613,49 @@ async function saveJobMetadata() {
 
 
       
+
+      {showTrustOnboarding && showReady && !showFailed && !finalizingResults ? (
+        <Card className="rounded-3xl border border-border bg-muted/20 shadow-sm">
+          <CardContent className="p-6 md:p-8">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold">How to verify trust</p>
+                <p className="mt-1 text-xs text-muted-foreground">A quick reminder for evidence-first review.</p>
+
+                <ol className="mt-4 space-y-2 text-sm text-foreground/80">
+                  <li>
+                    <span className="font-medium">1.</span> Open evidence excerpt (authoritative)
+                  </li>
+                  <li>
+                    <span className="font-medium">2.</span> Locate in source is best-effort
+                  </li>
+                  <li>
+                    <span className="font-medium">3.</span> Verify key clauses in the PDF if needed
+                  </li>
+                </ol>
+              </div>
+
+              <div className="flex shrink-0 items-center justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full"
+                  onClick={() => {
+                    try {
+                      window.localStorage.setItem("tp_trust_onboarding_seen_v1", "1");
+                    } catch {
+                      // ignore
+                    }
+                    setShowTrustOnboarding(false);
+                  }}
+                >
+                  Got it
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
             {/* Decision cockpit */}
       <Card className="rounded-3xl border border-border bg-card/80 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/70">
         <CardContent className="p-7 md:p-10">
@@ -3600,7 +3725,7 @@ async function saveJobMetadata() {
 
             <div className="flex shrink-0 items-center gap-2">
               <Button asChild className="rounded-full">
-                <Link href={`/app/jobs/${jobId}/bid-room`}>Open Workspace</Link>
+                <Link href={`/app/jobs/${jobId}/bid-room`}>Open Bid Room</Link>
               </Button>
             </div>
           </div>
@@ -3712,7 +3837,7 @@ async function saveJobMetadata() {
                     ))}
                     <div className="flex justify-end">
                      <Button asChild variant="outline" className="rounded-full">
-					  <Link href={`/app/jobs/${jobId}/bid-room`}>Open in Workspace</Link>
+					  <Link href={`/app/jobs/${jobId}/bid-room`}>Open Bid Room</Link>
 					</Button>
 
                     </div>
@@ -3908,6 +4033,7 @@ async function saveJobMetadata() {
                                     : prev
                                 );
 
+                                track("evidence_opened", { jobId, evidenceId: String((cand as any)?.id ?? eid) });
                                 setShowEvidenceExcerpt(true);
                                 openTabAndScroll();
                                 if (ex) window.setTimeout(() => onJumpToSource(ex), 0);
@@ -3932,6 +4058,7 @@ async function saveJobMetadata() {
                     <Button
                       className="rounded-full"
                       onClick={() => {
+                        track("evidence_opened", { jobId, evidenceId: evidenceFocus?.id ?? null });
                         setShowEvidenceExcerpt(true);
                         window.setTimeout(() => evidenceExcerptRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
                       }}

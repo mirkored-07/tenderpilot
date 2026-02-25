@@ -40,6 +40,7 @@ where c.relkind = 'r'
     'jobs',
     'job_results',
     'job_events',
+    'job_work_items',
     'work_items',
     'bid_room_items',
     'job_metadata'
