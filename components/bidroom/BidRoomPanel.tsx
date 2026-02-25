@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { stableRefKey } from "@/lib/bid-workflow/keys";
@@ -67,6 +67,19 @@ export function BidRoomPanel(props: {
   const [evidenceFocus, setEvidenceFocus] = useState<EvidenceFocus | null>(null);
   const [notesOpen, setNotesOpen] = useState<Set<string>>(() => new Set());
 
+  // Debounced autosave for text inputs so refresh/navigation doesn't lose edits.
+  const saveTimersRef = useRef<Map<string, number>>(new Map());
+  function scheduleSave(key: string, fn: () => void, delayMs = 300) {
+    const m = saveTimersRef.current;
+    const prev = m.get(key);
+    if (prev) window.clearTimeout(prev);
+    const t = window.setTimeout(() => {
+      m.delete(key);
+      fn();
+    }, delayMs);
+    m.set(key, t as unknown as number);
+  }
+
   const evidenceById = useMemo(() => {
     const map = new Map<string, EvidenceCandidateUi>();
     const candidates = Array.isArray(props.evidenceCandidates) ? props.evidenceCandidates : [];
@@ -93,6 +106,21 @@ export function BidRoomPanel(props: {
 
     try {
       const supabase = supabaseBrowser();
+      if (process.env.NODE_ENV !== "production") {
+        try {
+          const { data } = await supabase.auth.getSession();
+          // eslint-disable-next-line no-console
+          console.debug("[BidRoom openPDF]", {
+		  jobId,
+		  filePath,
+		  supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+		  hasSession: Boolean(data?.session),
+		  userId: data?.session?.user?.id,
+		});
+        } catch {
+          // ignore
+        }
+      }
       const { data, error } = await supabase.storage.from("uploads").createSignedUrl(filePath, 60 * 10);
       if (error || !data?.signedUrl) throw error || new Error("No signed URL");
       const p = typeof args?.page === "number" && Number.isFinite(args.page) ? Math.max(1, Math.floor(args.page)) : null;
@@ -211,10 +239,13 @@ export function BidRoomPanel(props: {
   }, [jobId, checklist, risks, questions, outlineSections]);
 
   const workByKey = useMemo(() => {
+    // workItems is ordered by updated_at desc (newest first).
+    // If duplicates exist, we must keep the newest row (first) and ignore older rows.
     const m = new Map<string, any>();
     for (const w of workItems ?? []) {
       const k = `${String(w?.type ?? "")}:${String(w?.ref_key ?? "")}`;
-      if (k.includes(":")) m.set(k, w);
+      if (!k.includes(":")) continue;
+      if (!m.has(k)) m.set(k, w);
     }
     return m;
   }, [workItems]);
@@ -276,13 +307,18 @@ export function BidRoomPanel(props: {
       const supabase = supabaseBrowser();
 
       // Find existing row (do not rely on a specific unique constraint).
-      const { data: existing, error: exErr } = await supabase
+      const { data: existingRows, error: exErr } = await supabase
         .from("job_work_items")
-        .select("id,status,owner_label,due_at,notes")
+        .select("id,status,owner_label,due_at,notes,updated_at")
         .eq("job_id", jobId)
         .eq("type", input.type)
         .eq("ref_key", input.ref_key)
-        .maybeSingle();
+        .order("updated_at", { ascending: false })
+        .limit(10);
+      if (exErr) throw exErr;
+
+      const existing = Array.isArray(existingRows) && existingRows.length ? (existingRows[0] as any) : null;
+      const extraIds = Array.isArray(existingRows) ? existingRows.slice(1).map((r: any) => r?.id).filter(Boolean) : [];
       if (exErr) throw exErr;
 
       if (existing && (existing as any).id) {
@@ -312,6 +348,16 @@ export function BidRoomPanel(props: {
         if (error) throw error;
       }
 
+      // Best-effort cleanup: if historic duplicates exist for this key, delete older rows.
+      // This is defensive only (no schema changes / no unique constraints assumed).
+      if (Array.isArray(extraIds) && extraIds.length) {
+        try {
+          await supabase.from("job_work_items").delete().in("id", extraIds);
+        } catch (e) {
+          // ignore
+        }
+      }
+
       await refreshWork();
     } catch (e: any) {
       console.error("BidRoomPanel upsertWorkItem failed", {
@@ -325,13 +371,15 @@ export function BidRoomPanel(props: {
       });
       console.error("BidRoomPanel upsertWorkItem raw", e);
       setWorkError("Could not save changes.");
+      // Roll back optimistic UI to the last known server state.
+      try { await refreshWork(); } catch { /* ignore */ }
     } finally {
       setWorkSaving(null);
     }
   }
 
-  const doneCount = useMemo(() => workItems.filter((w) => String(w?.status ?? "") === "done").length, [workItems]);
-  const blockedCount = useMemo(() => workItems.filter((w) => String(w?.status ?? "") === "blocked").length, [workItems]);
+  const doneCount = useMemo(() => Array.from(workByKey.values()).filter((w: any) => String(w?.status ?? "") === "done").length, [workByKey]);
+  const blockedCount = useMemo(() => Array.from(workByKey.values()).filter((w: any) => String(w?.status ?? "") === "blocked").length, [workByKey]);
 
   const header = props.showHeader !== false;
   const showExport = props.showExport !== false;
@@ -577,6 +625,14 @@ export function BidRoomPanel(props: {
                                     else next.unshift({ job_id: jobId, type: r.type, ref_key: r.ref_key, title: r.title, status, owner_label: v });
                                     return next;
                                   });
+                                  scheduleSave(`${key}:owner_label`, () => {
+                                    void upsertWorkItem({
+                                      type: r.type,
+                                      ref_key: r.ref_key,
+                                      title: r.title,
+                                      owner_label: v || null,
+                                    });
+                                  });
                                 }}
                                 onBlur={async (e) => {
                                   await upsertWorkItem({
@@ -596,6 +652,7 @@ export function BidRoomPanel(props: {
                                 value={status}
                                 onChange={(e) => {
                                   const v = e.target.value;
+                                  // optimistic UI update
                                   setWorkItems((prev) => {
                                     const next = [...prev];
                                     const idx = next.findIndex((x) => `${x.type}:${x.ref_key}` === key);
@@ -603,13 +660,12 @@ export function BidRoomPanel(props: {
                                     else next.unshift({ job_id: jobId, type: r.type, ref_key: r.ref_key, title: r.title, status: v, owner_label: owner });
                                     return next;
                                   });
-                                }}
-                                onBlur={async (e) => {
-                                  await upsertWorkItem({
+                                  // persist immediately (do not rely on blur)
+                                  void upsertWorkItem({
                                     type: r.type,
                                     ref_key: r.ref_key,
                                     title: r.title,
-                                    status: e.currentTarget.value,
+                                    status: v,
                                   });
                                 }}
                                 disabled={workSaving === key}
@@ -631,6 +687,14 @@ export function BidRoomPanel(props: {
                                     if (idx >= 0) next[idx] = { ...next[idx], due_at: v || null };
                                     else next.unshift({ job_id: jobId, type: r.type, ref_key: r.ref_key, title: r.title, status, due_at: v || null });
                                     return next;
+                                  });
+                                  scheduleSave(`${key}:due_at`, () => {
+                                    void upsertWorkItem({
+                                      type: r.type,
+                                      ref_key: r.ref_key,
+                                      title: r.title,
+                                      due_at: v || null,
+                                    });
                                   });
                                 }}
                                 onBlur={async (e) => {
@@ -656,6 +720,14 @@ export function BidRoomPanel(props: {
                                       if (idx >= 0) next[idx] = { ...next[idx], notes: v };
                                       else next.unshift({ job_id: jobId, type: r.type, ref_key: r.ref_key, title: r.title, status, notes: v });
                                       return next;
+                                    });
+                                    scheduleSave(`${key}:notes`, () => {
+                                      void upsertWorkItem({
+                                        type: r.type,
+                                        ref_key: r.ref_key,
+                                        title: r.title,
+                                        notes: v || null,
+                                      });
                                     });
                                   }}
                                   onBlur={async (e) => {

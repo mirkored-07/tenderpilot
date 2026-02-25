@@ -21,7 +21,9 @@ async function supabaseServer() {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options);
+            // IMPORTANT: keep cookies readable by the browser Supabase client
+            // so client-side RLS writes (job_work_items overlays) keep working.
+            cookieStore.set(name, value, { ...options, httpOnly: false });
           });
         },
       },

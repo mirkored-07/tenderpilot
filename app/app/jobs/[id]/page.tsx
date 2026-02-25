@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
 import { supabaseBrowser } from "@/lib/supabase/browser";
+import { stableRefKey } from "@/lib/bid-workflow/keys";
 import { getJobDisplayName, setJobDisplayName, clearJobDisplayName } from "@/lib/pilot-job-names";
 
 import { track } from "@/lib/telemetry";
@@ -100,6 +101,65 @@ type AnalysisTab = "text";
 
 /** UI safety: cap initial source-text render to avoid freezing on huge extractions */
 const SOURCE_TEXT_PREVIEW_LIMIT = 20_000;
+
+function normalizeDecisionText(raw: string): string {
+  return String(raw ?? "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isUseExtractedDecisionOverride(v: unknown): boolean {
+  const t = normalizeDecisionText(String(v ?? ""));
+  // Treat sentinel UI values as "no override"
+  if (!t) return true;
+  if (t === "extracted") return true;
+  if (t.includes("use extracted")) return true;
+  if (t.includes("extracted decision")) return true;
+  if (t.startsWith("(") && t.includes("extracted")) return true;
+  return false;
+}
+
+function decisionBucket(raw: string): "go" | "hold" | "no-go" | "unknown" {
+  const t = normalizeDecisionText(raw);
+
+  // Order matters: check no-go first so "go/no-go" doesn't classify as "go"
+  const isNoGo =
+    /\b(no[-\s]?go|nogo|do\s+not\s+(bid|proceed|submit)|not\s+(bid|proceed|submit)|reject|decline|withdraw)\b/.test(t);
+  if (isNoGo) return "no-go";
+
+  // Treat "Proceed with caution" as Hold (caution state)
+  const isHold =
+    /\b(hold|caution|clarif(y|ication)|verify|pending|tbd|conditional|depends|review)\b/.test(t) ||
+    t.includes("proceed with caution");
+  if (isHold) return "hold";
+
+  const isGo = /\b(go|proceed|bid|submit)\b/.test(t);
+  if (isGo) return "go";
+
+  return "unknown";
+}
+
+function isDoneWorkStatus(s: unknown): boolean {
+  const v = String(s ?? "").toLowerCase().trim();
+  return v === "done" || v === "completed" || v === "closed";
+}
+
+function isBlockedWorkStatus(s: unknown): boolean {
+  const v = String(s ?? "").toLowerCase().trim();
+  return v === "blocked";
+}
+
+function isActionableWorkStatus(s: unknown): boolean {
+  const v = String(s ?? "").toLowerCase().trim();
+  return v === "todo" || v === "doing" || v === "in_progress" || v === "in-progress";
+}
+
+function isMustKind(rawKind: unknown): boolean {
+  const t = String(rawKind ?? "").toLowerCase();
+  return t.includes("must") || t.includes("mandatory") || t.includes("shall") || t.includes("required");
+}
+
 
 function VerdictBadge({ state }: { state: VerdictState }) {
   const base = "inline-flex items-center rounded-full border px-3 py-1 text-xs";
@@ -1448,6 +1508,7 @@ const [metaOpen, setMetaOpen] = useState(false);
 	  { deadlineLocal: "", targetDecisionLocal: "", portal_url: "", internal_bid_id: "", owner_label: "", decision_override: "" }
 	);
 const [savingMeta, setSavingMeta] = useState(false);
+	const [savingTeamDecision, setSavingTeamDecision] = useState(false);
 
 	const [events, setEvents] = useState<DbJobEvent[]>([]);
 
@@ -1515,6 +1576,49 @@ const [savingMeta, setSavingMeta] = useState(false);
     }
   }, [jobId]);
 
+
+
+  // Refresh operational overlays when returning from Bid Room (status + team decision)
+  useEffect(() => {
+    if (!jobId) return;
+    const supabase = supabaseBrowser();
+
+    let cancelled = false;
+
+    async function refresh() {
+      try {
+        const { data: wiRows, error: wiErr } = await supabase
+          .from("job_work_items")
+          .select("job_id,type,ref_key,title,status,owner_label,due_at,notes,updated_at")
+          .eq("job_id", jobId)
+          .order("updated_at", { ascending: false });
+        if (!cancelled && !wiErr) setWorkItems((wiRows as any[]) ?? []);
+      } catch {
+        // ignore
+      }
+
+      try {
+        const { data: metaRows, error: metaErr } = await supabase
+          .from("job_metadata")
+          .select("job_id,deadline_override,target_decision_at,portal_url,internal_bid_id,owner_label,decision_override,updated_at")
+          .eq("job_id", jobId)
+          .order("updated_at", { ascending: false })
+          .limit(1);
+        const metaRow = Array.isArray(metaRows) && metaRows.length ? (metaRows[0] as any) : null;
+        if (!cancelled && !metaErr) setJobMeta((metaRow as any) ?? null);
+      } catch {
+        // ignore
+      }
+    }
+
+    const onFocus = () => refresh();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [jobId]);
+
   // Polling robustness + graceful stop + error pressure guard
   useEffect(() => {
     if (invalidLink) return;
@@ -1574,11 +1678,14 @@ const [savingMeta, setSavingMeta] = useState(false);
 
 		setResult((resultRow as any) ?? null);
 		// Manual overlay: job metadata (deadline, portal link, owner, decision override)
-const { data: metaRow, error: metaErr } = await supabase
+const { data: metaRows, error: metaErr } = await supabase
   .from("job_metadata")
   .select("job_id,deadline_override,target_decision_at,portal_url,internal_bid_id,owner_label,decision_override,updated_at")
   .eq("job_id", jobId)
-  .maybeSingle();
+  .order("updated_at", { ascending: false })
+  .limit(1);
+
+const metaRow = Array.isArray(metaRows) && metaRows.length ? (metaRows[0] as any) : null;
 
 if (metaErr) console.warn(metaErr);
 
@@ -2004,6 +2111,59 @@ setWorkItems((wiRows as any[]) ?? []);
       .map((x) => String(x?.text ?? x?.requirement ?? "").trim())
       .filter(Boolean);
   }, [checklist]);
+
+
+
+  const blockersReadiness = useMemo(() => {
+    const items = Array.isArray(checklist) ? checklist : [];
+
+    // Index work items by requirement ref_key for quick lookup
+    const workByReqKey = new Map<string, any>();
+    for (const w of workItems ?? []) {
+      if (String((w as any)?.type ?? "") !== "requirement") continue;
+      const k = String((w as any)?.ref_key ?? "").trim();
+      if (!k) continue;
+      if (!workByReqKey.has(k)) workByReqKey.set(k, w);
+    }
+
+    let total = 0;
+    let done = 0;
+    let blocked = 0;
+    let fixableRemaining = 0;
+
+    for (const it of items) {
+      const kindRaw = String((it as any)?.type ?? (it as any)?.level ?? (it as any)?.priority ?? "INFO");
+      if (!isMustKind(kindRaw)) continue;
+
+      const kind = String(kindRaw).toUpperCase();
+      const text = String((it as any)?.text ?? (it as any)?.requirement ?? "").trim();
+      if (!text) continue;
+
+      total += 1;
+      const ref = stableRefKey({ jobId, type: "requirement", text, extra: kind });
+      const w = workByReqKey.get(ref);
+      const st = (w as any)?.status;
+
+      if (isBlockedWorkStatus(st)) {
+        blocked += 1;
+        continue;
+      }
+
+      if (w && isDoneWorkStatus(st)) {
+        done += 1;
+        continue;
+      }
+
+      // If the work item is missing or still in todo/doing/unknown, treat as fixable remaining.
+      // This matches the Bid Room rule: only when blockers are NOT in todo/doing we unlock "Ready to decide".
+      fixableRemaining += 1;
+    }
+
+    const readyToDecide = total > 0 && fixableRemaining === 0;
+    const resolvedByTeam = readyToDecide && blocked === 0;
+
+    return { total, done, blocked, fixableRemaining, readyToDecide, resolvedByTeam };
+  }, [checklist, workItems, jobId]);
 
   // Evidence map (MUST text -> verbatim source excerpt).
   // This enables "100% precision": we only highlight when we can locate the exact excerpt in Source text.
@@ -2644,6 +2804,36 @@ const executive = useMemo(() => {
     return "No mandatory blockers identified from eligibility and submission requirements.";
   }, [showReady, verdictState]);
 
+  const aiSuggestionLabel = useMemo(() => {
+    if (verdictState === "proceed") return "GO";
+    if (verdictState === "hold") return "HOLD";
+    return "GO (CAUTION)";
+  }, [verdictState]);
+
+  const teamDecision = useMemo(() => {
+    const raw = (jobMeta as any)?.decision_override;
+    if (isUseExtractedDecisionOverride(raw)) {
+      return { active: false, bucket: "unknown" as const, label: "", raw: "" };
+    }
+
+    const txt = String(raw ?? "").trim();
+    const bucket = decisionBucket(txt);
+    const label = bucket === "go" ? "GO" : bucket === "hold" ? "HOLD" : bucket === "no-go" ? "NO-GO" : txt;
+    return { active: true, bucket, label, raw: txt };
+  }, [jobMeta]);
+
+  const globalDecision = useMemo(() => {
+    if (teamDecision.active && teamDecision.bucket !== "unknown") {
+      return { source: "team" as const, bucket: teamDecision.bucket, label: teamDecision.label };
+    }
+
+    const bucket = verdictState === "hold" ? "hold" : verdictState === "proceed" ? "go" : "caution";
+    const label = verdictState === "proceed" ? "GO" : verdictState === "hold" ? "HOLD" : "GO (CAUTION)";
+    return { source: "ai" as const, bucket, label };
+  }, [teamDecision, verdictState]);
+
+
+
   async function copySection(which: "requirements" | "risks" | "clarifications" | "draft") {
     if (!canDownload) return;
 
@@ -3277,6 +3467,38 @@ async function saveJobMetadata() {
   }
 }
 
+
+
+async function saveTeamDecision(next: "Go" | "No-Go" | null) {
+  if (!jobId) return;
+  setSavingTeamDecision(true);
+  setError(null);
+
+  try {
+    const supabase = supabaseBrowser();
+    const payload: any = {
+      job_id: jobId,
+      decision_override: next,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await supabase
+      .from("job_metadata")
+      .upsert(payload, { onConflict: "job_id" })
+      .select("job_id,deadline_override,target_decision_at,portal_url,internal_bid_id,owner_label,decision_override,updated_at")
+      .maybeSingle();
+
+    if (error) throw error;
+    setJobMeta((data as any) ?? null);
+    setMetaDraft((s) => ({ ...s, decision_override: String(next ?? "") }));
+  } catch (e) {
+    console.error(e);
+    alert("Could not save team decision. Please try again.");
+  } finally {
+    setSavingTeamDecision(false);
+  }
+}
+
   async function handleDelete() {
     if (!job) return;
     const ok = window.confirm("Delete this tender review? This cannot be undone.");
@@ -3686,27 +3908,115 @@ async function saveJobMetadata() {
                 </div>
               ) : (
                 <div className="mt-3 space-y-5">
-                  <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-4">
                     <div className="flex flex-wrap items-center gap-3">
                       <div
                         className={[
                           "inline-flex items-center rounded-2xl px-4 py-2 text-sm font-semibold tracking-wide",
-                          verdictState === "proceed"
+                          globalDecision.bucket === "go"
                             ? "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-200 dark:ring-emerald-500/25"
-                            : verdictState === "hold"
+                            : globalDecision.bucket === "hold"
                             ? "bg-rose-50 text-rose-800 ring-1 ring-rose-200 dark:bg-rose-500/15 dark:text-rose-200 dark:ring-rose-500/25"
+                            : globalDecision.bucket === "no-go"
+                            ? "bg-red-50 text-red-800 ring-1 ring-red-200 dark:bg-red-500/15 dark:text-red-200 dark:ring-red-500/25"
                             : "bg-amber-50 text-amber-900 ring-1 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-200 dark:ring-amber-500/25",
                         ].join(" ")}
                       >
-                        {verdictState === "proceed" ? "GO" : verdictState === "hold" ? "HOLD" : "GO (CAUTION)"}
+                        {globalDecision.label}
                       </div>
 
-                      <p className="text-sm text-foreground/80">
-                        {verdictState === "hold" ? "Fixable blockers detected" : verdictState === "caution" ? "Bid looks feasible with validation" : "Ready to bid"}
-                      </p>
+                      <div
+                        className={[
+                          "inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold",
+                          (blockersReadiness.total === 0
+                            ? "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-200 dark:ring-emerald-500/25"
+                            : blockersReadiness.fixableRemaining === 0
+                            ? blockersReadiness.blocked > 0
+                              ? "bg-amber-50 text-amber-900 ring-1 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-200 dark:ring-amber-500/25"
+                              : "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-200 dark:ring-emerald-500/25"
+                            : "bg-slate-50 text-slate-800 ring-1 ring-slate-200 dark:bg-slate-500/10 dark:text-slate-200 dark:ring-slate-500/20"),
+                        ].join(" ")}
+                      >
+                        {blockersReadiness.total === 0
+                          ? "No blockers detected"
+                          : blockersReadiness.fixableRemaining === 0
+                          ? blockersReadiness.blocked > 0
+                            ? `Ready to decide · ${blockersReadiness.blocked} blocked`
+                            : "Blockers resolved by team"
+                          : `Fixable blockers remaining: ${blockersReadiness.fixableRemaining}`}
+                      </div>
+
+                      {globalDecision.source === "team" ? (
+                        <span className="text-xs text-muted-foreground">Team decision applied</span>
+                      ) : null}
                     </div>
 
-                    <p className="text-sm text-foreground/80">{verdictDriverLine}</p>
+                    {blockersReadiness.total > 0 && (blockersReadiness.fixableRemaining === 0 || teamDecision.active) ? (
+                      <div className="rounded-2xl border border-border bg-muted/20 p-4">
+                        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold">Ready to decide</p>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              All blockers are either <span className="font-medium text-foreground/80">done</span> or{" "}
+                              <span className="font-medium text-foreground/80">blocked</span>.
+                            </p>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="inline-flex items-center rounded-full border border-border bg-background px-3 py-1 text-xs font-semibold">
+                              Total {blockersReadiness.total}
+                            </span>
+                            <span className="inline-flex items-center rounded-full border border-border bg-background px-3 py-1 text-xs font-semibold">
+                              Done {blockersReadiness.done}
+                            </span>
+                            <span className="inline-flex items-center rounded-full border border-border bg-background px-3 py-1 text-xs font-semibold">
+                              Blocked {blockersReadiness.blocked}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 flex flex-wrap items-center gap-2">
+                          <span className="text-xs font-medium text-muted-foreground">Team decision</span>
+
+                          <div className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/20 p-1">
+                            <button
+                              type="button"
+                              disabled={!showReady || savingTeamDecision}
+                              onClick={() => saveTeamDecision("Go")}
+                              className={[
+                                "h-8 rounded-full px-3 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+                                teamDecision.bucket === "go" ? "bg-foreground text-background shadow-sm" : "text-foreground/80 hover:bg-background/60",
+                              ].join(" ")}
+                            >
+                              GO
+                            </button>
+
+                            <button
+                              type="button"
+                              disabled={!showReady || savingTeamDecision}
+                              onClick={() => saveTeamDecision("No-Go")}
+                              className={[
+                                "h-8 rounded-full px-3 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+                                teamDecision.bucket === "no-go" ? "bg-foreground text-background shadow-sm" : "text-foreground/80 hover:bg-background/60",
+                              ].join(" ")}
+                            >
+                              NO GO
+                            </button>
+
+                            <button
+                              type="button"
+                              disabled={!showReady || savingTeamDecision || !teamDecision.active}
+                              onClick={() => saveTeamDecision(null)}
+                              className="h-8 rounded-full px-3 text-xs font-semibold text-muted-foreground transition hover:bg-background/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
+                            >
+                              Clear
+                            </button>
+                          </div>
+                        </div>
+
+                        <p className="mt-2 text-xs text-muted-foreground">Operational overlay. Does not change AI extraction.</p>
+                      </div>
+                    ) : null}
                   </div>
 
                   {verdictState === "hold" && (mustItems ?? []).length ? (

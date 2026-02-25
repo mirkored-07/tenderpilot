@@ -67,14 +67,12 @@ const [metaDraft, setMetaDraft] = useState<{
   portal_url: string;
   internal_bid_id: string;
   owner_label: string;
-  decision_override: string;
   targetDecisionLocal: string;
 }>({
   deadlineLocal: "",
   portal_url: "",
   internal_bid_id: "",
   owner_label: "",
-  decision_override: "",
   targetDecisionLocal: "",
 });
 
@@ -142,7 +140,6 @@ const [metaDraft, setMetaDraft] = useState<{
             portal_url: String((metaRow as any)?.portal_url ?? ""),
             internal_bid_id: String((metaRow as any)?.internal_bid_id ?? ""),
             owner_label: String((metaRow as any)?.owner_label ?? ""),
-            decision_override: String((metaRow as any)?.decision_override ?? ""),
             targetDecisionLocal: toLocalInput((metaRow as any)?.target_decision_at),
           });
         }
@@ -179,7 +176,6 @@ const [metaDraft, setMetaDraft] = useState<{
       portal_url: metaDraft.portal_url?.trim() ? metaDraft.portal_url.trim() : null,
       internal_bid_id: metaDraft.internal_bid_id?.trim() ? metaDraft.internal_bid_id.trim() : null,
       owner_label: metaDraft.owner_label?.trim() ? metaDraft.owner_label.trim() : null,
-      decision_override: metaDraft.decision_override?.trim() ? metaDraft.decision_override.trim() : null,
       target_decision_at: toIsoOrNull(metaDraft.targetDecisionLocal),
       updated_at: new Date().toISOString(),
     };
@@ -261,7 +257,7 @@ const [metaDraft, setMetaDraft] = useState<{
                 <span>Portal: {(metaDraft.portal_url?.trim() || jobMeta?.portal_url?.trim()) ? "set" : "Add portal"}</span>
               </div>
 
-              <p className="mt-1 text-xs text-muted-foreground">Operational context (does not affect AI decision).</p>
+              <p className="mt-1 text-xs text-muted-foreground">Operational context (team decision is set on the job page).</p>
             </button>
 
             {metaOpen ? (
@@ -284,20 +280,6 @@ const [metaDraft, setMetaDraft] = useState<{
                   value={metaDraft.deadlineLocal}
                   onChange={(e) => setMetaDraft((s) => ({ ...s, deadlineLocal: e.target.value }))}
                 />
-              </div>
-
-              <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Decision override</p>
-                <select
-                  className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={metaDraft.decision_override}
-                  onChange={(e) => setMetaDraft((s) => ({ ...s, decision_override: e.target.value }))}
-                >
-                  <option value="">(use extracted decision)</option>
-                  <option value="Go">Go</option>
-                  <option value="Hold">Hold</option>
-                  <option value="No-Go">No-Go</option>
-                </select>
               </div>
 
               <div className="space-y-1">

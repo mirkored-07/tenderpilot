@@ -141,6 +141,19 @@ export function ComplianceMatrix(props: {
   // Local toast (lightweight; avoids adding global Toaster plumbing)
   const [toast, setToast] = useState<null | { title: string; description?: string; action?: "OPEN_BID_ROOM" }>(null);
 
+  // Debounced autosave for text inputs so refresh/navigation doesn't lose edits.
+  const saveTimersRef = useRef<Map<string, number>>(new Map());
+  function scheduleCmSave(key: string, fn: () => void, delayMs = 300) {
+    const m = saveTimersRef.current;
+    const prev = m.get(key);
+    if (prev) window.clearTimeout(prev);
+    const t = window.setTimeout(() => {
+      m.delete(key);
+      fn();
+    }, delayMs);
+    m.set(key, t as unknown as number);
+  }
+
   useEffect(() => {
     if (!toast) return;
     const t = window.setTimeout(() => setToast(null), 4500);
@@ -258,13 +271,31 @@ export function ComplianceMatrix(props: {
     setWorkError(null);
     try {
       const supabase = supabaseBrowser();
-      const { data: existing, error: exErr } = await supabase
+      if (process.env.NODE_ENV !== "production") {
+        try {
+          const { data } = await supabase.auth.getSession();
+          // eslint-disable-next-line no-console
+		console.debug("[Compliance sendGapToBidRoom]", {
+		  jobId,
+		  key: req.base_ref_key,
+		  supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+		  hasSession: Boolean(data?.session),
+		  userId: data?.session?.user?.id,
+		});
+        } catch {
+          // ignore
+        }
+      }
+      const { data: existingRows, error: exErr } = await supabase
         .from("job_work_items")
-        .select("job_id,type,ref_key")
+        .select("id")
         .eq("job_id", jobId)
         .eq("type", "requirement")
         .eq("ref_key", req.base_ref_key)
-        .maybeSingle();
+        .order("updated_at", { ascending: false })
+        .limit(1);
+      if (exErr) throw exErr;
+      const existing = Array.isArray(existingRows) && existingRows.length ? existingRows[0] : null;
       if (exErr) throw exErr;
       if (existing) {
         setSendState((p) => ({ ...p, [k]: "exists" }));
@@ -336,11 +367,13 @@ export function ComplianceMatrix(props: {
   }, [checklist, jobId]);
 
   const cmByRef = useMemo(() => {
+    // cmItems is ordered by updated_at desc (newest first).
+    // If duplicates exist, keep the newest row.
     const map = new Map<string, any>();
     for (const w of cmItems ?? []) {
       const key = String((w as any)?.ref_key ?? "").trim();
       if (!key) continue;
-      map.set(key, w);
+      if (!map.has(key)) map.set(key, w);
     }
     return map;
   }, [cmItems]);
@@ -456,13 +489,18 @@ export function ComplianceMatrix(props: {
     try {
       const supabase = supabaseBrowser();
 
-      const { data: existing, error: exErr } = await supabase
+      const { data: existingRows, error: exErr } = await supabase
         .from("job_work_items")
-        .select("id,notes")
+        .select("id,notes,updated_at")
         .eq("job_id", jobId)
         .eq("type", "requirement")
         .eq("ref_key", input.cm_ref_key)
-        .maybeSingle();
+        .order("updated_at", { ascending: false })
+        .limit(10);
+      if (exErr) throw exErr;
+
+      const existing = Array.isArray(existingRows) && existingRows.length ? (existingRows[0] as any) : null;
+      const extraIds = Array.isArray(existingRows) ? existingRows.slice(1).map((r: any) => r?.id).filter(Boolean) : [];
       if (exErr) throw exErr;
 
       // PATCH merge into JSON notes to avoid overwriting other fields.
@@ -500,6 +538,15 @@ export function ComplianceMatrix(props: {
         if (error) throw error;
       }
 
+      // Best-effort cleanup: if historic duplicates exist for this key, delete older rows.
+      if (Array.isArray(extraIds) && extraIds.length) {
+        try {
+          await supabase.from("job_work_items").delete().in("id", extraIds);
+        } catch (e) {
+          // ignore
+        }
+      }
+
       await refreshWork();
     } catch (e: any) {
       // Surface a useful error instead of {} when possible
@@ -515,6 +562,8 @@ export function ComplianceMatrix(props: {
       });
       console.error("ComplianceMatrix upsertCompliance raw", e);
       setWorkError(msg ? `Could not save changes: ${msg}` : "Could not save changes.");
+      // Roll back optimistic UI to the last known server state.
+      try { await refreshWork(); } catch { /* ignore */ }
     } finally {
       setSavingKey(null);
     }
@@ -748,12 +797,11 @@ export function ComplianceMatrix(props: {
                                   else next.unshift({ job_id: jobId, type: "requirement", ref_key: r.cm_ref_key, title: r.text, status: "todo", notes: merged });
                                   return next;
                                 });
-                              }}
-                              onBlur={async (e) => {
-                                await upsertCompliance({
+                                // persist immediately (do not rely on blur)
+                                void upsertCompliance({
                                   cm_ref_key: r.cm_ref_key,
                                   title: r.text,
-                                  complianceStatus: e.currentTarget.value as ComplianceStatus,
+                                  complianceStatus: v,
                                 });
                               }}
                             >
@@ -781,6 +829,13 @@ export function ComplianceMatrix(props: {
                                   if (idx >= 0) next[idx] = { ...next[idx], notes: merged };
                                   else next.unshift({ job_id: jobId, type: "requirement", ref_key: r.cm_ref_key, title: r.text, status: "todo", notes: merged });
                                   return next;
+                                });
+                                scheduleCmSave(`${r.cm_ref_key}:note`, () => {
+                                  void upsertCompliance({
+                                    cm_ref_key: r.cm_ref_key,
+                                    title: r.text,
+                                    note: v,
+                                  });
                                 });
                               }}
                               onBlur={async (e) => {
