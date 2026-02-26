@@ -20,6 +20,9 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ModeToggle } from "@/components/mode-toggle";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 async function supabaseServer() {
   // In this Next version, cookies() is async
   const cookieStore = await cookies();
@@ -104,8 +107,13 @@ async function loadCreditsBalance(): Promise<number | null> {
     }
 
     return null;
-  } catch (e) {
-    console.error("Unexpected error loading credits_balance", e);
+  } catch (e: any) {
+    // During `next build`, Next may attempt static optimization; `cookies()` throws
+    // `DYNAMIC_SERVER_USAGE` in that phase. This route is intentionally dynamic.
+    const digest = e && typeof e === "object" ? (e as any).digest : undefined;
+    if (digest !== "DYNAMIC_SERVER_USAGE") {
+      console.error("Unexpected error loading credits_balance", e);
+    }
     return null;
   }
 }
