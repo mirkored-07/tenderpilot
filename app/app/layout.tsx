@@ -1,6 +1,14 @@
 import type { ReactNode } from "react";
-import { AuthGate } from "./_components/auth-gate";
+
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { createServerClient } from "@supabase/ssr";
+
+import { AuthGate } from "./_components/auth-gate";
+import { SideNav } from "./_components/side-nav";
+import { TelemetryInit } from "./_components/telemetry-init";
+import { SignOutMenuItem } from "./_components/sign-out-menu-item";
+
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -10,12 +18,101 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { SideNav } from "./_components/side-nav";
-import { TelemetryInit } from "./_components/telemetry-init";
 import { ModeToggle } from "@/components/mode-toggle";
-import { SignOutMenuItem } from "./_components/sign-out-menu-item";
 
-export default function AppLayout({ children }: { children: ReactNode }) {
+async function supabaseServer() {
+  // In this Next version, cookies() is async
+  const cookieStore = await cookies();
+
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value, options }) => {
+            // IMPORTANT: keep cookies readable by the browser Supabase client
+            // so client-side RLS writes (bid room overlays, etc.) keep working.
+            cookieStore.set(name, value, { ...options, httpOnly: false });
+          });
+        },
+      },
+    }
+  );
+}
+
+async function loadCreditsBalance(): Promise<number | null> {
+  try {
+    const supabase = await supabaseServer();
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) return null;
+
+    // Source of truth: profiles.credits_balance
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("credits_balance")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    // If the column does not exist yet (before SQL is applied), do not break the app.
+    if (error) {
+      console.error("Failed to load credits_balance", error);
+      return null;
+    }
+
+    if (data && typeof (data as any).credits_balance === "number") {
+      return (data as any).credits_balance as number;
+    }
+
+    // If the profile row is missing, try to create it (best effort).
+    // The DB default will set credits_balance.
+    const email = user.email ?? "";
+    const ins = await supabase
+      .from("profiles")
+      .insert({ id: user.id, email })
+      .select("credits_balance")
+      .maybeSingle();
+
+    if (
+      !ins.error &&
+      ins.data &&
+      typeof (ins.data as any).credits_balance === "number"
+    ) {
+      return (ins.data as any).credits_balance as number;
+    }
+
+    const again = await supabase
+      .from("profiles")
+      .select("credits_balance")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (
+      !again.error &&
+      again.data &&
+      typeof (again.data as any).credits_balance === "number"
+    ) {
+      return (again.data as any).credits_balance as number;
+    }
+
+    return null;
+  } catch (e) {
+    console.error("Unexpected error loading credits_balance", e);
+    return null;
+  }
+}
+
+export default async function AppLayout({ children }: { children: ReactNode }) {
+  const creditsBalance = await loadCreditsBalance();
+
   return (
     <div className="h-dvh aurora-bg overflow-hidden">
       <TelemetryInit />
@@ -45,13 +142,15 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 <p className="text-xs font-medium text-white/80">Credits</p>
                 <div className="mt-2 flex items-center justify-between">
                   <Badge variant="secondary" className="rounded-full">
-                    2
+                    {typeof creditsBalance === "number" ? creditsBalance : "—"}
                   </Badge>
-                  <span className="text-xs font-medium text-white/80">test</span>
+                  <span className="text-xs font-medium text-white/80">
+                    remaining
+                  </span>
                 </div>
                 <p className="mt-3 text-xs text-white/75 leading-relaxed">
-                  Each tender review consumes 1 credit. Upgrade later via
-                  pricing.
+                  Each tender review consumes 1 credit. Exports are gated on the
+                  free tier.
                 </p>
               </div>
 

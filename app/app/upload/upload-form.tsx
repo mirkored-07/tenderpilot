@@ -10,7 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { createJobAction, saveExtractedTextAction } from "./actions";
-import { extractPdfTextFast, fastExtractPasses } from "@/lib/pdf/extract-pdf-text";
+import {
+  extractPdfTextFast,
+  fastExtractPasses,
+} from "@/lib/pdf/extract-pdf-text";
 import { track } from "@/lib/telemetry";
 
 type SourceType = "pdf" | "docx";
@@ -37,7 +40,13 @@ function isSupportedExt(ext: string): ext is SourceType {
   return ext === "pdf" || ext === "docx";
 }
 
-type UploadPhase = "idle" | "checking_session" | "uploading" | "creating_job" | "extracting_text" | "redirecting";
+type UploadPhase =
+  | "idle"
+  | "checking_session"
+  | "uploading"
+  | "creating_job"
+  | "extracting_text"
+  | "redirecting";
 
 export default function UploadForm() {
   const [file, setFile] = useState<File | null>(null);
@@ -48,6 +57,7 @@ export default function UploadForm() {
 
   const [error, setError] = useState<string | null>(null);
   const [needsSignIn, setNeedsSignIn] = useState(false);
+  const [noCredits, setNoCredits] = useState(false);
 
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -67,6 +77,7 @@ export default function UploadForm() {
   function validateAndSet(f: File | null) {
     setError(null);
     setNeedsSignIn(false);
+    setNoCredits(false);
 
     if (!f) {
       setFile(null);
@@ -82,14 +93,20 @@ export default function UploadForm() {
 
     if (!Number.isFinite(f.size) || f.size <= 0) {
       setFile(null);
-      setError("This file appears to be empty. Please choose a valid PDF or DOCX.");
+      setError(
+        "This file appears to be empty. Please choose a valid PDF or DOCX."
+      );
       track("upload_file_rejected", { reason: "empty_file" });
       return;
     }
 
     if (f.size > MAX_FILE_BYTES) {
       setFile(null);
-      setError(`File is too large. Please upload a file up to ${formatBytes(MAX_FILE_BYTES)}.`);
+      setError(
+        `File is too large. Please upload a file up to ${formatBytes(
+          MAX_FILE_BYTES
+        )}.`
+      );
       track("upload_file_rejected", { reason: "too_large", size: f.size });
       return;
     }
@@ -107,7 +124,6 @@ export default function UploadForm() {
   }
 
   function phaseLabel(p: UploadPhase) {
-    // Keep button labels short so the primary action stays visually strong.
     if (p === "checking_session") return "Checking…";
     if (p === "uploading") return "Uploading…";
     if (p === "creating_job") return "Creating…";
@@ -122,9 +138,12 @@ export default function UploadForm() {
     setPhase("checking_session");
     setError(null);
     setNeedsSignIn(false);
+    setNoCredits(false);
+
+    let uploadedFilePath: string | null = null;
+    let jobCreated = false;
 
     try {
-      // Gate BEFORE upload/job creation (prevents late RLS errors)
       const { data: sessionData } = await supabase.auth.getSession();
       const session = sessionData?.session;
 
@@ -142,6 +161,7 @@ export default function UploadForm() {
 
       const sourceType: SourceType = ext;
       const filePath = `${crypto.randomUUID()}.${ext}`;
+      uploadedFilePath = filePath;
 
       track("upload_started", { ext: sourceType, size: file.size });
 
@@ -157,15 +177,14 @@ export default function UploadForm() {
       track("upload_storage_completed", { sourceType });
       track("upload_completed", { sourceType, size: file.size });
 
-      // Server action will create job (we handle redirect client-side to allow fast extraction)
       setPhase("creating_job");
       const { jobId } = await createJobAction({
         fileName: file.name,
         filePath,
         sourceType,
       });
+      jobCreated = true;
 
-      // FAST PATH (PDF): client-side PDF.js extraction for text-native tenders
       if (sourceType === "pdf") {
         try {
           setPhase("extracting_text");
@@ -182,29 +201,50 @@ export default function UploadForm() {
             await saveExtractedTextAction({ jobId, extractedText: text });
             track("upload_fast_extract_saved", { jobId });
           } else {
-            // Let backend fallback extraction run (OCR / provider) if needed
             track("upload_fast_extract_failed_gate", { jobId, ...meta });
           }
         } catch (e: any) {
-          // Never block UX on extraction; backend fallback will handle it
-          track("upload_fast_extract_error", { jobId, message: String(e?.message ?? e) });
-		  console.error("FAST_EXTRACT_SAVE_FAILED", e);
+          track("upload_fast_extract_error", {
+            jobId,
+            message: String(e?.message ?? e),
+          });
+          console.error("FAST_EXTRACT_SAVE_FAILED", e);
         }
       }
 
       setPhase("redirecting");
       track("job_created", { sourceType });
 
+      // ✅ Force server components (incl. /app layout) to re-fetch credits_balance
+      router.refresh();
       router.push(`/app/jobs/${jobId}`);
     } catch (err: any) {
       const message = String(err?.message ?? "Upload failed");
+
+      if (uploadedFilePath && !jobCreated) {
+        try {
+          await supabase.storage.from("uploads").remove([uploadedFilePath]);
+        } catch {
+          // best-effort only
+        }
+      }
+
+      if (message.toLowerCase().includes("no credits")) {
+        setNoCredits(true);
+        track("upload_failed", { message: "no_credits" });
+        setPhase("idle");
+        return;
+      }
+
       setError(message);
       track("upload_failed", { message });
       setPhase("idle");
     }
   }
 
-  const primaryCtaLabel = loading ? phaseLabel(phase) || "Preparing…" : "Create bid";
+  const primaryCtaLabel = loading
+    ? phaseLabel(phase) || "Preparing…"
+    : "Create bid";
 
   return (
     <div className="space-y-4">
@@ -270,8 +310,12 @@ export default function UploadForm() {
           </div>
 
           <div>
-            <p className="text-sm font-semibold">Drag and drop your tender file here</p>
-            <p className="mt-1 text-xs text-muted-foreground">Or click to browse your computer.</p>
+            <p className="text-sm font-semibold">
+              Drag and drop your tender file here
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Or click to browse your computer.
+            </p>
           </div>
 
           {file ? (
@@ -279,7 +323,9 @@ export default function UploadForm() {
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
                   <p className="text-sm font-semibold truncate">{file.name}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{formatBytes(file.size)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {formatBytes(file.size)}
+                  </p>
                 </div>
                 <Button
                   type="button"
@@ -309,8 +355,36 @@ export default function UploadForm() {
             <Button asChild className="rounded-full">
               <Link href="/login">Sign in</Link>
             </Button>
-            <Button type="button" variant="outline" className="rounded-full" onClick={() => setNeedsSignIn(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full"
+              onClick={() => setNeedsSignIn(false)}
+            >
               Not now
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {noCredits && (
+        <div className="rounded-2xl border bg-muted/40 p-4">
+          <p className="text-sm font-medium">You’re out of credits</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Each tender review consumes 1 credit. Contact support to upgrade or
+            top up your account.
+          </p>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <Button asChild className="rounded-full">
+              <a href="mailto:support@tenderpilot.com">Email support</a>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="rounded-full"
+              onClick={() => setNoCredits(false)}
+            >
+              Dismiss
             </Button>
           </div>
         </div>
@@ -324,14 +398,17 @@ export default function UploadForm() {
               type="button"
               variant="outline"
               className="rounded-full"
-              onClick={() => {
-                setError(null);
-              }}
+              onClick={() => setError(null)}
               disabled={loading}
             >
               Dismiss
             </Button>
-            <Button type="button" className="rounded-full" onClick={handleUpload} disabled={!file || loading || needsSignIn}>
+            <Button
+              type="button"
+              className="rounded-full"
+              onClick={handleUpload}
+              disabled={!file || loading || needsSignIn}
+            >
               Try again
             </Button>
           </div>
@@ -346,10 +423,16 @@ export default function UploadForm() {
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-muted-foreground">
-          {file ? "You’ll be redirected to the decision cockpit after upload." : "Select a file to continue."}
+          {file
+            ? "You’ll be redirected to the decision cockpit after upload."
+            : "Select a file to continue."}
         </p>
 
-        <Button onClick={handleUpload} disabled={!file || loading || needsSignIn} className="rounded-full">
+        <Button
+          onClick={handleUpload}
+          disabled={!file || loading || needsSignIn}
+          className="rounded-full"
+        >
           {primaryCtaLabel}
         </Button>
       </div>
