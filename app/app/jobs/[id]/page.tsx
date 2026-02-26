@@ -1518,6 +1518,11 @@ const [savingMeta, setSavingMeta] = useState(false);
   const [polling, setPolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Monetization (free tier): used to gate exports
+  const [notice, setNotice] = useState<string | null>(null);
+  const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
+  const [creditsLoading, setCreditsLoading] = useState(false);
+
 	const [tab, setTab] = useState<AnalysisTab>("text");
 
   // Bid room overlay is handled via BidRoomPanel (job-level route + optional tab).
@@ -1660,6 +1665,29 @@ const [savingMeta, setSavingMeta] = useState(false);
         }
 
         setJob(jobRow as any);
+
+        setCreditsLoading(true);
+        try {
+          const { data: u } = await supabase.auth.getUser();
+          const uid = String(u?.user?.id ?? (jobRow as any)?.user_id ?? "").trim();
+          if (uid) {
+            const { data: profileRow, error: profErr } = await supabase
+              .from("profiles")
+              .select("credits_balance")
+              .eq("id", uid)
+              .maybeSingle();
+            if (profErr) console.warn(profErr);
+            const bal = typeof (profileRow as any)?.credits_balance === "number" ? (profileRow as any).credits_balance : 0;
+            if (mountedRef.current) setCreditsBalance(bal);
+          } else {
+            if (mountedRef.current) setCreditsBalance(0);
+          }
+        } catch (e) {
+          console.warn("credits_balance load failed", e);
+          if (mountedRef.current) setCreditsBalance(0);
+        } finally {
+          if (mountedRef.current) setCreditsLoading(false);
+        }
 
         const stored = getJobDisplayName(jobId) ?? "";
         const initialName = stored || String((jobRow as any)?.file_name ?? "").trim();
@@ -1950,6 +1978,10 @@ setWorkItems((wiRows as any[]) ?? []);
   }, [jobId, job?.status]);
 
   const canDownload = useMemo(() => Boolean(job && job.status === "done"), [job]);
+  const creditsKnown = typeof creditsBalance === "number";
+  const exportLocked = useMemo(() => canDownload && creditsKnown && (creditsBalance as number) < 1, [canDownload, creditsKnown, creditsBalance]);
+  const canExport = useMemo(() => canDownload && (!creditsKnown || (creditsBalance as number) > 0), [canDownload, creditsKnown, creditsBalance]);
+  const unlockExportsHref = "mailto:support@tenderpilot.com?subject=Unlock%20TenderPilot%20Exports";
   const canDelete = Boolean(job) && !showProgress;
 
   const extractedText = useMemo(() => String(result?.extracted_text ?? "").trim(), [result]);
@@ -3006,6 +3038,13 @@ const executive = useMemo(() => {
   async function exportSummaryTxt() {
     if (!job) return;
 
+    if (!canExport) {
+      setNotice("Exports are locked on the free tier when you have 0 credits remaining. Upgrade or top up to unlock exports.");
+      return;
+    }
+
+    setNotice(null);
+
     const text = toPlainTextSummary({
       fileName: displayName || job.file_name,
       createdAt: job.created_at,
@@ -3042,6 +3081,12 @@ const executive = useMemo(() => {
   async function exportTenderBriefPdf() {
     if (!job) return;
 
+    if (!canExport) {
+      setNotice("Exports are locked on the free tier when you have 0 credits remaining. Upgrade or top up to unlock exports.");
+      return;
+    }
+
+    setNotice(null);
     setError(null);
 
     const title = String(displayName || job.file_name || "Tender brief").trim() || "Tender brief";
@@ -3380,12 +3425,24 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
 
   async function exportBidPackXlsx() {
     if (!job) return;
+
+    if (!canExport) {
+      setNotice("Exports are locked on the free tier when you have 0 credits remaining. Upgrade or top up to unlock exports.");
+      return;
+    }
+
+    setNotice(null);
     setError(null);
 
     const res = await fetch(`/api/jobs/${jobId}/export/bid-pack`, {
       method: "GET",
       headers: { Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
     });
+
+    if (res.status === 402) {
+      setNotice("Exports are locked on the free tier when you have 0 credits remaining. Upgrade or top up to unlock exports.");
+      return;
+    }
 
     if (!res.ok) {
       const txt = await res.text().catch(() => "");
@@ -3406,12 +3463,24 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
   }
   async function exportCsv(type: "overview" | "requirements" | "risks" | "clarifications" | "outline") {
     if (!job) return;
+
+    if (!canExport) {
+      setNotice("Exports are locked on the free tier when you have 0 credits remaining. Upgrade or top up to unlock exports.");
+      return;
+    }
+
+    setNotice(null);
     setError(null);
 
     const res = await fetch(`/api/jobs/${jobId}/export/csv?type=${encodeURIComponent(type)}`, {
       method: "GET",
       headers: { Accept: "text/csv" },
     });
+
+    if (res.status === 402) {
+      setNotice("Exports are locked on the free tier when you have 0 credits remaining. Upgrade or top up to unlock exports.");
+      return;
+    }
 
     if (!res.ok) {
       const txt = await res.text().catch(() => "");
@@ -3661,22 +3730,28 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
           </Button>
 
 
-          <Button
-            className="h-9 rounded-full px-4"
-            disabled={!canDownload || exporting !== null}
-            onClick={async () => {
-              if (!canDownload || exporting !== null) return;
-              track("export_bid_pack_clicked", { jobId });
-              setExporting("xlsx");
-              try {
-                await exportBidPackXlsx();
-              } finally {
-                setExporting(null);
-              }
-            }}
-          >
-            {exporting === "xlsx" ? "Preparing…" : "Download Bid Pack (Excel)"}
-          </Button>
+          {exportLocked ? (
+            <Button asChild variant="outline" className="h-9 rounded-full px-4">
+              <a href={unlockExportsHref}>Unlock exports</a>
+            </Button>
+          ) : (
+            <Button
+              className="h-9 rounded-full px-4"
+              disabled={!canExport || exporting !== null || creditsLoading}
+              onClick={async () => {
+                if (!canDownload || exporting !== null) return;
+                track("export_bid_pack_clicked", { jobId });
+                setExporting("xlsx");
+                try {
+                  await exportBidPackXlsx();
+                } finally {
+                  setExporting(null);
+                }
+              }}
+            >
+              {exporting === "xlsx" ? "Preparing…" : "Download Bid Pack (Excel)"}
+            </Button>
+          )}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -3705,8 +3780,17 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
 
               <DropdownMenuSeparator />
 
+              {exportLocked ? (
+                <>
+                  <DropdownMenuItem asChild>
+                    <a href={unlockExportsHref}>Unlock exports</a>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              ) : null}
+
               <DropdownMenuItem
-                disabled={!canDownload || exporting !== null}
+                disabled={!canExport || exporting !== null || creditsLoading}
                 onSelect={async (e) => {
                   e.preventDefault();
                   if (!canDownload || exporting !== null) return;
@@ -3722,7 +3806,7 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
               </DropdownMenuItem>
 
               <DropdownMenuItem
-                disabled={!canDownload || exporting !== null}
+                disabled={!canExport || exporting !== null || creditsLoading}
                 onSelect={async (e) => {
                   e.preventDefault();
                   if (!canDownload || exporting !== null) return;
@@ -3741,7 +3825,7 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
               <DropdownMenuSeparator />
 
               <DropdownMenuItem
-                disabled={!canDownload}
+                disabled={!canExport || creditsLoading}
                 onSelect={(e) => {
                   e.preventDefault();
                   exportCsv("overview");
@@ -3750,7 +3834,7 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
                 Overview (CSV)
               </DropdownMenuItem>
               <DropdownMenuItem
-                disabled={!canDownload}
+                disabled={!canExport || creditsLoading}
                 onSelect={(e) => {
                   e.preventDefault();
                   exportCsv("requirements");
@@ -3759,7 +3843,7 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
                 Requirements (CSV)
               </DropdownMenuItem>
               <DropdownMenuItem
-                disabled={!canDownload}
+                disabled={!canExport || creditsLoading}
                 onSelect={(e) => {
                   e.preventDefault();
                   exportCsv("risks");
@@ -3768,7 +3852,7 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
                 Risks (CSV)
               </DropdownMenuItem>
               <DropdownMenuItem
-                disabled={!canDownload}
+                disabled={!canExport || creditsLoading}
                 onSelect={(e) => {
                   e.preventDefault();
                   exportCsv("clarifications");
@@ -3777,7 +3861,7 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
                 Clarifications (CSV)
               </DropdownMenuItem>
               <DropdownMenuItem
-                disabled={!canDownload}
+                disabled={!canExport || creditsLoading}
                 onSelect={(e) => {
                   e.preventDefault();
                   exportCsv("outline");
@@ -3789,7 +3873,7 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
               <DropdownMenuSeparator />
 
               <DropdownMenuItem
-                disabled={!canDownload || exporting !== null}
+                disabled={!canExport || exporting !== null || creditsLoading}
                 onSelect={async (e) => {
                   e.preventDefault();
                   if (!canDownload || exporting !== null) return;
@@ -3821,6 +3905,22 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
           </DropdownMenu>
         </div>
       </div>
+
+{notice ? (
+        <Card className="rounded-2xl border bg-muted/30">
+          <CardContent className="p-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <p className="text-sm text-foreground/80">{notice}</p>
+            <div className="flex shrink-0 gap-2">
+              <Button asChild variant="outline" size="sm" className="rounded-full">
+                <a href={unlockExportsHref}>Unlock exports</a>
+              </Button>
+              <Button variant="ghost" size="sm" className="rounded-full" onClick={() => setNotice(null)}>
+                Dismiss
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
 
 {error ? (
         <Card className="rounded-2xl border-red-200 bg-red-50 dark:border-red-500/25 dark:bg-red-500/10">

@@ -1,8 +1,17 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
 
 import { supabaseRoute } from "@/lib/supabase/route";
 import { stableRefKey } from "@/lib/bid-workflow/keys";
+
+function supabaseAdmin() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { persistSession: false } }
+  );
+}
 
 function csvEscape(v: any) {
   const s = String(v ?? "");
@@ -73,6 +82,26 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   const { data: userRes } = await supabase.auth.getUser();
   if (!userRes?.user) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+
+  // Export gating: free tier requires at least 1 remaining credit.
+  // Server-side enforced so UI cannot bypass.
+  const admin = supabaseAdmin();
+  const { data: profileRow, error: profErr } = await admin
+    .from("profiles")
+    .select("credits_balance")
+    .eq("id", userRes.user.id)
+    .maybeSingle();
+
+  if (profErr) {
+    console.warn("Failed to read credits_balance for export gate", profErr);
+  }
+
+  const credits = (profileRow as any)?.credits_balance;
+  const creditsBalance = typeof credits === "number" ? credits : 0;
+
+  if (creditsBalance < 1) {
+    return NextResponse.json({ error: "no_export_entitlement" }, { status: 402 });
   }
 
   const { data: job } = await supabase
