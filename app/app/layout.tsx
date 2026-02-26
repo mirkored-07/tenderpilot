@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { SideNav } from "./_components/side-nav";
 import { TelemetryInit } from "./_components/telemetry-init";
 import { ModeToggle } from "@/components/mode-toggle";
+import { SignOutMenuItem } from "./_components/sign-out-menu-item";
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   return (
@@ -49,7 +50,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                   <span className="text-xs font-medium text-white/80">test</span>
                 </div>
                 <p className="mt-3 text-xs text-white/75 leading-relaxed">
-                  Each tender review consumes 1 credit. Upgrade later via pricing.
+                  Each tender review consumes 1 credit. Upgrade later via
+                  pricing.
                 </p>
               </div>
 
@@ -89,9 +91,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 <DropdownMenuItem asChild>
                   <Link href="/app/account">Settings</Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/">Sign out</Link>
-                </DropdownMenuItem>
+                <SignOutMenuItem />
               </DropdownMenuContent>
             </DropdownMenu>
           </header>
