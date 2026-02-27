@@ -15,22 +15,17 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  // CRITICAL FOR SEO: This resolves all relative social image URLs
   metadataBase: new URL("https://www.trytenderpilot.com"),
-
   title: {
     default: "TenderPilot - AI Tender Analysis & Risk Assessment",
     template: "%s | TenderPilot",
   },
-
   description:
     "The Friday 4PM solution. Upload complex tender PDFs and get instant go/no-go decision support, risk analysis, and compliance checklists.",
-
   icons: {
     icon: "/favicon.ico",
     apple: "/apple-icon.png",
   },
-
   keywords: [
     "Tender Analysis AI",
     "RFP Review Software",
@@ -39,17 +34,14 @@ export const metadata: Metadata = {
     "Automated Tender Summary",
     "Proposal Management Tool",
   ],
-
   authors: [{ name: "TenderPilot Team" }],
   creator: "TenderPilot",
   publisher: "TenderPilot",
-
   formatDetection: {
     email: false,
     address: false,
     telephone: false,
   },
-
   openGraph: {
     title: "Stop Reading. Start Deciding.",
     description:
@@ -67,7 +59,6 @@ export const metadata: Metadata = {
       },
     ],
   },
-
   twitter: {
     card: "summary_large_image",
     title: "TenderPilot - AI Tender Analysis",
@@ -80,7 +71,6 @@ export const metadata: Metadata = {
       },
     ],
   },
-
   robots: {
     index: true,
     follow: true,
@@ -94,6 +84,40 @@ export const metadata: Metadata = {
   },
 };
 
+// Blocking, pre-paint forward to /auth/callback when Supabase drops users on marketing routes.
+const TP_AUTH_FORWARD_SCRIPT = `
+(function () {
+  try {
+    // Avoid loops
+    if (window.__tpAuthForwarded) return;
+
+    var u = new URL(window.location.href);
+    if (u.pathname.indexOf("/auth/callback") === 0) return;
+
+    var sp = u.searchParams;
+
+    // Supabase may provide different params depending on flow/config:
+    // - PKCE: ?code=...
+    // - older/other flows: ?token_hash=...&type=magiclink|recovery
+    var code = sp.get("code");
+    var tokenHash = sp.get("token_hash");
+    var type = sp.get("type");
+
+    var looksLikeAuth =
+      (!!code && (code.length >= 12 || type === "magiclink" || type === "recovery")) ||
+      (!!tokenHash && (tokenHash.length >= 12 || type === "magiclink" || type === "recovery"));
+
+    if (!looksLikeAuth) return;
+
+    window.__tpAuthForwarded = true;
+
+    u.pathname = "/auth/callback";
+    // keep query as-is (includes next= if present)
+    window.location.replace(u.toString());
+  } catch (e) {}
+})();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -101,6 +125,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: TP_AUTH_FORWARD_SCRIPT }} />
+      </head>
+
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <LanguageFixer />
 

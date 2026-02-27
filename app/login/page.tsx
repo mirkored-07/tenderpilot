@@ -1,22 +1,28 @@
 import LoginClient from "./LoginClient";
 
-// This page depends on querystring routing (next=...), so keep it dynamic.
 export const dynamic = "force-dynamic";
 
 function safeNextPath(v: unknown) {
   const raw = typeof v === "string" ? v : "";
-  // Only allow internal paths to avoid open-redirect risks.
-  if (!raw || !raw.startsWith("/")) return "/app/upload";
-  if (raw.startsWith("//")) return "/app/upload";
+  if (!raw || !raw.startsWith("/")) return "/app/jobs";
+  if (raw.startsWith("//")) return "/app/jobs";
   return raw;
 }
 
-export default function LoginPage({
+export default async function LoginPage({
   searchParams,
 }: {
-  searchParams?: { [key: string]: string | string[] | undefined };
+  searchParams?:
+    | { [key: string]: string | string[] | undefined }
+    | Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
-  const nextParam = searchParams?.next;
+  const sp =
+    searchParams && typeof (searchParams as any)?.then === "function"
+      ? await (searchParams as any)
+      : (searchParams as any) || {};
+
+  const nextParam = sp.next;
   const nextPath = safeNextPath(Array.isArray(nextParam) ? nextParam[0] : nextParam);
+
   return <LoginClient nextPath={nextPath} />;
 }

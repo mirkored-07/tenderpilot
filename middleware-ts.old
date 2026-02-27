@@ -2,9 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
 // Keeps the Supabase session cookies fresh on navigations and SSR requests.
-// NOTE: Cookie mutation is allowed in proxy, but NOT in Server Components.
+// NOTE: Cookie mutation is allowed in middleware, but NOT in Server Components.
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -23,7 +23,6 @@ export async function proxy(request: NextRequest) {
       },
       setAll(cookiesToSet) {
         cookiesToSet.forEach(({ name, value, options }) => {
-          // Keep cookies readable by the browser Supabase client.
           try {
             (request as any).cookies?.set?.(name, value);
           } catch {
@@ -35,7 +34,6 @@ export async function proxy(request: NextRequest) {
     },
   });
 
-  // Refresh session if needed and write updated cookies.
   try {
     await supabase.auth.getUser();
   } catch {

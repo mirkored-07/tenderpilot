@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,21 +12,27 @@ export default function LoginClient({ nextPath }: { nextPath: string }) {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const redirectTo = useMemo(() => {
-    // Preserve the post-login destination through the auth callback.
-    const qp = nextPath ? `?next=${encodeURIComponent(nextPath)}` : "";
-    return `${location.origin}/auth/callback${qp}`;
-  }, [nextPath]);
-
   async function sendLink() {
     setError(null);
     setSent(false);
 
+    // Store next as short-lived cookie (fallback if Supabase drops query params).
+    try {
+      const v = encodeURIComponent(nextPath || "/app/jobs");
+      const secure = window.location.protocol === "https:" ? "; Secure" : "";
+      document.cookie = `tp_next=${v}; Max-Age=600; Path=/; SameSite=Lax${secure}`;
+    } catch {
+      // ignore
+    }
+
+    // Build redirect only on the client (avoid `location` during SSR).
+    const base = (process.env.NEXT_PUBLIC_SITE_URL || window.location.origin).replace(/\/$/, "");
+    const qp = nextPath ? `?next=${encodeURIComponent(nextPath)}` : "";
+    const emailRedirectTo = `${base}/auth/callback${qp}`;
+
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: {
-        emailRedirectTo: redirectTo,
-      },
+      options: { emailRedirectTo },
     });
 
     if (error) setError(error.message);

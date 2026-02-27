@@ -21,7 +21,13 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
     supabase.auth.getUser().then(({ data, error }) => {
       if (error || !data?.user) {
-        router.replace("/login");
+        // Preserve the user's intended destination.
+        // Avoid useSearchParams here (keeps this component simple + resilient).
+        const next =
+          typeof window !== "undefined"
+            ? `${window.location.pathname}${window.location.search}`
+            : "/app/jobs";
+        router.replace(`/login?next=${encodeURIComponent(next)}`);
         return;
       }
       setReady(true);
