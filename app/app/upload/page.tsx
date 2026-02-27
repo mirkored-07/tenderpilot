@@ -17,11 +17,11 @@ async function supabaseServer() {
           return cookieStore.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            // IMPORTANT: keep cookies readable by the browser Supabase client
-            // so client-side RLS writes (job_work_items overlays) keep working.
-            cookieStore.set(name, value, { ...options, httpOnly: false });
-          });
+          // IMPORTANT:
+          // In Next.js (App Router), Server Components (pages/layouts)
+          // are NOT allowed to mutate cookies.
+          // Cookies are refreshed/propagated in middleware + route handlers.
+          void cookiesToSet;
         },
       },
     }

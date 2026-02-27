@@ -391,123 +391,148 @@ function statusBadge(status: JobStatus) {
   );
 }
 
-function ProgressCard({
-  status,
-  events,
-}: {
-  status: JobStatus;
-  events: DbJobEvent[];
-}) {
-  function pickFailure(events: DbJobEvent[]) {
-    const msgs = (events ?? []).map((e) => e.message);
 
-    if (msgs.includes("Job exceeds cost cap, reduce input or limits")) {
-      const e = events.find((x) => x.message === "Job exceeds cost cap, reduce input or limits");
-      const usdEst = e?.meta?.usdEst;
-      const maxUsd = e?.meta?.maxUsdPerJob;
+function pickFailureFromEvents(events: DbJobEvent[]) {
+  const list = Array.isArray(events) ? [...events] : [];
+  // Ensure we reason about the latest event to avoid showing an outdated error.
+  list.sort((a, b) => String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")));
 
-      return {
-        title: "File exceeds processing limits",
-        text:
-          "This file is too large for the current processing limits." +
-          (usdEst && maxUsd
-            ? ` (Estimated cost: $${Number(usdEst).toFixed(3)}, cap: $${Number(maxUsd).toFixed(3)})`
-            : "") +
-          " Upload a smaller scope (eligibility + requirements) or split the tender.",
-      };
-    }
+  const lastError =
+    [...list].reverse().find((e) => e.level === "error") ??
+    [...list].reverse()[0] ??
+    null;
 
-    if (msgs.includes("Unstructured extract returned empty text")) {
-      return {
-        title: "No text could be extracted",
-        text: "We could not read text from this file. If it is a scanned PDF, export it with OCR and retry.",
-      };
-    }
+  const msg = String(lastError?.message ?? "").trim();
 
-    if (msgs.includes("Storage download failed")) {
-      return {
-        title: "File could not be accessed",
-        text: "We could not access the uploaded file. Please re-upload and try again.",
-      };
-    }
-
-    if (msgs.includes("Saving results failed")) {
-      return {
-        title: "Results could not be saved",
-        text: "We generated results but could not save them. Please retry.",
-      };
-    }
+  if (msg.includes("Job exceeds cost cap")) {
+    const usdEst = (lastError as any)?.meta?.usdEst;
+    const maxUsd = (lastError as any)?.meta?.maxUsdPerJob;
 
     return {
-      title: "Something needs attention",
-      text: "Please try again or re-upload the file.",
+      title: "File exceeds processing limits",
+      text:
+        "This file is too large for the current processing limits." +
+        (usdEst && maxUsd
+          ? ` (Estimated cost: $${Number(usdEst).toFixed(3)}, cap: $${Number(maxUsd).toFixed(3)})`
+          : "") +
+        " Upload a smaller scope (eligibility + requirements) or split the tender.",
     };
   }
 
-  const isFailed = status === "failed";
-  const failure = isFailed ? pickFailure(events) : null;
+  if (msg.includes("Unstructured extract returned empty text")) {
+    return {
+      title: "No text could be extracted",
+      text: "We could not read text from this file. If it is a scanned PDF, export it with OCR and retry.",
+    };
+  }
 
-  const title =
-    status === "queued"
-      ? "Getting started"
-      : status === "processing"
-      ? "Working on your tender review"
-      : isFailed
-      ? failure?.title ?? "Something needs attention"
-      : "Ready";
+  if (msg.includes("Storage download failed")) {
+    return {
+      title: "File could not be accessed",
+      text: "We could not access the uploaded file. Please re-upload and try again.",
+    };
+  }
 
-  const subtitle =
-    status === "queued"
-      ? "Preparing your bid review…"
-      : status === "processing"
-      ? "Extracting requirements, risks, clarifications, and a short draft…"
-      : isFailed
-      ? failure?.text ?? "Please try again."
-      : "Results are ready.";
+  if (msg.includes("Saving results failed")) {
+    return {
+      title: "Results could not be saved",
+      text: "We generated results but could not save them. Please retry.",
+    };
+  }
 
-  const barClass =
-    status === "failed"
-      ? "w-full bg-red-500"
-      : status === "queued"
-      ? "w-1/3 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 animate-pulse"
-      : status === "processing"
-      ? "w-2/3 bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-500 animate-pulse"
-      : "w-full bg-green-500";
+  return {
+    title: "Something needs attention",
+    text: "Please retry processing or re-upload the file.",
+  };
+}
+
+function FailedStatePanel({
+  jobId,
+  fileName,
+  events,
+  retrying,
+  retryFeedback,
+  onRetry,
+}: {
+  jobId: string;
+  fileName: string;
+  events: DbJobEvent[];
+  retrying: boolean;
+  retryFeedback: string | null;
+  onRetry: () => void;
+}) {
+  const failure = pickFailureFromEvents(events);
+
+  const lastError = (() => {
+    const list = Array.isArray(events) ? [...events] : [];
+    list.sort((a, b) => String(a.created_at ?? "").localeCompare(String(b.created_at ?? "")));
+    return [...list].reverse().find((e) => e.level === "error") ?? [...list].reverse()[0] ?? null;
+  })();
+  const lastMsg = summarizeEventMessage(lastError?.message);
+  const lastWhen = lastError?.created_at ? formatDate(lastError.created_at) : "";
+
+  const supportHref = useMemo(() => {
+    const subject = `TenderPilot: job failed (${jobId})`;
+    const bodyLines: string[] = [];
+    bodyLines.push(`Job ID: ${jobId}`);
+    bodyLines.push(`File: ${fileName}`);
+    bodyLines.push("");
+    bodyLines.push(`What happened: ${failure.title}`);
+    if (lastMsg) bodyLines.push(`Last event: ${lastMsg}${lastWhen ? ` (${lastWhen})` : ""}`);
+    bodyLines.push("");
+    bodyLines.push("Please help me retry or diagnose this failure.");
+
+    const body = bodyLines.join("\n");
+    return `mailto:support@tenderpilot.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  }, [jobId, fileName, failure.title, lastMsg, lastWhen]);
+
 
   return (
-    <Card className="rounded-2xl">
-      <CardContent className="py-5 space-y-3">
-        <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-          <p className="text-sm font-medium">{title}</p>
-          <p className="text-xs text-muted-foreground">Results appear automatically on this page</p>
-        </div>
+    <Card className="rounded-3xl border-red-200 bg-red-50/70 shadow-sm dark:border-red-500/25 dark:bg-red-500/10">
+      <CardContent className="p-6 md:p-8">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div className="min-w-0">
+            <div className="flex items-center gap-3">
+              <Badge variant="destructive" className="rounded-full">
+                Failed
+              </Badge>
+              <p className="text-sm font-semibold">This tender review could not be completed</p>
+            </div>
 
-        <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
-          <div className={`absolute left-0 top-0 h-full rounded-full transition-all duration-700 ${barClass}`} />
-        </div>
+            <p className="mt-3 text-sm text-red-800/90 dark:text-red-200/90">
+              <span className="font-medium">Reason:</span> {failure.title}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">{failure.text}</p>
 
-        <p className="text-xs text-muted-foreground">{subtitle}</p>
+            {lastMsg ? (
+              <p className="mt-4 text-xs text-muted-foreground">
+                Last recorded step: <span className="font-medium">{lastMsg}</span>
+                {lastWhen ? <span className="ml-1">({lastWhen})</span> : null}
+              </p>
+            ) : null}
+          </div>
 
-        <p className="text-xs text-muted-foreground">
-          Steps: upload → extract → analyze → results. This usually takes 1–3 minutes (large files can take longer). If it
-          takes longer, refresh this page or open{" "}
-          <Link href="/app/jobs" className="underline underline-offset-4">
-            My jobs
-          </Link>
-          .
-        </p>
-
-        {isFailed ? (
-          <div className="pt-1">
-            <Button asChild className="rounded-full">
+          <div className="flex shrink-0 flex-col gap-2 sm:flex-row md:flex-col md:items-end">
+            <Button className="rounded-full" onClick={onRetry} disabled={retrying}>
+              {retrying ? "Retrying…" : "Retry processing"}
+            </Button>
+            <Button asChild variant="outline" className="rounded-full">
               <Link href="/app/upload">Start a new review</Link>
             </Button>
+            <Button asChild variant="ghost" className="rounded-full">
+              <a href={supportHref}>Contact support</a>
+            </Button>
           </div>
+        </div>
+
+        {retryFeedback ? (
+          <div className="mt-5 rounded-2xl border bg-background/70 p-4 text-sm text-foreground/80">{retryFeedback}</div>
         ) : null}
       </CardContent>
     </Card>
   );
 }
+
 
 
 function findExcerpt(text: string, query: string) {
@@ -1554,6 +1579,9 @@ const [savingMeta, setSavingMeta] = useState(false);
 
   const [showTrustOnboarding, setShowTrustOnboarding] = useState(false);
 
+  const [retrying, setRetrying] = useState(false);
+  const [retryFeedback, setRetryFeedback] = useState<string | null>(null);
+
   const mountedRef = useRef(true);
   const sourceAnchorRef = useRef<HTMLSpanElement | null>(null);
   const tabsTopRef = useRef<HTMLDivElement | null>(null);
@@ -1931,6 +1959,37 @@ setWorkItems((wiRows as any[]) ?? []);
 
   const showReady = useMemo(() => job?.status === "done", [job]);
   const showFailed = useMemo(() => job?.status === "failed", [job]);
+
+  async function retryProcessing() {
+    if (!jobId) return;
+    if (retrying) return;
+    setRetryFeedback(null);
+    setRetrying(true);
+    try {
+      const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}/retry`, { method: "POST" });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({} as any));
+        const code = String((j as any)?.error ?? "");
+        if (res.status === 401) {
+          setRetryFeedback("You are signed out. Please log in again and retry.");
+        } else if (res.status === 409 && code === "job_not_failed") {
+          setRetryFeedback("This job is no longer marked as failed. Refresh the page.");
+        } else {
+          setRetryFeedback("Retry could not be started. Please try again or contact support.");
+        }
+        return;
+      }
+
+      setJob((prev) => (prev ? ({ ...prev, status: "queued" } as any) : prev));
+      setError(null);
+      setRetryFeedback("Retry started. This page will update automatically.");
+      triggerProcessingOnce();
+    } catch {
+      setRetryFeedback("Retry could not be started. Please try again or contact support.");
+    } finally {
+      setRetrying(false);
+    }
+  }
 
   useEffect(() => {
     if (!showReady || showFailed) return;
@@ -3730,28 +3789,30 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
           </Button>
 
 
-          {exportLocked ? (
-            <Button asChild variant="outline" className="h-9 rounded-full px-4">
-              <a href={unlockExportsHref}>Unlock exports</a>
-            </Button>
-          ) : (
-            <Button
-              className="h-9 rounded-full px-4"
-              disabled={!canExport || exporting !== null || creditsLoading}
-              onClick={async () => {
-                if (!canDownload || exporting !== null) return;
-                track("export_bid_pack_clicked", { jobId });
-                setExporting("xlsx");
-                try {
-                  await exportBidPackXlsx();
-                } finally {
-                  setExporting(null);
-                }
-              }}
-            >
-              {exporting === "xlsx" ? "Preparing…" : "Download Bid Pack (Excel)"}
-            </Button>
-          )}
+          {canDownload ? (
+            exportLocked ? (
+              <Button asChild variant="outline" className="h-9 rounded-full px-4">
+                <a href={unlockExportsHref}>Unlock exports</a>
+              </Button>
+            ) : (
+              <Button
+                className="h-9 rounded-full px-4"
+                disabled={!canExport || exporting !== null || creditsLoading}
+                onClick={async () => {
+                  if (!canDownload || exporting !== null) return;
+                  track("export_bid_pack_clicked", { jobId });
+                  setExporting("xlsx");
+                  try {
+                    await exportBidPackXlsx();
+                  } finally {
+                    setExporting(null);
+                  }
+                }}
+              >
+                {exporting === "xlsx" ? "Preparing…" : "Download Bid Pack (Excel)"}
+              </Button>
+            )
+          ) : null}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -3780,7 +3841,9 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
 
               <DropdownMenuSeparator />
 
-              {exportLocked ? (
+              {canDownload ? (
+                <>
+                  {exportLocked ? (
                 <>
                   <DropdownMenuItem asChild>
                     <a href={unlockExportsHref}>Unlock exports</a>
@@ -3890,6 +3953,15 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
 
               <DropdownMenuSeparator />
 
+              
+                </>
+              ) : (
+                <>
+                  <DropdownMenuItem disabled>Exports available when review is ready</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
+
               <DropdownMenuItem
                 disabled={!canDelete}
                 className="text-red-600 focus:text-red-600 dark:text-red-300 dark:focus:text-red-300"
@@ -3931,7 +4003,16 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
       ) : null}
 
      {showProgress ? <ProgressCard status={job?.status ?? "processing"} events={events} /> : null}
-	{showFailed ? <ProgressCard status="failed" events={events} /> : null}
+	{showFailed ? (
+        <FailedStatePanel
+          jobId={jobId}
+          fileName={String(job?.file_name ?? "")}
+          events={events}
+          retrying={retrying}
+          retryFeedback={retryFeedback}
+          onRetry={retryProcessing}
+        />
+      ) : null}
 
 
       
@@ -3990,7 +4071,7 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
                   <div className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-800 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-200">
                     FAILED
                   </div>
-                  <p className="mt-3 text-sm text-muted-foreground">This tender review could not be completed. Re-upload the document or retry processing.</p>
+                  <p className="mt-3 text-sm text-muted-foreground">This tender review could not be completed. Use “Retry processing” above or start a new review.</p>
                 </div>
               ) : !showReady ? (
                 <div className="mt-3">

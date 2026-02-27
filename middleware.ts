@@ -1,58 +1,57 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 
-const LOCALE_COOKIE = "tp_locale";
-const SUPPORTED = ["en", "de", "it", "es", "fr"] as const;
-type Locale = (typeof SUPPORTED)[number];
+// Keeps the Supabase session cookies fresh on navigations and SSR requests.
+// NOTE: Cookie mutation is allowed in middleware, but NOT in Server Components.
 
-function isSupportedLocale(v: string | undefined | null): v is Locale {
-  return !!v && (SUPPORTED as readonly string[]).includes(v);
-}
+export async function middleware(request: NextRequest) {
+  const response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  });
 
-// Default is EN. Cookie overrides if user selected a language.
-function detectLocale(req: NextRequest): Locale {
-  const cookie = req.cookies.get(LOCALE_COOKIE)?.value;
-  if (isSupportedLocale(cookie)) return cookie;
-  return "en";
-}
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-export function middleware(request: NextRequest) {
-  const pathname = request.nextUrl.pathname;
+  if (!supabaseUrl || !supabaseAnon) return response;
 
-    // Do NOT apply locale logic to auth/app routes
-  if (
-    pathname.startsWith("/app") ||
-    pathname.startsWith("/login") ||
-    pathname.startsWith("/auth")
-  ) {
-    return NextResponse.next();
+  const supabase = createServerClient(supabaseUrl, supabaseAnon, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) => {
+          // IMPORTANT: keep cookies readable by the browser Supabase client
+          // so client-side RLS writes keep working.
+          // Also attempt to reflect cookies into the in-flight request so
+          // downstream Server Components see the refreshed session on the same request.
+          try {
+            (request as any).cookies?.set?.(name, value);
+          } catch {
+            // ignore
+          }
+          response.cookies.set(name, value, { ...options, httpOnly: false });
+        });
+      },
+    },
+  });
+
+  // This refreshes the session if needed and writes back updated cookies.
+  // Do not block if it fails.
+  try {
+    await supabase.auth.getUser();
+  } catch {
+    // ignore
   }
 
-  // If user visits /{locale} directly, remember it
-  const firstSeg = pathname.split("/")[1];
-  if (isSupportedLocale(firstSeg)) {
-    const res = NextResponse.next();
-    res.cookies.set(LOCALE_COOKIE, firstSeg, { path: "/", sameSite: "lax" });
-    return res;
-  }
-
-  // Redirect root to locale (default: en)
-  if (pathname === "/") {
-    const locale = detectLocale(request);
-    const url = request.nextUrl.clone();
-    url.pathname = `/${locale}`;
-    return NextResponse.redirect(url);
-  }
-
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {
   matcher: [
-    "/",
-    "/en/:path*",
-    "/de/:path*",
-    "/it/:path*",
-    "/es/:path*",
-    "/fr/:path*",
-    ],
+    "/app/:path*",
+    "/login",
+  ],
 };

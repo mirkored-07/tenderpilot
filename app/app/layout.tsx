@@ -36,11 +36,14 @@ async function supabaseServer() {
           return cookieStore.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            // IMPORTANT: keep cookies readable by the browser Supabase client
-            // so client-side RLS writes (bid room overlays, etc.) keep working.
-            cookieStore.set(name, value, { ...options, httpOnly: false });
-          });
+          // IMPORTANT:
+          // In Next.js (App Router), Server Components (including layouts/pages)
+          // are NOT allowed to mutate cookies. Attempting to do so throws:
+          // "Cookies can only be modified in a Server Action or Route Handler".
+          //
+          // We refresh/propagate Supabase cookies in middleware + route handlers.
+          // Here we intentionally no-op to avoid runtime crashes.
+          void cookiesToSet;
         },
       },
     }
