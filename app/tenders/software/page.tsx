@@ -4,6 +4,7 @@ import { ArrowRight, Search, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { BrandIcon } from "@/components/brand-icon";
+import { loginWithNextHref } from "@/lib/access-mode";
 
 // 1. FORCE STATIC
 export const dynamic = "force-static";
@@ -89,6 +90,7 @@ const REAL_TENDERS = [
 ];
 
 export default function SoftwareTendersPage() {
+  const primaryCtaHref = loginWithNextHref("/app/upload");
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",
@@ -124,7 +126,7 @@ export default function SoftwareTendersPage() {
           </Link>
           <div className="hidden md:flex items-center gap-4">
             <Button asChild className="rounded-full shadow-lg shadow-blue-500/20 bg-white text-black hover:bg-gray-100 font-semibold">
-              <Link href="/app/upload">
+              <Link href={primaryCtaHref}>
                 Get Early Audit Access <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
@@ -186,7 +188,7 @@ export default function SoftwareTendersPage() {
                   {/* Right Side: Buttons */}
                   <div className="flex shrink-0 flex-col gap-3 md:w-48">
                     <Button asChild className="w-full rounded-full shadow-md shadow-blue-500/10">
-                      <Link href="/app/upload">Analyze Risk</Link>
+                      <Link href={primaryCtaHref}>Analyze Risk</Link>
                     </Button>
                     <Button asChild variant="outline" className="w-full rounded-full border-white/10 bg-transparent hover:bg-white/5">
                       <Link href={tender.link || "#"} target="_blank">

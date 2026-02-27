@@ -49,6 +49,7 @@ type LandingDict = {
       executive: { title: string; subtitle: string; bullets: string[] };
       mandatory: { title: string; subtitle: string; bullets: string[] };
       risks: { title: string; subtitle: string; bullets: string[] };
+      execution: { title: string; subtitle: string; bullets: string[] };
     };
   };
   roi: {
@@ -61,6 +62,7 @@ type LandingDict = {
     };
   };
   zero_training: { title: string; text: string };
+  get_started: { title: string; description: string; bullets: string[]; note: string };
   early_access: { title: string; description: string; limited: string };
   footer: { browse: string; privacy: string; terms: string };
 };
@@ -323,7 +325,7 @@ export default async function LandingPage() {
                 {nav.sample}
               </Link>
               <Link
-                href="#early-access"
+                href={primaryCtaHref}
                 className="block rounded-xl px-3 py-2 text-sm font-medium text-blue-400 hover:bg-blue-500/10"
               >
                 {t.nav.cta}
@@ -419,7 +421,7 @@ export default async function LandingPage() {
           <p className="text-zinc-400 mt-4">{t.features.section_subtitle}</p>
         </div>
 
-        <div className="grid gap-8 md:grid-cols-3">
+        <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
           <FeatureCard
             title={t.features.cards.executive.title}
             subtitle={t.features.cards.executive.subtitle}
@@ -437,6 +439,12 @@ export default async function LandingPage() {
             subtitle={t.features.cards.risks.subtitle}
             bullets={t.features.cards.risks.bullets}
             icon={<ShieldAlert className="h-5 w-5" />}
+          />
+          <FeatureCard
+            title={t.features.cards.execution.title}
+            subtitle={t.features.cards.execution.subtitle}
+            bullets={t.features.cards.execution.bullets}
+            icon={<CheckCircle2 className="h-5 w-5" />}
           />
         </div>
 
@@ -457,7 +465,45 @@ export default async function LandingPage() {
       </section>
 
       {/* EARLY ACCESS FORM */}
-      <section
+      {accessMode === "public" ? (
+        <section className="mx-auto max-w-7xl px-4 pb-32 md:px-8">
+          <div className="max-w-4xl mx-auto relative z-10 text-center">
+            <h2 className="text-4xl md:text-5xl font-bold tracking-tight mb-6">
+              {t.get_started.title}
+            </h2>
+            <p className="text-xl text-zinc-400 mb-12 max-w-2xl mx-auto">
+              {t.get_started.description}
+            </p>
+
+            <div className="grid gap-4 md:grid-cols-3 max-w-4xl mx-auto">
+              {t.get_started.bullets.map((b, i) => (
+                <div key={i} className="rounded-2xl border border-white/10 bg-zinc-900/30 backdrop-blur-md p-5 text-left">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="h-5 w-5 text-emerald-400 mt-0.5" />
+                    <div className="text-sm text-zinc-200 leading-relaxed">{b}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-10 flex flex-col sm:flex-row gap-3 justify-center">
+              <Button asChild size="lg" className="rounded-full px-10 h-12 shadow-lg shadow-blue-500/20 bg-primary text-primary-foreground">
+                <Link href={primaryCtaHref}>{t.nav.cta}</Link>
+              </Button>
+              <Button asChild size="lg" variant="outline" className="rounded-full px-10 h-12 border-white/10">
+                <Link href="/fr/sample">{t.hero.secondary_cta}</Link>
+              </Button>
+            </div>
+
+            <p className="mt-6 text-xs text-center text-zinc-500">
+              {t.get_started.note}
+            </p>
+          </div>
+
+          <div className="absolute left-0 right-0 h-[400px] bg-gradient-to-t from-blue-900/20 to-transparent pointer-events-none -z-10" />
+        </section>
+      ) : (
+        <section
         id="early-access"
         className="mx-auto max-w-7xl px-4 pb-32 md:px-8 scroll-mt-24"
       >
@@ -479,6 +525,7 @@ export default async function LandingPage() {
 
         <div className="absolute bottom-0 left-0 right-0 h-[400px] bg-gradient-to-t from-blue-900/20 to-transparent pointer-events-none -z-10" />
       </section>
+      )}
 
       {/* FOOTER */}
       <footer className="border-t border-white/5 py-12 bg-zinc-950">

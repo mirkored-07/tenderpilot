@@ -3,7 +3,7 @@
     "title": "TenderPilot",
     "howItWorks": "Come funziona",
     "sample": "Esempio di output",
-    "waitlist": "Accesso anticipato",
+    "waitlist": "Inizia ora",
     "menu": "Menu",
     "backHome": "Torna alla home",
     "back": "Indietro",
@@ -224,15 +224,15 @@
   },
   "landing": {
     "nav": {
-      "cta": "Accesso al motore di audit",
+      "cta": "Inizia ora",
       "theme": "Tema"
     },
     "hero": {
       "badge": "Modello IA specializzato per gare",
       "title_line1": "Smetti di leggere.",
       "title_line2": "Inizia a decidere.",
-      "description": "Una revisione rapida della gara per decisioni urgenti. Carica PDF di gara complessi e ottieni subito una decisione go/no-go basata su rischi e requisiti obbligatori.",
-      "primary_cta": "Accesso al motore di audit",
+      "description": "Carica PDF o DOCX di gara e ottieni un decision cockpit Go/Hold/No-Go con evidenze, requisiti MUST, rischi e chiarimenti — con Compliance Matrix, task nel Bid Room e output esportabili.",
+      "primary_cta": "Inizia ora",
       "secondary_cta": "Vedi esempio di output",
       "validated_prefix": "Validato in pilot privati da",
       "validated_emphasis": "consulenti di livello Tier 1"
@@ -241,34 +241,43 @@
       "risk_badge": "Rischio di responsabilità"
     },
     "features": {
-      "section_title": "Cosa ottieni da un documento di gara",
-      "section_subtitle": "Trasformiamo 100 pagine di PDF in tre liste operative.",
+      "section_title": "Dal documento di gara al pacchetto pronto per l’offerta",
+      "section_subtitle": "Decision cockpit, compliance matrix, task di esecuzione ed export — per bid manager.",
       "cards": {
         "executive": {
-          "title": "Executive Summary",
-          "subtitle": "Sintesi breve e orientata alla decisione per go/no-go anticipati e un allineamento più rapido con gli stakeholder.",
+          "title": "Decision cockpit",
+          "subtitle": "Go/Hold/No-Go con evidenze citabili.",
           "bullets": [
-            "Perimetro e contesto",
-            "Vincoli principali",
-            "Punti decisionali"
+            "Executive summary",
+            "Go/Hold/No-Go + motivazione",
+            "Estratti di evidenza"
           ]
         },
         "mandatory": {
-          "title": "Requisiti obbligatori",
-          "subtitle": "Requisiti estratti e strutturati per ridurre il rischio di non vedere condizioni eliminatorie.",
+          "title": "Requisiti MUST",
+          "subtitle": "Punti obbligatori strutturati per evitare la squalifica.",
           "bullets": [
             "Obbligatorio vs opzionale",
-            "Chiaro: ok o da verificare",
-            "Pronto per la verifica"
+            "Pass / Review / Blocker",
+            "Owner + scadenza"
           ]
         },
         "risks": {
-          "title": "Rischi e ambiguità",
-          "subtitle": "Clausole poco chiare, lacune e possibili rischi su consegna o costi evidenziati subito per chiarire prima.",
+          "title": "Rischi & chiarimenti",
+          "subtitle": "Ambiguità evidenziate subito per chiarire prima.",
           "bullets": [
-            "Etichette di severità",
-            "Punti aperti",
-            "Spunti di chiarimento"
+            "Livelli di severità",
+            "Domande di chiarimento",
+            "Rischi commerciali e delivery"
+          ]
+        },
+        "execution": {
+          "title": "Esecuzione & export",
+          "subtitle": "Trasforma la decisione in un pack pronto per l’offerta.",
+          "bullets": [
+            "Compliance Matrix + Bid Room",
+            "Export PDF tender brief",
+            "Export XLSX bid pack"
           ]
         }
       }
@@ -304,39 +313,61 @@
       "browse": "Sfoglia gare software",
       "privacy": "Privacy",
       "terms": "Terms"
+    },
+    "get_started": {
+      "title": "Inizia in 30 secondi",
+      "description": "Accesso con magic link. Nessuna password. Carica subito e ottieni il tuo decision cockpit.",
+      "bullets": [
+        "Carica una gara e ottieni Go/Hold/No-Go con evidenze",
+        "Traccia i requisiti MUST nella Compliance Matrix",
+        "Trasforma i chiarimenti in task nel Bid Room"
+      ],
+      "note": "Verrai portato nell’app e potrai caricare subito."
     }
   },
   "howItWorksPage": {
     "header": {
-      "backToHome": "Torna alla home"
+      "backToHome": "Torna alla home",
+      "sample": "Output di esempio",
+      "cta": "Inizia ora"
     },
     "hero": {
-      "titleA": "Dal PDF alla decisione",
+      "titleA": "Dal PDF al decision cockpit",
       "titleB": "in",
-      "highlight": "tre passaggi",
-      "subtitle": "Non scriviamo l’offerta. Ti aiutiamo a decidere se vale la pena scriverla."
+      "highlight": "in quattro passi",
+      "subtitle": "Non scriviamo l’offerta. Ti aiutiamo a decidere — con evidenze e checklist."
     },
     "steps": [
       {
         "step": "01",
         "title": "Carica i documenti",
-        "desc": "Trascina e rilascia RFP, RFI o PDF di gara complessi. Supportiamo file fino a 100MB."
+        "desc": "Carica PDF o DOCX di gara (fino a 25MB per file)."
       },
       {
         "step": "02",
-        "title": "Analisi approfondita ed estrazione",
-        "desc": "Il nostro motore legge ogni riga, estrae requisiti obbligatori (\"shall\", \"must\") e identifica rischi di responsabilità."
+        "title": "Decision cockpit",
+        "desc": "Ottieni Go/Hold/No-Go, executive summary, MUST blocker ed estratti di evidenza citabili."
       },
       {
         "step": "03",
-        "title": "Report go/no-go",
-        "desc": "Ricevi una Executive Summary strutturata con matrice di compliance e risk register, pronta per l’export."
+        "title": "Esecuzione del team",
+        "desc": "Assegna i MUST nella Compliance Matrix e traccia le azioni nel Bid Room (chiarimenti, verifiche, deliverable)."
+      },
+      {
+        "step": "04",
+        "title": "Export e condivisione",
+        "desc": "Esporta tender brief e bid pack (PDF/XLSX/CSV) per stakeholder e scrittura dell’offerta."
       }
     ],
     "bottomCta": {
-      "title": "Hai una gara sul tavolo in questo momento?",
-      "desc": "Prova il flusso pensato per decisioni di gara rapide e urgenti.",
-      "button": "Accesso anticipato all’audit"
+      "title": "Hai una gara sulla scrivania proprio ora?",
+      "desc": "Caricala e ottieni un cockpit Go/Hold/No-Go in pochi minuti.",
+      "button": "Inizia ora",
+      "footnote": "Accesso con magic link. Nessuna password. Puoi caricare subito."
+    },
+    "footer": {
+      "privacy": "Privacy",
+      "terms": "Termini"
     }
   },
   "samplePage": {
@@ -347,25 +378,25 @@
     },
     "header": {
       "backToHome": "Torna alla home",
-      "exportPdf": "Esporta PDF",
-      "joinEarlyAccess": "Accesso anticipato",
-      "join": "Iscriviti",
-      "exportSample": "Esporta esempio",
-      "delete": "Elimina"
+      "title": "Output di esempio",
+      "subtitle": "Esempio di decision cockpit — requisiti MUST, rischi, chiarimenti, compliance matrix, task bid room, export.",
+      "primaryCta": "Provalo ora",
+      "secondaryCta": "Come funziona"
     },
     "workspace": {
-      "title": "Il tuo workspace di gara",
-      "desc": "Questo è un esempio statico che mostra come TenderPilot struttura la revisione di una gara. Verifica sempre con il PDF originale."
+      "title": "Workspace di esempio",
+      "desc": "Esempio statico. Nell’app ogni elemento rimanda alle evidenze nel documento."
     },
     "nextActions": {
       "title": "Prossime azioni"
     },
     "counts": {
-      "title": "Panoramica rapida",
+      "title": "Conteggio rapido",
       "must": "MUST",
       "risks": "Rischi",
-      "qa": "Q&A",
-      "microcopy": "Pensato per la velocità. Progettato per la tracciabilità."
+      "qa": "Chiarimenti",
+      "work": "Task",
+      "microcopy": "Pensato per la velocità. Creato per la tracciabilità."
     },
     "mustItems": {
       "title": "Elementi MUST",
@@ -389,89 +420,125 @@
       "subtitle": "Scansione rapida di ciò che conta."
     },
     "tabs": {
-      "requirements": "Requisiti",
-      "risks": "Rischi",
-      "questions": "Chiarimenti",
-      "draft": "Struttura",
-      "source": "Fonte",
-      "copyAll": "Copia tutto"
+      "compliance": "Compliance Matrix",
+      "bidroom": "Bid Room",
+      "exports": "Export",
+      "outline": "Outline",
+      "source": "Estratto"
     },
     "tabContent": {
-      "detailedRequirements": "Requisiti dettagliati",
-      "riskRegister": "Risk register",
-      "clarificationTitle": "Domande di chiarimento",
-      "clarificationDesc": "Fai queste domande prima di impegnarti su prezzo, tempi o SLA.",
-      "outlineTitle": "Struttura dell’offerta",
-      "outlineDesc": "Una struttura iniziale da copiare nel tuo template di offerta.",
-      "sourceTitle": "Testo fonte",
-      "sourceDesc": "Testo estratto per tracciabilità."
+      "complianceTitle": "Compliance Matrix (MUST)",
+      "complianceDesc": "Assegna owner e traccia lo stato. I blocker vanno risolti prima del GO.",
+      "bidroomTitle": "Bid Room (task)",
+      "bidroomDesc": "Trasforma chiarimenti e verifiche in task.",
+      "exportsTitle": "Pacchetto export",
+      "exportsDesc": "Condividi con stakeholder e team di proposta.",
+      "sourceTitle": "Estratto di evidenza",
+      "sourceDesc": "Evidence-first: verifica sempre sul documento originale."
     },
     "data": {
-      "fileName": "standard-tender-document.pdf",
-      "status": "In revisione",
-      "submissionDeadline": "14 maggio 2026, 12:00 CET",
-      "decision": {
-        "badge": "Procedere con cautela",
-        "line": "Nessun motivo di esclusione evidente, ma due punti richiedono chiarimenti: il pacchetto di presentazione e i criteri di accettazione dello SLA di supporto."
-      },
-      "nextActions": [
-        "Confermare le regole del pacchetto di presentazione (set di PDF e dichiarazioni firmate).",
-        "Chiarire i test di accettazione e il processo di validazione dei deliverable.",
-        "Verificare la richiesta di evidenze ISO 27001 e le alternative accettate."
-      ],
+      "fileName": "EU_Tender_Software_Services_2026.pdf",
+      "submissionDeadline": "14 May 2026 — 12:00 CET",
+      "decisionBadge": "HOLD",
+      "decisionLine": "HOLD — Two blockers need clarification before bidding: acceptance testing and SLA penalties.",
       "mustItems": [
         {
-          "id": "m1",
-          "title": "Modalità di presentazione e scadenza",
-          "detail": "Presentazione tramite portale di e-procurement entro la scadenza. Offerta tecnica e offerta economica in PDF separati. Si applicano regole di nomenclatura dei file.",
-          "tag": "MUST"
+          "title": "Acceptance test criteria and sign-off timeline must be defined",
+          "status": "BLOCKER",
+          "evidence": "“The supplier shall pass acceptance tests according to Annex 4… Acceptance is confirmed by written sign-off.”"
         },
         {
-          "id": "m2",
-          "title": "Dichiarazioni firmate e allegati",
-          "detail": "Includere dichiarazioni firmate (idoneità, non collusione, riservatezza). La stazione appaltante può richiedere documentazione aggiuntiva durante la fase di chiarimenti.",
-          "tag": "MUST"
+          "title": "SLA penalties and service credits must be capped or clarified",
+          "status": "BLOCKER",
+          "evidence": "“Service credits may be applied for each month below 99.5% availability… no maximum cap specified.”"
         },
         {
-          "id": "m3",
-          "title": "Evidenze di sicurezza (ISO 27001 o equivalente)",
-          "detail": "La gara richiede evidenze di controlli di sicurezza delle informazioni per il trattamento di dati personali. Verificare se ISO 27001 è obbligatoria o se sono accettati equivalenti.",
-          "tag": "MUST"
+          "title": "Proof of ISO 27001 (or equivalent) must be provided",
+          "status": "REVIEW",
+          "evidence": "“The bidder shall provide evidence of an ISO 27001 certified ISMS or equivalent controls.”"
+        },
+        {
+          "title": "Named key personnel and CVs must be included in the offer",
+          "status": "REVIEW",
+          "evidence": "“The bidder shall nominate key experts and include CVs (max 2 pages each).”"
         }
       ],
       "risks": [
         {
-          "id": "r1",
-          "severity": "high",
-          "title": "Criteri di accettazione non definiti",
-          "detail": "Sono citati test di accettazione, ma non sono definiti criteri di successo o fallimento né ruoli per l’accettazione finale. Rischio di estensione non controllata del perimetro e contestazioni tardive."
+          "title": "Scope ambiguity around legacy system integration responsibilities",
+          "severity": "High"
         },
         {
-          "id": "r2",
-          "severity": "medium",
-          "title": "Ambiguità sullo SLA di supporto",
-          "detail": "Tempi di risposta e fasce di servizio non sono chiaramente definiti (orario lavorativo vs 24/7). Chiarire escalation, esclusioni e gestione delle manutenzioni pianificate."
+          "title": "Unclear ownership of on-site support costs and travel",
+          "severity": "Medium"
         },
         {
-          "id": "r3",
-          "severity": "low",
-          "title": "Template delle referenze potenzialmente rigido",
-          "detail": "Un allegato suggerisce una struttura obbligatoria per le referenze. Verificare se il tuo formato è accettato o se il template è imposto."
+          "title": "Bid bond wording may require legal review",
+          "severity": "Medium"
         }
       ],
-      "keyBullets": [
-        "Presentazione tramite portale con regole di nomenclatura stringenti.",
-        "Evidenza ISO 27001 richiesta per il trattamento dati.",
-        "Milestone presenti, ma test di accettazione non definiti.",
-        "Valutazione ponderata: prezzo (40%), approccio (40%), esperienza (20%)."
-      ],
       "questions": [
-        "Potete confermare le regole esatte del pacchetto di presentazione (nomenclatura, numero di file, firme)?",
-        "Quali sono i criteri di accettazione e chi concede l’accettazione finale?",
-        "ISO 27001 è obbligatoria o sono accettate certificazioni o controlli equivalenti?"
+        {
+          "q": "Can you confirm the acceptance test procedure and acceptance criteria (Annex 4) and the sign-off SLA?",
+          "why": "This is a blocker for delivery planning and commercial risk."
+        },
+        {
+          "q": "Is there a monthly cap for service credits/penalties tied to SLA availability?",
+          "why": "Needed to quantify downside exposure and price correctly."
+        },
+        {
+          "q": "Which integration interfaces are in scope, and who owns middleware changes?",
+          "why": "Clarifies delivery effort and timeline feasibility."
+        },
+        {
+          "q": "Are on-site support days fixed or on-demand, and are travel costs reimbursable?",
+          "why": "Affects cost model and resourcing."
+        }
       ],
-      "draftOutline": "1. Executive Summary\n2. Comprensione del perimetro\n3. Approccio e metodologia\n4. Piano di consegna e milestone\n5. Team e referenze\n6. Sicurezza e protezione dei dati\n7. Modello di servizio e supporto (SLA)\n8. Prezzo\n9. Conformità e dichiarazioni",
-      "sourceExcerpt": "1. Presentazione\nLe offerte devono essere presentate tramite il portale di e-procurement della stazione appaltante entro le 12:00 CET del 14 maggio 2026. La presentazione deve includere un’offerta tecnica e un’offerta economica come file PDF separati. Si applicano regole di nomenclatura dei file.\n\n2. Idoneità e dichiarazioni\nI concorrenti devono includere dichiarazioni firmate relative a idoneità, non collusione e riservatezza. La stazione appaltante può richiedere documentazione aggiuntiva durante la fase di chiarimenti.\n\n3. Protezione dati e sicurezza\nL’aggiudicatario tratterà dati personali. È richiesta evidenza di controlli di sicurezza delle informazioni (certificazione ISO 27001 o equivalente).\n\n4. Consegna e accettazione\nLa consegna deve seguire il piano milestone descritto nell’Allegato B. Saranno eseguiti test di accettazione prima del go-live. I criteri di accettazione sono menzionati, ma non sono specificati in modo misurabile.\n\n5. Supporto e SLA\nL’aggiudicatario deve fornire servizi di supporto. La gara menziona tempi di risposta e percorsi di escalation, ma non definisce in modo chiaro se le fasce di servizio siano in orario lavorativo o 24/7.\n\n6. Valutazione\nL’aggiudicazione si basa su prezzo (40%), approccio tecnico (40%) ed esperienza del team (20%)."
+      "outline": [
+        "1. Executive summary and bid decision (Go/Hold/No-Go)",
+        "2. Compliance Matrix (MUST items with evidence and status)",
+        "3. Risk register and assumptions",
+        "4. Clarification questions to contracting authority",
+        "5. Delivery approach, timeline, and key experts",
+        "6. Pricing model and contractual notes"
+      ],
+      "bidRoom": [
+        {
+          "title": "Draft clarification email (acceptance tests + SLA penalties)",
+          "owner": "Bid Manager",
+          "due": "Today"
+        },
+        {
+          "title": "Legal review: SLA credits wording and bid bond clause",
+          "owner": "Legal",
+          "due": "Tomorrow"
+        },
+        {
+          "title": "Technical scoping call: integration interfaces and responsibilities",
+          "owner": "Tech Lead",
+          "due": "This week"
+        }
+      ],
+      "exports": [
+        "Tender brief (PDF) — decision, MUST items, risks, clarifications",
+        "Bid Pack (XLSX) — Compliance Matrix + risk register + task list"
+      ],
+      "sourceExcerpt": "3.2 Service Levels\\n\\nThe supplier shall ensure an availability of 99.5% per calendar month.\\nService credits may be applied for each month below the defined availability.\\n\\n4.1 Acceptance\\n\\nThe supplier shall pass acceptance tests according to Annex 4. Acceptance is confirmed by written sign-off by the contracting authority."
+    },
+    "sections": {
+      "mustTitle": "Top requisiti MUST",
+      "risksTitle": "Rischi principali",
+      "bulletsTitle": "Domande di chiarimento"
+    },
+    "labels": {
+      "deadline": "Scadenza",
+      "decision": "Decisione",
+      "must": "MUST",
+      "risks": "Rischi",
+      "clarifications": "Chiarimenti",
+      "workItems": "Task",
+      "evidence": "Evidenza"
     }
   }
 }

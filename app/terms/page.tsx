@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandIcon } from "@/components/brand-icon";
+import { loginWithNextHref } from "@/lib/access-mode";
 
 export const metadata = {
   title: "Terms of Service | TenderPilot",
@@ -9,6 +10,7 @@ export const metadata = {
 };
 
 export default function TermsPage() {
+  const primaryCtaHref = loginWithNextHref("/app/upload");
   return (
     <div className="min-h-screen bg-background aurora-bg selection:bg-blue-500/30">
       
@@ -31,8 +33,8 @@ export default function TermsPage() {
             </Button>
 
             <Button asChild className="rounded-full shadow-lg shadow-blue-500/20 bg-white text-black hover:bg-gray-100 font-semibold">
-              <Link href="/app/upload">
-                Get Audit Engine Access
+              <Link href={primaryCtaHref}>
+                Start now
               </Link>
             </Button>
           </div>
@@ -141,7 +143,7 @@ export default function TermsPage() {
             <Link  href="/tenders/software" className="text-sm text-muted-foreground hover:text-foreground">
               Browse Software Tenders
             </Link>
-            <Link href="/app/upload" className="text-muted-foreground hover:text-foreground">
+            <Link href={primaryCtaHref} className="text-muted-foreground hover:text-foreground">
               Get audit access
             </Link>
             <Link href="/privacy" className="text-muted-foreground hover:text-foreground">

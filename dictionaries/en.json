@@ -3,7 +3,7 @@
     "title": "TenderPilot",
     "howItWorks": "How it works",
     "sample": "Sample output",
-    "waitlist": "Get early access",
+    "waitlist": "Start now",
     "menu": "Menu",
     "backHome": "Back to home",
     "back": "Back",
@@ -224,15 +224,15 @@
   },
   "landing": {
     "nav": {
-      "cta": "Get Audit Engine Access",
+      "cta": "Start now",
       "theme": "Theme"
     },
     "hero": {
       "badge": "Specialized Tender AI Model",
       "title_line1": "Stop Reading.",
       "title_line2": "Start Deciding.",
-      "description": "A fast, last-minute tender review. Upload complex tender PDFs and get an instant go/no-go decision based on risks and mandatory requirements.",
-      "primary_cta": "Get Audit Engine Access",
+      "description": "Upload tender PDFs or DOCX and get a Go/Hold/No-Go decision cockpit with evidence, MUST blockers, risks, and clarifications — plus a Compliance Matrix, Bid Room tasks, and export-ready outputs.",
+      "primary_cta": "Start now",
       "secondary_cta": "See Sample Output",
       "validated_prefix": "Validated in private pilots by",
       "validated_emphasis": "Tier-1 Consultants"
@@ -241,34 +241,43 @@
       "risk_badge": "Liability Risk"
     },
     "features": {
-      "section_title": "What you get from a tender document",
-      "section_subtitle": "We turn 100 pages of PDF into 3 actionable lists.",
+      "section_title": "From tender document to bid-ready pack",
+      "section_subtitle": "Decision cockpit, compliance matrix, execution tasks, and exports — built for bid managers.",
       "cards": {
         "executive": {
-          "title": "Executive summary",
-          "subtitle": "A concise, decision-oriented summary to support early go/no-go decisions and faster stakeholder alignment.",
+          "title": "Decision cockpit",
+          "subtitle": "Go/Hold/No-Go with evidence you can cite.",
           "bullets": [
-            "Scope and context",
-            "Key constraints",
-            "Decision points"
+            "Executive summary",
+            "Go/Hold/No-Go + rationale",
+            "Evidence snippets"
           ]
         },
         "mandatory": {
-          "title": "Mandatory requirements",
-          "subtitle": "Requirements extracted and structured to reduce the risk of missing disqualifying conditions.",
+          "title": "MUST requirements",
+          "subtitle": "Mandatory items structured to avoid disqualification.",
           "bullets": [
             "Mandatory vs optional",
-            "Clear pass / review",
-            "Verification-ready"
+            "Pass / Review / Blocker",
+            "Owner + due date"
           ]
         },
         "risks": {
-          "title": "Risks and ambiguities",
-          "subtitle": "Unclear clauses, gaps, and potential delivery or cost risks highlighted early so you can clarify sooner.",
+          "title": "Risks & clarifications",
+          "subtitle": "Ambiguities highlighted early so you can clarify faster.",
           "bullets": [
             "Severity labels",
-            "Open points",
-            "Clarification prompts"
+            "Clarification questions",
+            "Commercial + delivery risks"
+          ]
+        },
+        "execution": {
+          "title": "Execution & exports",
+          "subtitle": "Turn decisions into a bid-ready pack.",
+          "bullets": [
+            "Compliance Matrix + Bid Room",
+            "Tender brief PDF export",
+            "Bid Pack XLSX export"
           ]
         }
       }
@@ -300,181 +309,236 @@
       "description": "Secure your spot in the early access program. Analyze your first tender in minutes.",
       "limited": "Limited spots TenderPilot for the beta program."
     },
-        "footer": {
+    "footer": {
       "browse": "Browse Software Tenders",
+      "privacy": "Privacy",
+      "terms": "Terms"
+    },
+    "get_started": {
+      "title": "Start in 30 seconds",
+      "description": "Magic link sign-in. No password. Upload immediately and get your decision cockpit.",
+      "bullets": [
+        "Upload a tender and get Go/Hold/No-Go with evidence",
+        "Track MUST items in the Compliance Matrix",
+        "Turn clarifications into tasks in the Bid Room"
+      ],
+      "note": "You’ll land in the app and can upload immediately."
+    }
+  },
+  "howItWorksPage": {
+    "header": {
+      "backToHome": "Back to Home",
+      "sample": "Sample output",
+      "cta": "Start now"
+    },
+    "hero": {
+      "titleA": "From PDF to a decision cockpit",
+      "titleB": "in",
+      "highlight": "in four steps",
+      "subtitle": "We don’t write the proposal. We help you decide whether it’s worth writing — with evidence and checklists."
+    },
+    "steps": [
+      {
+        "step": "01",
+        "title": "Upload documents",
+        "desc": "Upload tender PDFs or DOCX (up to 25MB per file)."
+      },
+      {
+        "step": "02",
+        "title": "Decision cockpit",
+        "desc": "Get Go/Hold/No-Go, an executive summary, MUST blockers, and evidence snippets you can cite."
+      },
+      {
+        "step": "03",
+        "title": "Team execution",
+        "desc": "Assign MUST items in the Compliance Matrix and track actions in the Bid Room (clarifications, checks, deliverables)."
+      },
+      {
+        "step": "04",
+        "title": "Export & share",
+        "desc": "Export a tender brief and bid pack (PDF/XLSX/CSV) for stakeholders and proposal writing."
+      }
+    ],
+    "bottomCta": {
+      "title": "Have a tender on your desk right now?",
+      "desc": "Upload it and get a Go/Hold/No-Go cockpit in minutes.",
+      "button": "Start now",
+      "footnote": "Magic link sign-in. No password. You can upload immediately."
+    },
+    "footer": {
       "privacy": "Privacy",
       "terms": "Terms"
     }
   },
-  "howItWorksPage": {
-
-  "header": {
-    "backToHome": "Back to Home"
-  },
-  "hero": {
-    "titleA": "From PDF to Decision",
-    "titleB": "in",
-    "highlight": "Three Steps",
-    "subtitle": "We don't write the proposal. We help you decide if it's worth writing."
-  },
-  "steps": [
-    {
-      "step": "01",
-      "title": "Upload Tender Docs",
-      "desc": "Drag and drop your complex RFPs, RFIs, or Tender PDFs. We support files up to 100MB."
-    },
-    {
-      "step": "02",
-      "title": "Deep Extraction",
-      "desc": "Our engine reads every line, extracting mandatory requirements ('shall', 'must') and identifying liability risks."
-    },
-    {
-      "step": "03",
-      "title": "The Go/No-Go Report",
-      "desc": "Receive a structured executive summary with a Compliance Matrix and Risk Register ready for export."
-    }
-  ],
-    "bottomCta": {
-    "title": "Have a tender on your desk right now?",
-    "desc": "Try the workflow designed for fast, time-critical tender decisions.",
-    "button": "Get Early Audit Access"
-  }
-  },
   "samplePage": {
-
-  "severity": {
-    "high": "High",
-    "medium": "Medium",
-    "low": "Low"
-  },
-  "header": {
-    "backToHome": "Back to home",
-    "exportPdf": "Export PDF",
-    "joinEarlyAccess": "Join early access",
-    "join": "Join",
-    "exportSample": "Export sample",
-    "delete": "Delete"
-  },
-  "workspace": {
-    "title": "Your tender workspace",
-    "desc": "This is a static sample showing how TenderPilot structures a tender review. Always verify against the original PDF."
-  },
-  "nextActions": {
-    "title": "Next actions"
-  },
-  "counts": {
-    "title": "Quick counts",
-    "must": "MUST",
-    "risks": "Risks",
-    "qa": "Q&A",
-    "microcopy": "Designed for speed. Built for traceability."
-  },
-  "mustItems": {
-    "title": "MUST items",
-    "subtitle": "Hard requirements that can disqualify you.",
-    "export": "Export",
-    "jump": "Jump"
-  },
-  "risks": {
-    "title": "Top risks",
-    "subtitle": "Ambiguities that can impact delivery or cost.",
-    "export": "Export",
-    "jump": "Jump"
-  },
-  "deadline": {
-    "title": "Deadline",
-    "helper": "Confirm timezone and portal rules",
-    "cta": "Join early access"
-  },
-  "keyBullets": {
-    "title": "Key bullets",
-    "subtitle": "Quick scan of what matters."
-  },
-  "tabs": {
-    "requirements": "Requirements",
-    "risks": "Risks",
-    "questions": "Clarifications",
-    "draft": "Outline",
-    "source": "Source",
-    "copyAll": "Copy all"
-  },
-  "tabContent": {
-    "detailedRequirements": "Detailed Requirements",
-    "riskRegister": "Risk Register",
-    "clarificationTitle": "Clarification questions",
-    "clarificationDesc": "Ask these before committing to price, timeline, or SLA.",
-    "outlineTitle": "Tender outline",
-    "outlineDesc": "A starting structure you can paste into your bid template.",
-    "sourceTitle": "Source text",
-    "sourceDesc": "Extracted text for traceability."
-  },
-  "data": {
-    "fileName": "standard-tender-document.pdf",
-    "status": "Review",
-    "submissionDeadline": "14 May 2026, 12:00 CET",
-    "decision": {
-      "badge": "Proceed with caution",
-      "line": "No clear disqualifier detected, but two points need clarification: submission packaging and acceptance criteria for the support SLA."
+    "severity": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
     },
-    "nextActions": [
-      "Confirm submission packaging rules (PDF set + signed declarations).",
-      "Clarify acceptance tests and deliverable sign-off process.",
-      "Validate ISO 27001 evidence requirements and acceptable alternatives."
-    ],
-    "mustItems": [
-      {
-        "id": "m1",
-        "title": "Submission method and deadline",
-        "detail": "Submit through the e-procurement portal before the deadline. Technical and commercial offers as separate PDFs. File naming conventions apply.",
-        "tag": "MUST"
-      },
-      {
-        "id": "m2",
-        "title": "Signed declarations and annexes",
-        "detail": "Include signed declarations (eligibility, non-collusion, confidentiality). Authority may request additional documentation during clarification.",
-        "tag": "MUST"
-      },
-      {
-        "id": "m3",
-        "title": "Security evidence (ISO 27001 or equivalent)",
-        "detail": "Tender requests evidence of security controls for processing personal data. Confirm whether ISO 27001 is strictly required or equivalence is accepted.",
-        "tag": "MUST"
-      }
-    ],
-    "risks": [
-      {
-        "id": "r1",
-        "severity": "high",
-        "title": "Acceptance criteria unclear",
-        "detail": "Acceptance testing is referenced but pass/fail criteria and sign-off roles are not defined. Risk of scope creep and late disputes."
-      },
-      {
-        "id": "r2",
-        "severity": "medium",
-        "title": "Support SLA ambiguity",
-        "detail": "Response times and service hours are unclear (business hours vs 24/7). Confirm escalation path, exclusions, and planned downtime handling."
-      },
-      {
-        "id": "r3",
-        "severity": "low",
-        "title": "Reference project template may be strict",
-        "detail": "Annex suggests a fixed structure for references. Confirm if your format is accepted or if a template is mandatory."
-      }
-    ],
-    "keyBullets": [
-      "Submission via portal; strict file naming rules.",
-      "ISO 27001 evidence requested for data processing.",
-      "Milestones exist but acceptance tests not defined.",
-      "Evaluation weighted: price (40%), approach (40%), experience (20%)."
-    ],
-    "questions": [
-      "Can you confirm the exact submission packaging rules (file naming, number of files, signatures)?",
-      "What are the acceptance test criteria and who provides final sign-off?",
-      "Is ISO 27001 mandatory, or are equivalent certifications or controls acceptable?"
-    ],
-    "draftOutline": "1. Executive summary\n2. Understanding of scope\n3. Proposed approach and methodology\n4. Delivery plan and milestones\n5. Team and references\n6. Security and data protection\n7. Service and support model (SLA)\n8. Pricing\n9. Compliance and declarations",
-    "sourceExcerpt": "1. Submission\nOffers must be submitted through the Authority e-procurement portal no later than 12:00 CET on 14 May 2026. The submission must include a technical offer and a commercial offer as separate PDF files. File naming conventions apply.\n\n2. Eligibility and declarations\nBidders shall include signed declarations regarding eligibility, non-collusion, and confidentiality. The Authority may request additional documentation during clarification.\n\n3. Data protection and security\nThe Contractor will process personal data. Evidence of information security controls (ISO 27001 certification or equivalent) is requested.\n\n4. Delivery and acceptance\nThe delivery shall follow the milestone schedule described in Annex B. Acceptance testing will be performed prior to go-live. Acceptance criteria are referenced but not specified in measurable terms.\n\n5. Support and SLA\nThe Contractor shall provide support services. The tender mentions response times and escalation paths but does not explicitly define whether service hours are business hours or 24/7.\n\n6. Evaluation\nAwards will be based on price (40%), technical approach (40%), and team experience (20%)."
-   }
+    "header": {
+      "backToHome": "Back to home",
+      "title": "Sample output",
+      "subtitle": "Example decision cockpit — MUST items, risks, clarifications, compliance matrix, bid room tasks, exports.",
+      "primaryCta": "Try it now",
+      "secondaryCta": "How it works"
+    },
+    "workspace": {
+      "title": "Sample tender workspace",
+      "desc": "Static example. In the app, every item links back to evidence in the source."
+    },
+    "nextActions": {
+      "title": "Next actions"
+    },
+    "counts": {
+      "title": "Quick counts",
+      "must": "MUST",
+      "risks": "Risks",
+      "qa": "Clarifications",
+      "work": "Work items",
+      "microcopy": "Designed for speed. Built for traceability."
+    },
+    "mustItems": {
+      "title": "MUST items",
+      "subtitle": "Hard requirements that can disqualify you.",
+      "export": "Export",
+      "jump": "Jump"
+    },
+    "risks": {
+      "title": "Top risks",
+      "subtitle": "Ambiguities that can impact delivery or cost.",
+      "export": "Export",
+      "jump": "Jump"
+    },
+    "deadline": {
+      "title": "Deadline",
+      "helper": "Confirm timezone and portal rules",
+      "cta": "Join early access"
+    },
+    "keyBullets": {
+      "title": "Key bullets",
+      "subtitle": "Quick scan of what matters."
+    },
+    "tabs": {
+      "compliance": "Compliance Matrix",
+      "bidroom": "Bid Room",
+      "exports": "Exports",
+      "outline": "Tender outline",
+      "source": "Evidence excerpt"
+    },
+    "tabContent": {
+      "complianceTitle": "Compliance Matrix (MUST items)",
+      "complianceDesc": "Assign owners and track status. Blockers must be resolved before GO.",
+      "bidroomTitle": "Bid Room (work items)",
+      "bidroomDesc": "Turn clarifications and checks into actionable tasks.",
+      "exportsTitle": "Export pack",
+      "exportsDesc": "Share with stakeholders and proposal writers.",
+      "sourceTitle": "Evidence excerpt",
+      "sourceDesc": "Evidence-first: always verify against the original document."
+    },
+    "data": {
+      "fileName": "EU_Tender_Software_Services_2026.pdf",
+      "submissionDeadline": "14 May 2026 — 12:00 CET",
+      "decisionBadge": "HOLD",
+      "decisionLine": "HOLD — Two blockers need clarification before bidding: acceptance testing and SLA penalties.",
+      "mustItems": [
+        {
+          "title": "Acceptance test criteria and sign-off timeline must be defined",
+          "status": "BLOCKER",
+          "evidence": "“The supplier shall pass acceptance tests according to Annex 4… Acceptance is confirmed by written sign-off.”"
+        },
+        {
+          "title": "SLA penalties and service credits must be capped or clarified",
+          "status": "BLOCKER",
+          "evidence": "“Service credits may be applied for each month below 99.5% availability… no maximum cap specified.”"
+        },
+        {
+          "title": "Proof of ISO 27001 (or equivalent) must be provided",
+          "status": "REVIEW",
+          "evidence": "“The bidder shall provide evidence of an ISO 27001 certified ISMS or equivalent controls.”"
+        },
+        {
+          "title": "Named key personnel and CVs must be included in the offer",
+          "status": "REVIEW",
+          "evidence": "“The bidder shall nominate key experts and include CVs (max 2 pages each).”"
+        }
+      ],
+      "risks": [
+        {
+          "title": "Scope ambiguity around legacy system integration responsibilities",
+          "severity": "High"
+        },
+        {
+          "title": "Unclear ownership of on-site support costs and travel",
+          "severity": "Medium"
+        },
+        {
+          "title": "Bid bond wording may require legal review",
+          "severity": "Medium"
+        }
+      ],
+      "questions": [
+        {
+          "q": "Can you confirm the acceptance test procedure and acceptance criteria (Annex 4) and the sign-off SLA?",
+          "why": "This is a blocker for delivery planning and commercial risk."
+        },
+        {
+          "q": "Is there a monthly cap for service credits/penalties tied to SLA availability?",
+          "why": "Needed to quantify downside exposure and price correctly."
+        },
+        {
+          "q": "Which integration interfaces are in scope, and who owns middleware changes?",
+          "why": "Clarifies delivery effort and timeline feasibility."
+        },
+        {
+          "q": "Are on-site support days fixed or on-demand, and are travel costs reimbursable?",
+          "why": "Affects cost model and resourcing."
+        }
+      ],
+      "outline": [
+        "1. Executive summary and bid decision (Go/Hold/No-Go)",
+        "2. Compliance Matrix (MUST items with evidence and status)",
+        "3. Risk register and assumptions",
+        "4. Clarification questions to contracting authority",
+        "5. Delivery approach, timeline, and key experts",
+        "6. Pricing model and contractual notes"
+      ],
+      "bidRoom": [
+        {
+          "title": "Draft clarification email (acceptance tests + SLA penalties)",
+          "owner": "Bid Manager",
+          "due": "Today"
+        },
+        {
+          "title": "Legal review: SLA credits wording and bid bond clause",
+          "owner": "Legal",
+          "due": "Tomorrow"
+        },
+        {
+          "title": "Technical scoping call: integration interfaces and responsibilities",
+          "owner": "Tech Lead",
+          "due": "This week"
+        }
+      ],
+      "exports": [
+        "Tender brief (PDF) — decision, MUST items, risks, clarifications",
+        "Bid Pack (XLSX) — Compliance Matrix + risk register + task list"
+      ],
+      "sourceExcerpt": "3.2 Service Levels\\n\\nThe supplier shall ensure an availability of 99.5% per calendar month.\\nService credits may be applied for each month below the defined availability.\\n\\n4.1 Acceptance\\n\\nThe supplier shall pass acceptance tests according to Annex 4. Acceptance is confirmed by written sign-off by the contracting authority."
+    },
+    "sections": {
+      "mustTitle": "Top MUST items",
+      "risksTitle": "Top risks",
+      "bulletsTitle": "Clarification questions"
+    },
+    "labels": {
+      "deadline": "Deadline",
+      "decision": "Decision",
+      "must": "MUST",
+      "risks": "Risks",
+      "clarifications": "Clarifications",
+      "workItems": "Work items",
+      "evidence": "Evidence"
+    }
   }
 }
-

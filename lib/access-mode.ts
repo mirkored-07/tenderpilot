@@ -1,22 +1,23 @@
-export type AccessMode = "invite" | "public";
+export type AccessMode = "public" | "waitlist" | "private";
 
 /**
- * Controls marketing to app routing.
- *
- * Default is invite-only to preserve current behavior.
- * Set NEXT_PUBLIC_ACCESS_MODE=public to route CTAs to /login?next=/app/upload.
+ * Controls the marketing-to-app funnel.
+ * - public: users can sign up and start using the app immediately
+ * - waitlist: marketing CTA leads to waitlist section / form
+ * - private: (reserved) could be used for invite-only gating
  */
 export function getAccessMode(): AccessMode {
-  const raw = String(process.env.NEXT_PUBLIC_ACCESS_MODE ?? "").toLowerCase().trim();
-  if (raw === "public" || raw === "open" || raw === "beta") return "public";
-
-  const inv = String(process.env.NEXT_PUBLIC_INVITE_ONLY ?? "").toLowerCase().trim();
-  if (inv === "true" || inv === "1" || inv === "yes") return "invite";
-
-  return "invite";
+  const raw = (process.env.NEXT_PUBLIC_ACCESS_MODE || "").trim().toLowerCase();
+  if (raw === "public") return "public";
+  if (raw === "private") return "private";
+  return "waitlist";
 }
 
-export function loginWithNextHref(nextPath: string) {
-  const safe = String(nextPath ?? "").trim() || "/app/upload";
-  return `/login?next=${encodeURIComponent(safe)}`;
+/**
+ * Single source of truth for marketing CTAs that should route users through login
+ * and preserve the intended destination in the app.
+ */
+export function loginWithNextHref(nextPath: string = "/app/upload"): string {
+  const next = nextPath && nextPath.trim().length > 0 ? nextPath.trim() : "/app/upload";
+  return `/login?next=${encodeURIComponent(next)}`;
 }

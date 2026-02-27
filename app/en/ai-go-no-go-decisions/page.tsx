@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { BrandIcon } from "@/components/brand-icon";
+import { loginWithNextHref } from "@/lib/access-mode";
 import {
   ArrowRight,
   CheckCircle2,
@@ -48,6 +49,7 @@ function GlassCard({
 
 export default async function AIGoNoGoDecisionsPage() {
   const dict = (await import("@/dictionaries/en.json")).default as any;
+  const primaryCtaHref = loginWithNextHref("/app/upload");
   const nav = dict.nav as { title: string };
 
   return (
@@ -76,7 +78,7 @@ export default async function AIGoNoGoDecisionsPage() {
           </nav>
 
           <Button asChild size="sm" className="rounded-full">
-            <Link href="/en/waitlist">Get Audit Engine Access</Link>
+            <Link href={primaryCtaHref}>Start now</Link>
           </Button>
         </div>
       </header>
