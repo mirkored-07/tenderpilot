@@ -1500,7 +1500,73 @@ function classifyDoneWhen(args: { text: string; target: ActionTargetTab; label: 
 }
 
 
+function ProgressCard({
+  status,
+  events,
+}: {
+  status: JobStatus;
+  events: DbJobEvent[];
+}) {
+  const isFailed = status === "failed";
 
+  // Safe fallback: if pickFailureFromEvents exists in the file, use it; otherwise use a generic message.
+  const failure =
+    typeof (pickFailureFromEvents as any) === "function"
+      ? (pickFailureFromEvents as any)(events)
+      : { title: "Something needs attention", text: "Please try again or re-upload the file." };
+
+  const title =
+    status === "queued"
+      ? "Getting started"
+      : status === "processing"
+      ? "Working on your tender review"
+      : status === "done"
+      ? "Ready"
+      : failure.title;
+
+  const subtitle =
+    status === "queued"
+      ? "Preparing your bid review…"
+      : status === "processing"
+      ? "Extracting requirements, risks, clarifications, and a short draft…"
+      : status === "done"
+      ? "Results are ready."
+      : failure.text;
+
+  const barClass =
+    status === "failed"
+      ? "w-full bg-red-500"
+      : status === "queued"
+      ? "w-1/3 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 animate-pulse"
+      : status === "processing"
+      ? "w-2/3 bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-500 animate-pulse"
+      : "w-full bg-green-500";
+
+  return (
+    <Card className="rounded-2xl">
+      <CardContent className="space-y-3 py-5">
+        <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+          <p className="text-sm font-medium">{title}</p>
+          <p className="text-xs text-muted-foreground">Results appear automatically on this page</p>
+        </div>
+
+        <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
+          <div className={`absolute left-0 top-0 h-full rounded-full transition-all duration-700 ${barClass}`} />
+        </div>
+
+        <p className="text-xs text-muted-foreground">{subtitle}</p>
+
+        {isFailed ? (
+          <div className="pt-1">
+            <Button asChild className="rounded-full">
+              <Link href="/app/upload">Start a new review</Link>
+            </Button>
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function JobDetailPage() {
   const params = useParams();
@@ -4002,7 +4068,26 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
         </Card>
       ) : null}
 
-     {showProgress ? <ProgressCard status={job?.status ?? "processing"} events={events} /> : null}
+     {showProgress ? (
+        <Card className="rounded-2xl">
+          <CardContent className="space-y-3 py-5">
+            <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
+              <p className="text-sm font-medium">Working on your tender review</p>
+              <p className="text-xs text-muted-foreground">Results appear automatically on this page</p>
+            </div>
+
+            <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
+              <div className="absolute left-0 top-0 h-full w-2/3 rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-500 animate-pulse" />
+            </div>
+
+            <p className="text-xs text-muted-foreground">Extracting requirements, risks, clarifications, and a short draft…</p>
+
+            <p className="text-xs text-muted-foreground">
+              Steps: upload → extract → analyze → results. This usually takes 1–3 minutes (large files can take longer).
+            </p>
+          </CardContent>
+        </Card>
+      ) : null}
 	{showFailed ? (
         <FailedStatePanel
           jobId={jobId}

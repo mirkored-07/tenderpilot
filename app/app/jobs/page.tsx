@@ -223,6 +223,8 @@ function isDoneStatus(s?: string | null) {
 }
 
 export default function JobsPage() {
+  const ONBOARDING_DISMISS_KEY = "tp_onboarding_jobs_empty_dismissed_v1";
+
   const [statusFilter, setStatusFilter] = useState<"all" | "ready" | "processing" | "failed">("all");
   const [decisionFilter, setDecisionFilter] = useState<"all" | "go" | "hold" | "no-go" | "unset">("all");
   const [deadlineFilter, setDeadlineFilter] = useState<"all" | "due-soon" | "this-week" | "no-deadline">("all");
@@ -239,6 +241,8 @@ export default function JobsPage() {
 
   const [actionError, setActionError] = useState<string | null>(null);
   const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
+
+  const [onboardingDismissed, setOnboardingDismissed] = useState<boolean>(false);
 
   const pollRef = useRef<NodeJS.Timeout | null>(null);
   const router = useRouter();
@@ -306,6 +310,16 @@ export default function JobsPage() {
   // initial load
   useEffect(() => {
     loadJobs();
+  }, []);
+
+  // best-effort first run onboarding (local)
+  useEffect(() => {
+    try {
+      const v = window.localStorage.getItem(ONBOARDING_DISMISS_KEY);
+      setOnboardingDismissed(v === "1");
+    } catch {
+      setOnboardingDismissed(false);
+    }
   }, []);
 
   // polling (only while active jobs exist + tab visible)
@@ -534,6 +548,18 @@ export default function JobsPage() {
   const deadlineLabel =
     deadlineFilter === "all" ? "Any" : deadlineFilter === "due-soon" ? "Due soon" : deadlineFilter === "this-week" ? "This week" : "No deadline";
 
+  const shouldShowOnboarding = !loading && jobs.length === 0 && !onboardingDismissed;
+
+  function dismissOnboarding() {
+    try {
+      window.localStorage.setItem(ONBOARDING_DISMISS_KEY, "1");
+    } catch {
+      // ignore
+    }
+    setOnboardingDismissed(true);
+    track("first_run_onboarding_dismissed", { location: "jobs_list" });
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -678,6 +704,49 @@ export default function JobsPage() {
             <div className="rounded-2xl border p-8 text-center">
               <p className="text-sm font-medium">Loading</p>
               <p className="mt-1 text-sm text-muted-foreground">Fetching your tenders.</p>
+            </div>
+          ) : shouldShowOnboarding ? (
+            <div className="rounded-2xl border bg-gradient-to-b from-muted/40 to-background p-8">
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">Welcome to TenderPilot</p>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Upload a tender document to get a fast Go Hold No Go recommendation, key risks, and a drafting ready workspace.
+                  </p>
+
+                  <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-2xl border bg-background/60 p-4">
+                      <p className="text-sm font-medium">Evidence first trust</p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Important claims link to supporting excerpts. Always verify in the original tender document.
+                      </p>
+                    </div>
+                    <div className="rounded-2xl border bg-background/60 p-4">
+                      <p className="text-sm font-medium">Estimated time</p>
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Usually 1 to 3 minutes. Large files can take longer.
+                      </p>
+                    </div>
+                  </div>
+
+                  <p className="mt-5 text-xs text-muted-foreground">
+                    Flow: upload → extract → evaluate → decision cockpit.
+                  </p>
+                </div>
+
+                <div className="flex shrink-0 flex-col gap-2">
+                  <Button
+                    asChild
+                    className="rounded-full"
+                    onClick={() => track("first_run_onboarding_upload_cta", { location: "jobs_list" })}
+                  >
+                    <Link href="/app/upload">Upload your first tender</Link>
+                  </Button>
+                  <Button variant="ghost" className="rounded-full" onClick={dismissOnboarding}>
+                    Dismiss
+                  </Button>
+                </div>
+              </div>
             </div>
           ) : rows.length === 0 ? (
             <div className="rounded-2xl border p-8 text-center">

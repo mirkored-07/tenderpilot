@@ -23,6 +23,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
+  // Verify ownership (RLS + explicit check)
   const { data: jobRow, error: jobErr } = await supabase
     .from("jobs")
     .select("id,user_id,status,file_name")
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   const admin = supabaseAdmin();
 
-  // Reset job to queued so the Edge function can claim it again.
+  // Reset to queued so process-job can claim again.
   {
     const { error: updErr } = await admin
       .from("jobs")
@@ -62,7 +63,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     }
   }
 
-  // Best-effort: add an event for traceability.
+  // Best-effort: add a lightweight event.
   try {
     await admin.from("job_events").insert({
       job_id: jobId,
@@ -75,7 +76,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     // ignore
   }
 
-  // Best-effort: trigger processing immediately.
+  // Best-effort: trigger now.
   try {
     await fetch(`${supabaseUrl}/functions/v1/process-job`, {
       method: "POST",
@@ -86,7 +87,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       body: JSON.stringify({ job_id: jobId }),
     });
   } catch {
-    // If trigger fails, the job is still queued and can be picked up by the next tick.
+    // job remains queued; next tick can pick it up
   }
 
   return NextResponse.json({ ok: true });

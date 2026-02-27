@@ -8,6 +8,7 @@ import { ModeToggle } from "@/components/mode-toggle";
 import LanguageSwitcherSlot from "@/components/marketing/LanguageSwitcherSlot";
 import type { Metadata } from "next";
 import { BrandIcon } from "@/components/brand-icon";
+import { getAccessMode, loginWithNextHref } from "@/lib/access-mode";
 
 export const metadata: Metadata = {
   title: "TenderPilot - AI Go/No-Go Decisions for Tenders & RFPs — Analyse d’appels d’offres & RFP par IA",
@@ -247,6 +248,9 @@ function RoiBenefitGraphic({ roi }: { roi: LandingDict["roi"] }) {
 }
 
 export default async function LandingPage() {
+  const accessMode = getAccessMode();
+  const primaryCtaHref = accessMode === "public" ? loginWithNextHref("/app/upload") : "#early-access";
+
   const dict = (await import("@/dictionaries/fr.json")).default as any;
   const t = dict.landing as LandingDict;
   const nav = dict.nav as {
@@ -290,7 +294,7 @@ export default async function LandingPage() {
               asChild
               className="rounded-full shadow-lg shadow-blue-500/20 bg-primary text-primary-foreground ml-2"
             >
-              <Link href="#early-access">{t.nav.cta}</Link>
+              <Link href={primaryCtaHref}>{t.nav.cta}</Link>
             </Button>
             {/* Theme toggle */}
             <div className="ml-2 pl-2 border-l border-white/10 flex items-center gap-2">
@@ -369,7 +373,7 @@ export default async function LandingPage() {
                 size="lg"
                 className="rounded-full text-base px-8 h-14 shadow-xl shadow-blue-500/20"
               >
-                <Link href="#early-access">{t.hero.primary_cta}</Link>
+                <Link href={primaryCtaHref}>{t.hero.primary_cta}</Link>
               </Button>
               <Button
                 asChild
@@ -501,7 +505,7 @@ export default async function LandingPage() {
             >
               {t.footer.browse}
             </Link>
-            <Link href="#early-access" className="text-blue-400 hover:text-blue-300">
+            <Link href={primaryCtaHref} className="text-blue-400 hover:text-blue-300">
               {t.nav.cta}
             </Link>
             <Link
