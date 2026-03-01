@@ -154,6 +154,46 @@ export default function UploadForm() {
         return;
       }
 
+      // Pre-check credits to avoid uploading a file we can't process.
+      // Server-side credit enforcement remains the source of truth.
+      try {
+        const uid = session.user.id;
+        const email = session.user.email ?? null;
+
+        const { data: prof, error: profErr } = await supabase
+          .from("profiles")
+          .select("credits_balance")
+          .eq("id", uid)
+          .maybeSingle();
+
+        // Self-heal older users where the profile row may not exist yet.
+        if (!profErr && !prof) {
+          await supabase.from("profiles").insert({ id: uid, email });
+        }
+
+        const { data: again } = await supabase
+          .from("profiles")
+          .select("credits_balance")
+          .eq("id", uid)
+          .maybeSingle();
+
+        const bal =
+          typeof (again as any)?.credits_balance === "number"
+            ? (again as any).credits_balance
+            : typeof (prof as any)?.credits_balance === "number"
+              ? (prof as any).credits_balance
+              : 0;
+
+        if (bal < 1) {
+          setNoCredits(true);
+          track("upload_failed", { message: "no_credits_precheck" });
+          setPhase("idle");
+          return;
+        }
+      } catch {
+        // If this pre-check fails, we continue; the server action will enforce credits.
+      }
+
       const ext = getFileExt(file.name);
       if (!isSupportedExt(ext)) {
         throw new Error("Only PDF or DOCX files are supported.");
