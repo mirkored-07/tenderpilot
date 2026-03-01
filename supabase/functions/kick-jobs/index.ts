@@ -18,6 +18,15 @@ Deno.serve(async (req) => {
     const SUPABASE_URL = requiredEnv("TP_SUPABASE_URL");
     const SERVICE_ROLE = requiredEnv("TP_SERVICE_ROLE_KEY");
     const CRON_SECRET = requiredEnv("TP_CRON_SECRET");
+
+    // Require shared secret on incoming request
+    const url = new URL(req.url);
+    const headerSecret = String(req.headers.get("x-tenderpilot-secret") ?? "").trim();
+    const querySecret = String(url.searchParams.get("tp_secret") ?? "").trim();
+    const provided = headerSecret || querySecret;
+    if (!provided || provided !== CRON_SECRET) {
+      return new Response("Unauthorized", { status: 401 });
+    }
     const PROJECT_REF = requiredEnv("TP_PROJECT_REF");
 
     const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE, {

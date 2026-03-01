@@ -988,8 +988,8 @@ function buildEvidenceCandidates(extractedText: string): EvidenceCandidate[] {
 
 	const corsHeaders = {
 	  "Access-Control-Allow-Origin": "*",
-	  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-	  "Access-Control-Allow-Methods": "POST, OPTIONS",
+	  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-tenderpilot-secret",
+	  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
 	};
 
 	// Helper so every response includes CORS headers
@@ -1044,10 +1044,16 @@ Deno.serve(async (req) => {
   try {
     const url = new URL(req.url);
 
-    // Optional shared-secret gate (recommended for pg_net/cron callers)
-    const expectedSecret = String(Deno.env.get("TP_SECRET") ?? "").trim();
+    // Shared-secret gate (recommended for pg_net/cron callers)
+    const expectedSecret = String(
+      Deno.env.get("TP_CRON_SECRET") ?? Deno.env.get("TP_SECRET") ?? ""
+    ).trim();
+
     if (expectedSecret) {
-      const provided = String(url.searchParams.get("tp_secret") ?? "").trim();
+      const headerSecret = String(req.headers.get("x-tenderpilot-secret") ?? "").trim();
+      const querySecret = String(url.searchParams.get("tp_secret") ?? "").trim();
+      const provided = headerSecret || querySecret;
+
       if (!provided || provided !== expectedSecret) {
         return corsResponse(JSON.stringify({ ok: false, error: "unauthorized" }), {
           status: 401,
