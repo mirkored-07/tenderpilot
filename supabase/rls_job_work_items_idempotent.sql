@@ -1,5 +1,5 @@
 /*
-RLS policies for public.job_work_items
+RLS policies for public.job_work_items (idempotent)
 
 Purpose
 Enable Bid Room + Compliance Matrix to save execution overlays while keeping isolation by job owner.
@@ -13,6 +13,11 @@ Run this in Supabase SQL Editor.
 */
 
 alter table public.job_work_items enable row level security;
+
+drop policy if exists "job_work_items_select_own_jobs" on public.job_work_items;
+drop policy if exists "job_work_items_insert_own_jobs" on public.job_work_items;
+drop policy if exists "job_work_items_update_own_jobs" on public.job_work_items;
+drop policy if exists "job_work_items_delete_own_jobs" on public.job_work_items;
 
 -- Read: only items for jobs owned by the current user
 create policy "job_work_items_select_own_jobs"
