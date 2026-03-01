@@ -44,11 +44,29 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !serviceKey) {
+  const cronSecret = process.env.TP_CRON_SECRET || process.env.TP_SECRET;
+  if (!supabaseUrl || !serviceKey || !cronSecret) {
     return NextResponse.json({ error: "server_misconfigured" }, { status: 500 });
   }
 
   const admin = supabaseAdmin();
+
+  // Lightweight retry cap to prevent repeated compute abuse.
+  // Allows up to 2 retries per job.
+  try {
+    const { count } = await admin
+      .from("job_events")
+      .select("id", { count: "exact", head: true })
+      .eq("job_id", jobId)
+      .eq("user_id", userRes.user.id)
+      .eq("message", "Retry requested");
+
+    if (typeof count === "number" && count >= 2) {
+      return NextResponse.json({ error: "retry_limit_reached" }, { status: 429 });
+    }
+  } catch {
+    // If job_events is missing or count fails, continue (best-effort).
+  }
 
   // Reset to queued so process-job can claim again.
   {
@@ -83,6 +101,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${serviceKey}`,
+        "x-tenderpilot-secret": cronSecret,
       },
       body: JSON.stringify({ job_id: jobId }),
     });
