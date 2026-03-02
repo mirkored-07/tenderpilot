@@ -27,7 +27,10 @@ export default function LoginClient({ nextPath }: { nextPath: string }) {
 
     // Build redirect only on the client (avoid `location` during SSR).
     const base = (process.env.NEXT_PUBLIC_SITE_URL || window.location.origin).replace(/\/$/, "");
-    const qp = nextPath ? `?next=${encodeURIComponent(nextPath)}` : "";
+    // IMPORTANT: Always include a `?next=` query so the Supabase email template can safely append
+    // `&token_hash=...` and we never end up with a broken URL like `/${'&'}token_hash=...`.
+    const effectiveNext = nextPath || "/app/jobs";
+    const qp = `?next=${encodeURIComponent(effectiveNext)}`;
     const emailRedirectTo = `${base}/auth/callback${qp}`;
 
     const { error } = await supabase.auth.signInWithOtp({

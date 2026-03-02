@@ -13,7 +13,11 @@ const nav: NavItem[] = [
   { href: "/app/account", label: "Account" },
 ];
 
-export function SideNav() {
+export function SideNav({
+  onNavigate,
+}: {
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
 
   return (
@@ -29,6 +33,7 @@ export function SideNav() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onNavigate}
               className={cn(
                 "flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition-all",
                 "hover:bg-white/10 hover:text-white",

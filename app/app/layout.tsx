@@ -6,8 +6,10 @@ import { createServerClient } from "@supabase/ssr";
 
 import { AuthGate } from "./_components/auth-gate";
 import { SideNav } from "./_components/side-nav";
+import { MobileNavDrawer } from "./_components/mobile-nav-drawer";
 import { TelemetryInit } from "./_components/telemetry-init";
 import { SignOutMenuItem } from "./_components/sign-out-menu-item";
+import { AppPageTitle } from "./_components/app-page-title";
 
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -179,10 +181,18 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         <div className="flex min-w-0 flex-1 flex-col md:pl-[280px]">
           <header className="h-16 sticky top-0 z-30 border-b border-border bg-background/70 backdrop-blur flex items-center justify-between px-4 md:px-8">
             <div className="flex items-center gap-3">
-              <div className="md:hidden font-semibold">TenderPilot</div>
-              <div>
-                <p className="text-sm font-medium leading-none">TenderPilot</p>
-                <p className="text-xs text-muted-foreground">
+              <div className="md:hidden">
+                <MobileNavDrawer creditsBalance={creditsBalance} />
+              </div>
+
+              <div className="min-w-0">
+                <p className="text-sm font-medium leading-none">
+                  <span className="hidden md:inline">TenderPilot</span>
+                  <span className="md:hidden">
+                    <AppPageTitle />
+                  </span>
+                </p>
+                <p className="hidden md:block text-xs text-muted-foreground">
                   Go or no go in minutes. Draft bids faster.
                 </p>
               </div>
