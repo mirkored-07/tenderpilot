@@ -1,48 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createServerClient } from "@supabase/ssr";
 
-// Keeps the Supabase session cookies fresh on navigations and SSR requests.
-// NOTE: Cookie mutation is allowed in proxy, but NOT in Server Components.
+// Minimal proxy (Next 16+ replacement for middleware.ts)
+// Keeps routing stable on Vercel Edge. Auth/session is handled by:
+// - /auth/callback (sets cookies)
+// - client-side supabaseBrowser() refresh
 
 export async function proxy(request: NextRequest) {
-  const response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
+  return NextResponse.next({
+    request: { headers: request.headers },
   });
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseAnon) return response;
-
-  const supabase = createServerClient(supabaseUrl, supabaseAnon, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
-      },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value, options }) => {
-          // Keep cookies readable by the browser Supabase client.
-          try {
-            (request as any).cookies?.set?.(name, value);
-          } catch {
-            // ignore
-          }
-          response.cookies.set(name, value, { ...options, httpOnly: false });
-        });
-      },
-    },
-  });
-
-  // Refresh session if needed and write updated cookies.
-  try {
-    await supabase.auth.getUser();
-  } catch {
-    // ignore
-  }
-
-  return response;
 }
 
 export const config = {
