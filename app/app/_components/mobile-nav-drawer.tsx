@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Menu, X } from "lucide-react";
 
 import { SideNav } from "./side-nav";
@@ -30,6 +31,7 @@ export function MobileNavDrawer({
   creditsBalance: number | null;
 }) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const lastActive = useRef<HTMLElement | null>(null);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const closeBtnRef = useRef<HTMLButtonElement | null>(null);
@@ -39,6 +41,10 @@ export function MobileNavDrawer({
     () => (typeof creditsBalance === "number" ? String(creditsBalance) : "—"),
     [creditsBalance]
   );
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -110,10 +116,12 @@ export function MobileNavDrawer({
         <Menu className="h-5 w-5" />
       </button>
 
-      {/* Drawer */}
+      {mounted
+        ? createPortal(
+            (
       <div
         className={cn(
-          "fixed inset-0 z-[60] md:hidden",
+          "fixed inset-0 z-[999] md:hidden isolate",
           open ? "pointer-events-auto" : "pointer-events-none"
         )}
         aria-hidden={!open}
@@ -121,7 +129,7 @@ export function MobileNavDrawer({
         {/* Overlay */}
         <div
           className={cn(
-            "absolute inset-0 bg-black/50 transition-opacity",
+            "absolute inset-0 bg-black/85 transition-opacity",
             open ? "opacity-100" : "opacity-0"
           )}
           onClick={() => setOpen(false)}
@@ -135,14 +143,14 @@ export function MobileNavDrawer({
           aria-label="Navigation menu"
           className={cn(
             "absolute inset-y-0 left-0 w-[85vw] max-w-[320px]",
-            "bg-gradient-to-b from-teal-600 via-cyan-700 to-sky-800 text-white",
-            "shadow-2xl ring-1 ring-white/15",
+            "bg-slate-950 text-white",
+            "shadow-2xl ring-1 ring-white/10",
             "transition-transform duration-200 ease-out",
             open ? "translate-x-0" : "-translate-x-full"
           )}
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="h-16 px-4 flex items-center justify-between">
+          <div className="h-16 px-4 flex items-center justify-between bg-gradient-to-r from-teal-600 via-cyan-700 to-sky-800 border-b border-white/10">
             <Link
               href="/app/jobs"
               onClick={() => setOpen(false)}
@@ -166,8 +174,8 @@ export function MobileNavDrawer({
               <SideNav onNavigate={() => setOpen(false)} />
             </div>
 
-            <div className="border-t border-white/15 p-4 space-y-4">
-              <div className="rounded-2xl bg-white/12 p-4 ring-1 ring-white/15">
+            <div className="border-t border-white/10 p-4 space-y-4">
+              <div className="rounded-2xl bg-white/20 p-4 ring-1 ring-white/20">
                 <p className="text-xs font-medium text-white/80">Credits</p>
                 <div className="mt-2 flex items-center justify-between">
                   <Badge variant="secondary" className="rounded-full">
@@ -192,7 +200,11 @@ export function MobileNavDrawer({
             </div>
           </div>
         </div>
-      </div>
+      </div>            ),
+            document.body
+          )
+        : null}
+
     </>
   );
 }
