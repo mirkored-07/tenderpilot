@@ -445,7 +445,7 @@ export function BidRoomPanel(props: {
           </div>
         ) : null}
 
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <Badge variant="outline" className="rounded-full">
             Items: {workBaseRows.length}
@@ -458,16 +458,16 @@ export function BidRoomPanel(props: {
           </Badge>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search items…"
-              className="h-9 w-[240px] rounded-full"
+              className="h-9 w-full rounded-full sm:w-[240px]"
             />
 
             <select
-              className="h-9 rounded-full border bg-background px-3 text-xs"
+              className="h-9 w-full rounded-full border bg-background px-3 text-xs sm:w-auto"
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value as any)}
             >
@@ -479,7 +479,7 @@ export function BidRoomPanel(props: {
             </select>
 
             <select
-              className="h-9 rounded-full border bg-background px-3 text-xs"
+              className="h-9 w-full rounded-full border bg-background px-3 text-xs sm:w-auto"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as any)}
             >
@@ -494,7 +494,7 @@ export function BidRoomPanel(props: {
               type="button"
               variant={hideDone ? "secondary" : "outline"}
               size="sm"
-              className="rounded-full"
+              className="w-full rounded-full sm:w-auto"
               onClick={() => setHideDone((v) => !v)}
             >
               {hideDone ? "Hiding done" : "Showing done"}
@@ -508,7 +508,7 @@ export function BidRoomPanel(props: {
             <p className="text-xs text-muted-foreground">Operational overlay only. This does not change the AI decision.</p>
           </div>
 
-          <ScrollArea className="h-[560px]">
+          <ScrollArea className="h-[65dvh] sm:h-[560px]">
             <div className="p-3 space-y-6">
               {filteredRows.length === 0 ? (
                 <div className="rounded-2xl border bg-background p-6 text-center">
@@ -569,7 +569,7 @@ export function BidRoomPanel(props: {
 
                         return (
                           <div key={key} className="rounded-2xl border bg-background p-4 shadow-sm">
-                            <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
                               <div className="min-w-0">
                                 <div className="flex flex-wrap items-center gap-2">
                                   <Badge variant="outline" className="rounded-full">{typeBadge}{r.meta ? ` • ${r.meta}` : ""}</Badge>
@@ -585,7 +585,7 @@ export function BidRoomPanel(props: {
                                 </button>
                               </div>
 
-                              <div className="flex flex-wrap items-center gap-2">
+                              <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                                 <Button
                                   type="button"
                                   variant="outline"
@@ -613,7 +613,8 @@ export function BidRoomPanel(props: {
                               </div>
                             </div>
 
-                            <div className="mt-4 flex flex-wrap items-center gap-2">
+                            {/* Mobile: grid for form controls (prevents horizontal overflow). Desktop: wraps inline. */}
+                            <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-2">
                               <Input
                                 value={owner}
                                 onChange={(e) => {
@@ -643,12 +644,12 @@ export function BidRoomPanel(props: {
                                   });
                                 }}
                                 placeholder="Owner"
-                                className="h-9 w-[160px] rounded-full"
+                                className="h-9 w-full rounded-full sm:w-[160px]"
                                 disabled={workSaving === key}
                               />
 
                               <select
-                                className="h-9 rounded-full border bg-background px-3 text-xs"
+                                className="h-9 w-full rounded-full border bg-background px-3 text-xs sm:w-auto"
                                 value={status}
                                 onChange={(e) => {
                                   const v = e.target.value;
@@ -705,7 +706,7 @@ export function BidRoomPanel(props: {
                                     due_at: e.target.value || null,
                                   });
                                 }}
-                                className="h-9 w-[150px] rounded-full"
+                                className="h-9 w-full rounded-full sm:w-[150px]"
                                 disabled={workSaving === key}
                               />
 
@@ -739,7 +740,7 @@ export function BidRoomPanel(props: {
                                     });
                                   }}
                                   placeholder="Notes (short, actionable)"
-                                  className="h-9 flex-1 min-w-[220px] rounded-full"
+                                  className="col-span-2 h-9 w-full rounded-full sm:col-span-1 sm:flex-1 sm:min-w-[220px]"
                                   disabled={workSaving === key}
                                 />
                               ) : (
@@ -747,7 +748,7 @@ export function BidRoomPanel(props: {
                                   type="button"
                                   variant="ghost"
                                   size="sm"
-                                  className="rounded-full"
+                                  className="col-span-2 w-full rounded-full sm:col-span-1 sm:w-auto"
                                   onClick={() =>
                                     setNotesOpen((prev) => {
                                       const next = new Set(prev);
@@ -774,7 +775,7 @@ export function BidRoomPanel(props: {
         {evidenceOpen ? (
           <div className="fixed inset-0 z-50">
             <div className="absolute inset-0 bg-black/40" onClick={() => setEvidenceOpen(false)} />
-            <div className="absolute right-0 top-0 h-full w-full max-w-xl bg-background shadow-2xl border-l">
+            <div className="absolute right-0 top-0 h-full w-full max-w-none bg-background shadow-2xl border-l sm:max-w-xl">
               <div className="flex items-start justify-between gap-3 p-5 border-b">
                 <div>
                   <p className="text-sm font-semibold">Evidence excerpt</p>
