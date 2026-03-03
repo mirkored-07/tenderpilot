@@ -21,6 +21,23 @@ function asStringId(v: any): string | null {
   return null;
 }
 
+function extractPriceIdFromInvoice(inv: any): string | null {
+  const lines: any[] = Array.isArray(inv?.lines?.data) ? inv.lines.data : [];
+  for (const l of lines) {
+    const p1 = asStringId(l?.price);
+    if (p1) return p1;
+
+    // defensive: some payload variants wrap price differently
+    const p2 = asStringId(l?.pricing?.price);
+    if (p2) return p2;
+
+    if (l?.price && typeof l.price === "object" && typeof l.price.id === "string") {
+      return l.price.id;
+    }
+  }
+  return null;
+}
+
 export async function POST(req: NextRequest) {
   const secret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!secret) {
@@ -29,14 +46,13 @@ export async function POST(req: NextRequest) {
 
   const stripe = getStripe();
   const sig = req.headers.get("stripe-signature");
-
   if (!sig) {
     return NextResponse.json({ error: "missing_signature" }, { status: 400 });
   }
 
-  let event: any;
   const body = await req.text();
 
+  let event: any;
   try {
     event = stripe.webhooks.constructEvent(body, sig, secret);
   } catch (e) {
@@ -54,12 +70,9 @@ export async function POST(req: NextRequest) {
       if ((ins.error as any).code === "23505") {
         return NextResponse.json({ ok: true, deduped: true });
       }
-      // If table doesn't exist / schema missing, return a more direct error
+      // If table doesn't exist / schema missing
       if ((ins.error as any).message?.includes("stripe_webhook_events")) {
-        return NextResponse.json(
-          { error: "missing_billing_schema" },
-          { status: 500 }
-        );
+        return NextResponse.json({ error: "missing_billing_schema" }, { status: 500 });
       }
       throw ins.error;
     }
@@ -77,9 +90,7 @@ export async function POST(req: NextRequest) {
         const userId = session?.metadata?.supabase_user_id ?? null;
 
         if (customerId && (userId || subscriptionId)) {
-          const update: any = {
-            stripe_customer_id: customerId,
-          };
+          const update: any = { stripe_customer_id: customerId };
           if (subscriptionId) update.stripe_subscription_id = subscriptionId;
 
           const q = userId
@@ -141,24 +152,39 @@ export async function POST(req: NextRequest) {
 
       case "invoice.paid": {
         const invoice = event.data.object;
+
         const customerId = asStringId(invoice.customer);
-        if (!customerId) break;
+        const invoiceId = asStringId(invoice.id);
+        if (!customerId || !invoiceId) break;
 
-        const subscriptionId = asStringId(invoice.subscription);
+        // These can be null in Snapshot payloads
+        let subscriptionId = asStringId(invoice.subscription);
 
-        // Try to get priceId from invoice lines
-        const lines: any[] = Array.isArray(invoice?.lines?.data) ? invoice.lines.data : [];
-        const lineWithPrice = lines.find((l) => asStringId(l?.price));
-        let priceId = lineWithPrice ? asStringId(lineWithPrice.price) : null;
+        // 1) Try the event payload first
+        let priceId = extractPriceIdFromInvoice(invoice);
 
-        // Fallback: fetch subscription and read price from items
+        // 2) If missing (your current case), fetch full invoice from Stripe
+        let fullInvoice: any = invoice;
+        if (!priceId) {
+          try {
+            fullInvoice = await stripe.invoices.retrieve(invoiceId, {
+              expand: ["lines.data.price", "subscription"],
+            });
+            priceId = extractPriceIdFromInvoice(fullInvoice);
+            subscriptionId = subscriptionId ?? asStringId(fullInvoice.subscription);
+          } catch (e) {
+            console.error("invoice.paid: failed to retrieve invoice", e);
+          }
+        }
+
+        // 3) If still missing, fallback to subscription (if we have it)
         let periodEnd: string | null = null;
-        if (!priceId && subscriptionId) {
+        if ((!priceId || !periodEnd) && subscriptionId) {
           try {
             const sub = await stripe.subscriptions.retrieve(subscriptionId, {
               expand: ["items.data.price"],
             });
-            priceId = asStringId(sub?.items?.data?.[0]?.price);
+            priceId = priceId ?? asStringId(sub?.items?.data?.[0]?.price);
             periodEnd =
               typeof sub.current_period_end === "number"
                 ? new Date(sub.current_period_end * 1000).toISOString()
@@ -169,7 +195,7 @@ export async function POST(req: NextRequest) {
         }
 
         if (!priceId) {
-          console.error("invoice.paid: missing priceId", { customerId, subscriptionId });
+          console.error("invoice.paid: missing priceId", { customerId, invoiceId, subscriptionId });
           break;
         }
 
@@ -202,17 +228,17 @@ export async function POST(req: NextRequest) {
           break;
         }
 
+        // Grant credits (atomic RPC)
         const rpc = await admin.rpc("grant_credits_v1", {
           p_user_id: userId,
           p_amount: credits,
           p_reason: "stripe_invoice_paid",
         });
-
         if (rpc.error) {
           console.error("grant_credits_v1 failed", rpc.error);
         }
 
-        // Mark plan as Pro once invoice is paid
+        // Ensure plan reflects paid status
         const update: any = {
           stripe_customer_id: customerId,
           stripe_price_id: priceId,
@@ -229,7 +255,6 @@ export async function POST(req: NextRequest) {
       }
 
       default:
-        // Ignore other events (still deduped)
         break;
     }
 

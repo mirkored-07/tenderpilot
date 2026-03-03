@@ -67,6 +67,33 @@ export async function POST(req: NextRequest) {
 
     let customerId = existing?.stripe_customer_id ?? null;
 
+    // ✅ NEW: validate stored customer id (handles when you deleted customers in Stripe)
+    if (customerId) {
+      try {
+        await stripe.customers.retrieve(customerId);
+      } catch (err: any) {
+        if (err?.code === "resource_missing") {
+          // Customer was deleted in Stripe → clear stale fields so we can recreate cleanly
+          const clear = await admin
+            .from("profiles")
+            .update({
+              stripe_customer_id: null,
+              stripe_subscription_id: null,
+              stripe_price_id: null,
+              plan_tier: "free",
+              plan_status: null,
+              current_period_end: null,
+            })
+            .eq("id", user.id);
+
+          if (clear.error) throw clear.error;
+          customerId = null;
+        } else {
+          throw err;
+        }
+      }
+    }
+
     if (!customerId) {
       const customer = await stripe.customers.create({
         email: user.email ?? undefined,
@@ -101,9 +128,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ url: session.url });
   } catch (e: any) {
     console.error("Stripe checkout error", e);
-    return NextResponse.json(
-      { error: "stripe_checkout_failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "stripe_checkout_failed" }, { status: 500 });
   }
 }
