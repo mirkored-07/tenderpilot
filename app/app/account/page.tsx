@@ -593,8 +593,19 @@ export default function AccountPage() {
     hasCustomer: boolean;
   } | null>(null);
 
+  const billingSnapshotRef = useRef<{
+    credits: number | null;
+    planTier: "free" | "pro";
+  } | null>(null);
+
   const [billingBusy, setBillingBusy] = useState(false);
   const [billingNotice, setBillingNotice] = useState<{
+    kind: "ok" | "err";
+    text: string;
+  } | null>(null);
+
+  const [dangerBusy, setDangerBusy] = useState<null | "purge" | "delete">(null);
+  const [dangerNotice, setDangerNotice] = useState<{
     kind: "ok" | "err";
     text: string;
   } | null>(null);
@@ -604,7 +615,42 @@ export default function AccountPage() {
     const p = new URLSearchParams(window.location.search);
     const billing = p.get("billing");
     if (billing === "success") {
-      setBillingNotice({ kind: "ok", text: "Billing updated. Syncing your plan…" });
+      setBillingNotice({ kind: "ok", text: "Payment received. Confirming your plan…" });
+
+      let cancelled = false;
+      // Best-effort: sync billing + refresh credits for up to ~45s.
+      void (async () => {
+        for (let i = 0; i < 18; i++) {
+          if (cancelled) return;
+          try {
+            await fetch("/api/stripe/sync", { method: "POST" });
+          } catch {
+            // ignore
+          }
+
+          await loadAccount();
+          router.refresh();
+
+          // Stop early once we see Pro + a non-zero credit balance.
+          const snap = billingSnapshotRef.current;
+          if (snap?.planTier === "pro" && typeof snap.credits === "number" && snap.credits >= 1) {
+            setBillingNotice({ kind: "ok", text: "Plan confirmed. Credits updated." });
+            return;
+          }
+
+          await new Promise((r) => setTimeout(r, 2500));
+        }
+
+        // If we exit the loop, keep message actionable.
+        setBillingNotice({
+          kind: "ok",
+          text: "Payment received. If credits did not update yet, click Sync billing below.",
+        });
+      })();
+
+      return () => {
+        cancelled = true;
+      };
     } else if (billing === "cancel") {
       setBillingNotice({ kind: "err", text: "Checkout canceled." });
     }
@@ -886,12 +932,14 @@ export default function AccountPage() {
           : null;
 
       const tierRaw = String((profile as any)?.plan_tier ?? "free").toLowerCase();
-      const planTier = tierRaw === "pro" ? "pro" : "free";
+      const planTier: "free" | "pro" = tierRaw === "pro" ? "pro" : "free";
       const planStatus = ((profile as any)?.plan_status ?? null) as string | null;
       const periodEnd = ((profile as any)?.current_period_end ?? null) as string | null;
       const hasCustomer = Boolean((profile as any)?.stripe_customer_id);
 
-      setBilling({ credits, planTier, planStatus, periodEnd, hasCustomer });
+      const billingSnap = { credits, planTier, planStatus, periodEnd, hasCustomer };
+      setBilling(billingSnap);
+      billingSnapshotRef.current = { credits, planTier };
 
 
       setFullName(nextFullName);
@@ -993,6 +1041,90 @@ export default function AccountPage() {
       });
     } finally {
       setBillingBusy(false);
+    }
+  }
+
+  async function syncBillingNow(opts?: { silent?: boolean }) {
+    const silent = Boolean(opts?.silent);
+    if (!silent) setBillingNotice(null);
+    setBillingBusy(true);
+    try {
+      const r = await fetch("/api/stripe/sync", { method: "POST" });
+      const j = await r.json().catch(() => ({}));
+
+      if (!r.ok) {
+        const err = String((j as any)?.error ?? "stripe_sync_failed");
+        if (!silent) {
+          setBillingNotice({
+            kind: "err",
+            text:
+              err === "missing_billing_schema"
+                ? "Billing schema missing in Supabase. Run supabase/stripe_billing_v1.sql."
+                : "Couldn’t sync billing. Try again.",
+          });
+        }
+        return;
+      }
+
+      if (!silent) {
+        const plan = String((j as any)?.plan_tier ?? "").toLowerCase();
+        setBillingNotice({
+          kind: "ok",
+          text: plan === "pro" ? "Billing synced." : "Billing synced (free).",
+        });
+      }
+
+      await loadAccount();
+      router.refresh();
+    } catch (e) {
+      console.error(e);
+      if (!silent) {
+        setBillingNotice({ kind: "err", text: "Couldn’t sync billing. Try again." });
+      }
+    } finally {
+      setBillingBusy(false);
+    }
+  }
+
+  async function purgeMyTenderData() {
+    setDangerNotice(null);
+    setDangerBusy("purge");
+    try {
+      const r = await fetch("/api/account/purge", { method: "POST" });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(String((j as any)?.error ?? "purge_failed"));
+      setDangerNotice({ kind: "ok", text: "All tender data deleted." });
+      await loadAccount();
+      router.refresh();
+    } catch (e) {
+      console.error(e);
+      setDangerNotice({ kind: "err", text: "Couldn’t delete your tender data. Try again." });
+    } finally {
+      setDangerBusy(null);
+    }
+  }
+
+  async function deleteMyAccount() {
+    setDangerNotice(null);
+    setDangerBusy("delete");
+    try {
+      const r = await fetch("/api/account/delete", { method: "POST" });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(String((j as any)?.error ?? "delete_failed"));
+
+      // Best-effort: sign out locally (ignore errors) and send user to marketing site.
+      try {
+        const supabase = supabaseBrowser();
+        await supabase.auth.signOut();
+      } catch {
+        // ignore
+      }
+
+      window.location.href = "/";
+    } catch (e) {
+      console.error(e);
+      setDangerNotice({ kind: "err", text: "Couldn’t delete your account. Try again." });
+      setDangerBusy(null);
     }
   }
 
@@ -1415,6 +1547,27 @@ export default function AccountPage() {
                 </div>
               )}
 
+              {billing?.planTier === "pro" && typeof billing?.credits === "number" && billing.credits < 1 ? (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                  <p className="font-medium">Credits not updated yet</p>
+                  <p className="mt-1 text-xs text-amber-900/80">
+                    Your plan looks active, but your credit balance is 0. This usually means the Stripe webhook
+                    couldn’t grant monthly credits (missing DB schema or webhook not configured).
+                  </p>
+                  <div className="mt-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="rounded-full"
+                      onClick={() => syncBillingNow()}
+                      disabled={billingBusy}
+                    >
+                      Sync billing
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
               <div className="flex items-center justify-between gap-3">
                 <p className="text-sm">
                   <span className="text-muted-foreground">Current</span>{" "}
@@ -1499,6 +1652,16 @@ export default function AccountPage() {
                   >
                     Change plan
                   </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-full"
+                    onClick={() => syncBillingNow()}
+                    disabled={billingBusy}
+                  >
+                    Sync billing
+                  </Button>
                 </div>
               ) : (
                 <div className="flex flex-col gap-2 sm:flex-row">
@@ -1520,6 +1683,18 @@ export default function AccountPage() {
                   >
                     Upgrade annual
                   </Button>
+
+                  {billing?.hasCustomer ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="rounded-full"
+                      onClick={() => syncBillingNow()}
+                      disabled={billingBusy}
+                    >
+                      Sync billing
+                    </Button>
+                  ) : null}
                 </div>
               )}
 
@@ -1591,6 +1766,71 @@ export default function AccountPage() {
               <div className="pt-1">
                 <Button disabled variant="secondary" className="rounded-full">
                   Contact support (soon)
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-2xl">
+            <CardHeader className="pb-3">
+              <CardTitle>Data & privacy</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {dangerNotice ? (
+                <div
+                  className={cn(
+                    "rounded-2xl border p-3 text-sm",
+                    dangerNotice.kind === "ok"
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                      : "border-red-200 bg-red-50 text-red-800"
+                  )}
+                >
+                  {dangerNotice.text}
+                </div>
+              ) : null}
+
+              <p className="text-sm text-muted-foreground">
+                Tender files, extracted text, and job results are stored in your workspace. You can delete individual
+                tenders from the Jobs list, purge all tender data, or delete your entire account.
+              </p>
+
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                <p className="font-medium">Retention</p>
+                <p className="mt-1 text-xs text-amber-900/80">
+                  Deletions are immediate (best effort). If a file was already removed or a legacy table is missing,
+                  the operation will still complete.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-full justify-start"
+                  disabled={dangerBusy !== null}
+                  onClick={() => {
+                    const ok = window.confirm(
+                      "Delete ALL tender data (uploads, extracted text, results, bid room items) from your workspace?\n\nThis cannot be undone."
+                    );
+                    if (ok) void purgeMyTenderData();
+                  }}
+                >
+                  {dangerBusy === "purge" ? "Deleting tender data…" : "Delete all tender data"}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="destructive"
+                  className="rounded-full justify-start"
+                  disabled={dangerBusy !== null}
+                  onClick={() => {
+                    const ok = window.confirm(
+                      "Delete your account and ALL stored data?\n\nThis will remove tenders, results, and your profile. This cannot be undone."
+                    );
+                    if (ok) void deleteMyAccount();
+                  }}
+                >
+                  {dangerBusy === "delete" ? "Deleting account…" : "Delete my account"}
                 </Button>
               </div>
             </CardContent>

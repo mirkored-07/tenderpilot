@@ -3699,10 +3699,11 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
     if (!ok) return;
 
     try {
-      const supabase = supabaseBrowser();
-      await supabase.from("job_results").delete().eq("job_id", jobId);
-      await supabase.from("job_events").delete().eq("job_id", jobId);
-      await supabase.from("jobs").delete().eq("id", jobId);
+      const r = await fetch(`/api/jobs/${jobId}/delete`, { method: "DELETE" });
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        throw new Error(String((j as any)?.error ?? "delete_failed"));
+      }
       router.push("/app/jobs");
     } catch (e) {
       console.error(e);

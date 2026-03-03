@@ -392,22 +392,11 @@ export default function JobsPage() {
     setDeletingJobId(job.id);
 
     try {
-      const supabase = supabaseBrowser();
-
-      const r1 = await supabase
-        .from("job_results")
-        .delete()
-        .eq("job_id", job.id);
-      if (r1.error) throw r1.error;
-
-      const r2 = await supabase
-        .from("job_events")
-        .delete()
-        .eq("job_id", job.id);
-      if (r2.error) throw r2.error;
-
-      const r3 = await supabase.from("jobs").delete().eq("id", job.id);
-      if (r3.error) throw r3.error;
+      const r = await fetch(`/api/jobs/${job.id}/delete`, { method: "DELETE" });
+      if (!r.ok) {
+        const j = await r.json().catch(() => ({}));
+        throw new Error(String((j as any)?.error ?? "delete_failed"));
+      }
 
       setJobs((prev) => prev.filter((j) => j.id !== job.id));
       track("job_deleted", { job_id: job.id, source: "jobs_list" });
