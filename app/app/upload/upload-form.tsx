@@ -407,28 +407,33 @@ export default function UploadForm() {
         </div>
       )}
 
-      {noCredits && (
-        <div className="rounded-2xl border bg-muted/40 p-4">
-          <p className="text-sm font-medium">You’re out of credits</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Each tender review consumes 1 credit. Contact support to upgrade or
-            top up your account.
-          </p>
-          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-            <Button asChild className="rounded-full">
-              <a href="mailto:support@tenderpilot.com">Email support</a>
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-full"
-              onClick={() => setNoCredits(false)}
-            >
-              Dismiss
-            </Button>
-          </div>
-        </div>
-      )}
+   {noCredits && (
+	  <div className="rounded-2xl border bg-muted/40 p-4">
+		<p className="text-sm font-medium">You’re out of credits</p>
+		<p className="mt-1 text-sm text-muted-foreground">
+		  Each tender review consumes 1 credit. Upgrade to Pro to get monthly credits.
+		</p>
+
+		<div className="mt-3 flex flex-col gap-2 sm:flex-row">
+		  <Button asChild className="rounded-full">
+			<Link href="/app/account#billing">Upgrade to Pro</Link>
+		  </Button>
+
+		  <Button asChild variant="outline" className="rounded-full">
+			<a href="mailto:support@tenderpilot.com">Email support</a>
+		  </Button>
+
+		  <Button
+			type="button"
+			variant="outline"
+			className="rounded-full"
+			onClick={() => setNoCredits(false)}
+		  >
+			Dismiss
+		  </Button>
+		</div>
+	  </div>
+	)}
 
       {error && (
         <div className="rounded-2xl border border-red-200 bg-red-50 p-4">

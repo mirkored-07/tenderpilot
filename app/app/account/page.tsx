@@ -20,6 +20,14 @@ type ProfileRow = {
   email: string | null;
   full_name: string | null;
   company: string | null;
+
+  // Optional billing fields (added by supabase/stripe_billing_v1.sql)
+  credits_balance?: number | null;
+  plan_tier?: "free" | "pro" | null;
+  plan_status?: string | null;
+  current_period_end?: string | null;
+  stripe_customer_id?: string | null;
+  stripe_price_id?: string | null;
 };
 
 type SettingsRow = {
@@ -577,6 +585,32 @@ export default function AccountPage() {
   const [usage, setUsage] = useState<UsageSnapshot | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
 
+  const [billing, setBilling] = useState<{
+    credits: number | null;
+    planTier: "free" | "pro";
+    planStatus: string | null;
+    periodEnd: string | null;
+    hasCustomer: boolean;
+  } | null>(null);
+
+  const [billingBusy, setBillingBusy] = useState(false);
+  const [billingNotice, setBillingNotice] = useState<{
+    kind: "ok" | "err";
+    text: string;
+  } | null>(null);
+
+  useEffect(() => {
+    // Optional: show a small notice after returning from Stripe.
+    const p = new URLSearchParams(window.location.search);
+    const billing = p.get("billing");
+    if (billing === "success") {
+      setBillingNotice({ kind: "ok", text: "Billing updated. Syncing your plan…" });
+    } else if (billing === "cancel") {
+      setBillingNotice({ kind: "err", text: "Checkout canceled." });
+    }
+  }, []);
+
+
   const [fullName, setFullName] = useState("");
   const [company, setCompany] = useState("");
 
@@ -674,22 +708,58 @@ export default function AccountPage() {
     uid: string,
     mail: string
   ) {
-    const { data, error } = await supabase
+    const selectFull =
+      "id,email,full_name,company,credits_balance,plan_tier,plan_status,current_period_end,stripe_customer_id,stripe_price_id";
+    const selectBase = "id,email,full_name,company";
+
+    const first = await supabase
       .from("profiles")
-      .select("id,email,full_name,company")
+      .select(selectFull)
       .eq("id", uid)
       .maybeSingle();
 
-    if (!error && data) return data as ProfileRow;
+    if (!first.error && first.data) return first.data as ProfileRow;
+
+    // If billing columns aren't there yet, fall back without breaking.
+    if (
+      first.error &&
+      String((first.error as any)?.message ?? "")
+        .toLowerCase()
+        .includes("column")
+    ) {
+      const base = await supabase
+        .from("profiles")
+        .select(selectBase)
+        .eq("id", uid)
+        .maybeSingle();
+
+      if (!base.error && base.data) return base.data as ProfileRow;
+    }
 
     const ins = await supabase.from("profiles").insert({ id: uid, email: mail });
     if (ins.error) throw ins.error;
 
     const again = await supabase
       .from("profiles")
-      .select("id,email,full_name,company")
+      .select(selectFull)
       .eq("id", uid)
       .single();
+
+    if (
+      again.error &&
+      String((again.error as any)?.message ?? "")
+        .toLowerCase()
+        .includes("column")
+    ) {
+      const baseAgain = await supabase
+        .from("profiles")
+        .select(selectBase)
+        .eq("id", uid)
+        .single();
+
+      if (baseAgain.error) throw baseAgain.error;
+      return baseAgain.data as ProfileRow;
+    }
 
     if (again.error) throw again.error;
     return again.data as ProfileRow;
@@ -810,6 +880,20 @@ export default function AccountPage() {
         | "light"
         | "dark";
 
+      const credits =
+        typeof (profile as any)?.credits_balance === "number"
+          ? Number((profile as any).credits_balance)
+          : null;
+
+      const tierRaw = String((profile as any)?.plan_tier ?? "free").toLowerCase();
+      const planTier = tierRaw === "pro" ? "pro" : "free";
+      const planStatus = ((profile as any)?.plan_status ?? null) as string | null;
+      const periodEnd = ((profile as any)?.current_period_end ?? null) as string | null;
+      const hasCustomer = Boolean((profile as any)?.stripe_customer_id);
+
+      setBilling({ credits, planTier, planStatus, periodEnd, hasCustomer });
+
+
       setFullName(nextFullName);
       setCompany(nextCompany);
       setDefaultStartPage(nextStart);
@@ -861,6 +945,56 @@ export default function AccountPage() {
     loadAccount();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+
+  async function startCheckout(interval: "monthly" | "yearly") {
+    setBillingNotice(null);
+    setBillingBusy(true);
+    try {
+      const r = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ interval }),
+      });
+
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j?.url) {
+        throw new Error(String(j?.error ?? "checkout_failed"));
+      }
+
+      window.location.href = String(j.url);
+    } catch (e) {
+      console.error(e);
+      setBillingNotice({
+        kind: "err",
+        text: "Couldn’t start checkout. Check Stripe env vars and try again.",
+      });
+    } finally {
+      setBillingBusy(false);
+    }
+  }
+
+  async function openBillingPortal() {
+    setBillingNotice(null);
+    setBillingBusy(true);
+    try {
+      const r = await fetch("/api/stripe/portal", { method: "POST" });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || !j?.url) {
+        throw new Error(String(j?.error ?? "portal_failed"));
+      }
+
+      window.location.href = String(j.url);
+    } catch (e) {
+      console.error(e);
+      setBillingNotice({
+        kind: "err",
+        text: "Couldn’t open billing portal. Try upgrading first.",
+      });
+    } finally {
+      setBillingBusy(false);
+    }
+  }
 
   async function save() {
     setStatusAutoClear(null);
@@ -1131,7 +1265,7 @@ export default function AccountPage() {
         </div>
 
         {/* Column B */}
-        <div className="space-y-6 lg:col-span-5">
+        <div className="space-y-6 lg:col-span-4">
           <Card className="rounded-2xl">
             <CardHeader className="pb-3">
               <CardTitle>Workspace</CardTitle>
@@ -1262,25 +1396,68 @@ export default function AccountPage() {
         </div>
 
         {/* Column C */}
-        <div className="space-y-6 lg:col-span-3">
-          <Card className="rounded-2xl">
+        <div className="space-y-6 lg:col-span-4">
+          <Card id="billing" className="rounded-2xl">
             <CardHeader className="pb-3">
-              <CardTitle>Plan</CardTitle>
+              <CardTitle>Billing</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {billingNotice && (
+                <div
+                  className={cn(
+                    "rounded-2xl border p-3 text-sm",
+                    billingNotice.kind === "ok"
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+                      : "border-red-200 bg-red-50 text-red-800"
+                  )}
+                >
+                  {billingNotice.text}
+                </div>
+              )}
+
               <div className="flex items-center justify-between gap-3">
                 <p className="text-sm">
                   <span className="text-muted-foreground">Current</span>{" "}
-                  <span className="font-medium">Free</span>
+                  <span className="font-medium">
+                    {billing?.planTier === "pro" ? "Pro" : "Free"}
+                  </span>
                 </p>
                 <Badge variant="secondary" className="rounded-full">
-                  Active
+                  {billing?.planTier === "pro"
+				  ? billing?.planStatus
+					? String(billing.planStatus).replaceAll("_", " ")
+					: "active"
+				  : "free"}
                 </Badge>
               </div>
 
               <div className="rounded-2xl border bg-muted/20 p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground">
+                      Credits balance
+                    </p>
+                    <p className="mt-1 text-2xl font-semibold">
+                      {billing?.credits ?? "–"}
+                    </p>
+                  </div>
+
+                  {billing?.periodEnd ? (
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">
+                        Period ends
+                      </p>
+                      <p className="mt-1 text-sm font-medium">
+                        {new Date(billing.periodEnd).toLocaleDateString()}
+                      </p>
+                    </div>
+                  ) : null}
+                </div>
+
+                <Separator className="my-4" />
+
                 <p className="text-xs text-muted-foreground">Usage</p>
-                <div className="mt-2 grid grid-cols-3 gap-3">
+                <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
                   <div>
                     <p className="text-sm font-semibold">
                       {usage ? usage.totalJobs : "–"}
@@ -1302,9 +1479,53 @@ export default function AccountPage() {
                 </div>
               </div>
 
-              <Button disabled className="rounded-full">
-                Manage plan (soon)
-              </Button>
+              {billing?.planTier === "pro" ? (
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Button
+                    type="button"
+                    className="rounded-full"
+                    onClick={openBillingPortal}
+                    disabled={billingBusy}
+                  >
+                    Manage billing
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-full"
+                    onClick={() => startCheckout("yearly")}
+                    disabled={billingBusy}
+                  >
+                    Change plan
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Button
+                    type="button"
+                    className="rounded-full"
+                    onClick={() => startCheckout("monthly")}
+                    disabled={billingBusy}
+                  >
+                    Upgrade monthly
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="rounded-full"
+                    onClick={() => startCheckout("yearly")}
+                    disabled={billingBusy}
+                  >
+                    Upgrade annual
+                  </Button>
+                </div>
+              )}
+
+              <p className="text-xs text-muted-foreground">
+                Subscriptions and invoices are managed via Stripe.
+              </p>
             </CardContent>
           </Card>
 
