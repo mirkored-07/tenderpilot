@@ -54,10 +54,10 @@ export async function POST(req: NextRequest) {
       if ((ins.error as any).code === "23505") {
         return NextResponse.json({ ok: true, deduped: true });
       }
-      // Table/column missing -> clear message
-      if (String(ins.error.message ?? "").toLowerCase().includes("relation")) {
+      // If table doesn't exist / schema missing, return a more direct error
+      if ((ins.error as any).message?.includes("stripe_webhook_events")) {
         return NextResponse.json(
-          { error: "missing_billing_schema", hint: "Run supabase/stripe_billing_v1.sql." },
+          { error: "missing_billing_schema" },
           { status: 500 }
         );
       }
@@ -100,13 +100,16 @@ export async function POST(req: NextRequest) {
         const subscriptionId = asStringId(sub.id);
         const status = String(sub.status ?? "").toLowerCase();
         const priceId = asStringId(sub?.items?.data?.[0]?.price);
-        const periodEnd = typeof sub.current_period_end === "number"
-          ? new Date(sub.current_period_end * 1000).toISOString()
-          : null;
+        const periodEnd =
+          typeof sub.current_period_end === "number"
+            ? new Date(sub.current_period_end * 1000).toISOString()
+            : null;
         const userId = sub?.metadata?.supabase_user_id ?? null;
 
         const isActive = status === "active" || status === "trialing";
-        const planTier = isActive ? "pro" : "free";
+        const isCanceledLike =
+          status === "canceled" || status === "unpaid" || status === "incomplete_expired";
+
         const planStatus = status || null;
 
         if (customerId) {
@@ -114,10 +117,17 @@ export async function POST(req: NextRequest) {
             stripe_customer_id: customerId,
             stripe_subscription_id: subscriptionId,
             stripe_price_id: priceId,
-            plan_tier: planTier,
             plan_status: planStatus,
             current_period_end: periodEnd,
           };
+
+          // Only upgrade to pro when truly active/trialing
+          if (isActive) update.plan_tier = "pro";
+
+          // Only downgrade on deletion or clearly canceled-like statuses
+          if (event.type === "customer.subscription.deleted" || isCanceledLike) {
+            update.plan_tier = "free";
+          }
 
           const q = userId
             ? admin.from("profiles").update(update).eq("id", userId)
@@ -134,15 +144,46 @@ export async function POST(req: NextRequest) {
         const customerId = asStringId(invoice.customer);
         if (!customerId) break;
 
-        // Pick first price id from invoice lines
+        const subscriptionId = asStringId(invoice.subscription);
+
+        // Try to get priceId from invoice lines
         const lines: any[] = Array.isArray(invoice?.lines?.data) ? invoice.lines.data : [];
         const lineWithPrice = lines.find((l) => asStringId(l?.price));
-        const priceId = lineWithPrice ? asStringId(lineWithPrice.price) : null;
+        let priceId = lineWithPrice ? asStringId(lineWithPrice.price) : null;
 
-        if (!priceId) break;
+        // Fallback: fetch subscription and read price from items
+        let periodEnd: string | null = null;
+        if (!priceId && subscriptionId) {
+          try {
+            const sub = await stripe.subscriptions.retrieve(subscriptionId, {
+              expand: ["items.data.price"],
+            });
+            priceId = asStringId(sub?.items?.data?.[0]?.price);
+            periodEnd =
+              typeof sub.current_period_end === "number"
+                ? new Date(sub.current_period_end * 1000).toISOString()
+                : null;
+          } catch (e) {
+            console.error("invoice.paid: failed to retrieve subscription", e);
+          }
+        }
+
+        if (!priceId) {
+          console.error("invoice.paid: missing priceId", { customerId, subscriptionId });
+          break;
+        }
 
         const credits = creditsForPrice(priceId);
-        if (!credits || credits < 1) break;
+        if (!credits || credits < 1) {
+          console.error("invoice.paid: creditsForPrice returned null/0", {
+            priceId,
+            envMonthly: process.env.STRIPE_PRICE_PRO_MONTHLY,
+            envYearly: process.env.STRIPE_PRICE_PRO_YEARLY,
+            creditsMonthly: process.env.STRIPE_CREDITS_PRO_MONTHLY,
+            creditsYearly: process.env.STRIPE_CREDITS_PRO_YEARLY,
+          });
+          break;
+        }
 
         const { data: prof, error: profErr } = await admin
           .from("profiles")
@@ -156,7 +197,10 @@ export async function POST(req: NextRequest) {
         }
 
         const userId = (prof as any)?.id;
-        if (!userId) break;
+        if (!userId) {
+          console.error("invoice.paid: no profile found for customer", { customerId });
+          break;
+        }
 
         const rpc = await admin.rpc("grant_credits_v1", {
           p_user_id: userId,
@@ -167,6 +211,19 @@ export async function POST(req: NextRequest) {
         if (rpc.error) {
           console.error("grant_credits_v1 failed", rpc.error);
         }
+
+        // Mark plan as Pro once invoice is paid
+        const update: any = {
+          stripe_customer_id: customerId,
+          stripe_price_id: priceId,
+          plan_tier: "pro",
+          plan_status: "active",
+        };
+        if (subscriptionId) update.stripe_subscription_id = subscriptionId;
+        if (periodEnd) update.current_period_end = periodEnd;
+
+        const up = await admin.from("profiles").update(update).eq("id", userId);
+        if (up.error) console.error("Profile update failed (invoice.paid plan sync)", up.error);
 
         break;
       }
