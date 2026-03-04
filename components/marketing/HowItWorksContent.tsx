@@ -2,6 +2,8 @@ import Link from "next/link";
 import { ArrowRight, UploadCloud, ScanLine, ListChecks, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandIcon } from "@/components/brand-icon";
+import { ModeToggle } from "@/components/mode-toggle";
+import LanguageSwitcherSlot from "@/components/marketing/LanguageSwitcherSlot";
 import { loginWithNextHref } from "@/lib/access-mode";
 
 type HowItWorksDict = {
@@ -82,6 +84,11 @@ export function HowItWorksContent({
               <Button asChild className="rounded-full shadow-lg shadow-blue-500/20 bg-primary text-primary-foreground">
                 <Link href={primaryCtaHref}>{dict.header.cta}</Link>
               </Button>
+
+              <div className="ml-2 pl-2 border-l border-white/10 flex items-center gap-2">
+                <LanguageSwitcherSlot />
+                <ModeToggle />
+              </div>
             </div>
           </div>
         </div>

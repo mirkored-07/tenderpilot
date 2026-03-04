@@ -21,6 +21,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { ModeToggle } from "@/components/mode-toggle";
+import LanguageSwitcherSlot from "@/components/marketing/LanguageSwitcherSlot";
 import { loginWithNextHref } from "@/lib/access-mode";
 
 type LocalePrefix = "" | "/en" | "/de" | "/it" | "/fr" | "/es";
@@ -266,6 +268,11 @@ export function SampleOutputContent({
                   {dict.header.primaryCta} <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
+
+              <div className="ml-2 pl-2 border-l border-white/10 flex items-center gap-2">
+                <LanguageSwitcherSlot />
+                <ModeToggle />
+              </div>
             </div>
           </div>
         </div>

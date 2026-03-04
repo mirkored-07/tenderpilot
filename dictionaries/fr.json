@@ -9,7 +9,8 @@
     "back": "Retour",
     "join": "S’inscrire",
     "export": "Exporter l’exemple (PDF)",
-    "delete": "Supprimer"
+    "delete": "Supprimer",
+    "pricing": "Tarifs"
   },
   "hero": {
     "subtitle": "Aide à la décision go/no-go pour consultants en appels d’offres et PME.",
@@ -539,6 +540,92 @@
       "clarifications": "Clarifications",
       "workItems": "Tâches",
       "evidence": "Preuve"
+    }
+  },
+  "pricingPage": {
+    "hero": {
+      "badge": "Tarifs",
+      "title": "Des tarifs simples pour les équipes appels d’offres",
+      "subtitle": "Commencez gratuitement et passez à une offre supérieure lorsque vous avez besoin de plus de volume. Les offres payantes incluent un prix de lancement pour une durée limitée.",
+      "cta": "Commencer gratuitement"
+    },
+    "ui": {
+      "theme": "Thème",
+      "tipLabel": "Conseil",
+      "tipText": "Importez un dossier et obtenez un cockpit de décision en quelques minutes."
+    },
+    "tiers": {
+      "free": {
+        "name": "Free",
+        "price": "€0",
+        "sub": "1 crédit, une seule fois",
+        "includes": [
+          "1 analyse (cockpit de décision)",
+          "MUST et risques",
+          "Evidence dans l’application",
+          "Pas d’exports"
+        ],
+        "cta": "Commencer gratuitement",
+        "note": "Les exports ne sont pas inclus dans Free."
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "€79 / mois",
+        "after": "Puis €99 / mois",
+        "limited": "Prix de lancement pour une durée limitée",
+        "includes": [
+          "30 crédits par mois",
+          "Exports: Bid Pack (Excel) et CSV",
+          "Matrice de conformité et Bid Room",
+          "Support email"
+        ],
+        "cta": "Passer à Pro",
+        "note": "Idéal pour consultants et bid managers."
+      },
+      "team": {
+        "name": "Team",
+        "price": "€199 / mois",
+        "after": "Puis €249 / mois",
+        "limited": "Prix de lancement pour une durée limitée",
+        "includes": [
+          "100 crédits par mois",
+          "Exports: Bid Pack (Excel) et CSV",
+          "Plus de volume pour petites équipes",
+          "Support prioritaire"
+        ],
+        "cta": "Passer à Team",
+        "note": "Idéal pour petites équipes avec plus de volume."
+      }
+    },
+    "credits": {
+      "title": "Qu’est-ce qu’un crédit ?",
+      "text": "Un crédit lance une analyse d’appel d’offres et génère le cockpit de décision. Les offres payantes incluent les exports et plus de crédits mensuels."
+    },
+    "faq": {
+      "title": "FAQ",
+      "items": [
+        {
+          "q": "Free inclut-il les exports ?",
+          "a": "Free sert à évaluer le cockpit. Les exports sont disponibles sur les offres payantes."
+        },
+        {
+          "q": "Puis-je supprimer mes données ?",
+          "a": "Oui. Vous pouvez supprimer les jobs et les fichiers importés depuis votre compte."
+        },
+        {
+          "q": "Comment gérez-vous la confidentialité ?",
+          "a": "L’accès est isolé par utilisateur et les documents sont servis via des liens signés."
+        }
+      ]
+    },
+    "early_access": {
+      "title": "Accès anticipé",
+      "description": "Inscrivez-vous sur la liste d’attente et nous vous préviendrons lorsque l’accès sera ouvert.",
+      "limited": "Places limitées pendant le lancement."
+    },
+    "footer": {
+      "privacy": "Confidentialité",
+      "terms": "Conditions"
     }
   }
 }

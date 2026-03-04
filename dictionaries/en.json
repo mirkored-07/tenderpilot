@@ -9,7 +9,8 @@
     "back": "Back",
     "join": "Join",
     "export": "Export sample (PDF)",
-    "delete": "Delete"
+    "delete": "Delete",
+    "pricing": "Pricing"
   },
   "hero": {
     "subtitle": "Go/no-go decision support for tender consultants and SMEs.",
@@ -539,6 +540,92 @@
       "clarifications": "Clarifications",
       "workItems": "Work items",
       "evidence": "Evidence"
+    }
+  },
+  "pricingPage": {
+    "hero": {
+      "badge": "Pricing",
+      "title": "Simple pricing for tender teams",
+      "subtitle": "Start free, upgrade when you need more volume. Paid tiers include a limited-time launch price.",
+      "cta": "Start free"
+    },
+    "ui": {
+      "theme": "Theme",
+      "tipLabel": "Tip",
+      "tipText": "Upload a tender and get a decision cockpit in minutes."
+    },
+    "tiers": {
+      "free": {
+        "name": "Free",
+        "price": "€0",
+        "sub": "1 credit one time",
+        "includes": [
+          "1 tender review run (decision cockpit)",
+          "MUST items and risks",
+          "Evidence snippets inside the app",
+          "No exports"
+        ],
+        "cta": "Start free",
+        "note": "Exports are not included in Free."
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "€79 / month",
+        "after": "Then €99 / month",
+        "limited": "Limited-time launch price",
+        "includes": [
+          "30 credits per month",
+          "Exports: Bid Pack (Excel) and CSV",
+          "Compliance matrix and Bid Room",
+          "Email support"
+        ],
+        "cta": "Start Pro",
+        "note": "Best for solo consultants and bid managers."
+      },
+      "team": {
+        "name": "Team",
+        "price": "€199 / month",
+        "after": "Then €249 / month",
+        "limited": "Limited-time launch price",
+        "includes": [
+          "100 credits per month",
+          "Exports: Bid Pack (Excel) and CSV",
+          "Higher volume for small teams",
+          "Priority support"
+        ],
+        "cta": "Start Team",
+        "note": "Best for small teams with higher volume."
+      }
+    },
+    "credits": {
+      "title": "What is a credit?",
+      "text": "One credit runs one tender review and generates the decision cockpit. Paid tiers include exports and more monthly credits."
+    },
+    "faq": {
+      "title": "FAQ",
+      "items": [
+        {
+          "q": "Does Free include exports?",
+          "a": "Free is for evaluating the cockpit. Exports are available on paid tiers."
+        },
+        {
+          "q": "Can I delete my tender data?",
+          "a": "Yes. You can delete jobs and uploaded files from your account."
+        },
+        {
+          "q": "How do you handle privacy and isolation?",
+          "a": "Access is isolated per user and documents are served via signed links."
+        }
+      ]
+    },
+    "early_access": {
+      "title": "Get early access",
+      "description": "Join the waitlist and we will notify you when access opens.",
+      "limited": "Limited spots during launch."
+    },
+    "footer": {
+      "privacy": "Privacy",
+      "terms": "Terms"
     }
   }
 }

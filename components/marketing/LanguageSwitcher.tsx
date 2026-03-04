@@ -31,6 +31,14 @@ function buildTargetPath(pathname: string, search: string, target: Locale) {
   if (first === "en" || first === "de" || first === "it" || first === "es" || first === "fr") {
     parts[1] = target;
     nextPath = parts.join("/") || `/${target}`;
+  } else {
+    // No locale prefix in the URL (default language pages like "/" or "/pricing").
+    // Keep EN canonical without prefix; for other locales, prefix the existing path.
+    if (target === "en") {
+      nextPath = pathname || "/";
+    } else {
+      nextPath = pathname === "/" ? `/${target}` : `/${target}${pathname}`;
+    }
   }
 
   return search ? `${nextPath}?${search}` : nextPath;

@@ -9,7 +9,8 @@
     "back": "Atrás",
     "join": "Unirse",
     "export": "Exportar ejemplo (PDF)",
-    "delete": "Eliminar"
+    "delete": "Eliminar",
+    "pricing": "Precios"
   },
   "hero": {
     "subtitle": "Ayuda para la decisión go/no-go para consultores de licitaciones y pymes.",
@@ -539,6 +540,92 @@
       "clarifications": "Aclaraciones",
       "workItems": "Tareas",
       "evidence": "Evidencia"
+    }
+  },
+  "pricingPage": {
+    "hero": {
+      "badge": "Precios",
+      "title": "Precios simples para equipos de licitaciones",
+      "subtitle": "Empieza gratis y sube de plan cuando necesites más volumen. Los planes de pago incluyen un precio de lanzamiento por tiempo limitado.",
+      "cta": "Empezar gratis"
+    },
+    "ui": {
+      "theme": "Tema",
+      "tipLabel": "Consejo",
+      "tipText": "Sube una licitación y obtén un panel de decisión en pocos minutos."
+    },
+    "tiers": {
+      "free": {
+        "name": "Free",
+        "price": "€0",
+        "sub": "1 crédito, una sola vez",
+        "includes": [
+          "1 análisis (cockpit de decisión)",
+          "MUST y riesgos",
+          "Evidence en la app",
+          "Sin exportaciones"
+        ],
+        "cta": "Empezar gratis",
+        "note": "Las exportaciones no están incluidas en Free."
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "€79 / mes",
+        "after": "Luego €99 / mes",
+        "limited": "Precio de lanzamiento por tiempo limitado",
+        "includes": [
+          "30 créditos al mes",
+          "Exportaciones: Bid Pack (Excel) y CSV",
+          "Matriz de cumplimiento y Bid Room",
+          "Soporte por email"
+        ],
+        "cta": "Pasar a Pro",
+        "note": "Ideal para consultores y bid managers."
+      },
+      "team": {
+        "name": "Team",
+        "price": "€199 / mes",
+        "after": "Luego €249 / mes",
+        "limited": "Precio de lanzamiento por tiempo limitado",
+        "includes": [
+          "100 créditos al mes",
+          "Exportaciones: Bid Pack (Excel) y CSV",
+          "Más volumen para equipos pequeños",
+          "Soporte prioritario"
+        ],
+        "cta": "Pasar a Team",
+        "note": "Ideal para equipos pequeños con más volumen."
+      }
+    },
+    "credits": {
+      "title": "¿Qué es un crédito?",
+      "text": "Un crédito ejecuta un análisis de licitación y genera el panel de decisión. Los planes de pago incluyen exportaciones y más créditos mensuales."
+    },
+    "faq": {
+      "title": "FAQ",
+      "items": [
+        {
+          "q": "¿Free incluye exportaciones?",
+          "a": "Free es para evaluar el cockpit. Las exportaciones están disponibles en los planes de pago."
+        },
+        {
+          "q": "¿Puedo borrar los datos de mi licitación?",
+          "a": "Sí. Puedes eliminar jobs y archivos subidos desde tu cuenta."
+        },
+        {
+          "q": "¿Cómo manejan la privacidad?",
+          "a": "El acceso está aislado por usuario y los documentos se sirven con enlaces firmados."
+        }
+      ]
+    },
+    "early_access": {
+      "title": "Acceso anticipado",
+      "description": "Únete a la lista de espera y te avisaremos cuando el acceso esté disponible.",
+      "limited": "Plazas limitadas durante el lanzamiento."
+    },
+    "footer": {
+      "privacy": "Privacidad",
+      "terms": "Términos"
     }
   }
 }

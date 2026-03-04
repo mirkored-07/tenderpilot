@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { WaitlistInline } from "@/components/marketing/WaitlistInline";
 import { ModeToggle } from "@/components/mode-toggle";
 import { BrandIcon } from "@/components/brand-icon";
+import LanguageSwitcherSlot from "@/components/marketing/LanguageSwitcherSlot";
 import { getAccessMode, loginWithNextHref } from "@/lib/access-mode";
 
 type LandingDict = {
@@ -233,6 +234,7 @@ export default async function LandingPage() {
   const nav = dict.nav as {
     howItWorks: string;
     sample: string;
+    pricing: string;
     title: string;
     menu: string;
   };
@@ -267,6 +269,12 @@ export default async function LandingPage() {
             >
               {nav.sample}
             </Link>
+            <Link
+              href="/pricing"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {nav.pricing}
+            </Link>
             <Button
               asChild
               className="rounded-full shadow-lg shadow-blue-500/20 bg-primary text-primary-foreground ml-2"
@@ -274,7 +282,8 @@ export default async function LandingPage() {
               <Link href={primaryCtaHref}>{t.nav.cta}</Link>
             </Button>
             {/* Theme toggle */}
-            <div className="ml-2 pl-2 border-l border-white/10">
+            <div className="ml-2 pl-2 border-l border-white/10 flex items-center gap-2">
+              <LanguageSwitcherSlot />
               <ModeToggle />
             </div>
           </div>
@@ -299,18 +308,25 @@ export default async function LandingPage() {
                 {nav.sample}
               </Link>
               <Link
+                href="/pricing"
+                className="block rounded-xl px-3 py-2 text-sm hover:bg-white/5 text-muted-foreground hover:text-foreground"
+              >
+                {nav.pricing}
+              </Link>
+              <Link
                 href={primaryCtaHref}
                 className="block rounded-xl px-3 py-2 text-sm font-medium text-blue-400 hover:bg-blue-500/10"
               >
                 {t.nav.cta}
               </Link>
 
-              {/* Mobile theme toggle */}
+              {/* Mobile theme + language */}
               <div className="mt-2 flex items-center justify-between border-t border-white/10 px-3 pt-3 pb-1">
-                <span className="text-sm text-muted-foreground">
-                  {t.nav.theme}
-                </span>
-                <ModeToggle />
+                <span className="text-sm text-muted-foreground">{t.nav.theme}</span>
+                <div className="flex items-center gap-2">
+                  <LanguageSwitcherSlot />
+                  <ModeToggle />
+                </div>
               </div>
             </div>
           </details>

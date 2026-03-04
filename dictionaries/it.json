@@ -9,7 +9,8 @@
     "back": "Indietro",
     "join": "Iscriviti",
     "export": "Esporta esempio (PDF)",
-    "delete": "Elimina"
+    "delete": "Elimina",
+    "pricing": "Prezzi"
   },
   "hero": {
     "subtitle": "Supporto decisionale go/no-go per consulenti gare e PMI.",
@@ -539,6 +540,92 @@
       "clarifications": "Chiarimenti",
       "workItems": "Task",
       "evidence": "Evidenza"
+    }
+  },
+  "pricingPage": {
+    "hero": {
+      "badge": "Prezzi",
+      "title": "Prezzi semplici per i team che rispondono ai bandi",
+      "subtitle": "Inizia gratis e passa al piano superiore quando ti serve più volume. I piani a pagamento includono un prezzo di lancio per un periodo limitato.",
+      "cta": "Inizia gratis"
+    },
+    "ui": {
+      "theme": "Tema",
+      "tipLabel": "Consiglio",
+      "tipText": "Carica un bando e ottieni un decision cockpit in pochi minuti."
+    },
+    "tiers": {
+      "free": {
+        "name": "Free",
+        "price": "€0",
+        "sub": "1 credito una tantum",
+        "includes": [
+          "1 analisi bando (decision cockpit)",
+          "MUST e rischi",
+          "Evidence in app",
+          "Nessun export"
+        ],
+        "cta": "Inizia gratis",
+        "note": "Gli export non sono inclusi nel piano Free."
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "€79 / mese",
+        "after": "Poi €99 / mese",
+        "limited": "Prezzo di lancio per un periodo limitato",
+        "includes": [
+          "30 crediti al mese",
+          "Export: Bid Pack (Excel) e CSV",
+          "Compliance matrix e Bid Room",
+          "Supporto email"
+        ],
+        "cta": "Passa a Pro",
+        "note": "Ideale per consulenti e bid manager."
+      },
+      "team": {
+        "name": "Team",
+        "price": "€199 / mese",
+        "after": "Poi €249 / mese",
+        "limited": "Prezzo di lancio per un periodo limitato",
+        "includes": [
+          "100 crediti al mese",
+          "Export: Bid Pack (Excel) e CSV",
+          "Più volume per piccoli team",
+          "Supporto prioritario"
+        ],
+        "cta": "Passa a Team",
+        "note": "Ideale per piccoli team con più volume."
+      }
+    },
+    "credits": {
+      "title": "Cos’è un credito?",
+      "text": "Un credito avvia una revisione del bando e genera il decision cockpit. I piani a pagamento includono export e più crediti mensili."
+    },
+    "faq": {
+      "title": "FAQ",
+      "items": [
+        {
+          "q": "Il piano Free include gli export?",
+          "a": "Il Free serve per valutare il cockpit. Gli export sono disponibili nei piani a pagamento."
+        },
+        {
+          "q": "Posso cancellare i dati del bando?",
+          "a": "Sì. Puoi eliminare job e file caricati dal tuo account."
+        },
+        {
+          "q": "Come gestite privacy e isolamento?",
+          "a": "Gli accessi sono isolati per utente e i documenti vengono serviti tramite link firmati."
+        }
+      ]
+    },
+    "early_access": {
+      "title": "Accesso anticipato",
+      "description": "Iscriviti alla waitlist e ti avviseremo quando l’accesso sarà disponibile.",
+      "limited": "Posti limitati durante il lancio."
+    },
+    "footer": {
+      "privacy": "Privacy",
+      "terms": "Termini"
     }
   }
 }

@@ -259,6 +259,7 @@ export default async function LandingPage() {
   const nav = dict.nav as {
     howItWorks: string;
     sample: string;
+    pricing: string;
     title: string;
     menu: string;
   };
@@ -293,6 +294,12 @@ export default async function LandingPage() {
             >
               {nav.sample}
             </Link>
+            <Link
+              href="/de/pricing"
+              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {nav.pricing}
+            </Link>
             <Button
               asChild
               className="rounded-full shadow-lg shadow-blue-500/20 bg-primary text-primary-foreground ml-2"
@@ -324,6 +331,12 @@ export default async function LandingPage() {
                 className="block rounded-xl px-3 py-2 text-sm hover:bg-white/5 text-muted-foreground hover:text-foreground"
               >
                 {nav.sample}
+              </Link>
+              <Link
+                href="/de/pricing"
+                className="block rounded-xl px-3 py-2 text-sm hover:bg-white/5 text-muted-foreground hover:text-foreground"
+              >
+                {nav.pricing}
               </Link>
               <Link
                 href={primaryCtaHref}

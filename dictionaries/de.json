@@ -9,7 +9,8 @@
     "back": "Zurück",
     "join": "Beitreten",
     "export": "Beispiel exportieren (PDF)",
-    "delete": "Löschen"
+    "delete": "Löschen",
+    "pricing": "Preise"
   },
   "hero": {
     "subtitle": "Go/No-Go Entscheidungshilfe für Ausschreibungsberater und KMU.",
@@ -539,6 +540,92 @@
       "clarifications": "Klärungen",
       "workItems": "Tasks",
       "evidence": "Beleg"
+    }
+  },
+  "pricingPage": {
+    "hero": {
+      "badge": "Preise",
+      "title": "Klare Preise für Ausschreibungsteams",
+      "subtitle": "Kostenlos starten und upgraden, wenn mehr Volumen nötig ist. Bezahlte Tarife enthalten einen zeitlich begrenzten Launch-Preis.",
+      "cta": "Kostenlos starten"
+    },
+    "ui": {
+      "theme": "Theme",
+      "tipLabel": "Tipp",
+      "tipText": "Laden Sie eine Ausschreibung hoch und erhalten Sie in wenigen Minuten ein Decision Cockpit."
+    },
+    "tiers": {
+      "free": {
+        "name": "Free",
+        "price": "€0",
+        "sub": "1 Credit einmalig",
+        "includes": [
+          "1 Tender Analyse (Decision Cockpit)",
+          "MUST Items und Risiken",
+          "Evidence Snippets in der App",
+          "Keine Exporte"
+        ],
+        "cta": "Kostenlos starten",
+        "note": "Exporte sind im Free Plan nicht enthalten."
+      },
+      "pro": {
+        "name": "Pro",
+        "price": "€79 / Monat",
+        "after": "Danach €99 / Monat",
+        "limited": "Launch-Preis für begrenzte Zeit",
+        "includes": [
+          "30 Credits pro Monat",
+          "Exporte: Bid Pack (Excel) und CSV",
+          "Compliance Matrix und Bid Room",
+          "E Mail Support"
+        ],
+        "cta": "Pro starten",
+        "note": "Für Solo-Berater und Bid Manager."
+      },
+      "team": {
+        "name": "Team",
+        "price": "€199 / Monat",
+        "after": "Danach €249 / Monat",
+        "limited": "Launch-Preis für begrenzte Zeit",
+        "includes": [
+          "100 Credits pro Monat",
+          "Exporte: Bid Pack (Excel) und CSV",
+          "Mehr Volumen für kleine Teams",
+          "Priorisierter Support"
+        ],
+        "cta": "Team starten",
+        "note": "Für kleine Teams mit höherem Volumen."
+      }
+    },
+    "credits": {
+      "title": "Was ist ein Credit?",
+      "text": "Ein Credit startet eine Tender-Analyse und erzeugt das Decision Cockpit. Bezahlte Tarife enthalten Exporte und mehr monatliche Credits."
+    },
+    "faq": {
+      "title": "FAQ",
+      "items": [
+        {
+          "q": "Sind Exporte im Free Plan enthalten?",
+          "a": "Free ist zum Testen des Cockpits gedacht. Exporte sind in den bezahlten Tarifen verfügbar."
+        },
+        {
+          "q": "Kann ich meine Tender-Daten löschen?",
+          "a": "Ja. Sie können Jobs und Uploads in Ihrem Account löschen."
+        },
+        {
+          "q": "Wie wird Datenschutz umgesetzt?",
+          "a": "Zugriffe sind pro Nutzer isoliert und Dokumente werden über signierte Links bereitgestellt."
+        }
+      ]
+    },
+    "early_access": {
+      "title": "Frühen Zugriff erhalten",
+      "description": "Tragen Sie sich in die Warteliste ein und wir melden uns, sobald der Zugang geöffnet ist.",
+      "limited": "Begrenzte Plätze zum Launch."
+    },
+    "footer": {
+      "privacy": "Datenschutz",
+      "terms": "AGB"
     }
   }
 }
