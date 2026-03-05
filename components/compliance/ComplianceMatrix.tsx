@@ -50,10 +50,10 @@ function normalizeType(raw: any): ReqType {
   return "INFO";
 }
 
-function kindBadge(kind: ReqType) {
-  if (kind === "MUST") return <Badge className="rounded-full">MUST</Badge>;
-  if (kind === "SHOULD") return <Badge variant="secondary" className="rounded-full">SHOULD</Badge>;
-  return <Badge variant="outline" className="rounded-full">Info</Badge>;
+function kindBadge(kind: ReqType, t: (k: string) => string) {
+  if (kind === "MUST") return <Badge className="rounded-full">{t("app.compliance.level.must")}</Badge>;
+  if (kind === "SHOULD") return <Badge variant="secondary" className="rounded-full">{t("app.compliance.level.should")}</Badge>;
+  return <Badge variant="outline" className="rounded-full">{t("app.compliance.level.info")}</Badge>;
 }
 
 function parseJsonNotes(raw: any): any {
@@ -75,12 +75,12 @@ function stringifyJsonNotes(obj: any) {
   }
 }
 
-function statusLabel(s: ComplianceStatus) {
-  if (s === "compliant") return "Compliant";
-  if (s === "partial") return "Partial";
-  if (s === "noncompliant") return "Non-compliant";
-  if (s === "na") return "N/A";
-  return "TBD";
+function statusLabel(s: ComplianceStatus, t: (k: string) => string) {
+  if (s === "compliant") return t("app.compliance.status.compliant");
+  if (s === "partial") return t("app.compliance.status.partial");
+  if (s === "noncompliant") return t("app.compliance.status.noncompliant");
+  if (s === "na") return t("app.compliance.status.na");
+  return t("app.compliance.status.tbd");
 }
 
 function isGapStatus(s: ComplianceStatus) {
@@ -176,7 +176,7 @@ export function ComplianceMatrix(props: {
 
     if (error) {
       console.warn("Failed to load compliance overlays", error);
-      setWorkError("Compliance overlays could not be loaded.");
+      setWorkError(t("app.compliance.errors.overlaysLoadFailed"));
       setCmItems([]);
       return;
     }
@@ -238,11 +238,11 @@ export function ComplianceMatrix(props: {
     const now = Date.now();
     // cache for ~10 minutes
     if (pdfUrl && now - pdfUrlFetchedAtRef.current < 10 * 60 * 1000) return pdfUrl;
-    if (!jobFilePath) throw new Error("No PDF file is attached to this job.");
+    if (!jobFilePath) throw new Error(t("app.compliance.errors.noPdf"));
 
     const supabase = supabaseBrowser();
     const { data, error } = await supabase.storage.from("uploads").createSignedUrl(jobFilePath, 60 * 30);
-    if (error || !data?.signedUrl) throw new Error("Could not open the PDF.");
+    if (error || !data?.signedUrl) throw new Error(t("app.compliance.errors.openPdfFailed"));
     setPdfUrl(data.signedUrl);
     pdfUrlFetchedAtRef.current = now;
     return data.signedUrl;
@@ -258,7 +258,7 @@ export function ComplianceMatrix(props: {
       window.open(url, "_blank", "noopener,noreferrer");
     } catch (e: any) {
       const msg = String(e?.message ?? "").trim();
-      setWorkError(msg || "Could not open the PDF.");
+      setWorkError(msg || t("app.compliance.errors.openPdfFailed"));
     }
   }
 
@@ -303,13 +303,16 @@ export function ComplianceMatrix(props: {
       if (existing) {
         setSendState((p) => ({ ...p, [k]: "exists" }));
         setToast({
-          title: "Already in Bid Room",
+          title: t("app.compliance.send.exists"),
           description: "This requirement already exists as an execution item.",
           action: workHref ? "OPEN_BID_ROOM" : undefined,
         });
         return;
       }
 
+      const noteParts: string[] = [t("app.compliance.send.noteBase", { status: statusLabel(cmStatus, t) })];
+      if (proposalSection) noteParts.push(t("app.compliance.send.noteProposal", { proposal: proposalSection }));
+      if (note) noteParts.push(t("app.compliance.send.noteNote", { note }));
       const payload: any = {
         job_id: jobId,
         type: "requirement",
@@ -318,7 +321,7 @@ export function ComplianceMatrix(props: {
         status: "todo",
         owner_label: null,
         due_at: null,
-        notes: `From Compliance Matrix — Status: ${statusLabel(cmStatus)}${proposalSection ? ` • Proposal: ${proposalSection}` : ""}${note ? ` • Note: ${note}` : ""}`,
+        notes: noteParts.join(" • "),
       };
       const { error } = await supabase.from("job_work_items").insert(payload);
       if (error) throw error;
@@ -331,7 +334,7 @@ export function ComplianceMatrix(props: {
     } catch (e: any) {
       const msg = String(e?.message ?? e?.error_description ?? e?.details ?? "").trim();
       console.error(e);
-      setWorkError(msg ? `Could not send to Bid Room: ${msg}` : "Could not send to Bid Room.");
+      setWorkError(msg ? t("app.compliance.errors.sendFailedWithMsg", { msg }) : t("app.compliance.errors.sendFailed"));
       setSendState((p) => ({ ...p, [k]: "idle" }));
     }
   }
@@ -564,7 +567,7 @@ export function ComplianceMatrix(props: {
         status: e?.status,
       });
       console.error("ComplianceMatrix upsertCompliance raw", e);
-      setWorkError(msg ? `Could not save changes: ${msg}` : "Could not save changes.");
+      setWorkError(msg ? t("app.compliance.errors.saveFailedWithMsg", { msg }) : t("app.compliance.errors.saveFailed"));
       // Roll back optimistic UI to the last known server state.
       try { await refreshWork(); } catch { /* ignore */ }
     } finally {
@@ -576,7 +579,7 @@ export function ComplianceMatrix(props: {
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold">Proposal coverage</h1>
+          <h1 className="text-xl font-semibold">{t("app.compliance.proposalCoverage")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Audit lens for requirements. Set compliance stance and map where each requirement is addressed in the proposal.
           </p>
@@ -588,7 +591,7 @@ export function ComplianceMatrix(props: {
         <div className="flex items-center gap-2">
           {workHref ? (
             <Button asChild className="rounded-full">
-				  <Link href={workHref}>Open Bid Room</Link>
+				  <Link href={workHref}>{t("app.dashboard.menu.openBidRoom")}</Link>
             </Button>
           ) : null}
 
@@ -606,7 +609,7 @@ export function ComplianceMatrix(props: {
                   exportMatrixCsv();
                 }}
               >
-                <FileDown className="h-4 w-4" /> Export CSV
+                <FileDown className="h-4 w-4" /> {t("app.compliance.actions.exportCsv")}
               </DropdownMenuItem>
 
               <DropdownMenuItem
@@ -615,7 +618,7 @@ export function ComplianceMatrix(props: {
                   openPdfAtEvidence(undefined);
                 }}
               >
-                <FileText className="h-4 w-4" /> Open PDF
+                <FileText className="h-4 w-4" /> {t("app.compliance.actions.openPdf")}
               </DropdownMenuItem>
 
               {backHref ? (
@@ -646,7 +649,7 @@ export function ComplianceMatrix(props: {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <Card className="rounded-2xl">
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Gate</p>
+            <p className="text-xs text-muted-foreground">{t("app.compliance.view.gate")}</p>
             <p className="mt-1 text-sm font-semibold">
               {summary.mustGaps === 0 ? "Submission-ready (MUST covered)" : `MUST gaps: ${summary.mustGaps}`}
             </p>
@@ -655,14 +658,14 @@ export function ComplianceMatrix(props: {
         </Card>
         <Card className="rounded-2xl">
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Gaps</p>
+            <p className="text-xs text-muted-foreground">{t("app.compliance.view.gaps")}</p>
             <p className="mt-1 text-sm font-semibold">{summary.gaps} / {summary.total}</p>
             <p className="mt-1 text-xs text-muted-foreground">TBD: {summary.tbd} • Partial: {summary.partial} • Non-compliant: {summary.non}</p>
           </CardContent>
         </Card>
         <Card className="rounded-2xl">
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Covered</p>
+            <p className="text-xs text-muted-foreground">{t("app.compliance.view.covered")}</p>
             <p className="mt-1 text-sm font-semibold">{summary.compliant + summary.na} / {summary.total}</p>
             <p className="mt-1 text-xs text-muted-foreground">Compliant: {summary.compliant} • N/A: {summary.na}</p>
           </CardContent>
@@ -686,10 +689,10 @@ export function ComplianceMatrix(props: {
                 value={levelFilter}
                 onChange={(e) => setLevelFilter(e.target.value as any)}
               >
-                <option value="ALL">All levels</option>
-                <option value="MUST">MUST</option>
-                <option value="SHOULD">SHOULD</option>
-                <option value="INFO">INFO</option>
+                <option value="ALL">{t("app.compliance.filters.allLevels")}</option>
+                <option value="MUST">{t("app.compliance.level.must")}</option>
+                <option value="SHOULD">{t("app.compliance.level.should")}</option>
+                <option value="INFO">{t("app.compliance.level.infoUpper")}</option>
               </select>
 
               <select
@@ -697,23 +700,23 @@ export function ComplianceMatrix(props: {
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as any)}
               >
-                <option value="ALL">All statuses</option>
-                <option value="tbd">TBD</option>
-                <option value="partial">Partial</option>
-                <option value="noncompliant">Non-compliant</option>
-                <option value="compliant">Compliant</option>
-                <option value="na">N/A</option>
+                <option value="ALL">{t("app.compliance.filters.allStatuses")}</option>
+                <option value="tbd">{statusLabel("tbd", t)}</option>
+                <option value="partial">{statusLabel("partial", t)}</option>
+                <option value="noncompliant">{statusLabel("noncompliant", t)}</option>
+                <option value="compliant">{statusLabel("compliant", t)}</option>
+                <option value="na">{statusLabel("na", t)}</option>
               </select>
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <Badge variant="outline" className="rounded-full">Rows: {filteredRows.length}</Badge>
-                <Badge variant="outline" className="rounded-full">Evidence map: {evidenceById.size}</Badge>
+                <Badge variant="outline" className="rounded-full">{t("app.compliance.stats.rows", { count: filteredRows.length })}</Badge>
+                <Badge variant="outline" className="rounded-full">{t("app.compliance.stats.evidenceMap", { count: evidenceById.size })}</Badge>
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">View</span>
+                <span className="text-xs text-muted-foreground">{t("app.compliance.filters.view")}</span>
                 <div className="flex items-center rounded-full border bg-background p-0.5">
                   <Button
                     type="button"
@@ -743,7 +746,7 @@ export function ComplianceMatrix(props: {
         <CardContent className="p-0">
           <div className="px-4 py-3 text-xs font-semibold text-muted-foreground">
             {viewMode === "GAPS" ? "Gaps queue" : "Full matrix"}
-            <span className="ml-2 font-normal">• set stance, map proposal section, justify with evidence</span>
+            <span className="ml-2 font-normal">{t("app.compliance.helper.setStance")}</span>
           </div>
           <Separator />
 
@@ -765,12 +768,12 @@ export function ComplianceMatrix(props: {
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          {kindBadge(r.kind)}
+                          {kindBadge(r.kind, t)}
                           <Badge variant="outline" className="rounded-full text-[11px] font-mono">{r.base_ref_key}</Badge>
                           {isGapStatus(complianceStatus) ? (
-                            <Badge variant="secondary" className="rounded-full">Gap</Badge>
+                            <Badge variant="secondary" className="rounded-full">{t("app.compliance.badges.gap")}</Badge>
                           ) : (
-                            <Badge variant="outline" className="rounded-full">Covered</Badge>
+                            <Badge variant="outline" className="rounded-full">{t("app.compliance.view.covered")}</Badge>
                           )}
                         </div>
 
@@ -782,9 +785,9 @@ export function ComplianceMatrix(props: {
                       </div>
 
                       <div className="w-full lg:w-[420px]">
-                        <div className="grid grid-cols-12 gap-2">
-                          <div className="col-span-5">
-                            <label className="text-[11px] font-medium text-muted-foreground">Compliance stance</label>
+                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-12">
+                          <div className="col-span-12 sm:col-span-5">
+                            <label className="text-[11px] font-medium text-muted-foreground">{t("app.compliance.fields.stance")}</label>
                             <select
                               className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-xs"
                               value={complianceStatus}
@@ -808,16 +811,16 @@ export function ComplianceMatrix(props: {
                                 });
                               }}
                             >
-                              <option value="tbd">{statusLabel("tbd")}</option>
-                              <option value="compliant">{statusLabel("compliant")}</option>
-                              <option value="partial">{statusLabel("partial")}</option>
-                              <option value="noncompliant">{statusLabel("noncompliant")}</option>
-                              <option value="na">{statusLabel("na")}</option>
+                              <option value="tbd">{statusLabel("tbd", t)}</option>
+                              <option value="compliant">{statusLabel("compliant", t)}</option>
+                              <option value="partial">{statusLabel("partial", t)}</option>
+                              <option value="noncompliant">{statusLabel("noncompliant", t)}</option>
+                              <option value="na">{statusLabel("na", t)}</option>
                             </select>
                           </div>
 
-                          <div className="col-span-7">
-                            <label className="text-[11px] font-medium text-muted-foreground">Proposal section</label>
+                          <div className="col-span-12 sm:col-span-7">
+                            <label className="text-[11px] font-medium text-muted-foreground">{t("app.compliance.fields.proposalSection")}</label>
                             <Input
                               value={proposalSection}
                               placeholder="e.g. 2.1 / Annex A"
@@ -833,11 +836,11 @@ export function ComplianceMatrix(props: {
                                   else next.unshift({ job_id: jobId, type: "requirement", ref_key: r.cm_ref_key, title: r.text, status: "todo", notes: merged });
                                   return next;
                                 });
-                                scheduleCmSave(`${r.cm_ref_key}:note`, () => {
+                                scheduleCmSave(`${r.cm_ref_key}:proposalSection`, () => {
                                   void upsertCompliance({
                                     cm_ref_key: r.cm_ref_key,
                                     title: r.text,
-                                    note: v,
+                                    proposalSection: v,
                                   });
                                 });
                               }}
@@ -852,7 +855,7 @@ export function ComplianceMatrix(props: {
                           </div>
 
                           <div className="col-span-12">
-                            <label className="text-[11px] font-medium text-muted-foreground">Audit note</label>
+                            <label className="text-[11px] font-medium text-muted-foreground">{t("app.compliance.fields.auditNote")}</label>
                             <Input
                               value={note}
                               placeholder="Why this stance (short, audit-friendly)"
@@ -941,7 +944,7 @@ export function ComplianceMatrix(props: {
           <div className="absolute right-0 top-0 h-full w-full max-w-[520px] border-l bg-background shadow-xl">
             <div className="flex items-start justify-between gap-3 border-b p-4">
               <div>
-                <p className="text-sm font-semibold">Evidence & justification</p>
+                <p className="text-sm font-semibold">{t("app.compliance.drawer.evidenceJustification")}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Excerpt is authoritative. Locate in PDF is best-effort.
                 </p>
@@ -956,7 +959,7 @@ export function ComplianceMatrix(props: {
                 <>
                   <div className="space-y-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      {kindBadge(drawerReq.kind)}
+                      {kindBadge(drawerReq.kind, t)}
                       <Badge variant="outline" className="rounded-full text-[11px] font-mono">{drawerReq.base_ref_key}</Badge>
                     </div>
                     <p className="text-sm font-medium leading-snug">{drawerReq.text}</p>
@@ -965,7 +968,7 @@ export function ComplianceMatrix(props: {
                   <Separator />
 
                   <div className="space-y-2">
-                    <p className="text-xs font-semibold text-muted-foreground">Evidence ID</p>
+                    <p className="text-xs font-semibold text-muted-foreground">{t("app.exports.headers.evidence_id")}</p>
                     {drawerReq.evidenceIds?.length ? (
                       <select
                         className="h-9 w-full rounded-md border bg-background px-2 text-xs"
@@ -979,7 +982,7 @@ export function ComplianceMatrix(props: {
                         ))}
                       </select>
                     ) : (
-                      <p className="text-sm text-muted-foreground">No evidence ids available.</p>
+                      <p className="text-sm text-muted-foreground">{t("app.compliance.drawer.noEvidenceIds")}</p>
                     )}
                   </div>
 
@@ -988,7 +991,7 @@ export function ComplianceMatrix(props: {
                       <Separator />
                       <div className="space-y-2">
                         <div className="flex items-center justify-between gap-2">
-                          <p className="text-xs font-semibold text-muted-foreground">Authoritative excerpt</p>
+                          <p className="text-xs font-semibold text-muted-foreground">{t("app.compliance.drawer.authoritativeExcerpt")}</p>
                           <Button
                             type="button"
                             variant="outline"
@@ -1028,7 +1031,7 @@ export function ComplianceMatrix(props: {
                   ) : null}
                 </>
               ) : (
-                <p className="text-sm text-muted-foreground">No requirement selected.</p>
+                <p className="text-sm text-muted-foreground">{t("app.compliance.drawer.noRequirementSelected")}</p>
               )}
             </div>
           </div>
@@ -1066,7 +1069,7 @@ export function ComplianceMatrix(props: {
                     window.location.href = workHref;
                   }}
                 >
-                  Open bid room
+                  {t("app.compliance.actions.openBidRoom")}
                 </Button>
               </div>
             ) : null}

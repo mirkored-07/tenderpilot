@@ -64,32 +64,36 @@ type DbJobMetadata = {
   updated_at: string;
 };
 
+const FILTER_ALL = "__all__";
+const FILTER_UNASSIGNED = "__unassigned__";
+
 function DecisionBadge({ raw }: { raw: string }) {
+  const { t } = useAppI18n();
   const b = decisionBucket(raw);
   if (b === "no-go") {
     return (
       <Badge variant="destructive" className="rounded-full">
-        No-Go
+        {t("app.decision.noGo")}
       </Badge>
     );
   }
   if (b === "hold") {
     return (
       <Badge variant="secondary" className="rounded-full">
-        Hold
+        {t("app.decision.hold")}
       </Badge>
     );
   }
   if (b === "go") {
     return (
       <Badge variant="default" className="rounded-full">
-        Go
+        {t("app.decision.go")}
       </Badge>
     );
   }
   return (
     <Badge variant="outline" className="rounded-full">
-      Unknown
+      {t("app.common.unknown")}
     </Badge>
   );
 }
@@ -270,8 +274,8 @@ export default function DashboardPage() {
   const [jobMeta, setJobMeta] = useState<Record<string, DbJobMetadata>>({});
   const [workItems, setWorkItems] = useState<DbWorkItem[]>([]);
 
-  const [ownerFilter, setOwnerFilter] = useState<string>("All");
-  const [decisionFilter, setDecisionFilter] = useState<string>("All");
+  const [ownerFilter, setOwnerFilter] = useState<string>(FILTER_ALL);
+  const [decisionFilter, setDecisionFilter] = useState<string>(FILTER_ALL);
   const [windowDays, setWindowDays] = useState<number>(30);
 
   // Layout controls (progressive disclosure)
@@ -430,7 +434,7 @@ export default function DashboardPage() {
     const now = new Date();
 
     for (const wi of workItems ?? []) {
-      const owner = String(wi.owner_label ?? "").trim() || "Unassigned";
+      const owner = String(wi.owner_label ?? "").trim() || FILTER_UNASSIGNED;
       const row = m.get(owner) || { total: 0, blocked: 0, overdue: 0 };
       row.total += 1;
       if (String(wi.status ?? "") === "blocked") row.blocked += 1;
@@ -453,16 +457,16 @@ export default function DashboardPage() {
       const o = String(jobMeta[j.id]?.owner_label ?? "").trim();
       if (o) set.add(o);
     }
-    return ["All", ...Array.from(set).filter(Boolean)];
+    return [FILTER_ALL, ...Array.from(set).filter(Boolean)];
   }, [workloadByOwner, jobs, jobMeta]);
 
   const filteredRows = useMemo(() => {
     return dashboardRows.filter((r) => {
-      if (decisionFilter !== "All" && r.decisionBucket !== decisionFilter) return false;
-      if (ownerFilter === "All") return true;
+      if (decisionFilter !== FILTER_ALL && r.decisionBucket !== decisionFilter) return false;
+      if (ownerFilter === FILTER_ALL) return true;
 
       const items = workItems.filter((w) => String(w.job_id) === r.job.id);
-      const hasOwner = items.some((w) => (String(w.owner_label ?? "").trim() || "Unassigned") === ownerFilter);
+      const hasOwner = items.some((w) => (String(w.owner_label ?? "").trim() || FILTER_UNASSIGNED) === ownerFilter);
 
       const metaOwner = String(jobMeta[r.job.id]?.owner_label ?? "").trim();
       const hasMetaOwner = metaOwner && metaOwner === ownerFilter;
@@ -578,10 +582,10 @@ return {
     const now = new Date();
     const buckets = [
       { label: t("app.dashboard.kpi.chart.overdue"), value: 0 },
-      { label: "0-7d", value: 0 },
-      { label: "8-30d", value: 0 },
-      { label: "31-90d", value: 0 },
-      { label: "Unknown", value: 0 },
+      { label: t("app.dashboard.kpi.chart.next7"), value: 0 },
+      { label: t("app.dashboard.kpi.chart.next30"), value: 0 },
+      { label: t("app.dashboard.kpi.chart.next90"), value: 0 },
+      { label: t("app.common.unknown"), value: 0 },
     ];
 
     for (const r of filteredRows) {
@@ -625,7 +629,7 @@ return {
       .filter((w) => String(w?.status ?? "").toLowerCase() === "blocked")
       .map((w) => ({
         ...w,
-        displayOwner: String(w.owner_label ?? "").trim() || "Unassigned",
+        displayOwner: String(w.owner_label ?? "").trim() || "",
       }))
       .slice(0, 10);
   }, [workItems]);
@@ -674,8 +678,8 @@ return {
       <div className="mx-auto max-w-6xl space-y-6 py-8">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Bid manager dashboard</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Loading…</p>
+            <h1 className="text-2xl font-semibold tracking-tight">{t("app.dashboard.title")}</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{t("app.common.loading")}…</p>
           </div>
           <Button variant="outline" className="rounded-full" onClick={loadAll}>
             {t("app.common.refresh")}
@@ -938,9 +942,9 @@ return {
                   <div className="mt-3 flex items-center gap-4">
                     <DonutChart
                       parts={[
-                        { label: "Go", value: go },
-                        { label: "Hold", value: hold },
-                        { label: "No-Go", value: nogo },
+                        { label: t("app.decision.go"), value: go },
+                        { label: t("app.decision.hold"), value: hold },
+                        { label: t("app.decision.noGo"), value: nogo },
                         { label: t("app.common.unknown"), value: unknown },
                       ]}
                       size={72}
@@ -979,7 +983,7 @@ return {
           >
             {owners.map((o) => (
               <option key={o} value={o}>
-                {o === "All" ? t("app.common.all") : o === "Unassigned" ? t("app.dashboard.labels.unassigned") : o}
+                {o === FILTER_ALL ? t("app.common.all") : o === FILTER_UNASSIGNED ? t("app.dashboard.labels.unassigned") : o}
               </option>
             ))}
           </select>
@@ -990,10 +994,10 @@ return {
             value={decisionFilter}
             onChange={(e) => setDecisionFilter(e.target.value)}
           >
-            <option value="All">{t("app.common.all")}</option>
-            <option value="go">Go</option>
-            <option value="hold">Hold</option>
-            <option value="no-go">No-Go</option>
+            <option value={FILTER_ALL}>{t("app.common.all")}</option>
+            <option value="go">{t("app.decision.go")}</option>
+            <option value="hold">{t("app.decision.hold")}</option>
+            <option value="no-go">{t("app.decision.noGo")}</option>
             <option value="unknown">{t("app.common.unknown")}</option>
           </select>
         </div>
@@ -1042,7 +1046,7 @@ return {
               </div>
               <div className="mt-2 space-y-1">
                 {standupQueues.needsTriage.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">No jobs need triage.</p>
+                  <p className="text-xs text-muted-foreground">{t("app.dashboard.empty.noNeedsTriage")}</p>
                 ) : (
                   (() => {
                     const expanded = !!queueExpand.needsTriage;
@@ -1054,7 +1058,7 @@ return {
                             <Link className="text-sm underline-offset-2 hover:underline" href={`/app/jobs/${r.job.id}`}>
                               {r.displayName}
                             </Link>
-                            <span className="text-xs text-muted-foreground">Owner: —</span>
+                            <span className="text-xs text-muted-foreground">{t("app.dashboard.filters.owner")}: {t("app.common.unknown")}</span>
                           </div>
                         ))}
                         {standupQueues.needsTriage.length > 6 ? (
@@ -1081,7 +1085,7 @@ return {
               </div>
               <div className="mt-2 space-y-1">
                 {standupQueues.deadlineUnknown.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">All visible jobs have a deadline (or override).</p>
+                  <p className="text-xs text-muted-foreground">{t("app.dashboard.empty.allHaveDeadline")}</p>
                 ) : (
                   (() => {
                     const expanded = !!queueExpand.deadlineUnknown;
@@ -1093,7 +1097,7 @@ return {
                             <Link className="text-sm underline-offset-2 hover:underline" href={`/app/jobs/${r.job.id}`}>
                               {r.displayName}
                             </Link>
-                            <span className="text-xs text-muted-foreground">Add override</span>
+                            <span className="text-xs text-muted-foreground">{t("app.dashboard.actions.addOverride")}</span>
                           </div>
                         ))}
                         {standupQueues.deadlineUnknown.length > 6 ? (
@@ -1112,15 +1116,15 @@ return {
               </div>
             </div>
 
-            {/* Due next 7 days */}
+            {/* {t("app.dashboard.sections.dueNext7Title")} */}
             <div className="rounded-xl border p-3">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">Due next 7 days</p>
+                <p className="text-sm font-medium">{t("app.dashboard.sections.dueNext7Title")}</p>
                 <span className="text-xs text-muted-foreground">{standupQueues.dueNext7.length}</span>
               </div>
               <div className="mt-2 space-y-1">
                 {standupQueues.dueNext7.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">No jobs due within 7 days.</p>
+                  <p className="text-xs text-muted-foreground">{t("app.dashboard.empty.noDueNext7")}</p>
                 ) : (
                   (() => {
                     const expanded = !!queueExpand.dueNext7;
@@ -1161,7 +1165,7 @@ return {
               </div>
               <div className="mt-2 space-y-1">
                 {standupQueues.overdueWorkItems.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">No overdue work items.</p>
+                  <p className="text-xs text-muted-foreground">{t("app.dashboard.empty.noOverdueWorkItems")}</p>
                 ) : (
                   (() => {
                     const expanded = !!queueExpand.overdueWorkItems;
@@ -1204,7 +1208,7 @@ return {
               </div>
               <div className="mt-2 space-y-1">
                 {standupQueues.blockedItems.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">No blocked items.</p>
+                  <p className="text-xs text-muted-foreground">{t("app.dashboard.empty.noBlockedItems")}</p>
                 ) : (
                   (() => {
                     const expanded = !!queueExpand.blockedItems;
@@ -1243,7 +1247,7 @@ return {
               </div>
               <div className="mt-2 space-y-1">
                 {standupQueues.unassignedItems.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">No unassigned items.</p>
+                  <p className="text-xs text-muted-foreground">{t("app.dashboard.empty.noUnassignedItems")}</p>
                 ) : (
                   (() => {
                     const expanded = !!queueExpand.unassignedItems;
@@ -1255,7 +1259,7 @@ return {
                             <Link className="text-sm underline-offset-2 hover:underline" href={`/app/jobs/${wi.job_id}`}>
                               {String(wi.title || wi.ref_key || t("app.dashboard.labels.workItem"))}
                             </Link>
-                            <span className="text-xs text-muted-foreground">Owner: —</span>
+                            <span className="text-xs text-muted-foreground">{t("app.dashboard.filters.owner")}: {t("app.common.unknown")}</span>
                           </div>
                         ))}
                         {standupQueues.unassignedItems.length > 6 ? (
@@ -1282,7 +1286,7 @@ return {
               </div>
               <div className="mt-2 space-y-1">
                 {standupQueues.clarificationsPending.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">No open clarification items.</p>
+                  <p className="text-xs text-muted-foreground">{t("app.dashboard.empty.noOpenClarifications")}</p>
                 ) : (
                   (() => {
                     const expanded = !!queueExpand.clarificationsPending;
@@ -1332,12 +1336,12 @@ return {
               <Card className="rounded-2xl">
                 <CardContent className="p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold">Hold: unblock actions open</p>
+                    <p className="text-sm font-semibold">{t("app.dashboard.attention.holdTitle")}</p>
                     <span className="text-xs text-muted-foreground">{standupQueues.holdUnblock.length}</span>
                   </div>
 
                   {standupQueues.holdUnblock.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No Hold jobs with open unblock actions in the current filters.</p>
+                    <p className="text-sm text-muted-foreground">{t("app.dashboard.attention.holdEmpty")}</p>
                   ) : (
                     (() => {
                       const expanded = !!queueExpand.holdUnblock;
@@ -1395,12 +1399,12 @@ return {
               </Card>
 
 
-      {/* Needs attention (Top 8 when collapsed) */}
+      {/* {t("app.dashboard.attention.title")} (Top 8 when collapsed) */}
       <Card className="rounded-2xl">
         <CardContent className="p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold">Needs attention</p>
+              <p className="text-sm font-semibold">{t("app.dashboard.attention.title")}</p>
               <p className="mt-1 text-xs text-muted-foreground">
                 Highest priority bids based on missing fields, deadlines, and blockers.
               </p>
@@ -1417,7 +1421,7 @@ return {
 
           <div className="mt-4 grid gap-2">
             {attentionBids.length === 0 ? (
-              <p className="text-xs text-muted-foreground">Nothing urgent right now.</p>
+              <p className="text-xs text-muted-foreground">{t("app.dashboard.attention.empty")}</p>
             ) : (
               (() => {
                 const expanded = openSections.attention;
@@ -1500,12 +1504,12 @@ return {
         </CardContent>
       </Card>
 
-      {/* Analytics (collapsed by default; hidden in standup mode) */}
+      {/* {t("app.dashboard.analytics.title")} (collapsed by default; hidden in standup mode) */}
       <Card className="rounded-2xl">
         <CardContent className="p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold">Analytics</p>
+              <p className="text-sm font-semibold">{t("app.dashboard.analytics.title")}</p>
               <p className="mt-1 text-xs text-muted-foreground">Deadline distribution and workload overview.</p>
             </div>
 
@@ -1550,7 +1554,7 @@ return {
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-sm font-semibold">Workload by owner</p>
+                      <p className="text-sm font-semibold">{t("app.dashboard.analytics.workloadByOwner")}</p>
                       <p className="mt-1 text-xs text-muted-foreground">
                         Who is carrying open work and where the blockers are.
                       </p>
@@ -1581,13 +1585,13 @@ return {
         </CardContent>
       </Card>
 
-      {/* Top blockers (collapsible; hidden in standup mode) */}
+      {/* {t("app.dashboard.blockers.title")} (collapsible; hidden in standup mode) */}
       {!standupMode ? (
         <Card className="rounded-2xl">
           <CardContent className="p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold">Top blockers</p>
+                <p className="text-sm font-semibold">{t("app.dashboard.blockers.title")}</p>
                 <p className="mt-1 text-xs text-muted-foreground">Blocked work items across bids.</p>
               </div>
 
@@ -1607,7 +1611,7 @@ return {
             {openSections.blockers ? (
               <div className="space-y-2">
                 {topBlockedItems.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">No blocked items.</p>
+                  <p className="text-xs text-muted-foreground">{t("app.dashboard.empty.noBlockedItems")}</p>
                 ) : (
                   topBlockedItems.map((w: any, idx: number) => (
                     <div
@@ -1622,7 +1626,7 @@ return {
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className="rounded-full">
-                          {String(w.displayOwner)}
+                          {String(w.displayOwner || t("app.dashboard.labels.unassigned"))}
                         </Badge>
                         <Badge variant="secondary" className="rounded-full">
                           Blocked
@@ -1633,19 +1637,19 @@ return {
                 )}
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground">Collapsed.</p>
+              <p className="text-xs text-muted-foreground">{t("app.common.collapsed")}</p>
             )}
           </CardContent>
         </Card>
       ) : null}
 
-      {/* Bids (collapsible; hidden in standup mode; Top 10 by default) */}
+      {/* {t("app.dashboard.bids.title")} (collapsible; hidden in standup mode; Top 10 by default) */}
       {!standupMode ? (
         <Card className="rounded-2xl">
           <CardContent className="p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold">Bids</p>
+                <p className="text-sm font-semibold">{t("app.dashboard.bids.title")}</p>
                 <p className="mt-1 text-xs text-muted-foreground">Sorted by urgency within the selected window.</p>
               </div>
 
@@ -1724,7 +1728,7 @@ return {
                 )}
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground">Collapsed.</p>
+              <p className="text-xs text-muted-foreground">{t("app.common.collapsed")}</p>
             )}
           </CardContent>
         </Card>

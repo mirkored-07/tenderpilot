@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 
+import { useAppI18n } from "@/app/app/_components/app-i18n-provider";
+
 type WorkItemType = "requirement" | "risk" | "clarification" | "outline";
 
 type EvidenceCandidateUi = {
@@ -53,6 +55,8 @@ export function BidRoomPanel(props: {
   onExportError?: (msg: string) => void;
 }) {
   const { jobId, checklist, risks, questions, outlineSections, canDownload } = props;
+
+  const { t } = useAppI18n();
 
   const [workItems, setWorkItems] = useState<any[]>([]);
   const [workError, setWorkError] = useState<string | null>(null);
@@ -100,7 +104,7 @@ export function BidRoomPanel(props: {
     setWorkError(null);
     const filePath = String(props.jobFilePath ?? "").trim();
     if (!filePath) {
-      setWorkError("Original PDF is not available for this job.");
+      setWorkError(t("app.bidroom.errors.noPdf"));
       return;
     }
 
@@ -122,13 +126,13 @@ export function BidRoomPanel(props: {
         }
       }
       const { data, error } = await supabase.storage.from("uploads").createSignedUrl(filePath, 60 * 10);
-      if (error || !data?.signedUrl) throw error || new Error("No signed URL");
+      if (error || !data?.signedUrl) throw error || new Error(t("app.bidroom.errors.noSignedUrl"));
       const p = typeof args?.page === "number" && Number.isFinite(args.page) ? Math.max(1, Math.floor(args.page)) : null;
       const url = p ? `${data.signedUrl}#page=${p}` : data.signedUrl;
       window.open(url, "_blank", "noopener,noreferrer");
     } catch (e) {
       console.warn(e);
-      setWorkError("Could not open the original PDF.");
+      setWorkError(t("app.bidroom.errors.openPdfFailed"));
     }
   }
 
@@ -157,7 +161,7 @@ export function BidRoomPanel(props: {
         page: null,
         anchor: null,
         note:
-          "Evidence id not found in the pipeline evidence map. This can happen if the pipeline evidence was generated with a different version or was trimmed. Verify in the original PDF.",
+          t("app.bidroom.evidence.notes.notFound"),
         allIds: ids.length ? ids : null,
       });
     } else {
@@ -166,7 +170,7 @@ export function BidRoomPanel(props: {
         excerpt: "",
         page: null,
         anchor: null,
-        note: "No evidence id is available for this item. Verify in the original PDF.",
+        note: t("app.bidroom.evidence.notes.none"),
         allIds: null,
       });
     }
@@ -187,7 +191,7 @@ export function BidRoomPanel(props: {
       if (cancelled) return;
       if (error) {
         console.warn("Failed to load work items", error);
-        setWorkError("Work items could not be loaded.");
+        setWorkError(t("app.bidroom.errors.loadWorkFailed"));
         setWorkItems([]);
         return;
       }
@@ -370,7 +374,7 @@ export function BidRoomPanel(props: {
         status: e?.status,
       });
       console.error("BidRoomPanel upsertWorkItem raw", e);
-      setWorkError("Could not save changes.");
+      setWorkError(t("app.bidroom.panel.saveFailed"));
       // Roll back optimistic UI to the last known server state.
       try { await refreshWork(); } catch { /* ignore */ }
     } finally {
@@ -390,9 +394,9 @@ export function BidRoomPanel(props: {
         {header ? (
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-			  <p className="text-sm font-semibold">Bid Room</p>
+			  <p className="text-sm font-semibold">{t("app.bidroom.title")}</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Assign owners, track status, and leave short notes. This overlays the evidence-first results (it does not change them).
+                {t("app.bidroom.panel.subtitle")}
               </p>
             </div>
             {showExport ? (
@@ -403,7 +407,7 @@ export function BidRoomPanel(props: {
                   className="rounded-full"
                   onClick={() => openPdfAt()}
                 >
-                  Open original PDF
+                  {t("app.bidroom.panel.openOriginalPdf")}
                 </Button>
                 <Button
                   variant="outline"
@@ -423,14 +427,14 @@ export function BidRoomPanel(props: {
                       a.remove();
                       URL.revokeObjectURL(url);
                     } catch {
-                      const msg = "Could not export the Bid Pack.";
+                      const msg = t("app.bidroom.panel.exportBidPackFailed");
                       setWorkError(msg);
                       props.onExportError?.(msg);
                     }
                   }}
                   disabled={!canDownload}
                 >
-                  Export Bid Pack
+                  {t("app.bidroom.panel.exportBidPack")}
                 </Button>
               </div>
             ) : null}
@@ -448,13 +452,13 @@ export function BidRoomPanel(props: {
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <Badge variant="outline" className="rounded-full">
-            Items: {workBaseRows.length}
+            {t("app.bidroom.panel.stats.items", { count: workBaseRows.length })}
           </Badge>
           <Badge variant="outline" className="rounded-full">
-            Done: {doneCount}
+            {t("app.bidroom.panel.stats.done", { count: doneCount })}
           </Badge>
           <Badge variant="outline" className="rounded-full">
-            Blocked: {blockedCount}
+            {t("app.bidroom.panel.stats.blocked", { count: blockedCount })}
           </Badge>
           </div>
 
@@ -462,7 +466,7 @@ export function BidRoomPanel(props: {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search items…"
+              placeholder={t("app.bidroom.panel.searchPlaceholder")}
               className="h-9 w-full rounded-full sm:w-[240px]"
             />
 
@@ -471,11 +475,11 @@ export function BidRoomPanel(props: {
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value as any)}
             >
-              <option value="all">All types</option>
-              <option value="requirement">Requirements</option>
-              <option value="risk">Risks</option>
-              <option value="clarification">Clarifications</option>
-              <option value="outline">Outline</option>
+              <option value="all">{t("app.bidroom.panel.filters.allTypes")}</option>
+              <option value="requirement">{t("app.bidroom.types.requirement")}</option>
+              <option value="risk">{t("app.bidroom.types.risk")}</option>
+              <option value="clarification">{t("app.bidroom.types.clarification")}</option>
+              <option value="outline">{t("app.bidroom.types.outline")}</option>
             </select>
 
             <select
@@ -483,11 +487,11 @@ export function BidRoomPanel(props: {
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as any)}
             >
-              <option value="all">All status</option>
-              <option value="todo">Todo</option>
-              <option value="doing">Doing</option>
-              <option value="blocked">Blocked</option>
-              <option value="done">Done</option>
+              <option value="all">{t("app.bidroom.panel.filters.allStatus")}</option>
+              <option value="todo">{t("app.bidroom.status.todo")}</option>
+              <option value="doing">{t("app.bidroom.status.doing")}</option>
+              <option value="blocked">{t("app.bidroom.status.blocked")}</option>
+              <option value="done">{t("app.bidroom.status.done")}</option>
             </select>
 
             <Button
@@ -497,25 +501,25 @@ export function BidRoomPanel(props: {
               className="w-full rounded-full sm:w-auto"
               onClick={() => setHideDone((v) => !v)}
             >
-              {hideDone ? "Hiding done" : "Showing done"}
+              {hideDone ? t("app.bidroom.panel.hideDone.hiding") : t("app.bidroom.panel.hideDone.showing")}
             </Button>
           </div>
         </div>
 
         <div className="rounded-2xl border bg-card/30">
           <div className="flex items-center justify-between gap-3 border-b p-3">
-            <p className="text-xs font-semibold text-muted-foreground">Work items</p>
-            <p className="text-xs text-muted-foreground">Operational overlay only. This does not change the AI decision.</p>
+            <p className="text-xs font-semibold text-muted-foreground">{t("app.bidroom.panel.table.title")}</p>
+            <p className="text-xs text-muted-foreground">{t("app.bidroom.panel.table.note")}</p>
           </div>
 
           <ScrollArea className="h-[65dvh] sm:h-[560px]">
             <div className="p-3 space-y-6">
               {filteredRows.length === 0 ? (
                 <div className="rounded-2xl border bg-background p-6 text-center">
-                  <p className="text-sm font-medium">No items match your filters.</p>
-                  <p className="mt-1 text-sm text-muted-foreground">Try clearing filters or searching for a different keyword.</p>
+                  <p className="text-sm font-medium">{t("app.bidroom.panel.empty.title")}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{t("app.bidroom.panel.empty.body")}</p>
                   <div className="mt-4 flex items-center justify-center gap-2">
-                    <Button variant="outline" size="sm" className="rounded-full" onClick={() => setQuery("")}>Clear search</Button>
+                    <Button variant="outline" size="sm" className="rounded-full" onClick={() => setQuery("")}>{t("app.bidroom.panel.empty.clearSearch")}</Button>
                     <Button
                       variant="outline"
                       size="sm"
@@ -643,7 +647,7 @@ export function BidRoomPanel(props: {
 								  owner_label: e.target.value || null,
                                   });
                                 }}
-                                placeholder="Owner"
+                                placeholder={t("app.bidroom.fields.ownerPlaceholder")}
                                 className="h-9 w-full rounded-full sm:w-[160px]"
                                 disabled={workSaving === key}
                               />
@@ -671,10 +675,10 @@ export function BidRoomPanel(props: {
                                 }}
                                 disabled={workSaving === key}
                               >
-                                <option value="todo">Todo</option>
-                                <option value="doing">Doing</option>
-                                <option value="blocked">Blocked</option>
-                                <option value="done">Done</option>
+                                <option value="todo">{t("app.bidroom.status.todo")}</option>
+                                <option value="doing">{t("app.bidroom.status.doing")}</option>
+                                <option value="blocked">{t("app.bidroom.status.blocked")}</option>
+                                <option value="done">{t("app.bidroom.status.done")}</option>
                               </select>
 
                               <Input
@@ -739,7 +743,7 @@ export function BidRoomPanel(props: {
 									  notes: e.target.value || null,
                                     });
                                   }}
-                                  placeholder="Notes (short, actionable)"
+                                  placeholder={t("app.bidroom.fields.notesPlaceholder")}
                                   className="col-span-2 h-9 w-full rounded-full sm:col-span-1 sm:flex-1 sm:min-w-[220px]"
                                   disabled={workSaving === key}
                                 />
@@ -778,7 +782,7 @@ export function BidRoomPanel(props: {
             <div className="absolute right-0 top-0 h-full w-full max-w-none bg-background shadow-2xl border-l sm:max-w-xl">
               <div className="flex items-start justify-between gap-3 p-5 border-b">
                 <div>
-                  <p className="text-sm font-semibold">Evidence excerpt</p>
+                  <p className="text-sm font-semibold">{t("app.bidroom.evidence.title")}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     Excerpt is authoritative. “Locate in PDF” is best-effort.
                   </p>
@@ -809,7 +813,7 @@ export function BidRoomPanel(props: {
                   {evidenceFocus?.excerpt ? (
                     <p className="whitespace-pre-wrap text-sm leading-relaxed">{evidenceFocus.excerpt}</p>
                   ) : (
-                    <p className="text-sm text-muted-foreground">No excerpt text available for this evidence id.</p>
+                    <p className="text-sm text-muted-foreground">{t("app.bidroom.evidence.noExcerpt")}</p>
                   )}
                 </div>
 
@@ -829,7 +833,7 @@ export function BidRoomPanel(props: {
 
                 {evidenceFocus?.allIds?.length ? (
                   <div>
-                    <p className="text-xs font-medium text-muted-foreground">Other evidence ids</p>
+                    <p className="text-xs font-medium text-muted-foreground">{t("app.bidroom.evidence.otherEvidenceIds")}</p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {evidenceFocus.allIds.slice(0, 12).map((id) => (
                         <Button

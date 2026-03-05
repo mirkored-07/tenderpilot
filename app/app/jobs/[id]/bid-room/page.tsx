@@ -26,19 +26,18 @@ type DbJobMetadata = {
   updated_at: string;
 };
 
-
 function normalizeChecklist(raw: any): any[] {
-  const items = Array.isArray(raw) ? raw : (raw?.items ?? raw?.checklist ?? null);
+  const items = Array.isArray(raw) ? raw : raw?.items ?? raw?.checklist ?? null;
   return Array.isArray(items) ? items : [];
 }
 
 function normalizeRisks(raw: any): any[] {
-  const items = Array.isArray(raw) ? raw : (raw?.items ?? raw?.risks ?? null);
+  const items = Array.isArray(raw) ? raw : raw?.items ?? raw?.risks ?? null;
   return Array.isArray(items) ? items : [];
 }
 
 function normalizeQuestions(raw: any): string[] {
-  const arr = Array.isArray(raw) ? raw : (raw?.questions ?? raw?.items ?? null);
+  const arr = Array.isArray(raw) ? raw : raw?.questions ?? raw?.items ?? null;
   return Array.isArray(arr) ? arr.map((x) => String(x ?? "").trim()).filter(Boolean) : [];
 }
 
@@ -62,21 +61,22 @@ export default function JobBidRoomPage() {
   const [job, setJob] = useState<any | null>(null);
   const [result, setResult] = useState<any | null>(null);
   const [jobMeta, setJobMeta] = useState<DbJobMetadata | null>(null);
+
   const [metaOpen, setMetaOpen] = useState(false);
   const [savingMeta, setSavingMeta] = useState(false);
-const [metaDraft, setMetaDraft] = useState<{
-  deadlineLocal: string;
-  portal_url: string;
-  internal_bid_id: string;
-  owner_label: string;
-  targetDecisionLocal: string;
-}>({
-  deadlineLocal: "",
-  portal_url: "",
-  internal_bid_id: "",
-  owner_label: "",
-  targetDecisionLocal: "",
-});
+  const [metaDraft, setMetaDraft] = useState<{
+    deadlineLocal: string;
+    portal_url: string;
+    internal_bid_id: string;
+    owner_label: string;
+    targetDecisionLocal: string;
+  }>({
+    deadlineLocal: "",
+    portal_url: "",
+    internal_bid_id: "",
+    owner_label: "",
+    targetDecisionLocal: "",
+  });
 
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -84,6 +84,7 @@ const [metaDraft, setMetaDraft] = useState<{
   useEffect(() => {
     if (!jobId) return;
     track("bid_room_opened", { jobId });
+
     const supabase = supabaseBrowser();
     let cancelled = false;
 
@@ -93,6 +94,7 @@ const [metaDraft, setMetaDraft] = useState<{
       try {
         const { data: jobRow, error: jobErr } = await supabase.from("jobs").select("*").eq("id", jobId).maybeSingle();
         if (cancelled) return;
+
         if (jobErr || !jobRow) {
           setError(t("app.tender.notFound"));
           setJob(null);
@@ -100,29 +102,16 @@ const [metaDraft, setMetaDraft] = useState<{
           setLoading(false);
           return;
         }
+
         setJob(jobRow as any);
 
-        const { data: resultRow, error: resErr } = await supabase
-          .from("job_results")
-          .select("*")
-          .eq("job_id", jobId)
-          .maybeSingle();
+        const { data: resultRow, error: resErr } = await supabase.from("job_results").select("*").eq("job_id", jobId).maybeSingle();
         if (cancelled) return;
-        if (resErr) {
-          console.warn(resErr);
-          setResult(null);
-        } else {
-          setResult((resultRow as any) ?? null);
-        }
+        setResult(resErr ? null : (resultRow as any) ?? null);
 
-        // Bid metadata overlay (manual)
-        const { data: metaRow, error: metaErr } = await supabase
-          .from("job_metadata")
-          .select("*")
-          .eq("job_id", jobId)
-          .maybeSingle();
-
+        const { data: metaRow, error: metaErr } = await supabase.from("job_metadata").select("*").eq("job_id", jobId).maybeSingle();
         if (cancelled) return;
+
         if (metaErr) {
           console.warn(metaErr);
           setJobMeta(null);
@@ -147,7 +136,7 @@ const [metaDraft, setMetaDraft] = useState<{
         }
       } catch (e) {
         console.error(e);
-        setError("Could not load this bid room.");
+        setError(t("app.bidroom.errors.loadFailed"));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -157,42 +146,44 @@ const [metaDraft, setMetaDraft] = useState<{
     return () => {
       cancelled = true;
     };
-  }, [jobId]);
+  }, [jobId, t]);
 
   async function saveJobMetadata() {
-  if (!jobId) return;
-  const supabase = supabaseBrowser();
+    if (!jobId) return;
 
-  const toIsoOrNull = (localInput: string) => {
-    const s = String(localInput ?? "").trim();
-    if (!s) return null;
-    const d = new Date(s);
-    return Number.isNaN(d.getTime()) ? null : d.toISOString();
-  };
+    const supabase = supabaseBrowser();
 
-  setSavingMeta(true);
-  try {
-    const payload: Partial<DbJobMetadata> = {
-      job_id: jobId,
-      deadline_override: toIsoOrNull(metaDraft.deadlineLocal),
-      portal_url: metaDraft.portal_url?.trim() ? metaDraft.portal_url.trim() : null,
-      internal_bid_id: metaDraft.internal_bid_id?.trim() ? metaDraft.internal_bid_id.trim() : null,
-      owner_label: metaDraft.owner_label?.trim() ? metaDraft.owner_label.trim() : null,
-      target_decision_at: toIsoOrNull(metaDraft.targetDecisionLocal),
-      updated_at: new Date().toISOString(),
+    const toIsoOrNull = (localInput: string) => {
+      const s = String(localInput ?? "").trim();
+      if (!s) return null;
+      const d = new Date(s);
+      return Number.isNaN(d.getTime()) ? null : d.toISOString();
     };
 
-    const { data, error } = await supabase.from("job_metadata").upsert(payload as any).select("*").maybeSingle();
-    if (error) {
-      console.warn(error);
-      return;
+    setSavingMeta(true);
+    try {
+      const payload: Partial<DbJobMetadata> = {
+        job_id: jobId,
+        deadline_override: toIsoOrNull(metaDraft.deadlineLocal),
+        portal_url: metaDraft.portal_url?.trim() ? metaDraft.portal_url.trim() : null,
+        internal_bid_id: metaDraft.internal_bid_id?.trim() ? metaDraft.internal_bid_id.trim() : null,
+        owner_label: metaDraft.owner_label?.trim() ? metaDraft.owner_label.trim() : null,
+        target_decision_at: toIsoOrNull(metaDraft.targetDecisionLocal),
+        updated_at: new Date().toISOString(),
+      };
+
+      const { data, error } = await supabase.from("job_metadata").upsert(payload as any).select("*").maybeSingle();
+      if (error) {
+        console.warn(error);
+        setError(t("app.metadata.errors.saveFailed"));
+        return;
+      }
+      setJobMeta((data as any) ?? null);
+      setMetaOpen(false);
+    } finally {
+      setSavingMeta(false);
     }
-    setJobMeta((data as any) ?? null);
-    setMetaOpen(false);
-  } finally {
-    setSavingMeta(false);
   }
-}
 
   const status: JobStatus = useMemo(() => String(job?.status ?? "queued") as JobStatus, [job]);
   const canDownload = useMemo(() => Boolean(job && status === "done"), [job, status]);
@@ -207,29 +198,47 @@ const [metaDraft, setMetaDraft] = useState<{
   const questions = useMemo(() => normalizeQuestions(result?.clarifications), [result]);
   const outlineSections = useMemo(() => normalizeOutlineSections((result as any)?.proposal_draft), [result]);
 
+  const metaSummaryDeadline = jobMeta?.deadline_override
+    ? new Date(jobMeta.deadline_override).toLocaleString()
+    : metaDraft.deadlineLocal
+      ? t("app.metadata.labels.unsaved")
+      : t("app.metadata.labels.addDeadline");
+
+  const metaSummaryOwner = metaDraft.owner_label?.trim()
+    ? metaDraft.owner_label.trim()
+    : jobMeta?.owner_label?.trim()
+      ? jobMeta.owner_label.trim()
+      : t("app.metadata.labels.addOwner");
+
+  const metaSummaryPortal = (metaDraft.portal_url?.trim() || jobMeta?.portal_url?.trim())
+    ? t("app.metadata.labels.portalSet")
+    : t("app.metadata.labels.addPortal");
+
   return (
     <div className="mx-auto max-w-6xl space-y-4 p-4 md:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-lg font-semibold">{t("app.bidroom.title")}</p>
-          <p className="mt-1 text-sm text-muted-foreground">Work view: assign owners, track tasks, and coordinate the bid.</p>
+          <p className="mt-1 text-sm text-muted-foreground">{t("app.bidroom.workSubtitle")}</p>
           <p className="mt-1 text-sm text-muted-foreground">
             {job?.file_name ? (
               <>
                 {t("app.tender.label")}: <span className="font-medium text-foreground">{String(job.file_name)}</span>
               </>
             ) : (
-              <>{t("app.tender.label")}: {jobId}</>
+              <>
+                {t("app.tender.label")}: {jobId}
+              </>
             )}
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <Button asChild variant="outline" className="rounded-full">
-            <Link href={`/app/jobs/${jobId}/compliance`}>Compliance matrix</Link>
+            <Link href={`/app/jobs/${jobId}/compliance`}>{t("app.compliance.title")}</Link>
           </Button>
           <Button asChild variant="outline" className="rounded-full">
-            <Link href={`/app/jobs/${jobId}`}>Back to job</Link>
+            <Link href={`/app/jobs/${jobId}`}>{t("app.bidroom.backToJob")}</Link>
           </Button>
         </div>
       </div>
@@ -239,36 +248,32 @@ const [metaDraft, setMetaDraft] = useState<{
           <div className="flex flex-wrap items-start justify-between gap-3">
             <button type="button" className="text-left" onClick={() => setMetaOpen((v) => !v)} aria-expanded={metaOpen}>
               <p className="text-sm font-medium flex items-center gap-2">
-                Bid metadata
+                {t("app.metadata.title")}
                 <span className="text-xs text-muted-foreground">{metaOpen ? "▲" : "▼"}</span>
               </p>
 
               <div className="mt-1 text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-1">
                 <span>
-                  Deadline:{" "}
-                  {jobMeta?.deadline_override
-                    ? new Date(jobMeta.deadline_override).toLocaleString()
-                    : metaDraft.deadlineLocal
-                      ? "(unsaved)"
-                      : "Add deadline"}
+                  {t("app.metadata.labels.deadline")}: {metaSummaryDeadline}
                 </span>
                 <span>
-                  Owner:{" "}
-                  {metaDraft.owner_label?.trim() ? metaDraft.owner_label.trim() : jobMeta?.owner_label?.trim() ? jobMeta.owner_label.trim() : "Add owner"}
+                  {t("app.metadata.labels.owner")}: {metaSummaryOwner}
                 </span>
-                <span>Portal: {(metaDraft.portal_url?.trim() || jobMeta?.portal_url?.trim()) ? "set" : "Add portal"}</span>
+                <span>
+                  {t("app.metadata.labels.portal")}: {metaSummaryPortal}
+                </span>
               </div>
 
-              <p className="mt-1 text-xs text-muted-foreground">Operational context (team decision is set on the job page).</p>
+              <p className="mt-1 text-xs text-muted-foreground">{t("app.metadata.labels.contextHint")}</p>
             </button>
 
             {metaOpen ? (
               <Button variant="outline" className="rounded-full" onClick={saveJobMetadata} disabled={savingMeta}>
-                {savingMeta ? "Saving…" : "Save"}
+                {savingMeta ? t("app.metadata.actions.saving") : t("app.metadata.actions.save")}
               </Button>
             ) : (
               <Button variant="outline" className="rounded-full" onClick={() => setMetaOpen(true)}>
-                Edit
+                {t("app.common.edit")}
               </Button>
             )}
           </div>
@@ -276,7 +281,7 @@ const [metaDraft, setMetaDraft] = useState<{
           {metaOpen ? (
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Submission deadline override</p>
+                <p className="text-xs text-muted-foreground">{t("app.metadata.fields.deadlineOverride")}</p>
                 <Input
                   type="datetime-local"
                   value={metaDraft.deadlineLocal}
@@ -285,34 +290,34 @@ const [metaDraft, setMetaDraft] = useState<{
               </div>
 
               <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Portal / tender link</p>
+                <p className="text-xs text-muted-foreground">{t("app.metadata.fields.portalUrl")}</p>
                 <Input
                   value={metaDraft.portal_url}
                   onChange={(e) => setMetaDraft((s) => ({ ...s, portal_url: e.target.value }))}
-                  placeholder="https://…"
+                  placeholder={t("app.metadata.placeholders.portalUrl")}
                 />
               </div>
 
               <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Internal bid id</p>
+                <p className="text-xs text-muted-foreground">{t("app.metadata.fields.internalBidId")}</p>
                 <Input
                   value={metaDraft.internal_bid_id}
                   onChange={(e) => setMetaDraft((s) => ({ ...s, internal_bid_id: e.target.value }))}
-                  placeholder="e.g. BID-2026-014"
+                  placeholder={t("app.metadata.placeholders.internalBidId")}
                 />
               </div>
 
               <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Owner</p>
+                <p className="text-xs text-muted-foreground">{t("app.metadata.fields.owner")}</p>
                 <Input
                   value={metaDraft.owner_label}
                   onChange={(e) => setMetaDraft((s) => ({ ...s, owner_label: e.target.value }))}
-                  placeholder="e.g. Maria"
+                  placeholder={t("app.metadata.placeholders.owner")}
                 />
               </div>
 
               <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Target decision date</p>
+                <p className="text-xs text-muted-foreground">{t("app.metadata.fields.targetDecision")}</p>
                 <Input
                   type="datetime-local"
                   value={metaDraft.targetDecisionLocal}
@@ -321,7 +326,9 @@ const [metaDraft, setMetaDraft] = useState<{
               </div>
 
               <div className="md:col-span-2">
-                <p className="text-xs text-muted-foreground">Last saved: {jobMeta?.updated_at ? new Date(jobMeta.updated_at).toLocaleString() : "—"}</p>
+                <p className="text-xs text-muted-foreground">
+                  {t("app.metadata.labels.lastSaved")}: {jobMeta?.updated_at ? new Date(jobMeta.updated_at).toLocaleString() : t("app.common.unknown")}
+                </p>
               </div>
             </div>
           ) : null}
@@ -331,7 +338,7 @@ const [metaDraft, setMetaDraft] = useState<{
       {error ? (
         <Card className="rounded-2xl">
           <CardContent className="p-5">
-            <p className="text-sm text-red-700">{error}</p>
+            <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
           </CardContent>
         </Card>
       ) : null}
@@ -339,14 +346,14 @@ const [metaDraft, setMetaDraft] = useState<{
       {loading ? (
         <Card className="rounded-2xl">
           <CardContent className="p-5">
-            <p className="text-sm text-muted-foreground">Loading bid room…</p>
+            <p className="text-sm text-muted-foreground">{t("app.bidroom.loading")}</p>
           </CardContent>
         </Card>
       ) : status !== "done" ? (
         <Card className="rounded-2xl">
           <CardContent className="p-5 space-y-2">
-            <p className="text-sm font-medium">This job is not ready yet.</p>
-            <p className="text-sm text-muted-foreground">Status: {status}. When the review finishes, the bid room will show items to assign.</p>
+            <p className="text-sm font-medium">{t("app.bidroom.notReadyTitle")}</p>
+            <p className="text-sm text-muted-foreground">{t("app.bidroom.notReadyBody", { status })}</p>
           </CardContent>
         </Card>
       ) : (

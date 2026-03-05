@@ -79,7 +79,7 @@ export default function GlobalBidRoomPage() {
         setItems((wi as any[]) ?? []);
       } catch (e) {
         console.error(e);
-        setError("Could not load the global bid room.");
+        setError(t("app.bidroom.errors.globalLoadFailed"));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -89,7 +89,7 @@ export default function GlobalBidRoomPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   const filtered = useMemo(() => {
     const ownerQ = ownerFilter.trim().toLowerCase();
@@ -135,15 +135,18 @@ export default function GlobalBidRoomPage() {
             <div className="space-y-2">
               {props.items.map((it) => {
                 const job = jobsById.get(String(it.job_id));
+                const typeLabel = t(`app.bidroom.types.${String(it.type ?? "").toLowerCase()}`);
+                const statusLabel = t(`app.bidroom.status.${String(it.status ?? "").toLowerCase()}`);
+
                 return (
                   <div key={`${it.job_id}:${it.type}:${it.ref_key}`} className="rounded-xl border p-3">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0">
                         <p className="text-sm font-medium break-words">{it.title}</p>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          <span className="font-medium text-foreground/80">{it.type}</span> • {it.status}
+                          <span className="font-medium text-foreground/80">{typeLabel}</span> • {statusLabel}
                           {it.owner_label ? <span> • {it.owner_label}</span> : null}
-                          {it.due_at ? <span> • due {toDateOnly(it.due_at)}</span> : null}
+                          {it.due_at ? <span> • {t("app.bidroom.labels.due")} {toDateOnly(it.due_at)}</span> : null}
                         </p>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
@@ -151,13 +154,11 @@ export default function GlobalBidRoomPage() {
                           <Link href={`/app/jobs/${it.job_id}`}>{t("app.tenders.openTender")}</Link>
                         </Button>
                         <Button asChild size="sm" className="rounded-full">
-                          <Link href={`/app/jobs/${it.job_id}/bid-room`}>Bid Room</Link>
+                          <Link href={`/app/jobs/${it.job_id}/bid-room`}>{t("app.bidroom.title")}</Link>
                         </Button>
                       </div>
                     </div>
-                    {job?.file_name ? (
-                      <p className="mt-2 text-xs text-muted-foreground">{String(job.file_name)}</p>
-                    ) : null}
+                    {job?.file_name ? <p className="mt-2 text-xs text-muted-foreground">{String(job.file_name)}</p> : null}
                     {it.notes ? <p className="mt-2 text-xs text-muted-foreground break-words">{String(it.notes)}</p> : null}
                   </div>
                 );
@@ -184,22 +185,32 @@ export default function GlobalBidRoomPage() {
       <Card className="rounded-2xl">
         <CardContent className="p-5">
           <div className="flex flex-wrap items-center gap-2">
-            <Input value={ownerFilter} onChange={(e) => setOwnerFilter(e.target.value)} placeholder={t("app.bidroom.filters.owner")} className="max-w-[220px]" />
-            <Input value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} placeholder={t("app.bidroom.filters.status")} className="max-w-[260px]" />
+            <Input
+              value={ownerFilter}
+              onChange={(e) => setOwnerFilter(e.target.value)}
+              placeholder={t("app.bidroom.filters.owner")}
+              className="h-9 w-full rounded-full sm:max-w-[220px]"
+            />
+            <Input
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              placeholder={t("app.bidroom.filters.status")}
+              className="h-9 w-full rounded-full sm:max-w-[260px]"
+            />
             <Badge variant="outline" className="rounded-full">
-              Open items: {filtered.length}
+              {t("app.bidroom.labels.openItems", { count: filtered.length })}
             </Badge>
           </div>
-          {error ? <p className="mt-3 text-sm text-red-700">{error}</p> : null}
-          {loading ? <p className="mt-3 text-sm text-muted-foreground">Loading…</p> : null}
+          {error ? <p className="mt-3 text-sm text-red-700 dark:text-red-300">{error}</p> : null}
+          {loading ? <p className="mt-3 text-sm text-muted-foreground">{t("app.common.loading")}…</p> : null}
         </CardContent>
       </Card>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Section title="Blocked" items={groups.blocked} />
-        <Section title="Overdue" items={groups.overdue} />
-        <Section title="Due soon (7 days)" items={groups.dueSoon} />
-        <Section title="To do" items={groups.todo} />
+        <Section title={t("app.bidroom.groups.blocked")} items={groups.blocked} />
+        <Section title={t("app.bidroom.groups.overdue")} items={groups.overdue} />
+        <Section title={t("app.bidroom.groups.dueSoon")} items={groups.dueSoon} />
+        <Section title={t("app.bidroom.groups.todo")} items={groups.todo} />
       </div>
     </div>
   );

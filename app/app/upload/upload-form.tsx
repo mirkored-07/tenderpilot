@@ -88,27 +88,21 @@ export default function UploadForm() {
 
     if (!f.name) {
       setFile(null);
-      setError("This file could not be read. Please try another file.");
+      setError(t("app.upload.errors.unreadable"));
       track("upload_file_rejected", { reason: "missing_name" });
       return;
     }
 
     if (!Number.isFinite(f.size) || f.size <= 0) {
       setFile(null);
-      setError(
-        "This file appears to be empty. Please choose a valid PDF or DOCX."
-      );
+      setError(t("app.upload.errors.empty"));
       track("upload_file_rejected", { reason: "empty_file" });
       return;
     }
 
     if (f.size > MAX_FILE_BYTES) {
       setFile(null);
-      setError(
-        `File is too large. Please upload a file up to ${formatBytes(
-          MAX_FILE_BYTES
-        )}.`
-      );
+      setError(t("app.upload.errors.tooLarge", { max: formatBytes(MAX_FILE_BYTES) }));
       track("upload_file_rejected", { reason: "too_large", size: f.size });
       return;
     }
@@ -116,7 +110,7 @@ export default function UploadForm() {
     const ext = getFileExt(f.name);
     if (!isSupportedExt(ext)) {
       setFile(null);
-      setError("Only PDF or DOCX files are supported.");
+      setError(t("app.upload.errors.unsupported"));
       track("upload_file_rejected", { reason: "unsupported_type" });
       return;
     }
@@ -126,11 +120,11 @@ export default function UploadForm() {
   }
 
   function phaseLabel(p: UploadPhase) {
-    if (p === "checking_session") return "Checking…";
-    if (p === "uploading") return "Uploading…";
-    if (p === "creating_job") return "Creating…";
-    if (p === "extracting_text") return "Extracting…";
-    if (p === "redirecting") return "Redirecting…";
+    if (p === "checking_session") return t("app.upload.phases.checkingSession");
+    if (p === "uploading") return t("app.upload.phases.uploading");
+    if (p === "creating_job") return t("app.upload.phases.creatingJob");
+    if (p === "extracting_text") return t("app.upload.phases.extractingText");
+    if (p === "redirecting") return t("app.upload.phases.redirecting");
     return "";
   }
 
@@ -198,7 +192,7 @@ export default function UploadForm() {
 
       const ext = getFileExt(file.name);
       if (!isSupportedExt(ext)) {
-        throw new Error("Only PDF or DOCX files are supported.");
+        throw new Error(t("app.upload.errors.unsupported"));
       }
 
       const sourceType: SourceType = ext;
@@ -213,7 +207,7 @@ export default function UploadForm() {
         .upload(filePath, file, { upsert: false });
 
       if (uploadError) {
-        throw new Error("Upload failed. Please try again.");
+        throw new Error(t("app.upload.errors.uploadFailed"));
       }
 
       track("upload_storage_completed", { sourceType });
@@ -261,7 +255,7 @@ export default function UploadForm() {
       router.refresh();
       router.push(`/app/jobs/${jobId}`);
     } catch (err: any) {
-      const message = String(err?.message ?? "Upload failed");
+      const message = String(err?.message ?? t("app.upload.errors.uploadFailedShort"));
 
       if (uploadedFilePath && !jobCreated) {
         try {

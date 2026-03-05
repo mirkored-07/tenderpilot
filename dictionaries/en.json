@@ -691,7 +691,19 @@
       "updated": "Updated",
       "unknown": "Unknown",
       "draftingSupport": "Drafting support only. Always verify against the source.",
-      "typeAndPressEnter": "Type and press Enter"
+      "typeAndPressEnter": "Type and press Enter",
+      "back": "Back",
+      "collapsed": "Collapsed",
+      "couldNotOpenPage": "Could not open this page.",
+      "delete": "Delete",
+      "deleting": "Deleting…",
+      "gotIt": "Got it",
+      "keyLabel": "Key:",
+      "needsAttention": "Needs attention",
+      "noneDetected": "None detected",
+      "queued": "Queued",
+      "removeItemAria": "Remove item",
+      "saved": "Saved"
     },
     "decision": {
       "go": "Go",
@@ -729,7 +741,12 @@
       "deadline": {
         "dueSoon": "Due soon",
         "thisWeek": "This week",
-        "noDeadline": "No deadline"
+        "noDeadline": "No deadline",
+        "deadline": "Deadline",
+        "dueToday": "Due today",
+        "dueTomorrow": "Due tomorrow",
+        "dueInDays": "Due in {days}d",
+        "overdueDays": "Overdue ({days}d)"
       },
       "countShown": "{n} shown",
       "loadingBody": "Fetching your tenders.",
@@ -745,7 +762,13 @@
       },
       "emptyTitle": "No tenders match your filters",
       "emptyBody": "Try clearing filters, or upload a new tender to start.",
-      "openTender": "Open tender"
+      "openTender": "Open tender",
+      "loadFailed": "Your tenders could not be loaded. Please refresh the page.",
+      "createdAt": "Created {date}",
+      "bidRoomSummary": "Bid Room {open} open of {total}",
+      "overdueCount": "{count} overdue",
+      "deleteConfirm": "Delete this tender review? This cannot be undone.",
+      "deleteFailed": "Could not delete this tender review. Please try again."
     },
     "tender": {
       "single": "Tender",
@@ -761,7 +784,86 @@
         "owner": "Filter by owner",
         "status": "Filter by status (todo/doing/blocked)"
       },
-      "notStarted": "Bid Room not started"
+      "notStarted": "Bid Room not started",
+      "backToJob": "Back to review",
+      "workSubtitle": "Work items generated from blockers, requirements, risks, clarifications, and outline.",
+      "openBidRoom": "Open Bid Room",
+      "loading": "Loading Bid Room…",
+      "notReadyTitle": "Bid Room not ready",
+      "notReadyBody": "Complete the review first to generate Bid Room items.",
+      "errors": {
+        "globalLoadFailed": "Bid Room could not be loaded.",
+        "loadFailed": "Bid Room could not be loaded.",
+        "loadWorkFailed": "Work items could not be loaded.",
+        "noPdf": "No PDF is attached to this tender.",
+        "noSignedUrl": "Could not create a signed PDF link.",
+        "openPdfFailed": "Could not open the PDF."
+      },
+      "evidence": {
+        "title": "Evidence",
+        "noExcerpt": "No excerpt available.",
+        "otherEvidenceIds": "Other evidence IDs",
+        "notes": {
+          "none": "No evidence IDs available for this item. Verify in the original PDF.",
+          "notFound": "Evidence ID not found in the evidence map. Verify in the original PDF."
+        }
+      },
+      "labels": {
+        "due": "Due",
+        "openItems": "{open} open of {total}"
+      },
+      "groups": {
+        "todo": "To do",
+        "blocked": "Blocked",
+        "overdue": "Overdue",
+        "dueSoon": "Due soon"
+      },
+      "panel": {
+        "subtitle": "Track owners, statuses, due dates, and evidence-linked notes.",
+        "searchPlaceholder": "Search work items…",
+        "filters": {
+          "allTypes": "All types",
+          "allStatus": "All statuses"
+        },
+        "hideDone": {
+          "hiding": "Hiding done",
+          "showing": "Showing all"
+        },
+        "openOriginalPdf": "Open original PDF",
+        "exportBidPack": "Export Bid Pack",
+        "exportBidPackFailed": "Bid Pack export failed. Please try again.",
+        "saveFailed": "Could not save changes. Please try again.",
+        "stats": {
+          "items": "{count} items",
+          "done": "{count} done",
+          "blocked": "{count} blocked"
+        },
+        "table": {
+          "title": "Work items",
+          "note": "Click an item to update status, owner, notes, and evidence IDs."
+        },
+        "empty": {
+          "title": "No matching items",
+          "body": "Try adjusting filters or clearing your search.",
+          "clearSearch": "Clear search"
+        }
+      },
+      "fields": {
+        "ownerPlaceholder": "Owner",
+        "notesPlaceholder": "Notes (short, actionable)"
+      },
+      "status": {
+        "todo": "To do",
+        "doing": "Doing",
+        "blocked": "Blocked",
+        "done": "Done"
+      },
+      "types": {
+        "requirement": "Requirement",
+        "risk": "Risk",
+        "clarification": "Clarification",
+        "outline": "Outline"
+      }
     },
     "compliance": {
       "title": "Compliance matrix",
@@ -773,22 +875,339 @@
       "send": {
         "cta": "Send to Bid Room",
         "sent": "Sent to Bid Room",
-        "exists": "Already in Bid Room"
+        "exists": "Already in Bid Room",
+        "noteBase": "From Compliance Matrix — Status: {status}",
+        "noteProposal": "Proposal: {proposal}",
+        "noteNote": "Note: {note}"
       },
       "coveredNoTask": "Covered — no task needed",
       "noRows": "No rows match your current filters.",
-      "noReqs": "No requirements found yet."
+      "noReqs": "No requirements found yet.",
+      "actions": {
+        "exportCsv": "Export CSV",
+        "openPdf": "Open PDF",
+        "openBidRoom": "Open Bid Room"
+      },
+      "openProposalCoverage": "Open proposal coverage",
+      "proposalCoverage": "Proposal coverage",
+      "badges": {
+        "gap": "Gap"
+      },
+      "errors": {
+        "noPdf": "No PDF is attached to this tender.",
+        "openPdfFailed": "Could not open the PDF.",
+        "overlaysLoadFailed": "Could not load overlays. Please refresh the page.",
+        "sendFailed": "Could not send to Bid Room.",
+        "sendFailedWithMsg": "Could not send to Bid Room: {msg}",
+        "saveFailed": "Could not save changes.",
+        "saveFailedWithMsg": "Could not save changes: {msg}"
+      },
+      "fields": {
+        "stance": "Status",
+        "proposalSection": "Proposal section",
+        "auditNote": "Audit note"
+      },
+      "filters": {
+        "view": "View",
+        "allStatuses": "All statuses",
+        "allLevels": "All levels"
+      },
+      "view": {
+        "gate": "Gate",
+        "gaps": "Gaps",
+        "covered": "Covered"
+      },
+      "level": {
+        "must": "MUST",
+        "should": "SHOULD",
+        "infoUpper": "INFO",
+        "info": "Info"
+      },
+      "status": {
+        "compliant": "Compliant",
+        "partial": "Partial",
+        "noncompliant": "Non-compliant",
+        "tbd": "TBD",
+        "na": "N/A"
+      },
+      "stats": {
+        "rows": "{count} rows",
+        "evidenceMap": "{count} evidence IDs"
+      },
+      "drawer": {
+        "noRequirementSelected": "Select a requirement to see details and evidence.",
+        "authoritativeExcerpt": "Authoritative excerpt",
+        "evidenceJustification": "Evidence justification",
+        "noEvidenceIds": "No evidence IDs listed. Verify in the original PDF."
+      },
+      "helper": {
+        "setStance": "Set status and optionally add a note."
+      }
     },
     "review": {
       "decision": "Decision",
-      "teamDecision": "Team decision",
+      "teamDecision": {
+        "saveFailed": "Could not save team decision. Please try again."
+      },
       "drivers": {
         "loading": "Preparing decision drivers.",
         "hold": "Decision drivers: mandatory requirements and submission rules that can disqualify you.",
         "caution": "Decision drivers: risks requiring validation before committing.",
         "go": "No mandatory blockers detected in eligibility and submission requirements."
       },
-      "exportsLocked": "Exports are available on paid plans. Upgrade or top up to unlock exports."
+      "exportsLocked": "Exports are available on paid plans. Upgrade or top up to unlock exports.",
+      "titleFallback": "Tender review",
+      "invalidLink": "This tender link is invalid.",
+      "empty": {
+        "body": "No results yet. This page will update automatically once the review finishes."
+      },
+      "overlayNote": "This is a best-effort overlay. Always verify against the original tender documents.",
+      "actions": {
+        "menuAria": "Review actions",
+        "backToTenders": "Back to tenders",
+        "rename": "Rename",
+        "retry": "Retry",
+        "retrying": "Retrying…",
+        "retryAnalysis": "Retry analysis",
+        "unlockExports": "Unlock exports",
+        "downloadSummary": "Download summary",
+        "downloadBidPack": "Download Bid Pack",
+        "exportTenderBriefPdf": "Export tender brief (PDF)",
+        "exportCsvOverview": "Export overview (CSV)",
+        "exportCsvRequirements": "Export requirements (CSV)",
+        "exportCsvRisks": "Export risks (CSV)",
+        "exportCsvClarifications": "Export clarifications (CSV)",
+        "exportCsvOutline": "Export outline (CSV)",
+        "copyExcerpt": "Copy excerpt",
+        "copyPhrase": "Copy phrase",
+        "addToBuyerEmail": "Add to buyer email",
+        "assignOwnerPlaceholder": "Assign owner"
+      },
+      "delete": {
+        "confirm": "Delete this tender review? This cannot be undone.",
+        "failed": "Could not delete this tender review. Please try again."
+      },
+      "errors": {
+        "loadFailedReturnToTenders": "This tender review could not be loaded. Please return to your tenders and open it again.",
+        "loadFailedRefresh": "This tender review could not be loaded. Please refresh and try again.",
+        "takingLonger": "This tender review is taking longer than expected. Please refresh the page or check again later.",
+        "troubleLoading": "We are having trouble loading this tender review. Please refresh the page and try again.",
+        "printViewFailed": "Could not create the print view. Please try again.",
+        "printDialogFailed": "Could not open the print dialog. Please try again.",
+        "bidPackExportFailed": "Could not export the Bid Pack. Please try again.",
+        "exportCsvFailed": "Could not export {type} CSV. Please try again.",
+        "teamDecisionSaveFailed": "Could not save team decision. Please try again."
+      },
+      "progress": {
+        "needsAttentionTitle": "Something needs attention",
+        "needsAttentionBody": "Please try again or re-upload the file.",
+        "gettingStarted": "Getting started",
+        "preparing": "Preparing your bid review…",
+        "working": "Working on your tender review",
+        "workingShort": "Working…",
+        "extracting": "Extracting requirements, risks, clarifications, and a short draft…",
+        "resultsReady": "Results are ready.",
+        "autoUpdates": "Results appear automatically on this page",
+        "stepsHint": "You can leave this tab open — it will update automatically.",
+        "startNewReview": "Start a new review"
+      },
+      "driversTitle": "Decision drivers",
+      "driversSubtitle": "Key signals from the tender analysis and your workspace playbook.",
+      "verdictMicrocopy": {
+        "hold": "Review blockers and submission rules before committing.",
+        "caution": "Go, but validate the risks and any missing information before committing resources.",
+        "go": "Confirm submission basics, then start drafting."
+      },
+      "todayFocus": {
+        "hold": "Today focus: verify blockers and submission rules.",
+        "caution": "Today focus: validate top risks and missing information.",
+        "go": "Today focus: confirm submission basics, then start drafting."
+      },
+      "deadline": {
+        "passed": "Deadline passed",
+        "inDays": "In {days} days",
+        "inOneDay": "In 1 day",
+        "inHours": "In {hours} hours",
+        "inOneHour": "In 1 hour",
+        "inMinutes": "In {minutes} min"
+      },
+      "metrics": {
+        "risks": "{count} risks",
+        "questions": "{count} questions",
+        "outlineAvailable": "Outline available",
+        "outlineNotDetected": "Outline not detected",
+        "deadlineDetected": "Deadline detected",
+        "source": "Source"
+      },
+      "nextActions": {
+        "dueToday": "Due: Today",
+        "dueBeforePricing": "Due: Before pricing sign-off",
+        "dueBeforeSubmission": "Due: Before submission"
+      },
+      "labels": {
+        "tenderOutline": "Tender outline"
+      },
+      "doneWhen": {
+        "checklist": "Done when: requirement wording is verified in portal/PDF and any mandatory form/template is identified.",
+        "questions": "Done when: buyer question is drafted and either answered in the tender or queued to send.",
+        "risks": "Done when: risk impact/mitigation is agreed (accept, mitigate, or escalate) and evidence is noted.",
+        "draft": "Done when: outline is reviewed and owners are assigned to each major section.",
+        "submission": "Done when: submission method, deadline, and required upload format are confirmed in portal/PDF.",
+        "source": "Done when: the clause is located in portal/PDF and confirmed against the authoritative wording."
+      },
+      "eta": {
+        "min2to5": "2–5 min",
+        "min10to20": "10–20 min",
+        "min10to30": "10–30 min",
+        "min15to30": "15–30 min"
+      },
+      "roles": {
+        "bidManager": "Bid Manager",
+        "salesOps": "Sales Ops",
+        "proposalLead": "Proposal Lead",
+        "legal": "Legal",
+        "engineering": "Engineering"
+      },
+      "extraction": {
+        "textExtractedLabel": "Text extracted",
+        "textExtractedTitle": "Text extraction looks usable.",
+        "limitedLabel": "Limited text extraction",
+        "limitedTitle": "If text extraction is limited, verify key clauses directly in the PDF."
+      },
+      "warnings": {
+        "inputTruncated": "Input truncated",
+        "maxChars": "Max chars: {count}",
+        "noTextExtracted": "No text extracted",
+        "costCapExceeded": "Cost cap exceeded"
+      },
+      "retry": {
+        "signedOut": "You are signed out. Please log in again and retry.",
+        "noLongerFailed": "This job is no longer marked as failed. Refresh the page.",
+        "failed": "Retry could not be started. Please try again or contact support.",
+        "started": "Retry started. This page will update automatically."
+      },
+      "evidenceNotes": {
+        "idNotFound": "Evidence ID not found in the pipeline evidence map. This can happen if the pipeline evidence was generated with a different version or was trimmed. Verify in the original PDF.",
+        "idNotFoundShort": "Evidence ID not found in the pipeline evidence map. It may have been trimmed or generated with a different version. Verify in the original PDF.",
+        "noEvidenceId": "No evidence ID available for this item. Use Source text search and verify in the original PDF.",
+        "noExactClauseFound": "No exact supporting clause found for this item in the extracted text. Verify in the original PDF / tender portal.",
+        "pageMarkerNotFound": "Exact clause not found. Page marker {marker} was not found in extracted text. Verify in the original PDF.",
+        "jumpedToMarker": "Exact clause not found in extracted text. Jumped to {marker} as a reliable anchor. Verify the clause in the original PDF.",
+        "jumpedToMarkerGeneric": "Exact clause not found in extracted text. Jumped to the page marker as a reliable anchor. Verify in the original PDF."
+      },
+      "readiness": {
+        "total": "{count} blockers",
+        "done": "{count} done",
+        "blocked": "{count} blocked",
+        "fixableRemaining": "{count} fixable remaining",
+        "noBlockers": "No blockers",
+        "readyTitle": "Ready to decide",
+        "readyBody": "Blockers are resolved and the bid room is ready for execution.",
+        "readyWithBlocked": "Some blockers are still blocked. Assign owners and unblock them before committing.",
+        "resolvedByTeam": "Resolved by team"
+      },
+      "sections": {
+        "blockers": "Blockers",
+        "strategicRisks": "Strategic risks",
+        "noStrategicRisks": "No strategic risks detected.",
+        "immediateActions": "Immediate actions",
+        "noActions": "No immediate actions suggested."
+      },
+      "failed": {
+        "title": "Review failed",
+        "reasonLabel": "Reason",
+        "lastStepLabel": "Last step",
+        "inlineBody": "You can retry, or start a new review."
+      },
+      "rename": {
+        "title": "Rename tender",
+        "subtitle": "Choose a short, clear name your team will recognize."
+      },
+      "source": {
+        "idLabel": "Evidence ID",
+        "evidenceLabel": "Evidence",
+        "openEvidenceExcerpt": "Open evidence excerpt",
+        "evidenceExcerptTitle": "Evidence excerpt",
+        "excerptAuthoritativeNote": "Evidence excerpts are verbatim. Always verify against the original PDF.",
+        "locate": "Locate in source",
+        "locateBestEffort": "Locate (best effort)",
+        "openOriginalPdf": "Open original PDF",
+        "noSourceTextYet": "Source text is not available yet.",
+        "hiddenTitle": "Source hidden",
+        "hiddenBody": "For very large tenders, the source text is hidden by default for performance.",
+        "closeLocateView": "Close locate view",
+        "sectionTitle": "Source",
+        "sectionSubtitle": "Evidence excerpts are verbatim. Use Locate in source to verify.",
+        "title": "Source text",
+        "subtitle": "Search and verify key clauses in the extracted text, then cross-check the PDF.",
+        "searchTitle": "Search",
+        "searchSubtitle": "Search phrases in the extracted source text.",
+        "searchPhrasePlaceholder": "Search phrase…",
+        "tabLabel": "Mode",
+        "switchEvidence": "Switch to evidence",
+        "openReferenceText": "Open reference text",
+        "showPreview": "Show preview",
+        "showFullText": "Show full text",
+        "pageLabel": "Page",
+        "verificationFooter": "Always verify against the original PDF. Evidence excerpts are the source of truth."
+      },
+      "clarifications": {
+        "categories": {
+          "submission": "Submission",
+          "eligibility": "Eligibility",
+          "commercial": "Commercial",
+          "legal": "Legal",
+          "delivery": "Delivery",
+          "scope": "Scope",
+          "general": "General"
+        },
+        "hints": {
+          "submission": "How/when you must submit.",
+          "eligibility": "May affect whether you can participate.",
+          "commercial": "Pricing/payment/commercial terms.",
+          "legal": "Legal/contract terms to confirm.",
+          "delivery": "Delivery or support commitments.",
+          "scope": "Technical/scope boundary to confirm.",
+          "general": "Confirm in the tender source."
+        },
+        "email": {
+          "subject": "Clarification questions – {tender}",
+          "intro": "Hello,\n\nWe are preparing our tender response and would appreciate clarification on the points below.\nThank you.\n\n"
+        }
+      },
+      "title": "Tender review",
+      "exportsNotReady": "Exports are not ready yet. Finish the review first.",
+      "teamDecisionApplied": "Team decision saved.",
+      "topBlockersTitle": "Top blockers",
+      "trust": {
+        "subtitle": "Evidence-first. Every claim should link to a verbatim excerpt.",
+        "step1": "Start with the decision and top blockers.",
+        "step2": "Verify key clauses using Evidence IDs and Locate in source.",
+        "step3": "Use the Bid Room to assign owners and unblock execution.",
+        "title": "Title"
+      },
+      "playbook": {
+        "version": "Playbook v{version}",
+        "openSettings": "Open settings",
+        "noneTitle": "No playbook configured",
+        "noneBody": "Configure your workspace bid playbook to surface policy triggers.",
+        "configureCta": "Configure playbook",
+        "noTriggers": "No policy triggers detected.",
+        "noDetails": "No additional details."
+      },
+      "state": {
+        "progress": "Review in progress",
+        "failed": "Review failed",
+        "ready": "Review ready",
+        "lastUpdateLabel": "Last update:",
+        "preparingLabel": "Preparing…",
+        "preparingDecisionBody": "Extracting key items and building the decision view.",
+        "finalizingLabel": "Finalizing…",
+        "finalizingBody": "Stitching results and generating exports."
+      },
+      "support": {
+        "emailRequestLine": "Email Request Line"
+      }
     },
     "account": {
       "settings": "Settings",
@@ -974,6 +1393,94 @@
         "deadline": "Submission deadline",
         "notes": "Notes",
         "notesBody": "Evidence IDs point to authoritative excerpts. Company context (if any) is not evidence."
+      },
+      "textSummary": {
+        "sections": {
+          "executiveSummary": "Executive summary",
+          "keyConsiderations": "Key considerations",
+          "mustBlockers": "Blockers (MUST)",
+          "shouldItems": "Important (SHOULD)",
+          "infoItems": "Info",
+          "risks": "Risks",
+          "clarifications": "Clarifications",
+          "readyToSendEmail": "Ready-to-send email",
+          "rawList": "Raw list",
+          "tenderOutline": "Tender outline",
+          "why": "Why",
+          "whereToVerify": "Where to verify",
+          "recommendedAction": "Recommended action"
+        },
+        "empty": {
+          "noShouldItems": "No SHOULD items.",
+          "noInfoItems": "No INFO items."
+        },
+        "title": "Tender summary",
+        "meta": {
+          "file": "File",
+          "created": "Created",
+          "decision": "Decision"
+        },
+        "moreEvidence": "… +{count} more evidence IDs"
+      },
+      "tenderBrief": {
+        "empty": {
+          "noMustBlockers": "No MUST blockers.",
+          "noRisks": "No risks detected.",
+          "noClarifications": "No clarifications suggested.",
+          "noOutline": "No outline detected.",
+          "noDrivers": "No decision drivers available."
+        },
+        "manualChecks": "Manual checks",
+        "sections": {
+          "executiveSummary": "Executive summary",
+          "keyConsiderations": "Key considerations",
+          "mustBlockers": "Blockers (MUST)",
+          "mustBlockersNote": "Each blocker includes deterministic evidence snippets. Locate-in-source highlights are not authoritative.",
+          "risks": "Risks",
+          "clarifications": "Clarifications",
+          "readyToSendEmail": "Ready-to-send email",
+          "rawList": "Raw list",
+          "tenderOutline": "Tender outline",
+          "recommendedFocus": "Recommended focus"
+        },
+        "recommendedAction": {
+          "go": "Proceed — confirm submission basics, then start drafting.",
+          "hold": "Hold — review blockers and submission rules before committing.",
+          "caution": "Proceed with caution — validate risks and missing information before committing resources."
+        },
+        "meta": {
+          "created": "Created",
+          "coverage": "Coverage",
+          "confidence": "Confidence",
+          "submissionDeadline": "Submission deadline",
+          "deadlinePresentVerify": "Deadline detected — verify in the PDF."
+        },
+        "evidenceDisclaimer": "Evidence excerpts are verbatim and authoritative. Always verify against the original tender documents.",
+        "footerLeft": "Drafting support only. Always verify against the original tender documents.",
+        "footerRight": "TenderPilot • Tender brief",
+        "evidence": {
+          "label": "Evidence",
+          "emptyExcerpt": "(Excerpt not available)",
+          "missingSnippet": "(Snippet not found in extracted text)",
+          "moreEvidenceIds": "More evidence IDs",
+          "moreEvidenceLine": "… +{count} more",
+          "pageUnknown": "Page unknown"
+        },
+        "buyerEmail": {
+          "subjectLabel": "Subject",
+          "subject": "Clarification questions – {tender}",
+          "greeting": "Hello,",
+          "intro": "We are preparing our tender response and would appreciate clarification on the points below.",
+          "thanks": "Thank you."
+        },
+        "severity": {
+          "high": "High",
+          "medium": "Medium",
+          "low": "Low"
+        },
+        "title": "Tender brief",
+        "tipPdf": "Tip: Export as PDF for sharing.",
+        "whereToVerifyList": "Where to verify"
       }
     },
     "dashboard": {
@@ -1049,7 +1556,8 @@
         "blockedItems": "Blocked items",
         "unassignedItems": "Unassigned items",
         "overdueWorkItems": "Overdue work items",
-        "clarificationsPending": "Clarifications pending"
+        "clarificationsPending": "Clarifications pending",
+        "dueNext7Title": "Due next 7 days"
       },
       "labels": {
         "decision": "Decision",
@@ -1072,11 +1580,113 @@
         "toggleTitle": "Expand/collapse analytics",
         "hiddenInStandup": "Hidden in standup mode",
         "hiddenLabel": "Hidden",
-        "noWorkItemsYet": "No work items yet."
+        "noWorkItemsYet": "No work items yet.",
+        "title": "Analytics",
+        "workloadByOwner": "Workload by owner"
       },
       "blockers": {
         "noneTitle": "No blockers",
-        "noneLabel": "None"
+        "noneLabel": "None",
+        "title": "Blockers"
+      },
+      "bids": {
+        "title": "Bids"
+      },
+      "attention": {
+        "title": "Needs attention",
+        "empty": "Nothing urgent right now.",
+        "holdTitle": "Hold tenders",
+        "holdEmpty": "No tenders are currently in Hold."
+      },
+      "actions": {
+        "addOverride": "Add override"
+      },
+      "empty": {
+        "noNeedsTriage": "No tenders need triage.",
+        "allHaveDeadline": "All visible tenders have a deadline.",
+        "noDueNext7": "No tenders are due in the next 7 days.",
+        "noOverdueWorkItems": "No overdue work items.",
+        "noBlockedItems": "No blocked work items.",
+        "noUnassignedItems": "No unassigned work items.",
+        "noOpenClarifications": "No open clarifications."
+      }
+    },
+    "errors": {
+      "title": "Something went wrong",
+      "body": "We couldn’t load this part of TenderPilot.",
+      "details": "Error details",
+      "whatYouCanDo": "What you can do",
+      "cta": {
+        "retry": "Try again",
+        "newReview": "Start a new review",
+        "openHistory": "Open your tenders"
+      },
+      "actions": {
+        "retryPage": "Retry this page",
+        "refreshAfterSignIn": "Refresh after signing in",
+        "openHistory": "Go to tenders"
+      }
+    },
+    "loading": {
+      "title": "Loading…",
+      "subtitle": "Preparing your workspace",
+      "sessionHint": "If this takes longer than a few seconds, refresh the page."
+    },
+    "metadata": {
+      "title": "Bid metadata",
+      "labels": {
+        "contextHint": "Optional context that helps your team and improves exports. This does not change evidence excerpts.",
+        "deadline": "Deadline",
+        "addDeadline": "Add deadline",
+        "owner": "Owner",
+        "addOwner": "Add owner",
+        "portal": "Portal",
+        "addPortal": "Add portal link",
+        "portalSet": "Portal set",
+        "unsaved": "Unsaved",
+        "lastSaved": "Last saved"
+      },
+      "fields": {
+        "deadlineOverride": "Deadline override",
+        "portalUrl": "Portal URL",
+        "internalBidId": "Internal bid ID",
+        "owner": "Owner",
+        "targetDecision": "Target decision date"
+      },
+      "actions": {
+        "save": "Save",
+        "saving": "Saving…"
+      },
+      "placeholders": {
+        "portalUrl": "https://…",
+        "internalBidId": "e.g. BID-12345",
+        "owner": "e.g. Michela"
+      },
+      "errors": {
+        "saveFailed": "Could not save bid metadata. Please try again."
+      }
+    },
+    "policyTriggers": {
+      "title": "Policy triggers",
+      "subtitle": "Signals from your workspace bid playbook. These do not replace evidence excerpts.",
+      "impact": {
+        "blocker": "Blocker",
+        "risk": "Risk",
+        "clarify": "Clarify",
+        "fit": "Fit",
+        "info": "Info"
+      },
+      "keys": {
+        "policy": "Policy",
+        "industry_tags": "Industry fit",
+        "offerings_summary": "Offerings fit",
+        "delivery_geographies": "Delivery geographies",
+        "languages_supported": "Languages supported",
+        "delivery_modes": "Delivery modes",
+        "capacity_band": "Capacity / sizing",
+        "typical_lead_time_weeks": "Lead time",
+        "certifications": "Certifications",
+        "non_negotiables": "Non-negotiables"
       }
     }
   }

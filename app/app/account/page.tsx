@@ -176,6 +176,8 @@ function ChipsInput({
 }) {
   const [draft, setDraft] = useState("");
 
+  const { t } = useAppI18n();
+
   function commit(raw: string) {
     const s = String(raw ?? "").replace(/\s+/g, " ").trim();
     if (!s) return;
@@ -202,7 +204,7 @@ function ChipsInput({
               className="rounded-full px-1 text-muted-foreground hover:text-foreground"
               onClick={() => onChange(values.filter((x) => x !== v))}
               disabled={disabled}
-              aria-label={`Remove ${v}`}
+              aria-label={t("app.common.removeItemAria", { item: v })}
             >
               ×
             </button>
@@ -300,12 +302,12 @@ function PlaybookModal({
       <div className="absolute left-1/2 top-1/2 w-[min(92vw,860px)] max-h-[86vh] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl border bg-background shadow-2xl">
         <div className="flex items-start justify-between gap-3 border-b px-6 py-4">
           <div className="min-w-0">
-            <p className="text-sm text-muted-foreground">Bid Playbook</p>
+            <p className="text-sm text-muted-foreground">{t("app.account.playbook.title")}</p>
             <h2 className="text-lg font-semibold tracking-tight">
-              Edit playbook rules
+              {t("app.account.playbook.modalTitle")}
             </h2>
             <p className="mt-1 text-xs text-muted-foreground">
-              These rules shape Go / Hold / No Go. They are not used as evidence.
+              {t("app.account.playbook.modalSubtitle")}
             </p>
           </div>
 

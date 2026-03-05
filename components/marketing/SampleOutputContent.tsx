@@ -117,23 +117,32 @@ function SegTabs({
   items: Array<{ value: string; label: string }>; // keep tiny
 }) {
   return (
-    <div className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/20 p-1">
-      {items.map((it) => {
-        const active = it.value === value;
-        return (
-          <button
-            key={it.value}
-            type="button"
-            onClick={() => onChange(it.value)}
-            className={[
-              "h-9 rounded-full px-4 text-sm font-semibold transition",
-              active ? "bg-foreground text-background shadow-sm" : "text-foreground/80 hover:bg-background/60",
-            ].join(" ")}
-          >
-            {it.label}
-          </button>
-        );
-      })}
+    <div className="w-full">
+      <div
+        className={[
+          "flex w-full items-center gap-1 rounded-full border border-border bg-muted/20 p-1",
+          "overflow-x-auto whitespace-nowrap",
+          "[-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        ].join(" ")}
+      >
+        {items.map((it) => {
+          const active = it.value === value;
+          return (
+            <button
+              key={it.value}
+              type="button"
+              onClick={() => onChange(it.value)}
+              className={[
+                "shrink-0 whitespace-nowrap",
+                "h-9 rounded-full px-3 sm:px-4 text-xs sm:text-sm font-semibold transition",
+                active ? "bg-foreground text-background shadow-sm" : "text-foreground/80 hover:bg-background/60",
+              ].join(" ")}
+            >
+              {it.label}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -256,11 +265,11 @@ export function SampleOutputContent({
           <div className="flex items-center justify-between h-16">
             <Link href={homeHref} className="flex items-center gap-2 font-semibold tracking-tight">
               <BrandIcon className="h-7 w-7" />
-              <span>TenderPilot</span>
+              <span className="hidden sm:inline">TenderPilot</span>
             </Link>
 
             <div className="flex items-center gap-3">
-              <Button asChild variant="outline" className="rounded-full border-white/10">
+              <Button asChild variant="outline" className="hidden sm:inline-flex rounded-full border-white/10">
                 <Link href={howItWorksHref}>{dict.header.secondaryCta}</Link>
               </Button>
               <Button asChild className="rounded-full bg-primary text-primary-foreground">
@@ -284,8 +293,10 @@ export function SampleOutputContent({
           <p className="mt-4 text-muted-foreground text-lg">{dict.header.subtitle}</p>
         </div>
 
-        <div className="mt-8 flex items-center justify-center">
-          <SegTabs value={view} onChange={(v) => setView(v as any)} items={tabs} />
+        <div className="mt-8 flex justify-center">
+          <div className="w-full max-w-3xl">
+            <SegTabs value={view} onChange={(v) => setView(v as any)} items={tabs} />
+          </div>
         </div>
 
         {/* App preview container */}
@@ -307,7 +318,7 @@ export function SampleOutputContent({
                 <p className="mt-1 text-xs text-muted-foreground">Drafting support only. Always verify against the original tender document.</p>
               </div>
 
-              <div className="flex items-center gap-2 justify-start md:justify-end">
+              <div className="flex flex-wrap items-center gap-2 justify-start md:justify-end">
                 <button
                   type="button"
                   onClick={() => setView("dashboard")}
@@ -316,7 +327,7 @@ export function SampleOutputContent({
                   <ArrowLeft className="h-4 w-4" /> Back
                 </button>
 
-                <Button className="rounded-full" disabled>
+                <Button className="rounded-full w-full sm:w-auto" disabled>
                   Download Bid Pack (Excel)
                 </Button>
 
@@ -371,7 +382,7 @@ export function SampleOutputContent({
                 {/* Decision drivers */}
                 <Card className="rounded-3xl border border-border bg-card/80 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/70">
                   <CardContent className="p-7 md:p-10">
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div>
                         <p className="text-sm font-semibold">Decision drivers</p>
                         <p className="mt-1 text-xs text-muted-foreground">Structured drivers only. Verify using Evidence & Source.</p>
@@ -428,7 +439,7 @@ export function SampleOutputContent({
                           </div>
                           <Button
                             variant="outline"
-                            className="rounded-full"
+                            className="rounded-full w-full sm:w-auto"
                             onClick={async () => {
                               const text = dict.data.questions.map((q) => `- ${q.q}`).join("\n");
                               const ok = await safeCopy(text);
@@ -460,7 +471,7 @@ export function SampleOutputContent({
               <div className="space-y-6">
                 <Card className="rounded-3xl border border-border bg-card/80 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-card/70">
                   <CardContent className="p-7 md:p-10">
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div>
                         <p className="text-sm font-semibold">Evidence & Source</p>
                         <p className="mt-1 text-xs text-muted-foreground">
@@ -472,14 +483,14 @@ export function SampleOutputContent({
                 </Card>
 
                 <div ref={referenceRef} className="space-y-4">
-                  <div className="flex items-end justify-between gap-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                     <div>
                       <p className="text-sm font-semibold">Reference text (verification only)</p>
                       <p className="mt-1 text-xs text-muted-foreground">
                         Best-effort highlight. Always confirm exact wording and formatting in the original tender document.
                       </p>
                     </div>
-                    <Button variant="outline" className="rounded-full" disabled>
+                    <Button variant="outline" className="rounded-full w-full sm:w-auto" disabled>
                       Reference text
                     </Button>
                   </div>
@@ -487,7 +498,7 @@ export function SampleOutputContent({
                   {/* Evidence excerpt */}
                   <Card className="rounded-2xl">
                     <CardContent className="p-5">
-                      <div className="flex items-start justify-between gap-4">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div>
                           <p className="text-sm font-semibold">Evidence excerpt</p>
                           <p className="mt-1 text-sm text-muted-foreground">
@@ -523,9 +534,9 @@ export function SampleOutputContent({
                           </p>
                         </div>
 
-                        <div className="flex flex-col gap-2">
+                        <div className="flex w-full flex-col gap-2 sm:w-auto sm:shrink-0">
                           <Button
-                            className="rounded-full"
+                            className="rounded-full w-full sm:w-auto"
                             onClick={() => {
                               setShowEvidenceExcerpt(true);
                             }}
@@ -535,7 +546,7 @@ export function SampleOutputContent({
 
                           <Button
                             variant="outline"
-                            className="rounded-full"
+                            className="rounded-full w-full sm:w-auto"
                             onClick={() => {
                               setShowLocate(true);
                               window.setTimeout(() => referenceRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
@@ -546,7 +557,7 @@ export function SampleOutputContent({
 
                           <Button
                             variant="outline"
-                            className="rounded-full"
+                            className="rounded-full w-full sm:w-auto"
                             onClick={async () => {
                               const ok = await safeCopy(activeEvidence.excerpt);
                               if (ok) {
@@ -560,7 +571,7 @@ export function SampleOutputContent({
 
                           <Button
                             variant="outline"
-                            className="rounded-full"
+                            className="rounded-full w-full sm:w-auto"
                             onClick={() => {
                               setShowEvidenceExcerpt(false);
                               setShowLocate(false);
@@ -583,7 +594,7 @@ export function SampleOutputContent({
                   {showLocate ? (
                     <Card className="rounded-2xl">
                       <CardContent className="p-5">
-                        <div className="flex items-start justify-between gap-4">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                           <div>
                             <p className="text-sm font-semibold">Locate in source (best-effort)</p>
                             <p className="mt-1 text-sm text-muted-foreground">
@@ -594,10 +605,10 @@ export function SampleOutputContent({
                             </p>
                           </div>
 
-                          <div className="flex flex-col gap-2">
+                          <div className="flex w-full flex-col gap-2 sm:w-auto sm:shrink-0">
                             <Button
                               variant="outline"
-                              className="rounded-full"
+                              className="rounded-full w-full sm:w-auto"
                               onClick={async () => {
                                 const ok = await safeCopy(activeEvidence.locateSnippet);
                                 if (ok) {
@@ -608,7 +619,7 @@ export function SampleOutputContent({
                             >
                               {copied === "phrase" ? "Copied" : "Copy phrase"}
                             </Button>
-                            <Button variant="outline" className="rounded-full" onClick={() => setShowLocate(false)}>
+                            <Button variant="outline" className="rounded-full w-full sm:w-auto" onClick={() => setShowLocate(false)}>
                               Close locate view
                             </Button>
                           </div>
@@ -622,23 +633,23 @@ export function SampleOutputContent({
                   ) : null}
 
                   {/* Search */}
-                  <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
                       <p className="text-sm font-semibold">Search within reference text</p>
                       <p className="mt-1 text-xs text-muted-foreground">Best-effort highlight. Always confirm in the original PDF for legal wording.</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                      <div className="flex w-full items-center gap-2 rounded-full border border-border bg-background px-4 py-2">
                         <Search className="h-4 w-4 text-muted-foreground" />
                         <input
                           value={searchPhrase}
                           onChange={(e) => setSearchPhrase(e.target.value)}
                           placeholder="Search phrase..."
-                          className="w-[260px] bg-transparent text-sm outline-none"
+                          className="w-full sm:w-[260px] bg-transparent text-sm outline-none"
                         />
                       </div>
                       <Button
-                        className="rounded-full"
+                        className="rounded-full w-full sm:w-auto"
                         onClick={() => {
                           // scroll into view for the user
                           referenceRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -666,7 +677,7 @@ export function SampleOutputContent({
 
             {view === "bidroom" ? (
               <div className="space-y-6">
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <p className="text-xl font-semibold">Bid Room</p>
                     <p className="mt-1 text-sm text-muted-foreground">Work view: assign owners, track tasks, and coordinate the bid.</p>
@@ -686,7 +697,7 @@ export function SampleOutputContent({
 
                 <Card className="rounded-2xl">
                   <CardContent className="p-5">
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div>
                         <p className="text-sm font-semibold">Bid metadata</p>
                         <p className="mt-1 text-xs text-muted-foreground">
@@ -694,7 +705,7 @@ export function SampleOutputContent({
                         </p>
                         <p className="mt-1 text-xs text-muted-foreground">Operational context (team decision) is set on the job page.</p>
                       </div>
-                      <Button variant="outline" className="rounded-full" disabled>
+                      <Button variant="outline" className="rounded-full w-full sm:w-auto" disabled>
                         Edit
                       </Button>
                     </div>
@@ -703,7 +714,7 @@ export function SampleOutputContent({
 
                 <Card className="rounded-2xl">
                   <CardContent className="p-5">
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div>
                         <p className="text-sm font-semibold">Bid Room</p>
                         <p className="mt-1 text-xs text-muted-foreground">
@@ -711,10 +722,10 @@ export function SampleOutputContent({
                         </p>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <Button variant="outline" className="rounded-full" disabled>
+                        <Button variant="outline" className="rounded-full w-full sm:w-auto" disabled>
                           Open original PDF
                         </Button>
-                        <Button variant="outline" className="rounded-full" disabled>
+                        <Button variant="outline" className="rounded-full w-full sm:w-auto" disabled>
                           Export Bid Pack
                         </Button>
                       </div>
@@ -732,7 +743,7 @@ export function SampleOutputContent({
                         <div className="rounded-full border border-border bg-background px-4 py-2 text-xs text-muted-foreground inline-flex items-center gap-2">
                           All status <ChevronDown className="h-4 w-4" />
                         </div>
-                        <Button variant="outline" className="rounded-full" disabled>
+                        <Button variant="outline" className="rounded-full w-full sm:w-auto" disabled>
                           Hiding done
                         </Button>
                       </div>
@@ -747,7 +758,7 @@ export function SampleOutputContent({
                       <div className="p-4 space-y-3">
                         {dict.data.mustItems.slice(0, 4).map((m, i) => (
                           <div key={i} className="rounded-2xl border border-border bg-background p-4">
-                            <div className="flex items-start justify-between gap-4">
+                            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                               <div className="min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   {chip("Requirement · MUST", "text-xs")}
@@ -760,7 +771,7 @@ export function SampleOutputContent({
                                 >
                                   Open evidence
                                 </Button>
-                                <Button variant="outline" className="rounded-full" disabled>
+                                <Button variant="outline" className="rounded-full w-full sm:w-auto" disabled>
                                   Locate in PDF
                                 </Button>
                               </div>
@@ -783,7 +794,7 @@ export function SampleOutputContent({
 
             {view === "compliance" ? (
               <div className="space-y-6">
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <p className="text-xl font-semibold">Proposal coverage</p>
                     <p className="mt-1 text-sm text-muted-foreground">
@@ -798,7 +809,7 @@ export function SampleOutputContent({
                     >
                       Open Bid Room
                     </Button>
-                    <Button variant="outline" className="rounded-full" disabled>
+                    <Button variant="outline" className="rounded-full w-full sm:w-auto" disabled>
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </div>
@@ -840,13 +851,13 @@ export function SampleOutputContent({
                       </div>
                       {chip("Rows: 6")}
                       {chip("Evidence map: 7")}
-                      <Button variant="outline" className="rounded-full" disabled>
+                      <Button variant="outline" className="rounded-full w-full sm:w-auto" disabled>
                         View
                       </Button>
-                      <Button className="rounded-full" disabled>
+                      <Button className="rounded-full w-full sm:w-auto" disabled>
                         Gaps
                       </Button>
-                      <Button variant="outline" className="rounded-full" disabled>
+                      <Button variant="outline" className="rounded-full w-full sm:w-auto" disabled>
                         Full
                       </Button>
                     </div>
@@ -902,7 +913,7 @@ export function SampleOutputContent({
                                 >
                                   Evidence
                                 </Button>
-                                <Button variant="outline" className="rounded-full" disabled>
+                                <Button variant="outline" className="rounded-full w-full sm:w-auto" disabled>
                                   Locate in PDF
                                 </Button>
                                 <Button
@@ -926,7 +937,7 @@ export function SampleOutputContent({
 
             {view === "dashboard" ? (
               <div className="space-y-6">
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <p className="text-xl font-semibold">Dashboard</p>
                     <p className="mt-1 text-sm text-muted-foreground">High-signal triage for decisions, deadlines, and execution.</p>
@@ -935,7 +946,7 @@ export function SampleOutputContent({
                     <Button asChild className="rounded-full">
                       <Link href={primaryCtaHref}>New bid</Link>
                     </Button>
-                    <Button variant="outline" className="rounded-full" disabled>
+                    <Button variant="outline" className="rounded-full w-full sm:w-auto" disabled>
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </div>
@@ -1004,12 +1015,12 @@ export function SampleOutputContent({
 
                 <Card className="rounded-2xl">
                   <CardContent className="p-5">
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div>
                         <p className="text-sm font-semibold">Operational queues</p>
                         <p className="mt-1 text-xs text-muted-foreground">Actionable queues for daily delivery. Works even when the tender PDF has no deadline or decision.</p>
                       </div>
-                      <Button variant="outline" className="rounded-full" disabled>
+                      <Button variant="outline" className="rounded-full w-full sm:w-auto" disabled>
                         Expand
                       </Button>
                     </div>

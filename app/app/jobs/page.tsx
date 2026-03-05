@@ -128,54 +128,58 @@ function decisionBucket(raw: string): "go" | "hold" | "no-go" | "unknown" {
 }
 
 function DecisionBadge({ text }: { text: string }) {
+  const { t } = useAppI18n();
   const b = decisionBucket(text);
+
   if (b === "no-go") {
     return (
       <Badge variant="destructive" className="rounded-full">
-        No-Go
+        {t("app.decision.noGo")}
       </Badge>
     );
   }
   if (b === "hold") {
     return (
       <Badge variant="secondary" className="rounded-full">
-        Hold
+        {t("app.decision.hold")}
       </Badge>
     );
   }
   if (b === "go") {
     return (
       <Badge variant="default" className="rounded-full">
-        Go
+        {t("app.decision.go")}
       </Badge>
     );
   }
   return (
     <Badge variant="outline" className="rounded-full">
-      Unknown
+      {t("app.common.unknown")}
     </Badge>
   );
 }
 
 function StatusBadge({ status }: { status: JobStatus }) {
-  if (status === "done") return <Badge className="rounded-full">Ready</Badge>;
+  const { t } = useAppI18n();
+
+  if (status === "done") return <Badge className="rounded-full">{t("app.common.ready")}</Badge>;
   if (status === "failed") {
     return (
       <Badge variant="destructive" className="rounded-full">
-        Failed
+        {t("app.common.failed")}
       </Badge>
     );
   }
   if (status === "queued") {
     return (
       <Badge variant="secondary" className="rounded-full">
-        Queued
+        {t("app.common.queued")}
       </Badge>
     );
   }
   return (
     <Badge variant="secondary" className="rounded-full">
-      Processing
+      {t("app.common.processing")}
     </Badge>
   );
 }
@@ -269,7 +273,7 @@ export default function JobsPage() {
 
     if (error) {
       console.error("Failed to load jobs", error);
-      setLoadError("Your jobs could not be loaded. Please refresh the page.");
+      setLoadError(t("app.tenders.loadFailed"));
       setJobs([]);
       setJobResults({});
       setJobMeta({});
@@ -385,9 +389,9 @@ export default function JobsPage() {
   }, []);
 
   async function handleDelete(job: DbJob) {
-    const ok = window.confirm(
-      `Delete "${getJobDisplayName(job.id) || job.file_name}"?\n\nThis will remove the tender review and its results. This cannot be undone.`
-    );
+    const name = String(getJobDisplayName(job.id) || job.file_name || "").trim();
+    const ok = window.confirm(t("app.tenders.deleteConfirm", { name: name || t("app.tender.single") }));
+
     if (!ok) return;
 
     setActionError(null);
@@ -404,7 +408,7 @@ export default function JobsPage() {
       track("job_deleted", { job_id: job.id, source: "jobs_list" });
     } catch (e) {
       console.error("Delete failed", e);
-      setActionError("Could not delete this tender review. Please try again.");
+      setActionError(t("app.tenders.deleteFailed"));
     } finally {
       setDeletingJobId(null);
     }
@@ -438,7 +442,7 @@ export default function JobsPage() {
         const exec = r?.executive_summary ?? {};
         const meta = jobMeta[job.id];
 
-        const title = String(getJobDisplayName(job.id) || job.file_name || "Tender").trim();
+        const title = String(getJobDisplayName(job.id) || job.file_name || t("app.tender.single")).trim();
 
         const customerCandidate =
           String(
@@ -467,7 +471,7 @@ export default function JobsPage() {
         const dueDays = hasDeadline ? daysUntil(deadline as Date, now) : null;
 
         const extractedDecisionTextRaw = String(exec?.decisionBadge ?? exec?.decision ?? exec?.verdict ?? "").trim();
-        const extractedDecisionText = extractedDecisionTextRaw || "Proceed with caution";
+        const extractedDecisionText = extractedDecisionTextRaw || "Hold";
         const overrideRaw = meta?.decision_override;
         const decisionText = isUseExtractedDecisionOverride(overrideRaw) ? extractedDecisionText : String(overrideRaw ?? "").trim();
         const bucket = decisionBucket(decisionText);
@@ -789,16 +793,16 @@ export default function JobsPage() {
                 const showDeadlineTone = r.deadlineCategory === "soon";
                 const showWeekTone = r.deadlineCategory === "week";
                 const deadlineLabelText = !r.hasDeadline
-                  ? "No deadline"
+                  ? t("app.tenders.deadline.noDeadline")
                   : r.dueDays !== null && r.dueDays < 0
-                    ? `Overdue (${Math.abs(r.dueDays)}d)`
+                    ? t("app.tenders.deadline.overdueDays", { days: Math.abs(r.dueDays) })
                     : r.dueDays === 0
-                      ? "Due today"
+                      ? t("app.tenders.deadline.dueToday")
                       : r.dueDays === 1
-                        ? "Due tomorrow"
+                        ? t("app.tenders.deadline.dueTomorrow")
                         : r.dueDays !== null
-                          ? `Due in ${r.dueDays}d`
-                          : "Deadline";
+                          ? t("app.tenders.deadline.dueInDays", { days: r.dueDays })
+                          : t("app.tenders.deadline.deadline");
 
                 return (
                   <div
@@ -837,12 +841,12 @@ export default function JobsPage() {
                           {r.hasDeadline && r.deadline ? `${formatDeadline(r.deadline)} · ${deadlineLabelText}` : deadlineLabelText}
                         </span>
 
-                        <span className="text-muted-foreground">Created {formatDate(job.created_at)}</span>
+                        <span className="text-muted-foreground">{t("app.tenders.createdAt", { date: formatDate(job.created_at) })}</span>
 
                         {r.totalItems > 0 ? (
                           <span className="text-muted-foreground">
-                            Bid Room {r.openItems} open of {r.totalItems}
-                            {r.overdueItems > 0 ? ` · ${r.overdueItems} overdue` : ""}
+                            {t("app.tenders.bidRoomSummary", { open: r.openItems, total: r.totalItems })}
+                            {r.overdueItems > 0 ? ` · ${t("app.tenders.overdueCount", { count: r.overdueItems })}` : ""}
                           </span>
                         ) : (
                           <span className="text-muted-foreground">{t("app.bidroom.notStarted")}</span>
@@ -859,7 +863,7 @@ export default function JobsPage() {
                             router.push(`/app/jobs/${job.id}/bid-room`);
                           }}
                         >
-                          Bid Room
+                          {t("app.bidroom.title")}
                         </Button>
                         <Button
                           variant="outline"
@@ -904,7 +908,7 @@ export default function JobsPage() {
                                 router.push(`/app/jobs/${job.id}/bid-room`);
                               }}
                             >
-                              Open bid room
+                              {t("app.bidroom.openBidRoom")}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={(e) => {
@@ -913,7 +917,7 @@ export default function JobsPage() {
                                 router.push(`/app/jobs/${job.id}/compliance`);
                               }}
                             >
-                              Open proposal coverage
+                              {t("app.compliance.openProposalCoverage")}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="text-destructive"
@@ -923,7 +927,7 @@ export default function JobsPage() {
                                 handleDelete(job);
                               }}
                             >
-                              {deletingJobId === job.id ? "Deleting…" : "Delete"}
+                              {deletingJobId === job.id ? t("app.common.deleting") : t("app.common.delete")}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>

@@ -83,7 +83,7 @@ export default function JobCompliancePage() {
     return (
       <Card className="rounded-2xl">
         <CardContent className="p-6">
-          <p className="text-sm font-semibold">Loading…</p>
+          <p className="text-sm font-semibold">{t("app.common.loading")}…</p>
           <p className="mt-1 text-sm text-muted-foreground">{t("app.compliance.loadingBody")}</p>
         </CardContent>
       </Card>
@@ -94,7 +94,7 @@ export default function JobCompliancePage() {
     return (
       <Card className="rounded-2xl">
         <CardContent className="p-6">
-          <p className="text-sm font-semibold">Could not open this page</p>
+          <p className="text-sm font-semibold">{t("app.common.couldNotOpenPage")}</p>
           <p className="mt-1 text-sm text-muted-foreground">{error}</p>
         </CardContent>
       </Card>
