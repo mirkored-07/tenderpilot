@@ -3,15 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { useAppI18n } from "./app-i18n-provider";
 
 type NavItem = { href: string; label: string };
 
-const nav: NavItem[] = [
-  { href: "/app/upload", label: "New bid" },
-  { href: "/app/jobs", label: "Jobs" },
-  { href: "/app/dashboard", label: "Dashboard" },
-  { href: "/app/account", label: "Account" },
-];
+function buildNav(t: (k: string) => string): NavItem[] {
+  return [
+    { href: "/app/upload", label: t("app.nav.newReview") },
+    { href: "/app/jobs", label: t("app.nav.tenders") },
+    { href: "/app/dashboard", label: t("app.nav.dashboard") },
+    { href: "/app/account", label: t("app.nav.account") },
+  ];
+}
 
 export function SideNav({
   onNavigate,
@@ -19,10 +22,13 @@ export function SideNav({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
+  const { t } = useAppI18n();
+
+  const nav = buildNav((k) => t(k));
 
   return (
     <div className="px-3 py-4">
-      <p className="px-3 pb-2 text-xs font-medium text-white/80">Menu</p>
+      <p className="px-3 pb-2 text-xs font-medium text-white/80">{t("app.nav.menu")}</p>
 
       <nav className="space-y-1">
         {nav.map((item) => {

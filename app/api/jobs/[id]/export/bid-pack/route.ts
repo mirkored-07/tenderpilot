@@ -5,6 +5,9 @@ import { createClient } from "@supabase/supabase-js";
 
 import { supabaseRoute } from "@/lib/supabase/route";
 import { stableRefKey } from "@/lib/bid-workflow/keys";
+import { loadDict } from "@/lib/i18n/dict";
+import { normalizeLocale } from "@/lib/i18n/locales";
+import { tFromDict } from "@/lib/i18n/t";
 
 function supabaseAdmin() {
   return createClient(
@@ -127,22 +130,39 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   // Export gating: free tier requires at least 1 remaining credit.
   // Server-side enforced so UI cannot bypass.
   const admin = supabaseAdmin();
-  const { data: profileRow, error: profErr } = await admin
-    .from("profiles")
-    .select("credits_balance")
-    .eq("id", userRes.user.id)
-    .maybeSingle();
-
-  if (profErr) {
-    console.warn("Failed to read credits_balance for export gate", profErr);
+  let profileRow: any = null;
+  try {
+    const res = await admin
+      .from("profiles")
+      .select("credits_balance,locale")
+      .eq("id", userRes.user.id)
+      .maybeSingle();
+    if (res.error) throw res.error;
+    profileRow = res.data as any;
+  } catch (e) {
+    // If locale column does not exist yet, keep export path working.
+    const res = await admin
+      .from("profiles")
+      .select("credits_balance")
+      .eq("id", userRes.user.id)
+      .maybeSingle();
+    profileRow = res.data as any;
+    if (res.error) {
+      console.warn("Failed to read credits_balance for export gate", res.error);
+    }
   }
 
-  const credits = (profileRow as any)?.credits_balance;
+  const credits = profileRow?.credits_balance;
   const creditsBalance = typeof credits === "number" ? credits : 0;
 
   if (creditsBalance < 1) {
     return NextResponse.json({ error: "no_export_entitlement" }, { status: 402 });
   }
+
+  const locale = normalizeLocale(profileRow?.locale);
+  const [dict, fallback] = await Promise.all([loadDict(locale), loadDict("en")]);
+  const tt = (key: string, vars?: Record<string, string | number>) => tFromDict({ dict, fallbackDict: fallback, key, vars });
+  const H = (k: string) => tt(`app.exports.headers.${k}`);
 
   const { data: job, error: jobErr } = await supabase
     .from("jobs")
@@ -198,36 +218,36 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
 
   // ---- 00_Overview ----
   {
-    const ws = wb.addWorksheet("00_Overview");
+    const ws = wb.addWorksheet(tt("app.exports.bidPack.sheets.overview"));
     ws.columns = [
-      { header: "field", key: "field", width: 28 },
-      { header: "value", key: "value", width: 90 },
+      { header: H("field"), key: "field", width: 28 },
+      { header: H("value"), key: "value", width: 90 },
     ];
     const decisionBadge = String(exec?.decisionBadge ?? "").trim();
     const decisionLine = String(exec?.decisionLine ?? "").trim();
     const deadline = String(exec?.submissionDeadline ?? "").trim();
 
-    ws.addRow({ field: "Tender", value: String((job as any)?.file_name ?? "").trim() });
-    ws.addRow({ field: "Created", value: String((job as any)?.created_at ?? "").trim() });
-    ws.addRow({ field: "Status", value: String((job as any)?.status ?? "").trim() });
-    ws.addRow({ field: "Decision", value: decisionBadge });
-    ws.addRow({ field: "Why", value: decisionLine });
-    ws.addRow({ field: "Submission deadline", value: deadline });
-    ws.addRow({ field: "Notes", value: "Evidence IDs point to authoritative excerpts. Company context (if any) is not evidence." });
+    ws.addRow({ field: tt("app.exports.overview.tender"), value: String((job as any)?.file_name ?? "").trim() });
+    ws.addRow({ field: tt("app.exports.overview.created"), value: String((job as any)?.created_at ?? "").trim() });
+    ws.addRow({ field: tt("app.exports.overview.status"), value: String((job as any)?.status ?? "").trim() });
+    ws.addRow({ field: tt("app.exports.overview.decision"), value: decisionBadge });
+    ws.addRow({ field: tt("app.exports.overview.why"), value: decisionLine });
+    ws.addRow({ field: tt("app.exports.overview.deadline"), value: deadline });
+    ws.addRow({ field: tt("app.exports.overview.notes"), value: tt("app.exports.overview.notesBody") });
   }
 
   // ---- 01_Blockers ----
   {
-    const ws = wb.addWorksheet("01_Blockers");
+    const ws = wb.addWorksheet(tt("app.exports.bidPack.sheets.blockers"));
     ws.columns = [
-      { header: "ref_key", key: "ref_key", width: 22 },
-      { header: "requirement", key: "requirement", width: 90 },
-      { header: "owner", key: "owner", width: 18 },
-      { header: "status", key: "status", width: 14 },
-      { header: "due_at", key: "due_at", width: 16 },
-      { header: "notes", key: "notes", width: 40 },
-      { header: "evidence_ids", key: "evidence_ids", width: 22 },
-      { header: "pages", key: "pages", width: 10 },
+      { header: H("ref_key"), key: "ref_key", width: 22 },
+      { header: H("requirement"), key: "requirement", width: 90 },
+      { header: H("owner"), key: "owner", width: 18 },
+      { header: H("status"), key: "status", width: 14 },
+      { header: H("due_at"), key: "due_at", width: 16 },
+      { header: H("notes"), key: "notes", width: 40 },
+      { header: H("evidence_ids"), key: "evidence_ids", width: 22 },
+      { header: H("pages"), key: "pages", width: 10 },
     ];
 
     const musts = checklist.filter((i) => String(i?.type ?? i?.level ?? i?.priority ?? "").toUpperCase().includes("MUST"));
@@ -256,17 +276,17 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
 
   // ---- 02_Requirements ----
   {
-    const ws = wb.addWorksheet("02_Requirements");
+    const ws = wb.addWorksheet(tt("app.exports.bidPack.sheets.requirements"));
     ws.columns = [
-      { header: "ref_key", key: "ref_key", width: 22 },
-      { header: "type", key: "type", width: 10 },
-      { header: "requirement", key: "requirement", width: 90 },
-      { header: "owner", key: "owner", width: 18 },
-      { header: "status", key: "status", width: 14 },
-      { header: "due_at", key: "due_at", width: 16 },
-      { header: "notes", key: "notes", width: 40 },
-      { header: "evidence_ids", key: "evidence_ids", width: 22 },
-      { header: "pages", key: "pages", width: 10 },
+      { header: H("ref_key"), key: "ref_key", width: 22 },
+      { header: H("type"), key: "type", width: 10 },
+      { header: H("requirement"), key: "requirement", width: 90 },
+      { header: H("owner"), key: "owner", width: 18 },
+      { header: H("status"), key: "status", width: 14 },
+      { header: H("due_at"), key: "due_at", width: 16 },
+      { header: H("notes"), key: "notes", width: 40 },
+      { header: H("evidence_ids"), key: "evidence_ids", width: 22 },
+      { header: H("pages"), key: "pages", width: 10 },
     ];
 
     for (const it of checklist) {
@@ -297,18 +317,18 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
 
   // ---- 03_Risks ----
   {
-    const ws = wb.addWorksheet("03_Risks");
+    const ws = wb.addWorksheet(tt("app.exports.bidPack.sheets.risks"));
     ws.columns = [
-      { header: "ref_key", key: "ref_key", width: 22 },
-      { header: "severity", key: "severity", width: 10 },
-      { header: "risk", key: "risk", width: 55 },
-      { header: "detail", key: "detail", width: 70 },
-      { header: "owner", key: "owner", width: 18 },
-      { header: "status", key: "status", width: 14 },
-      { header: "due_at", key: "due_at", width: 16 },
-      { header: "notes", key: "notes", width: 40 },
-      { header: "evidence_ids", key: "evidence_ids", width: 22 },
-      { header: "pages", key: "pages", width: 10 },
+      { header: H("ref_key"), key: "ref_key", width: 22 },
+      { header: H("severity"), key: "severity", width: 10 },
+      { header: H("risk"), key: "risk", width: 55 },
+      { header: H("detail"), key: "detail", width: 70 },
+      { header: H("owner"), key: "owner", width: 18 },
+      { header: H("status"), key: "status", width: 14 },
+      { header: H("due_at"), key: "due_at", width: 16 },
+      { header: H("notes"), key: "notes", width: 40 },
+      { header: H("evidence_ids"), key: "evidence_ids", width: 22 },
+      { header: H("pages"), key: "pages", width: 10 },
     ];
 
     for (const r of risks) {
@@ -341,16 +361,16 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
 
   // ---- 04_Clarifications ----
   {
-    const ws = wb.addWorksheet("04_Clarifications");
+    const ws = wb.addWorksheet(tt("app.exports.bidPack.sheets.clarifications"));
     ws.columns = [
-      { header: "ref_key", key: "ref_key", width: 22 },
-      { header: "question", key: "question", width: 90 },
-      { header: "owner", key: "owner", width: 18 },
-      { header: "status", key: "status", width: 14 },
-      { header: "due_at", key: "due_at", width: 16 },
-      { header: "notes", key: "notes", width: 40 },
-      { header: "evidence_ids", key: "evidence_ids", width: 22 },
-      { header: "pages", key: "pages", width: 10 },
+      { header: H("ref_key"), key: "ref_key", width: 22 },
+      { header: H("question"), key: "question", width: 90 },
+      { header: H("owner"), key: "owner", width: 18 },
+      { header: H("status"), key: "status", width: 14 },
+      { header: H("due_at"), key: "due_at", width: 16 },
+      { header: H("notes"), key: "notes", width: 40 },
+      { header: H("evidence_ids"), key: "evidence_ids", width: 22 },
+      { header: H("pages"), key: "pages", width: 10 },
     ];
 
     for (const q of clarifications) {
@@ -373,15 +393,15 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
 
   // ---- 05_Outline ----
   {
-    const ws = wb.addWorksheet("05_Outline");
+    const ws = wb.addWorksheet(tt("app.exports.bidPack.sheets.outline"));
     ws.columns = [
-      { header: "ref_key", key: "ref_key", width: 22 },
-      { header: "section", key: "section", width: 60 },
-      { header: "bullets", key: "bullets", width: 90 },
-      { header: "owner", key: "owner", width: 18 },
-      { header: "status", key: "status", width: 14 },
-      { header: "due_at", key: "due_at", width: 16 },
-      { header: "notes", key: "notes", width: 40 },
+      { header: H("ref_key"), key: "ref_key", width: 22 },
+      { header: H("section"), key: "section", width: 60 },
+      { header: H("bullets"), key: "bullets", width: 90 },
+      { header: H("owner"), key: "owner", width: 18 },
+      { header: H("status"), key: "status", width: 14 },
+      { header: H("due_at"), key: "due_at", width: 16 },
+      { header: H("notes"), key: "notes", width: 40 },
     ];
 
     for (const s of outline) {
@@ -403,13 +423,13 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
 
   // ---- Policy Triggers ----
   if ((policyTriggers ?? []).length) {
-    const ws = wb.addWorksheet("Policy Triggers");
+    const ws = wb.addWorksheet(tt("app.exports.bidPack.sheets.policyTriggers"));
     ws.columns = [
-      { header: "trigger_id", key: "trigger_id", width: 20 },
-      { header: "impact", key: "impact", width: 16 },
-      { header: "title", key: "title", width: 32 },
-      { header: "detail", key: "detail", width: 90 },
-      { header: "playbook_version", key: "playbook_version", width: 16 },
+      { header: H("trigger_id"), key: "trigger_id", width: 20 },
+      { header: H("impact"), key: "impact", width: 16 },
+      { header: H("title"), key: "title", width: 32 },
+      { header: H("detail"), key: "detail", width: 90 },
+      { header: H("playbook_version"), key: "playbook_version", width: 16 },
     ];
 
     for (const t of policyTriggers) {
@@ -425,13 +445,13 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
 
   // ---- 99_EvidenceIndex ----
   {
-    const ws = wb.addWorksheet("99_EvidenceIndex");
+    const ws = wb.addWorksheet(tt("app.exports.bidPack.sheets.evidenceIndex"));
     ws.columns = [
-      { header: "evidence_id", key: "evidence_id", width: 14 },
-      { header: "page", key: "page", width: 8 },
-      { header: "anchor", key: "anchor", width: 22 },
-      { header: "kind", key: "kind", width: 12 },
-      { header: "excerpt", key: "excerpt", width: 120 },
+      { header: H("evidence_id"), key: "evidence_id", width: 14 },
+      { header: H("page"), key: "page", width: 8 },
+      { header: H("anchor"), key: "anchor", width: 22 },
+      { header: H("kind"), key: "kind", width: 12 },
+      { header: H("excerpt"), key: "excerpt", width: 120 },
     ];
     for (const e of evidenceCandidates) {
       const id = String(e?.id ?? "").trim();

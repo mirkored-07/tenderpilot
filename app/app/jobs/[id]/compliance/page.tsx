@@ -7,6 +7,7 @@ import { supabaseBrowser } from "@/lib/supabase/browser";
 
 import { ComplianceMatrix } from "@/components/compliance/ComplianceMatrix";
 import { Card, CardContent } from "@/components/ui/card";
+import { useAppI18n } from "../../../_components/app-i18n-provider";
 
 type JobStatus = "queued" | "processing" | "done" | "failed";
 
@@ -20,6 +21,7 @@ function normalizeChecklist(raw: any): any[] {
 }
 
 export default function JobCompliancePage() {
+  const { t } = useAppI18n();
   const params = useParams();
   const jobId = String((params as any)?.id ?? "").trim();
 
@@ -42,7 +44,7 @@ export default function JobCompliancePage() {
         if (cancelled) return;
 
         if (jobErr || !jobRow) {
-          setError("Job not found or not accessible.");
+          setError(t("app.tender.notFound"));
           setJob(null);
           setResult(null);
           setLoading(false);
@@ -62,7 +64,7 @@ export default function JobCompliancePage() {
         }
       } catch (e) {
         console.error(e);
-        setError("Could not load compliance matrix.");
+        setError(t("app.compliance.loadError"));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -82,7 +84,7 @@ export default function JobCompliancePage() {
       <Card className="rounded-2xl">
         <CardContent className="p-6">
           <p className="text-sm font-semibold">Loading…</p>
-          <p className="mt-1 text-sm text-muted-foreground">Preparing your compliance matrix.</p>
+          <p className="mt-1 text-sm text-muted-foreground">{t("app.compliance.loadingBody")}</p>
         </CardContent>
       </Card>
     );
@@ -104,9 +106,9 @@ export default function JobCompliancePage() {
       {status !== "done" ? (
         <Card className="rounded-2xl">
           <CardContent className="p-6">
-            <p className="text-sm font-semibold">Results are not finalized</p>
+            <p className="text-sm font-semibold">{t("app.compliance.notFinalTitle")}</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              You can still set compliance status, but the extracted requirement list may change until processing is complete.
+              {t("app.compliance.notFinalBody")}
             </p>
           </CardContent>
         </Card>

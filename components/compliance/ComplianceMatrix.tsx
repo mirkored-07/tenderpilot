@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { FileDown, FileText, MoreHorizontal, X } from "lucide-react";
+import { useAppI18n } from "@/app/app/_components/app-i18n-provider";
 
 type ReqType = "MUST" | "SHOULD" | "INFO";
 
@@ -115,6 +116,8 @@ export function ComplianceMatrix(props: {
   workHref?: string;
 }) {
   const { jobId, checklist, backHref, workHref } = props;
+
+  const { t } = useAppI18n();
 
   const [cmItems, setCmItems] = useState<any[]>([]);
   const [workError, setWorkError] = useState<string | null>(null);
@@ -468,7 +471,7 @@ export function ComplianceMatrix(props: {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `TenderRay_ComplianceMatrix_${jobId}.csv`;
+    a.download = `TenderPilot_ComplianceMatrix_${jobId}.csv`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -674,7 +677,7 @@ export function ComplianceMatrix(props: {
               <Input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Search requirement, proposal section, notes…"
+                placeholder={t("app.compliance.searchPlaceholder")}
                 className="h-9"
               />
 
@@ -894,7 +897,7 @@ export function ComplianceMatrix(props: {
                               className="h-8 rounded-full px-3 text-xs"
                               onClick={() => openPdfAtEvidence(firstEv)}
                             >
-                              Locate in PDF
+                              {t("app.common.locateInPdf")}
                             </Button>
                           </div>
 
@@ -905,10 +908,16 @@ export function ComplianceMatrix(props: {
                               onClick={() => sendGapToBidRoom(r, complianceStatus, proposalSection, note)}
                               disabled={send === "sending"}
                             >
-                              {send === "sending" ? "Sending…" : send === "sent" ? "Sent to Bid Room" : send === "exists" ? "Already in Bid Room" : "Send to Bid Room"}
+                              {send === "sending"
+                                ? t("app.common.sending")
+                                : send === "sent"
+                                  ? t("app.compliance.send.sent")
+                                  : send === "exists"
+                                    ? t("app.compliance.send.exists")
+                                    : t("app.compliance.send.cta")}
                             </Button>
                           ) : (
-                            <div className="text-[11px] text-muted-foreground">Covered — no task needed</div>
+                            <div className="text-[11px] text-muted-foreground">{t("app.compliance.coveredNoTask")}</div>
                           )}
                         </div>
                       </div>
@@ -919,7 +928,7 @@ export function ComplianceMatrix(props: {
             </div>
           ) : (
             <div className="px-4 py-10 text-sm text-muted-foreground">
-              {rowModel.length ? "No rows match the current filters." : "No requirements extracted yet."}
+              {rowModel.length ? t("app.compliance.noRows") : t("app.compliance.noReqs")}
             </div>
           )}
         </CardContent>

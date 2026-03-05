@@ -14,7 +14,7 @@ export function BrandIcon({
     >
       <Image
         src="/brand.jpg"
-        alt="TenderRay"
+        alt="TenderPilot"
         fill
         className="object-cover"
         priority

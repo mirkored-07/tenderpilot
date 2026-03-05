@@ -15,6 +15,7 @@ import {
   fastExtractPasses,
 } from "@/lib/pdf/extract-pdf-text";
 import { track } from "@/lib/telemetry";
+import { useAppI18n } from "../_components/app-i18n-provider";
 
 type SourceType = "pdf" | "docx";
 
@@ -49,6 +50,7 @@ type UploadPhase =
   | "redirecting";
 
 export default function UploadForm() {
+  const { t } = useAppI18n();
   const [file, setFile] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState(false);
 
@@ -282,9 +284,7 @@ export default function UploadForm() {
     }
   }
 
-  const primaryCtaLabel = loading
-    ? phaseLabel(phase) || "Preparing…"
-    : "Create bid";
+  const primaryCtaLabel = loading ? phaseLabel(phase) || t("app.common.preparing") : t("app.upload.ctaRun");
 
   return (
     <div className="space-y-4">
@@ -351,10 +351,10 @@ export default function UploadForm() {
 
           <div>
             <p className="text-sm font-semibold">
-              Drag and drop your tender file here
+              {t("app.upload.dropTitle")}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Or click to browse your computer.
+              {t("app.upload.dropHint")}
             </p>
           </div>
 
@@ -377,7 +377,7 @@ export default function UploadForm() {
                   }}
                   disabled={loading}
                 >
-                  Remove
+                  {t("app.common.remove")}
                 </Button>
               </div>
             </div>
@@ -387,13 +387,13 @@ export default function UploadForm() {
 
       {needsSignIn && (
         <div className="rounded-2xl border bg-muted/40 p-4">
-          <p className="text-sm font-medium">Sign in to create your bid</p>
+          <p className="text-sm font-medium">{t("app.upload.signInTitle")}</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            Your file is ready. Sign in via magic link, then click “Create bid”.
+            {t("app.upload.signInBody")}
           </p>
           <div className="mt-3 flex flex-col gap-2 sm:flex-row">
             <Button asChild className="rounded-full">
-              <Link href="/login">Sign in</Link>
+              <Link href="/login">{t("app.common.signIn")}</Link>
             </Button>
             <Button
               type="button"
@@ -401,7 +401,7 @@ export default function UploadForm() {
               className="rounded-full"
               onClick={() => setNeedsSignIn(false)}
             >
-              Not now
+              {t("app.common.notNow")}
             </Button>
           </div>
         </div>
@@ -409,18 +409,18 @@ export default function UploadForm() {
 
    {noCredits && (
 	  <div className="rounded-2xl border bg-muted/40 p-4">
-		<p className="text-sm font-medium">You’re out of credits</p>
+		<p className="text-sm font-medium">{t("app.upload.noCreditsTitle")}</p>
 		<p className="mt-1 text-sm text-muted-foreground">
-		  Each tender review consumes 1 credit. Upgrade to Pro to get monthly credits.
+		  {t("app.upload.noCreditsBody")}
 		</p>
 
 		<div className="mt-3 flex flex-col gap-2 sm:flex-row">
 		  <Button asChild className="rounded-full">
-			<Link href="/app/account#billing">Upgrade to Pro</Link>
+			<Link href="/app/account#billing">{t("app.upload.upgrade")}</Link>
 		  </Button>
 
 		  <Button asChild variant="outline" className="rounded-full">
-			<a href="mailto:support@tenderpilot.com">Email support</a>
+			<a href="mailto:support@tenderpilot.com">{t("app.common.emailSupport")}</a>
 		  </Button>
 
 		  <Button
@@ -429,7 +429,7 @@ export default function UploadForm() {
 			className="rounded-full"
 			onClick={() => setNoCredits(false)}
 		  >
-			Dismiss
+			{t("app.common.dismiss")}
 		  </Button>
 		</div>
 	  </div>
@@ -469,8 +469,8 @@ export default function UploadForm() {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-muted-foreground">
           {file
-            ? "You’ll be redirected to the decision cockpit after upload."
-            : "Select a file to continue."}
+            ? t("app.upload.footerHasFile")
+            : t("app.upload.footerNoFile")}
         </p>
 
         <Button

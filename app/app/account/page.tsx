@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator";
 
 import { useTheme } from "next-themes";
 import { X, Pencil } from "lucide-react";
+import { useAppI18n } from "../_components/app-i18n-provider";
 
 type ProfileRow = {
   id: string;
@@ -227,7 +228,8 @@ function ChipsInput({
             commit(draft);
             setDraft("");
           }}
-          placeholder={placeholder ?? "Type and press Enter"}
+          // Placeholder should be provided by caller using t(...)
+          placeholder={placeholder ?? ""}
           className="h-9 w-[240px] rounded-xl"
           disabled={disabled}
         />
@@ -269,6 +271,7 @@ function PlaybookModal({
   playbookIsDirty: boolean;
   onSave: () => Promise<void>;
 }) {
+	 const { t } = useAppI18n();
   const [more, setMore] = useState(false);
   const firstInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -323,7 +326,7 @@ function PlaybookModal({
               variant="outline"
               className="rounded-full h-9 px-3"
               onClick={onClose}
-              aria-label="Close"
+              aria-label={t("app.common.close")}
             >
               <X className="h-4 w-4" />
             </Button>
@@ -334,14 +337,13 @@ function PlaybookModal({
           {!playbookEnabled ? (
             <div className="rounded-2xl border bg-muted/20 p-4">
               <p className="text-sm text-muted-foreground">
-                Playbook storage is not enabled yet. Apply the migration and
-                refresh.
+                {t("app.account.playbook.storageNotEnabled")}
               </p>
             </div>
           ) : (
             <div className="space-y-6">
               <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">What you do</p>
+                <p className="text-xs text-muted-foreground">{t("app.account.playbook.whatYouDo")}</p>
                 <Input
                   ref={firstInputRef}
                   value={playbook.offerings_summary}
@@ -351,45 +353,45 @@ function PlaybookModal({
                       offerings_summary: e.target.value,
                     }))
                   }
-                  placeholder="One sentence summary"
+                  placeholder={t("app.account.playbook.oneSentencePlaceholder")}
                   className="rounded-xl"
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  Keep it short. This reduces generic noise.
+                  {t("app.account.playbook.oneSentenceHelp")}
                 </p>
               </div>
 
               <div className="grid gap-5 md:grid-cols-2">
                 <ChipsInput
-                  label="Industries"
+                  label={t("app.account.playbook.industries")}
                   values={playbook.industry_tags}
                   onChange={(next) =>
                     setPlaybook((p) => ({ ...p, industry_tags: next }))
                   }
-                  placeholder="Public sector, IT, healthcare"
+                  placeholder={t("app.account.playbook.industriesPlaceholder")}
                 />
 
                 <ChipsInput
-                  label="Regions"
+                  label={t("app.account.playbook.regions")}
                   values={playbook.delivery_geographies}
                   onChange={(next) =>
                     setPlaybook((p) => ({ ...p, delivery_geographies: next }))
                   }
-                  placeholder="Austria, DACH, EU"
+                  placeholder={t("app.account.playbook.regionsPlaceholder")}
                 />
               </div>
 
               <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">Work mode</p>
+                <p className="text-xs text-muted-foreground">{t("app.account.playbook.workMode")}</p>
                 <div className="flex flex-wrap items-center gap-4">
                   {(["remote", "hybrid", "onsite"] as const).map((m) => {
                     const checked = (playbook.delivery_modes ?? []).includes(m);
                     const label =
                       m === "onsite"
-                        ? "Onsite"
+                        ? t("app.account.playbook.modeOnsite")
                         : m === "hybrid"
-                        ? "Hybrid"
-                        : "Remote";
+                        ? t("app.account.playbook.modeHybrid")
+                        : t("app.account.playbook.modeRemote");
                     return (
                       <label
                         key={m}
@@ -418,7 +420,7 @@ function PlaybookModal({
 
               <div className="space-y-2">
                 <p className="text-xs text-muted-foreground">
-                  Hard rules (max 10)
+                  {t("app.account.playbook.hardRules")}
                 </p>
                 <textarea
                   value={(playbook.non_negotiables ?? []).join("\n")}
@@ -431,13 +433,12 @@ function PlaybookModal({
                     setPlaybook((p) => ({ ...p, non_negotiables: lines }));
                   }}
                   placeholder={
-                    "No onsite work\nISO 27001 required\nNo fixed price contracts"
+                    t("app.account.playbook.hardRulesPlaceholder")
                   }
                   className="min-h-[130px] w-full rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-muted"
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  If a rule influences the decision, it will appear as a playbook
-                  trigger in the cockpit.
+                  {t("app.account.playbook.triggerHint")}
                 </p>
               </div>
 
@@ -447,7 +448,7 @@ function PlaybookModal({
                   onClick={() => setMore((v) => !v)}
                   className="text-xs font-medium text-muted-foreground hover:text-foreground"
                 >
-                  {more ? "Hide options" : "More options"}
+                  {more ? t("app.common.hideOptions") : t("app.common.moreOptions")}
                 </button>
 
                 <div className="text-[11px] text-muted-foreground">
@@ -455,7 +456,7 @@ function PlaybookModal({
                   {playbookUpdatedAt ? (
                     <>
                       {" "}
-                      • Updated{" "}
+                      • {t("app.common.updated")}{" "}
                       <span className="text-foreground">
                         {new Date(playbookUpdatedAt).toLocaleString()}
                       </span>
@@ -468,7 +469,7 @@ function PlaybookModal({
                 <div className="space-y-5 rounded-2xl border bg-muted/10 p-4">
                   <div className="grid gap-5 md:grid-cols-2">
                     <ChipsInput
-                      label="Languages"
+                      label={t("app.account.playbook.languages")}
                       values={playbook.languages_supported}
                       onChange={(next) =>
                         setPlaybook((p) => ({
@@ -476,21 +477,21 @@ function PlaybookModal({
                           languages_supported: next,
                         }))
                       }
-                      placeholder="EN, DE, IT"
+                      placeholder={t("app.account.playbook.languagesPlaceholder")}
                     />
                     <ChipsInput
-                      label="Certifications"
+                      label={t("app.account.playbook.certifications")}
                       values={playbook.certifications}
                       onChange={(next) =>
                         setPlaybook((p) => ({ ...p, certifications: next }))
                       }
-                      placeholder="ISO 27001, TISAX"
+                      placeholder={t("app.account.playbook.certificationsPlaceholder")}
                     />
                   </div>
 
                   <div className="grid gap-5 md:grid-cols-2">
                     <div className="space-y-2">
-                      <p className="text-xs text-muted-foreground">Capacity</p>
+                      <p className="text-xs text-muted-foreground">{t("app.account.playbook.capacity")}</p>
                       <SegmentedChoice
                         value={playbook.capacity_band}
                         onChange={(v) =>
@@ -500,16 +501,16 @@ function PlaybookModal({
                           }))
                         }
                         options={[
-                          { value: "low", label: "Low" },
-                          { value: "medium", label: "Medium" },
-                          { value: "high", label: "High" },
+                          { value: "low", label: t("app.account.playbook.capacityLow") },
+                          { value: "medium", label: t("app.account.playbook.capacityMedium") },
+                          { value: "high", label: t("app.account.playbook.capacityHigh") },
                         ]}
                       />
                     </div>
 
                     <div className="space-y-2">
                       <p className="text-xs text-muted-foreground">
-                        Typical lead time (weeks)
+                        {t("app.account.playbook.leadTimeWeeks")}
                       </p>
                       <Input
                         type="number"
@@ -545,7 +546,7 @@ function PlaybookModal({
             className="rounded-full"
             onClick={onClose}
           >
-            Cancel
+            {t("app.common.cancel")}
           </Button>
 
           <Button
@@ -554,7 +555,7 @@ function PlaybookModal({
             onClick={onSave}
             disabled={!playbookEnabled || playbookSaving || !playbookIsDirty}
           >
-            {playbookSaving ? "Saving…" : "Save playbook"}
+            {playbookSaving ? t("app.common.saving") : t("app.account.playbook.savePlaybook")}
           </Button>
         </div>
       </div>
@@ -563,6 +564,7 @@ function PlaybookModal({
 }
 
 export default function AccountPage() {
+  const { t } = useAppI18n();
   const router = useRouter();
 
   const { setTheme } = useTheme();
@@ -580,7 +582,7 @@ export default function AccountPage() {
 
   const [userId, setUserId] = useState("");
   const [email, setEmail] = useState("");
-  const [authMethod, setAuthMethod] = useState<string>("Email");
+  const [authMethod, setAuthMethod] = useState<string>(t("app.account.profile.authMethodEmail"));
 
   const [usage, setUsage] = useState<UsageSnapshot | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -615,7 +617,7 @@ export default function AccountPage() {
     const p = new URLSearchParams(window.location.search);
     const billing = p.get("billing");
     if (billing === "success") {
-      setBillingNotice({ kind: "ok", text: "Payment received. Confirming your plan…" });
+      setBillingNotice({ kind: "ok", text: t("app.account.notice.paymentReceivedConfirming") });
 
       let cancelled = false;
       // Best-effort: sync billing + refresh credits for up to ~45s.
@@ -634,7 +636,7 @@ export default function AccountPage() {
           // Stop early once we see Pro + a non-zero credit balance.
           const snap = billingSnapshotRef.current;
           if (snap?.planTier === "pro" && typeof snap.credits === "number" && snap.credits >= 1) {
-            setBillingNotice({ kind: "ok", text: "Plan confirmed. Credits updated." });
+            setBillingNotice({ kind: "ok", text: t("app.account.notice.planConfirmed") });
             return;
           }
 
@@ -644,7 +646,7 @@ export default function AccountPage() {
         // If we exit the loop, keep message actionable.
         setBillingNotice({
           kind: "ok",
-          text: "Payment received. If credits did not update yet, click Sync billing below.",
+          text: t("app.account.notice.paymentReceivedSyncHint"),
         });
       })();
 
@@ -652,7 +654,7 @@ export default function AccountPage() {
         cancelled = true;
       };
     } else if (billing === "cancel") {
-      setBillingNotice({ kind: "err", text: "Checkout canceled." });
+      setBillingNotice({ kind: "err", text: t("app.account.notice.checkoutCanceled") });
     }
   }, []);
 
@@ -858,7 +860,7 @@ export default function AccountPage() {
       const provider = providerRaw || "email";
       const providerLabel =
         provider === "email"
-          ? "Email"
+          ? t("app.account.profile.authMethodEmail")
           : provider === "google"
           ? "Google"
           : provider === "azure"
@@ -909,10 +911,10 @@ export default function AccountPage() {
 
         if (looksMissing) {
           setPlaybookEnabled(false);
-          setPlaybookStatus({ kind: "err", text: "Setup required" });
+          setPlaybookStatus({ kind: "err", text: t("app.account.playbook.setupRequired") });
         } else {
           setPlaybookEnabled(true);
-          setPlaybookStatus({ kind: "err", text: "Couldn’t load" });
+          setPlaybookStatus({ kind: "err", text: t("app.account.notice.playbookCouldNotLoad") });
         }
       }
 
@@ -979,10 +981,10 @@ export default function AccountPage() {
         setUsage(null);
       }
     } catch (e) {
-      console.error("Account load failed", e);
+      console.error(t("app.account.notice.accountLoadFailed"), e);
       setStatusAutoClear({
         kind: "err",
-        text: "Couldn’t load settings. Refresh and try again.",
+        text: t("app.account.notice.couldNotLoadSettings"),
       });
     } finally {
       setLoading(false);
@@ -1015,7 +1017,7 @@ export default function AccountPage() {
       console.error(e);
       setBillingNotice({
         kind: "err",
-        text: "Couldn’t start checkout. Check Stripe env vars and try again.",
+        text: t("app.account.notice.couldNotStartCheckout"),
       });
     } finally {
       setBillingBusy(false);
@@ -1037,7 +1039,7 @@ export default function AccountPage() {
       console.error(e);
       setBillingNotice({
         kind: "err",
-        text: "Couldn’t open billing portal. Try upgrading first.",
+        text: t("app.account.notice.couldNotOpenPortal"),
       });
     } finally {
       setBillingBusy(false);
@@ -1059,8 +1061,8 @@ export default function AccountPage() {
             kind: "err",
             text:
               err === "missing_billing_schema"
-                ? "Billing schema missing in Supabase. Run supabase/stripe_billing_v1.sql."
-                : "Couldn’t sync billing. Try again.",
+                ? t("app.account.notice.missingBillingSchema")
+                : t("app.account.notice.couldNotSyncBilling"),
           });
         }
         return;
@@ -1070,7 +1072,7 @@ export default function AccountPage() {
         const plan = String((j as any)?.plan_tier ?? "").toLowerCase();
         setBillingNotice({
           kind: "ok",
-          text: plan === "pro" ? "Billing synced." : "Billing synced (free).",
+          text: plan === "pro" ? t("app.account.notice.billingSynced") : t("app.account.notice.billingSyncedFree"),
         });
       }
 
@@ -1079,7 +1081,7 @@ export default function AccountPage() {
     } catch (e) {
       console.error(e);
       if (!silent) {
-        setBillingNotice({ kind: "err", text: "Couldn’t sync billing. Try again." });
+        setBillingNotice({ kind: "err", text: t("app.account.notice.couldNotSyncBilling") });
       }
     } finally {
       setBillingBusy(false);
@@ -1093,12 +1095,12 @@ export default function AccountPage() {
       const r = await fetch("/api/account/purge", { method: "POST" });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(String((j as any)?.error ?? "purge_failed"));
-      setDangerNotice({ kind: "ok", text: "All tender data deleted." });
+      setDangerNotice({ kind: "ok", text: t("app.account.notice.allTenderDataDeleted") });
       await loadAccount();
       router.refresh();
     } catch (e) {
       console.error(e);
-      setDangerNotice({ kind: "err", text: "Couldn’t delete your tender data. Try again." });
+      setDangerNotice({ kind: "err", text: t("app.account.notice.couldNotDeleteTenderData") });
     } finally {
       setDangerBusy(null);
     }
@@ -1123,7 +1125,7 @@ export default function AccountPage() {
       window.location.href = "/";
     } catch (e) {
       console.error(e);
-      setDangerNotice({ kind: "err", text: "Couldn’t delete your account. Try again." });
+      setDangerNotice({ kind: "err", text: t("app.account.notice.couldNotDeleteAccount") });
       setDangerBusy(null);
     }
   }
@@ -1165,10 +1167,10 @@ export default function AccountPage() {
 
       setTheme(normalizedCurrent.theme);
       setInitial({ ...normalizedCurrent });
-      setStatusAutoClear({ kind: "ok", text: "Saved" });
+      setStatusAutoClear({ kind: "ok", text: t("app.common.saved") });
     } catch (e) {
-      console.error("Account save failed", e);
-      setStatusAutoClear({ kind: "err", text: "Couldn’t save. Try again." });
+      console.error(t("app.account.notice.accountSaveFailed"), e);
+      setStatusAutoClear({ kind: "err", text: t("app.account.notice.couldNotSave") });
     } finally {
       setSaving(false);
     }
@@ -1189,7 +1191,7 @@ export default function AccountPage() {
       }
 
       if (!playbookEnabled) {
-        setPlaybookStatus({ kind: "err", text: "Setup required" });
+        setPlaybookStatus({ kind: "err", text: t("app.account.playbook.setupRequired") });
         return;
       }
 
@@ -1213,12 +1215,12 @@ export default function AccountPage() {
       setPlaybookVersion(nextVersion);
       setPlaybookUpdatedAt(nowIso);
       setPlaybookInitialFp(fingerprintPlaybook(norm));
-      setPlaybookStatus({ kind: "ok", text: "Saved" });
+      setPlaybookStatus({ kind: "ok", text: t("app.common.saved") });
       window.setTimeout(() => setPlaybookStatus(null), 2200);
       setPlaybookOpen(false);
     } catch (e) {
-      console.error("Playbook save failed", e);
-      setPlaybookStatus({ kind: "err", text: "Couldn’t save" });
+      console.error(t("app.account.notice.playbookSaveFailed"), e);
+      setPlaybookStatus({ kind: "err", text: t("app.account.notice.couldNotSaveShort") });
     } finally {
       setPlaybookSaving(false);
     }
@@ -1234,21 +1236,21 @@ export default function AccountPage() {
   async function copyUserId() {
     try {
       await navigator.clipboard.writeText(userId);
-      setStatusAutoClear({ kind: "ok", text: "Copied" });
+      setStatusAutoClear({ kind: "ok", text: t("app.common.copied") });
     } catch {
-      setStatusAutoClear({ kind: "err", text: "Copy failed" });
+      setStatusAutoClear({ kind: "err", text: t("app.common.copyFailed") });
     }
   }
 
   const playbookSummary = useMemo(() => {
     const pb = playbookNormalized;
     const modes = pb.delivery_modes.length
-      ? pb.delivery_modes.map((m) => (m === "onsite" ? "Onsite" : m === "hybrid" ? "Hybrid" : "Remote"))
+      ? pb.delivery_modes.map((m) => (m === "onsite" ? t("app.account.playbook.modeOnsite") : m === "hybrid" ? t("app.account.playbook.modeHybrid") : t("app.account.playbook.modeRemote")))
       : [];
     const rulesCount = pb.non_negotiables.length;
 
     return {
-      what: pb.offerings_summary || "Add one sentence about what you deliver",
+      what: pb.offerings_summary || t("app.account.playbook.oneSentenceFallback"),
       industries: pb.industry_tags.slice(0, 3),
       regions: pb.delivery_geographies.slice(0, 3),
       modes,
@@ -1257,7 +1259,7 @@ export default function AccountPage() {
   }, [playbookNormalized]);
 
   if (loading) {
-    return <div className="py-16 text-sm text-muted-foreground">Loading…</div>;
+    return <div className="py-16 text-sm text-muted-foreground">{t("app.common.loading")}…</div>;
   }
 
   return (
@@ -1265,9 +1267,9 @@ export default function AccountPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("app.account.settings")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Profile, workspace, and preferences.
+            {t("app.account.settingsSubtitle")}
           </p>
         </div>
 
@@ -1286,7 +1288,7 @@ export default function AccountPage() {
             disabled={saving || !isDirty}
             className="rounded-full"
           >
-            {saving ? "Saving…" : "Save changes"}
+            {saving ? t("app.common.saving") : t("app.common.saveChanges")}
           </Button>
         </div>
       </div>
@@ -1297,19 +1299,19 @@ export default function AccountPage() {
         <div className="space-y-6 lg:col-span-4">
           <Card className="rounded-2xl">
             <CardHeader className="pb-3">
-              <CardTitle>Profile</CardTitle>
+              <CardTitle>{t("app.account.profile.title")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">Name</p>
+                <p className="text-xs text-muted-foreground">{t("app.account.profile.nameLabel")}</p>
                 <Input
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Your name"
+                  placeholder={t("app.account.profile.namePlaceholder")}
                   className="rounded-xl"
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  Used on exports and reports.
+                  {t("app.account.profile.nameHelp")}
                 </p>
               </div>
 
@@ -1317,12 +1319,12 @@ export default function AccountPage() {
 
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Email</p>
-                  <p className="text-sm font-medium">{email || "Unknown"}</p>
+                  <p className="text-xs text-muted-foreground">{t("app.account.profile.emailLabel")}</p>
+                  <p className="text-sm font-medium">{email || t("app.common.unknown")}</p>
                 </div>
 
                 <div className="space-y-1">
-                  <p className="text-xs text-muted-foreground">Sign in</p>
+                  <p className="text-xs text-muted-foreground">{t("app.account.profile.signInLabel")}</p>
                   <p className="text-sm font-medium">{authMethod}</p>
                 </div>
               </div>
@@ -1334,7 +1336,7 @@ export default function AccountPage() {
                   className="rounded-full"
                   onClick={() => setShowAdvanced((v) => !v)}
                 >
-                  {showAdvanced ? "Hide details" : "More"}
+                  {showAdvanced ? t("app.common.hideDetails") : t("app.common.more")}
                 </Button>
 
                 <Button
@@ -1349,7 +1351,7 @@ export default function AccountPage() {
               {showAdvanced ? (
                 <div className="rounded-2xl border bg-muted/20 p-4">
                   <div className="space-y-2">
-                    <p className="text-xs text-muted-foreground">User ID</p>
+                    <p className="text-xs text-muted-foreground">{t("app.account.profile.userIdLabel")}</p>
                     <div className="flex items-center justify-between gap-3">
                       <p className="text-sm font-mono">{shortUserId}</p>
                       <Button
@@ -1369,7 +1371,7 @@ export default function AccountPage() {
 
           <Card className="rounded-2xl">
             <CardHeader className="pb-3">
-              <CardTitle>Appearance</CardTitle>
+              <CardTitle>{t("app.account.appearance.title")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {themeMounted ? (
@@ -1377,9 +1379,9 @@ export default function AccountPage() {
                   value={pendingTheme}
                   onChange={setPendingTheme}
                   options={[
-                    { value: "system", label: "System" },
-                    { value: "light", label: "Light" },
-                    { value: "dark", label: "Dark" },
+                    { value: "system", label: t("app.common.system") },
+                    { value: "light", label: t("app.common.light") },
+                    { value: "dark", label: t("app.common.dark") },
                   ]}
                 />
               ) : (
@@ -1387,7 +1389,7 @@ export default function AccountPage() {
               )}
 
               <p className="text-xs text-muted-foreground">
-                Current:{" "}
+                {t("app.account.appearance.current")}:{" "}
                 <span className="text-foreground capitalize">
                   {pendingTheme}
                 </span>
@@ -1400,32 +1402,32 @@ export default function AccountPage() {
         <div className="space-y-6 lg:col-span-4">
           <Card className="rounded-2xl">
             <CardHeader className="pb-3">
-              <CardTitle>Workspace</CardTitle>
+              <CardTitle>{t("app.account.workspace.title")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5">
               <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">Workspace name</p>
+                <p className="text-xs text-muted-foreground">{t("app.account.workspace.nameLabel")}</p>
                 <Input
                   value={company}
                   onChange={(e) => setCompany(e.target.value)}
-                  placeholder="Workspace"
+                  placeholder={t("app.account.workspace.namePlaceholder")}
                   className="rounded-xl"
                 />
                 <p className="text-[11px] text-muted-foreground">
-                  Shown on exports and (later) for teams.
+                  {t("app.account.workspace.nameHelp")}
                 </p>
               </div>
 
               <Separator />
 
               <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">Start page</p>
+                <p className="text-xs text-muted-foreground">{t("app.account.workspace.startPageLabel")}</p>
                 <SegmentedChoice
                   value={defaultStartPage}
                   onChange={setDefaultStartPage}
                   options={[
-                    { value: "upload", label: "New bid" },
-                    { value: "jobs", label: "Jobs" },
+                    { value: "upload", label: t("app.nav.newReview") },
+                    { value: "jobs", label: t("app.nav.tenders") },
                   ]}
                 />
               </div>
@@ -1434,13 +1436,13 @@ export default function AccountPage() {
 
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm font-medium">Bid Room</p>
+                  <p className="text-sm font-medium">{t("app.account.bidRoom.title")}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Track owners, status, and due dates.
+                    {t("app.account.bidRoom.subtitle")}
                   </p>
                 </div>
                 <Button asChild variant="outline" className="rounded-full">
-                  <Link href="/app/bid-room">Open</Link>
+                  <Link href="/app/bid-room">{t("app.common.open")}</Link>
                 </Button>
               </div>
             </CardContent>
@@ -1451,9 +1453,9 @@ export default function AccountPage() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <CardTitle>Bid Playbook</CardTitle>
+                  <CardTitle>{t("app.account.playbook.title")}</CardTitle>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Rules that shape Go / Hold / No Go. Not evidence.
+                    {t("app.account.playbook.subtitle")}
                   </p>
                 </div>
 
@@ -1496,7 +1498,7 @@ export default function AccountPage() {
               ) : null}
 
               <div className="rounded-2xl border bg-muted/10 p-4">
-                <p className="text-sm font-medium">What you do</p>
+                <p className="text-sm font-medium">{t("app.account.playbook.whatYouDo")}</p>
                 <p className="mt-1 text-sm text-muted-foreground">
                   {playbookSummary.what}
                 </p>
@@ -1512,16 +1514,13 @@ export default function AccountPage() {
                     <MiniChip key={`m:${x}`} text={x} />
                   ))}
                   <MiniChip
-                    text={`${playbookSummary.rulesCount} rule${
-                      playbookSummary.rulesCount === 1 ? "" : "s"
-                    }`}
+                    text={playbookSummary.rulesCount === 1 ? t("app.account.playbook.ruleOne", { count: playbookSummary.rulesCount }) : t("app.account.playbook.ruleMany", { count: playbookSummary.rulesCount })}
                   />
                 </div>
               </div>
 
               <p className="text-[11px] text-muted-foreground">
-                If a playbook rule influences a decision, TenderRay will show it
-                as a trigger in the cockpit.
+                {t("app.account.playbookTriggerNote")}
               </p>
             </CardContent>
           </Card>
@@ -1531,7 +1530,7 @@ export default function AccountPage() {
         <div className="space-y-6 lg:col-span-4">
           <Card id="billing" className="rounded-2xl">
             <CardHeader className="pb-3">
-              <CardTitle>Billing</CardTitle>
+              <CardTitle>{t("app.account.billing.title")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {billingNotice && (
@@ -1549,7 +1548,7 @@ export default function AccountPage() {
 
               {billing?.planTier === "pro" && typeof billing?.credits === "number" && billing.credits < 1 ? (
                 <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                  <p className="font-medium">Credits not updated yet</p>
+                  <p className="font-medium">{t("app.account.billing.creditsNotUpdatedTitle")}</p>
                   <p className="mt-1 text-xs text-amber-900/80">
                     Your plan looks active, but your credit balance is 0. This usually means the Stripe webhook
                     couldn’t grant monthly credits (missing DB schema or webhook not configured).
@@ -1570,7 +1569,7 @@ export default function AccountPage() {
 
               <div className="flex items-center justify-between gap-3">
                 <p className="text-sm">
-                  <span className="text-muted-foreground">Current</span>{" "}
+                  <span className="text-muted-foreground">{t("app.account.billing.current")}</span>{" "}
                   <span className="font-medium">
                     {billing?.planTier === "pro" ? "Pro" : "Free"}
                   </span>
@@ -1579,8 +1578,8 @@ export default function AccountPage() {
                   {billing?.planTier === "pro"
 				  ? billing?.planStatus
 					? String(billing.planStatus).replaceAll("_", " ")
-					: "active"
-				  : "free"}
+					: t("app.account.billing.statusActive")
+				  : t("app.account.billing.statusFree")}
                 </Badge>
               </div>
 
@@ -1588,7 +1587,7 @@ export default function AccountPage() {
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <p className="text-xs text-muted-foreground">
-                      Credits balance
+                      {t("app.account.billing.creditsBalance")}
                     </p>
                     <p className="mt-1 text-2xl font-semibold">
                       {billing?.credits ?? "–"}
@@ -1598,7 +1597,7 @@ export default function AccountPage() {
                   {billing?.periodEnd ? (
                     <div className="text-right">
                       <p className="text-xs text-muted-foreground">
-                        Period ends
+                        {t("app.account.billing.periodEnds")}
                       </p>
                       <p className="mt-1 text-sm font-medium">
                         {new Date(billing.periodEnd).toLocaleDateString()}
@@ -1609,25 +1608,25 @@ export default function AccountPage() {
 
                 <Separator className="my-4" />
 
-                <p className="text-xs text-muted-foreground">Usage</p>
+                <p className="text-xs text-muted-foreground">{t("app.account.billing.usage")}</p>
                 <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
                   <div>
                     <p className="text-sm font-semibold">
                       {usage ? usage.totalJobs : "–"}
                     </p>
-                    <p className="text-xs text-muted-foreground">Tenders</p>
+                    <p className="text-xs text-muted-foreground">{t("app.account.billing.tenders")}</p>
                   </div>
                   <div>
                     <p className="text-sm font-semibold">
                       {usage ? usage.doneJobs : "–"}
                     </p>
-                    <p className="text-xs text-muted-foreground">Processed</p>
+                    <p className="text-xs text-muted-foreground">{t("app.account.billing.processed")}</p>
                   </div>
                   <div>
                     <p className="text-sm font-semibold">
                       {usage ? usage.inProgressJobs : "–"}
                     </p>
-                    <p className="text-xs text-muted-foreground">In progress</p>
+                    <p className="text-xs text-muted-foreground">{t("app.account.billing.inProgress")}</p>
                   </div>
                 </div>
               </div>
@@ -1699,27 +1698,26 @@ export default function AccountPage() {
               )}
 
               <p className="text-xs text-muted-foreground">
-                Subscriptions and invoices are managed via Stripe.
+                {t("app.account.billing.stripeNote")}
               </p>
             </CardContent>
           </Card>
 
           <Card className="rounded-2xl">
             <CardHeader className="pb-3">
-              <CardTitle>Exports</CardTitle>
+              <CardTitle>{t("app.account.exports.title")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                Export from inside a job to keep everything consistent with
-                evidence.
+                {t("app.account.exports.body")}
               </p>
 
               <div className="flex flex-wrap items-center gap-2">
                 <Button asChild className="rounded-full">
-                  <Link href="/app/jobs">Open jobs</Link>
+                  <Link href="/app/jobs">{t("app.account.exports.openTenders")}</Link>
                 </Button>
                 <Button asChild variant="outline" className="rounded-full">
-                  <Link href="/app/upload">New bid</Link>
+                  <Link href="/app/upload">{t("app.nav.newReview")}</Link>
                 </Button>
               </div>
             </CardContent>
@@ -1727,7 +1725,7 @@ export default function AccountPage() {
 
           <Card className="rounded-2xl">
             <CardHeader className="pb-3">
-              <CardTitle>Help</CardTitle>
+              <CardTitle>{t("app.account.help.title")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="text-sm">
@@ -1735,10 +1733,10 @@ export default function AccountPage() {
                   href="/how-it-works"
                   className="text-foreground underline underline-offset-4"
                 >
-                  How it works
+                  {t("app.account.help.howItWorks")}
                 </Link>
                 <p className="text-xs text-muted-foreground">
-                  Quick overview of the workflow.
+                  {t("app.account.help.workflowOverview")}
                 </p>
               </div>
 
@@ -1747,7 +1745,7 @@ export default function AccountPage() {
                   href="/privacy"
                   className="text-foreground underline underline-offset-4"
                 >
-                  Privacy
+                  {t("app.account.help.privacy")}
                 </Link>
               </div>
 
@@ -1756,16 +1754,16 @@ export default function AccountPage() {
                   href="/terms"
                   className="text-foreground underline underline-offset-4"
                 >
-                  Terms
+                  {t("app.account.help.terms")}
                 </Link>
                 <p className="text-xs text-muted-foreground">
-                  Drafting support only. Always verify against the source.
+                  {t("app.common.draftingSupport")}
                 </p>
               </div>
 
               <div className="pt-1">
                 <Button disabled variant="secondary" className="rounded-full">
-                  Contact support (soon)
+                  {t("app.account.help.contactSupportSoon")}
                 </Button>
               </div>
             </CardContent>
@@ -1773,7 +1771,7 @@ export default function AccountPage() {
 
           <Card className="rounded-2xl">
             <CardHeader className="pb-3">
-              <CardTitle>Data & privacy</CardTitle>
+              <CardTitle>{t("app.account.dataPrivacy.title")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {dangerNotice ? (
@@ -1791,11 +1789,11 @@ export default function AccountPage() {
 
               <p className="text-sm text-muted-foreground">
                 Tender files, extracted text, and job results are stored in your workspace. You can delete individual
-                tenders from the Jobs list, purge all tender data, or delete your entire account.
+                tenders from the Tenders list, purge all tender data, or delete your entire account.
               </p>
 
               <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                <p className="font-medium">Retention</p>
+                <p className="font-medium">{t("app.account.dataPrivacy.retentionTitle")}</p>
                 <p className="mt-1 text-xs text-amber-900/80">
                   Deletions are immediate (best effort). If a file was already removed or a legacy table is missing,
                   the operation will still complete.
@@ -1810,12 +1808,12 @@ export default function AccountPage() {
                   disabled={dangerBusy !== null}
                   onClick={() => {
                     const ok = window.confirm(
-                      "Delete ALL tender data (uploads, extracted text, results, bid room items) from your workspace?\n\nThis cannot be undone."
+                      t("app.account.dataPrivacy.confirmPurge")
                     );
                     if (ok) void purgeMyTenderData();
                   }}
                 >
-                  {dangerBusy === "purge" ? "Deleting tender data…" : "Delete all tender data"}
+                  {dangerBusy === "purge" ? t("app.account.dataPrivacy.deletingTenderData") : t("app.account.dataPrivacy.deleteAllTenderData")}
                 </Button>
 
                 <Button
@@ -1825,12 +1823,12 @@ export default function AccountPage() {
                   disabled={dangerBusy !== null}
                   onClick={() => {
                     const ok = window.confirm(
-                      "Delete your account and ALL stored data?\n\nThis will remove tenders, results, and your profile. This cannot be undone."
+                      t("app.account.dataPrivacy.confirmDelete")
                     );
                     if (ok) void deleteMyAccount();
                   }}
                 >
-                  {dangerBusy === "delete" ? "Deleting account…" : "Delete my account"}
+                  {dangerBusy === "delete" ? t("app.account.dataPrivacy.deletingAccount") : t("app.account.dataPrivacy.deleteMyAccount")}
                 </Button>
               </div>
             </CardContent>

@@ -19,6 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ArrowLeft, MoreHorizontal } from "lucide-react";
+import { useAppI18n } from "../../_components/app-i18n-provider";
 
 type JobStatus = "queued" | "processing" | "done" | "failed";
 
@@ -166,28 +167,28 @@ function VerdictBadge({ state }: { state: VerdictState }) {
   if (state === "proceed") {
     return (
       <span className={`${base} border-green-200 bg-green-50 text-green-800 dark:border-emerald-500/25 dark:bg-emerald-500/15 dark:text-emerald-200`}>
-        Proceed
+        Go
       </span>
     );
   }
   if (state === "hold") {
     return (
       <span className={`${base} border-red-200 bg-red-50 text-red-800 dark:border-rose-500/25 dark:bg-rose-500/15 dark:text-rose-200`}>
-        Hold — resolve blockers to bid
+        Hold
       </span>
     );
   }
   return (
     <span className={`${base} border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-500/25 dark:bg-amber-500/15 dark:text-amber-200`}>
-      Proceed with caution
+      Go
     </span>
   );
 }
 
 function verdictMicrocopy(state: VerdictState) {
-  if (state === "proceed") return "No major blockers detected. You can start tender response work.";
-  if (state === "hold") return "Bid is possible only if these blockers are resolved. Start with MUST items needing verification and submission rules.";
-  return "Tender looks feasible, but validate key points before committing.";
+  if (state === "proceed") return "No mandatory blockers detected. Confirm submission basics, then start drafting.";
+  if (state === "hold") return "Review blockers and submission rules before committing.";
+  return "Go, but validate the risks and any missing information before committing resources.";
 }
 
 function classifyClarification(text: string): { category: string; priority: "P1" | "P2"; hint: string } {
@@ -514,7 +515,7 @@ function FailedStatePanel({
 
           <div className="flex shrink-0 flex-col gap-2 sm:flex-row md:flex-col md:items-end">
             <Button className="rounded-full" onClick={onRetry} disabled={retrying}>
-              {retrying ? "Retrying…" : "Retry processing"}
+              {retrying ? "Retrying…" : "Retry analysis"}
             </Button>
             <Button asChild variant="outline" className="rounded-full">
               <Link href="/app/upload">Start a new review</Link>
@@ -867,7 +868,7 @@ function toExecutiveModel(args: { raw: any }) {
     .filter((r: any) => r.title);
 
   return {
-    decisionBadge: decisionBadge || "Proceed with caution",
+    decisionBadge: decisionBadge || "Hold",
     decisionLine,
     keyFindings: keyFindings.slice(0, 7).map((x: any) => String(x ?? "").trim()).filter(Boolean),
     nextActions: nextActions.slice(0, 3).map((x: any) => String(x ?? "").trim()).filter(Boolean),
@@ -1569,6 +1570,7 @@ function ProgressCard({
 }
 
 export default function JobDetailPage() {
+  const { t } = useAppI18n();
   const params = useParams();
   const router = useRouter();
 
@@ -2951,21 +2953,17 @@ const executive = useMemo(() => {
 	}
 		
   const verdictDriverLine = useMemo(() => {
-    if (!showReady) return "Preparing decision drivers.";
-    if (verdictState === "hold") {
-      return "Decision drivers: MUST compliance gates and submission rules that can invalidate the bid.";
-    }
-    if (verdictState === "caution") {
-      return "Decision drivers: risks requiring validation before committing.";
-    }
-    return "No mandatory blockers identified from eligibility and submission requirements.";
-  }, [showReady, verdictState]);
+    if (!showReady) return t("app.review.drivers.loading");
+    if (verdictState === "hold") return t("app.review.drivers.hold");
+    if (verdictState === "caution") return t("app.review.drivers.caution");
+    return t("app.review.drivers.go");
+  }, [showReady, verdictState, t]);
 
   const aiSuggestionLabel = useMemo(() => {
-    if (verdictState === "proceed") return "GO";
-    if (verdictState === "hold") return "HOLD";
-    return "GO (CAUTION)";
-  }, [verdictState]);
+    if (verdictState === "hold") return t("app.decision.hold");
+    // Option A: decision badge labels remain Go / Hold / No-Go; caution nuance is microcopy.
+    return t("app.decision.go");
+  }, [verdictState, t]);
 
   const teamDecision = useMemo(() => {
     const raw = (jobMeta as any)?.decision_override;
@@ -2975,9 +2973,16 @@ const executive = useMemo(() => {
 
     const txt = String(raw ?? "").trim();
     const bucket = decisionBucket(txt);
-    const label = bucket === "go" ? "GO" : bucket === "hold" ? "HOLD" : bucket === "no-go" ? "NO-GO" : txt;
+    const label =
+      bucket === "go"
+        ? t("app.decision.go")
+        : bucket === "hold"
+          ? t("app.decision.hold")
+          : bucket === "no-go"
+            ? t("app.decision.noGo")
+            : txt;
     return { active: true, bucket, label, raw: txt };
-  }, [jobMeta]);
+  }, [jobMeta, t]);
 
   const globalDecision = useMemo(() => {
     if (teamDecision.active && teamDecision.bucket !== "unknown") {
@@ -2985,9 +2990,9 @@ const executive = useMemo(() => {
     }
 
     const bucket = verdictState === "hold" ? "hold" : verdictState === "proceed" ? "go" : "caution";
-    const label = verdictState === "proceed" ? "GO" : verdictState === "hold" ? "HOLD" : "GO (CAUTION)";
+    const label = verdictState === "hold" ? t("app.decision.hold") : t("app.decision.go");
     return { source: "ai" as const, bucket, label };
-  }, [teamDecision, verdictState]);
+  }, [teamDecision, verdictState, t]);
 
 
 
@@ -3164,7 +3169,7 @@ const executive = useMemo(() => {
     if (!job) return;
 
     if (!canExport) {
-      setNotice("Exports are locked on the free tier when you have 0 credits remaining. Upgrade or top up to unlock exports.");
+      setNotice(t("app.review.exportsLocked"));
       return;
     }
 
@@ -3173,16 +3178,15 @@ const executive = useMemo(() => {
     const text = toPlainTextSummary({
       fileName: displayName || job.file_name,
       createdAt: job.created_at,
-      verdictLabel:
-        verdictState === "hold" ? "Hold — resolve blockers to bid" : verdictState === "caution" ? "Proceed with caution" : "Proceed",
+      verdictLabel: verdictState === "hold" ? t("app.decision.hold") : t("app.decision.go"),
       decisionLine: String(executive?.decisionLine ?? "").trim() || verdictMicrocopy(verdictState),
       rationaleSnapshot: (mustItems ?? []).slice(0, 3).map((t) => String(t).trim()).filter(Boolean),
       recommendedAction:
         verdictState === "hold"
-          ? "Verify all mandatory requirements and submission conditions before investing in a full response."
+          ? "Review blockers and submission rules before committing."
           : verdictState === "caution"
-          ? "Proceed, but validate the risks and any missing information before committing resources."
-          : "Proceed to bid. Confirm the deadline and submission method, then start drafting.",
+            ? "Go, but validate the risks and any missing information before committing resources."
+            : "Confirm submission basics, then start drafting.",
       whereToVerify:
         "tender portal / e-proc platform (deadlines, submission method, mandatory forms); Instructions to Tenderers / submission instructions (format, signatures, upload steps); annexes / templates (declarations, pricing, required forms)",
       checklist,
@@ -3207,7 +3211,7 @@ const executive = useMemo(() => {
     if (!job) return;
 
     if (!canExport) {
-      setNotice("Exports are locked on the free tier when you have 0 credits remaining. Upgrade or top up to unlock exports.");
+      setNotice(t("app.review.exportsLocked"));
       return;
     }
 
@@ -3303,10 +3307,10 @@ const rationaleLines = rationaleDrivers.length
 
     const recommendedAction =
       verdictState === "hold"
-        ? "Verify all mandatory requirements and submission conditions before investing in a full response."
+        ? "Review blockers and submission rules before committing."
         : verdictState === "caution"
-        ? "Proceed, but validate the risks and any missing information before committing resources."
-        : "Proceed to bid. Confirm the deadline and submission method, then start drafting.";
+          ? "Go, but validate the risks and any missing information before committing resources."
+          : "Confirm submission basics, then start drafting.";
 
     const manualChecks =
       `Where to verify: tender portal / e-proc platform (deadlines, submission method, mandatory forms); ` +
@@ -3351,8 +3355,7 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
       return `Submission deadline ${raw}`;
     })();
 
-    const verdictLabel =
-      verdictState === "hold" ? "Hold — resolve blockers to bid" : verdictState === "caution" ? "Proceed with caution" : "Proceed";
+    const verdictLabel = verdictState === "hold" ? "Hold" : "Go";
 
     const html = `<!doctype html>
 <html>
@@ -3552,7 +3555,7 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
     if (!job) return;
 
     if (!canExport) {
-      setNotice("Exports are locked on the free tier when you have 0 credits remaining. Upgrade or top up to unlock exports.");
+      setNotice(t("app.review.exportsLocked"));
       return;
     }
 
@@ -3565,7 +3568,7 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
     });
 
     if (res.status === 402) {
-      setNotice("Exports are locked on the free tier when you have 0 credits remaining. Upgrade or top up to unlock exports.");
+      setNotice(t("app.review.exportsLocked"));
       return;
     }
 
@@ -3590,7 +3593,7 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
     if (!job) return;
 
     if (!canExport) {
-      setNotice("Exports are locked on the free tier when you have 0 credits remaining. Upgrade or top up to unlock exports.");
+      setNotice(t("app.review.exportsLocked"));
       return;
     }
 
@@ -3603,7 +3606,7 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
     });
 
     if (res.status === 402) {
-      setNotice("Exports are locked on the free tier when you have 0 credits remaining. Upgrade or top up to unlock exports.");
+      setNotice(t("app.review.exportsLocked"));
       return;
     }
 
@@ -3812,7 +3815,7 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
 
             {(job?.status === "queued" || job?.status === "processing") && (
               <Button variant="secondary" className="rounded-full" onClick={triggerProcessingOnce} disabled={!job}>
-                Retry processing
+                Retry analysis
               </Button>
             )}
 
@@ -4150,14 +4153,14 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
         <CardContent className="p-7 md:p-10">
           <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-medium text-muted-foreground">Decision</p>
+              <p className="text-xs font-medium text-muted-foreground">{t("app.review.decision")}</p>
 
               {showFailed ? (
                 <div className="mt-3">
                   <div className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-800 dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-200">
                     FAILED
                   </div>
-                  <p className="mt-3 text-sm text-muted-foreground">This tender review could not be completed. Use “Retry processing” above or start a new review.</p>
+                  <p className="mt-3 text-sm text-muted-foreground">This tender review could not be completed. Use “Retry analysis” above or start a new review.</p>
                 </div>
               ) : !showReady ? (
                 <div className="mt-3">
@@ -4243,7 +4246,7 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
                         </div>
 
                         <div className="mt-4 flex flex-wrap items-center gap-2">
-                          <span className="text-xs font-medium text-muted-foreground">Team decision</span>
+                          <span className="text-xs font-medium text-muted-foreground">{t("app.review.teamDecision")}</span>
 
                           <div className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/20 p-1">
                             <button
@@ -4255,7 +4258,7 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
                                 teamDecision.bucket === "go" ? "bg-foreground text-background shadow-sm" : "text-foreground/80 hover:bg-background/60",
                               ].join(" ")}
                             >
-                              GO
+                              {t("app.decision.go")}
                             </button>
 
                             <button
@@ -4267,7 +4270,7 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
                                 teamDecision.bucket === "no-go" ? "bg-foreground text-background shadow-sm" : "text-foreground/80 hover:bg-background/60",
                               ].join(" ")}
                             >
-                              NO GO
+                              {t("app.decision.noGo")}
                             </button>
 
                             <button
@@ -4276,7 +4279,7 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
                               onClick={() => saveTeamDecision(null)}
                               className="h-8 rounded-full px-3 text-xs font-semibold text-muted-foreground transition hover:bg-background/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
                             >
-                              Clear
+                              {t("app.common.clear")}
                             </button>
                           </div>
                         </div>

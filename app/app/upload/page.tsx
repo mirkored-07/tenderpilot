@@ -1,8 +1,7 @@
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
-import UploadForm from "./upload-form";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import UploadPageClient from "./upload-page-client";
 
 async function supabaseServer() {
   // ✅ Matches your repo pattern: in your Next version, cookies() is async
@@ -31,23 +30,5 @@ async function supabaseServer() {
 export default async function UploadPage() {
   await supabaseServer();
 
-  return (
-    <div className="mx-auto max-w-3xl">
-      <Card className="rounded-2xl">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-xl">New bid</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Upload a PDF or DOCX. We’ll generate a decision cockpit with evidence.
-          </p>
-        </CardHeader>
-
-        <CardContent className="space-y-4 pt-0">
-          <UploadForm />
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            Drafting support only. Always verify requirements against the original tender documents.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
-  );
+  return <UploadPageClient />;
 }

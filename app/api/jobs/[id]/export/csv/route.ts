@@ -4,6 +4,9 @@ import { createClient } from "@supabase/supabase-js";
 
 import { supabaseRoute } from "@/lib/supabase/route";
 import { stableRefKey } from "@/lib/bid-workflow/keys";
+import { loadDict } from "@/lib/i18n/dict";
+import { normalizeLocale } from "@/lib/i18n/locales";
+import { tFromDict } from "@/lib/i18n/t";
 
 function supabaseAdmin() {
   return createClient(
@@ -19,11 +22,13 @@ function csvEscape(v: any) {
   return s;
 }
 
-function rowsToCsv(rows: Array<Record<string, any>>, headers: string[]) {
+type CsvCol = { key: string; label: string };
+
+function rowsToCsv(rows: Array<Record<string, any>>, cols: CsvCol[]) {
   const out: string[] = [];
-  out.push(headers.map(csvEscape).join(","));
+  out.push(cols.map((c) => csvEscape(c.label)).join(","));
   for (const r of rows) {
-    out.push(headers.map((h) => csvEscape((r as any)[h])).join(","));
+    out.push(cols.map((c) => csvEscape((r as any)[c.key])).join(","));
   }
   return out.join("\n") + "\n";
 }
@@ -87,22 +92,36 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   // Export gating: free tier requires at least 1 remaining credit.
   // Server-side enforced so UI cannot bypass.
   const admin = supabaseAdmin();
-  const { data: profileRow, error: profErr } = await admin
-    .from("profiles")
-    .select("credits_balance")
-    .eq("id", userRes.user.id)
-    .maybeSingle();
-
-  if (profErr) {
-    console.warn("Failed to read credits_balance for export gate", profErr);
+  let profileRow: any = null;
+  try {
+    const res = await admin
+      .from("profiles")
+      .select("credits_balance,locale")
+      .eq("id", userRes.user.id)
+      .maybeSingle();
+    if (res.error) throw res.error;
+    profileRow = res.data as any;
+  } catch {
+    const res = await admin
+      .from("profiles")
+      .select("credits_balance")
+      .eq("id", userRes.user.id)
+      .maybeSingle();
+    profileRow = res.data as any;
+    if (res.error) console.warn("Failed to read credits_balance for export gate", res.error);
   }
 
-  const credits = (profileRow as any)?.credits_balance;
+  const credits = profileRow?.credits_balance;
   const creditsBalance = typeof credits === "number" ? credits : 0;
 
   if (creditsBalance < 1) {
     return NextResponse.json({ error: "no_export_entitlement" }, { status: 402 });
   }
+
+  const locale = normalizeLocale(profileRow?.locale);
+  const [dict, fallback] = await Promise.all([loadDict(locale), loadDict("en")]);
+  const tt = (key: string, vars?: Record<string, string | number>) => tFromDict({ dict, fallbackDict: fallback, key, vars });
+  const H = (k: string) => tt(`app.exports.headers.${k}`);
 
   const { data: job } = await supabase
     .from("jobs")
@@ -143,14 +162,17 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   const baseName = String((job as any)?.file_name ?? "tender").replace(/[\\/:*?\"<>|]+/g, "_").slice(0, 60);
 
   if (type === "overview") {
-    const headers = ["field", "value"];
-    const rows = [
-      { field: "Tender", value: String((job as any)?.file_name ?? "") },
-      { field: "Decision", value: String(exec?.decisionBadge ?? "") },
-      { field: "Why", value: String(exec?.decisionLine ?? "") },
-      { field: "Submission deadline", value: String(exec?.submissionDeadline ?? "") },
+    const cols: CsvCol[] = [
+      { key: "field", label: H("field") },
+      { key: "value", label: H("value") },
     ];
-    const csv = rowsToCsv(rows, headers);
+    const rows = [
+      { field: tt("app.exports.overview.tender"), value: String((job as any)?.file_name ?? "") },
+      { field: tt("app.exports.overview.decision"), value: String(exec?.decisionBadge ?? "") },
+      { field: tt("app.exports.overview.why"), value: String(exec?.decisionLine ?? "") },
+      { field: tt("app.exports.overview.deadline"), value: String(exec?.submissionDeadline ?? "") },
+    ];
+    const csv = rowsToCsv(rows, cols);
     return new NextResponse(csv, {
       status: 200,
       headers: {
@@ -162,7 +184,17 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   }
 
   if (type === "requirements") {
-    const headers = ["ref_key", "type", "requirement", "owner", "status", "due_at", "notes", "evidence_ids", "pages"];
+    const cols: CsvCol[] = [
+      { key: "ref_key", label: H("ref_key") },
+      { key: "type", label: H("type") },
+      { key: "requirement", label: H("requirement") },
+      { key: "owner", label: H("owner") },
+      { key: "status", label: H("status") },
+      { key: "due_at", label: H("due_at") },
+      { key: "notes", label: H("notes") },
+      { key: "evidence_ids", label: H("evidence_ids") },
+      { key: "pages", label: H("pages") },
+    ];
     const rows = checklist
       .map((it) => {
         const kind = String(it?.type ?? it?.level ?? it?.priority ?? "INFO").toUpperCase();
@@ -188,7 +220,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       })
       .filter((r) => r.requirement);
 
-    const csv = rowsToCsv(rows, headers);
+    const csv = rowsToCsv(rows, cols);
     return new NextResponse(csv, {
       status: 200,
       headers: {
@@ -200,7 +232,18 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   }
 
   if (type === "risks") {
-    const headers = ["ref_key", "severity", "risk", "detail", "owner", "status", "due_at", "notes", "evidence_ids", "pages"];
+    const cols: CsvCol[] = [
+      { key: "ref_key", label: H("ref_key") },
+      { key: "severity", label: H("severity") },
+      { key: "risk", label: H("risk") },
+      { key: "detail", label: H("detail") },
+      { key: "owner", label: H("owner") },
+      { key: "status", label: H("status") },
+      { key: "due_at", label: H("due_at") },
+      { key: "notes", label: H("notes") },
+      { key: "evidence_ids", label: H("evidence_ids") },
+      { key: "pages", label: H("pages") },
+    ];
     const rows = risks
       .map((r) => {
         const title = String(r?.title ?? r?.text ?? r?.risk ?? "").trim();
@@ -228,7 +271,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       })
       .filter((r) => r.risk || r.detail);
 
-    const csv = rowsToCsv(rows, headers);
+    const csv = rowsToCsv(rows, cols);
     return new NextResponse(csv, {
       status: 200,
       headers: {
@@ -240,7 +283,14 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   }
 
   if (type === "clarifications") {
-    const headers = ["ref_key", "question", "owner", "status", "due_at", "notes"];
+    const cols: CsvCol[] = [
+      { key: "ref_key", label: H("ref_key") },
+      { key: "question", label: H("question") },
+      { key: "owner", label: H("owner") },
+      { key: "status", label: H("status") },
+      { key: "due_at", label: H("due_at") },
+      { key: "notes", label: H("notes") },
+    ];
     const rows = clarifications
       .map((q) => {
         const text = String(q ?? "").trim();
@@ -257,7 +307,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       })
       .filter((r) => r.question);
 
-    const csv = rowsToCsv(rows, headers);
+    const csv = rowsToCsv(rows, cols);
     return new NextResponse(csv, {
       status: 200,
       headers: {
@@ -269,7 +319,15 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   }
 
   if (type === "outline") {
-    const headers = ["ref_key", "section", "bullets", "owner", "status", "due_at", "notes"];
+    const cols: CsvCol[] = [
+      { key: "ref_key", label: H("ref_key") },
+      { key: "section", label: H("section") },
+      { key: "bullets", label: H("bullets") },
+      { key: "owner", label: H("owner") },
+      { key: "status", label: H("status") },
+      { key: "due_at", label: H("due_at") },
+      { key: "notes", label: H("notes") },
+    ];
     const rows = outline.map((s) => {
       const ref = stableRefKey({ jobId, type: "outline", text: s.title });
       const w = workByKey.get(`outline:${ref}`);
@@ -284,7 +342,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
       };
     });
 
-    const csv = rowsToCsv(rows, headers);
+    const csv = rowsToCsv(rows, cols);
     return new NextResponse(csv, {
       status: 200,
       headers: {

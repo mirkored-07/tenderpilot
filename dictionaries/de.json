@@ -627,5 +627,457 @@
       "privacy": "Datenschutz",
       "terms": "AGB"
     }
+  },
+  "app": {
+    "header": {
+      "tagline": "Go / Hold / No-Go in Minuten. Starte den Entwurf mit Evidenz."
+    },
+    "nav": {
+      "menu": "Menü",
+      "openMenu": "Menü öffnen",
+      "closeMenu": "Menü schließen",
+      "newReview": "Neue Prüfung",
+      "tenders": "Ausschreibungen",
+      "dashboard": "Dashboard",
+      "account": "Account"
+    },
+    "credits": {
+      "title": "Credits",
+      "left": "verbleibend",
+      "help": "Eine Prüfung verbraucht 1 Credit. Exporte sind in bezahlten Plänen verfügbar."
+    },
+    "common": {
+      "theme": "Design",
+      "language": "Sprache",
+      "preparing": "Wird vorbereitet…",
+      "remove": "Entfernen",
+      "signIn": "Anmelden",
+      "notNow": "Nicht jetzt",
+      "emailSupport": "Support per E-Mail",
+      "dismiss": "Schließen",
+      "refresh": "Aktualisieren",
+      "all": "Alle",
+      "ready": "Bereit",
+      "processing": "In Bearbeitung",
+      "failed": "Fehlgeschlagen",
+      "any": "Beliebig",
+      "clearFilters": "Filter zurücksetzen",
+      "loading": "Lädt",
+      "sending": "Wird gesendet…",
+      "locateInPdf": "Im PDF finden",
+      "backToDashboard": "Zurück zum Dashboard",
+      "clear": "Zurücksetzen",
+      "open": "Öffnen",
+      "expand": "Erweitern",
+      "collapse": "Einklappen",
+      "showMore": "Mehr anzeigen",
+      "showLess": "Weniger anzeigen",
+      "showAllCount": "Alle anzeigen ({count})",
+      "saving": "Speichern…",
+      "saveChanges": "Änderungen speichern",
+      "close": "Schließen",
+      "cancel": "Abbrechen",
+      "copy": "Kopieren",
+      "copied": "Kopiert",
+      "copyFailed": "Kopieren fehlgeschlagen",
+      "more": "Mehr",
+      "moreOptions": "Weitere Optionen",
+      "hideOptions": "Optionen ausblenden",
+      "hideDetails": "Details ausblenden",
+      "edit": "Bearbeiten",
+      "system": "System",
+      "light": "Hell",
+      "dark": "Dunkel",
+      "updated": "Aktualisiert",
+      "unknown": "Unbekannt",
+      "draftingSupport": "Nur zur Unterstützung beim Entwurf. Immer gegen die Quelle prüfen.",
+      "typeAndPressEnter": "Eingeben und Enter drücken"
+    },
+    "decision": {
+      "go": "Go",
+      "hold": "Hold",
+      "noGo": "No-Go",
+      "unset": "Unset"
+    },
+    "upload": {
+      "title": "Neue Prüfung",
+      "subtitle": "PDF oder DOCX hochladen. Wir erstellen ein Decision Cockpit mit Evidenz.",
+      "disclaimer": "Nur Drafting-Support. Anforderungen immer anhand der Originalunterlagen prüfen.",
+      "ctaRun": "Prüfung starten",
+      "dropTitle": "Ziehe deine Ausschreibungsdatei hierher",
+      "dropHint": "Oder klicken, um eine Datei auszuwählen.",
+      "signInTitle": "Anmelden, um eine Prüfung zu starten",
+      "signInBody": "Anmelden, um fortzufahren. Deine Datei ist ausgewählt und bereit.",
+      "noCreditsTitle": "Keine Credits mehr",
+      "noCreditsBody": "Eine Prüfung verbraucht 1 Credit und erstellt Decision Cockpit und Exporte.",
+      "upgrade": "Auf Pro upgraden",
+      "footerHasFile": "Nach dem Upload wirst du ins Decision Cockpit weitergeleitet.",
+      "footerNoFile": "Datei auswählen, um fortzufahren."
+    },
+    "tenders": {
+      "h1": "Ausschreibungen",
+      "subtitle": "Ausschreibungen schnell prüfen. Öffne eine Ausschreibung für Go / Hold / No-Go, Risiken und Evidenz.",
+      "cardSubLoading": "Ausschreibungen werden geladen.",
+      "cardSubError": "Ausschreibungen konnten nicht geladen werden.",
+      "cardSubDefault": "Suchen, filtern und dann eine Ausschreibung im Decision Cockpit öffnen.",
+      "searchPlaceholder": "Ausschreibungen durchsuchen",
+      "filters": {
+        "status": "Status",
+        "decision": "Entscheidung",
+        "deadline": "Deadline"
+      },
+      "deadline": {
+        "dueSoon": "Bald fällig",
+        "thisWeek": "Diese Woche",
+        "noDeadline": "Keine Deadline"
+      },
+      "countShown": "{n} angezeigt",
+      "loadingBody": "Ausschreibungen werden abgerufen.",
+      "onboarding": {
+        "title": "Willkommen bei TenderPilot",
+        "body": "Lade eine Ausschreibung hoch und erhalte schnell Go / Hold / No-Go, Risiken und einen Bid Room für die Umsetzung.",
+        "cardEvidenceTitle": "Evidenz zuerst",
+        "cardEvidenceBody": "Wichtige Aussagen verlinken zu passenden Auszügen. Immer im Original prüfen.",
+        "cardTimeTitle": "Dauer",
+        "cardTimeBody": "Meist 1–3 Minuten. Große Dateien können länger dauern.",
+        "workflow": "Workflow: Upload → Decision Cockpit → Bid Room Aufgaben → Export",
+        "cta": "Erste Ausschreibung hochladen"
+      },
+      "emptyTitle": "Keine Ausschreibungen passen zu deinen Filtern",
+      "emptyBody": "Filter zurücksetzen oder eine neue Ausschreibung hochladen.",
+      "openTender": "Ausschreibung öffnen"
+    },
+    "tender": {
+      "single": "Ausschreibung",
+      "label": "Ausschreibung",
+      "notFound": "Ausschreibung nicht gefunden oder kein Zugriff."
+    },
+    "bidroom": {
+      "title": "Bid Room",
+      "globalTitle": "Bid Room",
+      "globalSubtitle": "Offene Aufgaben über alle zugänglichen Ausschreibungen verwalten.",
+      "empty": "Keine offenen Aufgaben.",
+      "filters": {
+        "owner": "Nach Owner filtern",
+        "status": "Nach Status filtern (todo/doing/blocked)"
+      },
+      "notStarted": "Bid Room nicht gestartet"
+    },
+    "compliance": {
+      "title": "Compliance-Matrix",
+      "loadError": "Compliance-Matrix konnte nicht geladen werden.",
+      "loadingBody": "Compliance-Matrix wird vorbereitet.",
+      "notFinalTitle": "Ergebnisse sind noch nicht final",
+      "notFinalBody": "Du kannst den Status setzen, aber die Anforderungsliste kann sich bis zum Abschluss noch ändern.",
+      "searchPlaceholder": "Anforderung, Abschnitt, Notizen suchen…",
+      "send": {
+        "cta": "In den Bid Room senden",
+        "sent": "An Bid Room gesendet",
+        "exists": "Bereits im Bid Room"
+      },
+      "coveredNoTask": "Abgedeckt — keine Aufgabe nötig",
+      "noRows": "Keine Zeilen passen zu den aktuellen Filtern.",
+      "noReqs": "Noch keine Anforderungen gefunden."
+    },
+    "review": {
+      "decision": "Entscheidung",
+      "teamDecision": "Team-Entscheidung",
+      "drivers": {
+        "loading": "Decision Drivers werden vorbereitet.",
+        "hold": "Decision Drivers: Pflichtanforderungen und Einreichregeln, die zur Disqualifikation führen können.",
+        "caution": "Decision Drivers: Risiken, die vor dem Commit geprüft werden sollten.",
+        "go": "Keine Pflicht-Blocker in Eignung und Einreichanforderungen erkannt."
+      },
+      "exportsLocked": "Exporte sind in bezahlten Plänen verfügbar. Upgrade oder Top-up, um Exporte freizuschalten."
+    },
+    "account": {
+      "settings": "Einstellungen",
+      "playbookTriggerNote": "Wenn eine Playbook-Regel eine Entscheidung beeinflusst, zeigt TenderPilot sie als Trigger im Cockpit.",
+      "exports": {
+        "body": "Exportiere innerhalb einer Ausschreibung, damit alles konsistent mit Evidenz bleibt.",
+        "openTenders": "Ausschreibungen öffnen",
+        "title": "Exporte"
+      },
+      "settingsSubtitle": "Profil, Workspace und Einstellungen.",
+      "profile": {
+        "title": "Profil",
+        "nameLabel": "Name",
+        "namePlaceholder": "Ihr Name",
+        "nameHelp": "Wird in Exporten und Berichten verwendet.",
+        "emailLabel": "E-Mail",
+        "signInLabel": "Anmeldung",
+        "signOut": "Abmelden",
+        "userIdLabel": "User ID",
+        "authMethodEmail": "E-Mail"
+      },
+      "appearance": {
+        "title": "Darstellung",
+        "current": "Aktuell"
+      },
+      "workspace": {
+        "title": "Workspace",
+        "nameLabel": "Workspace-Name",
+        "namePlaceholder": "Workspace",
+        "nameHelp": "Wird in Exporten und (später) für Teams angezeigt.",
+        "startPageLabel": "Startseite"
+      },
+      "bidRoom": {
+        "title": "Bid Room",
+        "subtitle": "Owner, Status und Fristen nachverfolgen."
+      },
+      "playbook": {
+        "title": "Bid Playbook",
+        "subtitle": "Regeln, die Go / Hold / No-Go beeinflussen. Keine Evidenz.",
+        "setupRequired": "Setup erforderlich",
+        "policyBadge": "Policy",
+        "whatYouDo": "Was Sie liefern",
+        "ruleOne": "{count} Regel",
+        "ruleMany": "{count} Regeln",
+        "modalTitle": "Playbook-Regeln bearbeiten",
+        "modalSubtitle": "Diese Regeln beeinflussen Go / Hold / No-Go. Sie werden nicht als Evidenz genutzt.",
+        "storageNotEnabled": "Playbook-Speicher ist noch nicht aktiviert. Migration anwenden und aktualisieren.",
+        "oneSentencePlaceholder": "Zusammenfassung in einem Satz",
+        "oneSentenceHelp": "Kurz halten. Reduziert generisches Rauschen.",
+        "oneSentenceFallback": "Einen Satz hinzufügen, was Sie liefern",
+        "industries": "Branchen",
+        "industriesPlaceholder": "Öffentliche Hand, IT, Healthcare",
+        "regions": "Regionen",
+        "regionsPlaceholder": "Austria, DACH, EU",
+        "workMode": "Arbeitsmodus",
+        "modeRemote": "Remote",
+        "modeHybrid": "Hybrid",
+        "modeOnsite": "Onsite",
+        "hardRules": "Harte Regeln (max 10)",
+        "hardRulesPlaceholder": "Keine Onsite-Arbeit\nISO 27001 erforderlich\nKeine Festpreisverträge",
+        "triggerHint": "Wenn eine Regel die Entscheidung beeinflusst, erscheint sie als Trigger im Cockpit.",
+        "languages": "Sprachen",
+        "languagesPlaceholder": "EN, DE, IT",
+        "certifications": "Zertifizierungen",
+        "certificationsPlaceholder": "ISO 27001, TISAX",
+        "capacity": "Kapazität",
+        "capacityLow": "Niedrig",
+        "capacityMedium": "Mittel",
+        "capacityHigh": "Hoch",
+        "leadTimeWeeks": "Typische Vorlaufzeit (Wochen)",
+        "savePlaybook": "Playbook speichern"
+      },
+      "billing": {
+        "title": "Abrechnung",
+        "creditsNotUpdatedTitle": "Credits noch nicht aktualisiert",
+        "creditsNotUpdatedBody": "Ihr Plan scheint aktiv, aber Ihr Credit-Saldo ist 0. Das bedeutet meist, dass der Stripe-Webhook keine monatlichen Credits vergeben konnte (DB-Schema fehlt oder Webhook nicht konfiguriert).",
+        "syncBilling": "Abrechnung synchronisieren",
+        "current": "Aktuell",
+        "creditsBalance": "Credit-Saldo",
+        "periodEnds": "Periode endet",
+        "usage": "Nutzung",
+        "tenders": "Ausschreibungen",
+        "processed": "Verarbeitet",
+        "inProgress": "In Bearbeitung",
+        "manageBilling": "Abrechnung verwalten",
+        "changePlan": "Plan ändern",
+        "upgradeMonthly": "Monatlich upgraden",
+        "upgradeAnnual": "Jährlich upgraden",
+        "stripeNote": "Abos und Rechnungen werden über Stripe verwaltet.",
+        "statusActive": "aktiv",
+        "statusFree": "free"
+      },
+      "help": {
+        "title": "Hilfe",
+        "howItWorks": "So funktioniert’s",
+        "workflowOverview": "Kurzer Überblick über den Workflow.",
+        "privacy": "Datenschutz",
+        "terms": "AGB",
+        "contactSupportSoon": "Support kontaktieren (bald)"
+      },
+      "dataPrivacy": {
+        "title": "Daten & Datenschutz",
+        "body": "Ausschreibungsdateien, extrahierter Text und Ergebnisse werden in Ihrem Workspace gespeichert. Sie können einzelne Ausschreibungen löschen, alle Daten bereinigen oder Ihr Konto löschen.",
+        "retentionTitle": "Aufbewahrung",
+        "retentionBody": "Löschungen erfolgen sofort (best effort). Wenn eine Datei bereits entfernt wurde oder eine Legacy-Tabelle fehlt, wird die Aktion dennoch abgeschlossen.",
+        "deleteAllTenderData": "Alle Ausschreibungsdaten löschen",
+        "deletingTenderData": "Ausschreibungsdaten werden gelöscht…",
+        "deleteMyAccount": "Mein Konto löschen",
+        "deletingAccount": "Konto wird gelöscht…",
+        "confirmPurge": "ALLE Ausschreibungsdaten (Uploads, extrahierter Text, Ergebnisse, Bid Room) aus dem Workspace löschen?\n\nDies kann nicht rückgängig gemacht werden.",
+        "confirmDelete": "Konto und ALLE gespeicherten Daten löschen?\n\nEntfernt Ausschreibungen, Ergebnisse und Profil. Dies kann nicht rückgängig gemacht werden."
+      },
+      "notice": {
+        "accountLoadFailed": "Konto konnte nicht geladen werden",
+        "accountSaveFailed": "Konto konnte nicht gespeichert werden",
+        "playbookSaveFailed": "Playbook konnte nicht gespeichert werden",
+        "playbookCouldNotLoad": "Konnte nicht laden",
+        "couldNotLoadSettings": "Einstellungen konnten nicht geladen werden. Aktualisieren und erneut versuchen.",
+        "couldNotSaveShort": "Konnte nicht speichern",
+        "couldNotSave": "Konnte nicht speichern. Erneut versuchen.",
+        "checkoutCanceled": "Checkout abgebrochen.",
+        "paymentReceivedConfirming": "Zahlung erhalten. Plan wird bestätigt…",
+        "paymentReceivedSyncHint": "Zahlung erhalten. Wenn Credits noch nicht aktualisiert sind, unten „Abrechnung synchronisieren“ klicken.",
+        "planConfirmed": "Plan bestätigt. Credits aktualisiert.",
+        "missingBillingSchema": "Abrechnungs-Schema fehlt in Supabase. Führen Sie supabase/stripe_billing_v1.sql aus.",
+        "billingSynced": "Abrechnung synchronisiert.",
+        "billingSyncedFree": "Abrechnung synchronisiert (free).",
+        "couldNotSyncBilling": "Abrechnung konnte nicht synchronisiert werden. Erneut versuchen.",
+        "couldNotStartCheckout": "Checkout konnte nicht gestartet werden. Stripe-Env prüfen und erneut versuchen.",
+        "couldNotOpenPortal": "Billing-Portal konnte nicht geöffnet werden. Erst upgraden.",
+        "allTenderDataDeleted": "Alle Ausschreibungsdaten gelöscht.",
+        "couldNotDeleteTenderData": "Ausschreibungsdaten konnten nicht gelöscht werden. Erneut versuchen.",
+        "couldNotDeleteAccount": "Konto konnte nicht gelöscht werden. Erneut versuchen."
+      }
+    },
+    "exports": {
+      "bidPack": {
+        "sheets": {
+          "overview": "00_Übersicht",
+          "blockers": "01_Blocker",
+          "requirements": "02_Anforderungen",
+          "risks": "03_Risiken",
+          "clarifications": "04_Klärungen",
+          "outline": "05_Gliederung",
+          "policyTriggers": "Policy Trigger",
+          "evidenceIndex": "99_EvidenzIndex"
+        }
+      },
+      "headers": {
+        "field": "Feld",
+        "value": "Wert",
+        "ref_key": "Ref-Key",
+        "type": "Typ",
+        "requirement": "Anforderung",
+        "owner": "Owner",
+        "status": "Status",
+        "due_at": "Fällig am",
+        "notes": "Notizen",
+        "evidence_ids": "Evidenz-IDs",
+        "pages": "Seiten",
+        "severity": "Schweregrad",
+        "risk": "Risiko",
+        "detail": "Detail",
+        "question": "Frage",
+        "section": "Abschnitt",
+        "bullets": "Stichpunkte",
+        "trigger_id": "Trigger",
+        "impact": "Impact",
+        "title": "Titel",
+        "playbook_version": "Playbook v",
+        "evidence_id": "Evidenz-ID",
+        "page": "Seite",
+        "anchor": "Anker",
+        "kind": "Typ",
+        "excerpt": "Auszug"
+      },
+      "overview": {
+        "tender": "Ausschreibung",
+        "created": "Erstellt",
+        "status": "Status",
+        "decision": "Entscheidung",
+        "why": "Warum",
+        "deadline": "Abgabefrist",
+        "notes": "Hinweise",
+        "notesBody": "Evidenz-IDs verweisen auf autoritative Auszüge. Company Context (falls vorhanden) ist keine Evidenz."
+      }
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "subtitle": "Fokus-Triage für Entscheidungen, Fristen und Ausführung.",
+      "menu": {
+        "ariaLabel": "Dashboard-Menü",
+        "openTenders": "Ausschreibungen öffnen",
+        "openBidRoom": "Bid Room öffnen",
+        "focusedView": "Fokusansicht",
+        "fullView": "Gesamtansicht"
+      },
+      "errors": {
+        "title": "Dashboard-Fehler",
+        "failedToLoad": "Dashboard konnte nicht geladen werden"
+      },
+      "kpi": {
+        "portfolioTitle": "Portfolio",
+        "deadlinesTitle": "Fristen",
+        "executionTitle": "Ausführung",
+        "decisionsTitle": "Entscheidungen",
+        "basicsPresent": "Grundlagen vorhanden",
+        "aiExtractionHint": "Frist/Entscheidung aus KI-Extraktion, sofern nicht überschrieben.",
+        "basedOnWorkItems": "Basierend auf Team-Work-Items.",
+        "aiSuggestionHint": "KI-Vorschlag, sofern nicht durch Teamentscheidung überschrieben.",
+        "readyMissing": "{ready} bereit • {missing} fehlend",
+        "portfolioBreakdown": "Bereit {ready} • Entscheidung fehlt {missingDecision} • Frist fehlt {missingDeadline}",
+        "percentUrgent": "% dringend",
+        "urgentUnknown": "{urgent} dringend • {unknown} unbekannt",
+        "deadlineBreakdownBase": "Überfällig {overdue} • 0-7T {next7} • 8-30T {next30} • 31-90T {next90}",
+        "percentDone": "% erledigt",
+        "doneOpen": "{done} erledigt • {open} offen",
+        "executionBreakdown": "{done} erledigt • {open} offen • {blocked} blockiert",
+        "percentDecided": "% entschieden",
+        "decidedUnknown": "{decided} entschieden • {unknown} unbekannt",
+        "decisionsBreakdown": "Go {go} • Hold {hold} • No-Go {noGo} • Fehlend {missing}",
+        "chart": {
+          "ready": "Bereit",
+          "missingDecision": "Entscheidung fehlt",
+          "missingDeadline": "Frist fehlt",
+          "missingBoth": "Beides fehlt",
+          "overdue": "Überfällig",
+          "next7": "0-7T",
+          "next30": "8-30T",
+          "next90": "31-90T",
+          "done": "Erledigt",
+          "blocked": "Blockiert",
+          "open": "Offen"
+        }
+      },
+      "filters": {
+        "owner": "Owner",
+        "decision": "Entscheidung",
+        "window": "Zeitraum",
+        "next14Days": "Nächste 14 Tage",
+        "next30Days": "Nächste 30 Tage",
+        "next90Days": "Nächste 90 Tage"
+      },
+      "queues": {
+        "title": "Operative Queues",
+        "subtitle": "Handlungsorientierte Queues für die tägliche Lieferung. Funktioniert auch ohne Frist oder Entscheidung im PDF."
+      },
+      "badges": {
+        "needsTriage": "Triage nötig",
+        "deadlineUnknown": "Frist unbekannt",
+        "dueNext7": "Fällig in 7T",
+        "overdueItems": "Überfällig",
+        "blocked": "Blockiert"
+      },
+      "sections": {
+        "needsTriage": "Triage nötig",
+        "deadlineUnknown": "Frist unbekannt",
+        "blockedItems": "Blockierte Items",
+        "unassignedItems": "Nicht zugewiesen",
+        "overdueWorkItems": "Überfällige Work-Items",
+        "clarificationsPending": "Rückfragen offen"
+      },
+      "labels": {
+        "decision": "Entscheidung",
+        "deadline": "Frist",
+        "decisionUnset": "Entscheidung: nicht gesetzt",
+        "deadlineUnset": "Frist: nicht gesetzt",
+        "decisionMissing": "Entscheidung fehlt",
+        "decisionUnknown": "Entscheidung unbekannt",
+        "deadlineMissing": "Frist fehlt",
+        "deadlineUnknown": "Frist unbekannt",
+        "unassigned": "Nicht zugewiesen",
+        "workItem": "Work-Item",
+        "clarification": "Rückfrage",
+        "noWorkItems": "Keine Work-Items",
+        "openWorkItemOne": "{count} offenes Work-Item",
+        "openWorkItemMany": "{count} offene Work-Items",
+        "itemsDone": "{done}/{total} erledigt"
+      },
+      "analytics": {
+        "toggleTitle": "Analytics ein-/ausklappen",
+        "hiddenInStandup": "In Standup-Modus ausgeblendet",
+        "hiddenLabel": "Ausgeblendet",
+        "noWorkItemsYet": "Noch keine Work-Items."
+      },
+      "blockers": {
+        "noneTitle": "Keine Blocker",
+        "noneLabel": "Keine"
+      }
+    }
   }
 }

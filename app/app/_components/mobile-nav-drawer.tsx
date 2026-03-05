@@ -6,6 +6,7 @@ import { createPortal } from "react-dom";
 import { Menu, X } from "lucide-react";
 
 import { SideNav } from "./side-nav";
+import { useAppI18n } from "./app-i18n-provider";
 
 import { Badge } from "@/components/ui/badge";
 import { ModeToggle } from "@/components/mode-toggle";
@@ -30,6 +31,7 @@ export function MobileNavDrawer({
 }: {
   creditsBalance: number | null;
 }) {
+  const { t } = useAppI18n();
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const lastActive = useRef<HTMLElement | null>(null);
@@ -108,7 +110,7 @@ export function MobileNavDrawer({
     <>
       <button
         type="button"
-        aria-label="Open menu"
+        aria-label={t("app.nav.openMenu")}
         aria-expanded={open}
         onClick={() => setOpen(true)}
         className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-card/70 shadow-sm backdrop-blur hover:opacity-90 transition"
@@ -140,7 +142,7 @@ export function MobileNavDrawer({
           ref={panelRef}
           role="dialog"
           aria-modal="true"
-          aria-label="Navigation menu"
+          aria-label={t("app.nav.menu")}
           className={cn(
             "absolute inset-y-0 left-0 w-[85vw] max-w-[320px]",
             "bg-slate-950 text-white",
@@ -161,7 +163,7 @@ export function MobileNavDrawer({
             <button
               ref={closeBtnRef}
               type="button"
-              aria-label="Close menu"
+              aria-label={t("app.nav.closeMenu")}
               onClick={() => setOpen(false)}
               className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 hover:bg-white/15 transition"
             >
@@ -176,23 +178,22 @@ export function MobileNavDrawer({
 
             <div className="border-t border-white/10 p-4 space-y-4">
               <div className="rounded-2xl bg-white/20 p-4 ring-1 ring-white/20">
-                <p className="text-xs font-medium text-white/80">Credits</p>
+                <p className="text-xs font-medium text-white/80">{t("app.credits.title")}</p>
                 <div className="mt-2 flex items-center justify-between">
                   <Badge variant="secondary" className="rounded-full">
                     {creditsText}
                   </Badge>
                   <span className="text-xs font-medium text-white/80">
-                    remaining
+                    {t("app.credits.left")}
                   </span>
                 </div>
                 <p className="mt-3 text-xs text-white/75 leading-relaxed">
-                  Each tender review consumes 1 credit. Exports are gated on the
-                  free tier.
+                  {t("app.credits.help")}
                 </p>
               </div>
 
               <div className="flex w-full items-center justify-between px-2">
-                <span className="text-xs font-medium text-white/80">Theme</span>
+                <span className="text-xs font-medium text-white/80">{t("app.common.theme")}</span>
                 <div className="[&_button]:text-white [&_svg]:text-white">
                   <ModeToggle />
                 </div>

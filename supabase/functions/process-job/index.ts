@@ -79,6 +79,45 @@ function parseNumberEnv(name: string, fallback: number): number {
   return Number.isFinite(n) && n > 0 ? n : fallback;
 }
 
+// ---- i18n / output language (Option A: decision labels remain Go/Hold/No-Go) ----
+type LangCode = "en" | "de" | "it" | "fr" | "es";
+
+function normalizeLang(raw: unknown): LangCode {
+  const v = String(raw ?? "").trim().toLowerCase();
+  if (v === "de") return "de";
+  if (v === "it") return "it";
+  if (v === "fr") return "fr";
+  if (v === "es") return "es";
+  return "en";
+}
+
+function langName(code: LangCode): string {
+  if (code === "de") return "German";
+  if (code === "it") return "Italian";
+  if (code === "fr") return "French";
+  if (code === "es") return "Spanish";
+  return "English";
+}
+
+async function loadUserLanguagesAdmin(supabaseAdmin: any, userId: string): Promise<{ ui: LangCode; output: LangCode }> {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("profiles")
+      .select("locale,output_language")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    const ui = normalizeLang((data as any)?.locale);
+    const out = normalizeLang((data as any)?.output_language ?? (data as any)?.locale);
+    return { ui, output: out };
+  } catch {
+    // Columns may not exist yet; keep the system robust.
+    return { ui: "en", output: "en" };
+  }
+}
+
 
 // ---- Lease / heartbeat / runtime guards (Stage 2 stabilization) ----
 const JOB_LEASE_MS = parseNumberEnv("TP_JOB_LEASE_MS", 5 * 60 * 1000); // default 5 min
@@ -734,10 +773,14 @@ async function runOpenAi(args: {
     required: ["executive_summary", "checklist", "risks", "buyer_questions", "proposal_draft", "policy_triggers"],
   };
 
+  const { output: outputLang } = await loadUserLanguagesAdmin(supabaseAdmin, job.user_id);
+  const targetLanguage = langName(outputLang);
+
   const instructions =
     "You are TenderPilot. Drafting support only. Not legal advice. Not procurement advice. " +
     "Use executive, compliance grade language. No AI talk. " +
-    "Always write in the same language as the tender source text. " +
+    `Write all narrative content in ${targetLanguage}. ` +
+    "Do not translate or rewrite evidence excerpts; you do not output excerpts, only evidence_ids. " +
     "Avoid false certainty. If not present, write: Not found in extracted text.";
 
   const evidenceList = evidenceCandidates
@@ -773,7 +816,7 @@ ${playbookJson}
 
 Strict rules
 1. Grounding. Use only the evidence snippets provided. Do not guess. If a detail is not present, write: Not found in extracted text.
-2. Decision. Choose decisionBadge exactly as one of: Proceed, Proceed with caution, Hold – potential blocker. Provide decisionLine as one clear sentence.
+2. Decision. Choose decisionBadge exactly as one of: Go, Hold, No-Go. Provide decisionLine as one clear sentence.
 3. Submission deadline. If an explicit deadline date or time is present, copy it verbatim. Otherwise set submissionDeadline to: Not found in extracted text.
 4. Checklist. MUST means mandatory or disqualifying if missed. SHOULD means preferred or scoring. INFO is context.
 5. Evidence (STRICT). You MUST cite evidence_ids:

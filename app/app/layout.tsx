@@ -6,21 +6,12 @@ import { createServerClient } from "@supabase/ssr";
 
 import { AuthGate } from "./_components/auth-gate";
 import { SideNav } from "./_components/side-nav";
-import { MobileNavDrawer } from "./_components/mobile-nav-drawer";
 import { TelemetryInit } from "./_components/telemetry-init";
-import { SignOutMenuItem } from "./_components/sign-out-menu-item";
-import { AppPageTitle } from "./_components/app-page-title";
+import { AppI18nProvider } from "./_components/app-i18n-provider";
+import { SidebarFooter } from "./_components/sidebar-footer";
+import { AppHeader } from "./_components/app-header";
 
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ModeToggle } from "@/components/mode-toggle";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -52,7 +43,11 @@ async function supabaseServer() {
   );
 }
 
-async function loadCreditsBalance(): Promise<number | null> {
+async function loadProfileSettings(): Promise<{
+  creditsBalance: number | null;
+  locale: string | null;
+  outputLanguage: string | null;
+}> {
   try {
     const supabase = await supabaseServer();
 
@@ -61,23 +56,42 @@ async function loadCreditsBalance(): Promise<number | null> {
       error: userError,
     } = await supabase.auth.getUser();
 
-    if (userError || !user) return null;
-
-    // Source of truth: profiles.credits_balance
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("credits_balance")
-      .eq("id", user.id)
-      .maybeSingle();
-
-    // If the column does not exist yet (before SQL is applied), do not break the app.
-    if (error) {
-      console.error("Failed to load credits_balance", error);
-      return null;
+    if (userError || !user) {
+      return { creditsBalance: null, locale: null, outputLanguage: null };
     }
 
-    if (data && typeof (data as any).credits_balance === "number") {
-      return (data as any).credits_balance as number;
+    // Source of truth: profiles.* (robust to missing columns)
+    let data: any = null;
+    try {
+      const res = await supabase
+        .from("profiles")
+        .select("credits_balance,locale,output_language")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (res.error) throw res.error;
+      data = res.data as any;
+    } catch (e: any) {
+      // If columns do not exist yet (before SQL is applied), do not break the app.
+      const msg = String(e?.message ?? "");
+      if (msg.includes("locale") || msg.includes("output_language")) {
+        const res = await supabase
+          .from("profiles")
+          .select("credits_balance")
+          .eq("id", user.id)
+          .maybeSingle();
+        data = res.data as any;
+      } else {
+        console.error("Failed to load profile settings", e);
+      }
+    }
+
+    if (data && typeof data.credits_balance === "number") {
+      return {
+        creditsBalance: data.credits_balance as number,
+        locale: typeof data.locale === "string" ? data.locale : null,
+        outputLanguage: typeof data.output_language === "string" ? data.output_language : null,
+      };
     }
 
     // If the profile row is missing, try to create it (best effort).
@@ -86,32 +100,28 @@ async function loadCreditsBalance(): Promise<number | null> {
     const ins = await supabase
       .from("profiles")
       .insert({ id: user.id, email })
-      .select("credits_balance")
+      .select("credits_balance,locale,output_language")
       .maybeSingle();
 
-    if (
-      !ins.error &&
-      ins.data &&
-      typeof (ins.data as any).credits_balance === "number"
-    ) {
-      return (ins.data as any).credits_balance as number;
+    if (!ins.error && ins.data && typeof (ins.data as any).credits_balance === "number") {
+      return {
+        creditsBalance: (ins.data as any).credits_balance as number,
+        locale: typeof (ins.data as any).locale === "string" ? (ins.data as any).locale : null,
+        outputLanguage: typeof (ins.data as any).output_language === "string" ? (ins.data as any).output_language : null,
+      };
     }
 
     const again = await supabase
       .from("profiles")
-      .select("credits_balance")
+      .select("credits_balance,locale,output_language")
       .eq("id", user.id)
       .maybeSingle();
 
-    if (
-      !again.error &&
-      again.data &&
-      typeof (again.data as any).credits_balance === "number"
-    ) {
-      return (again.data as any).credits_balance as number;
-    }
-
-    return null;
+    return {
+      creditsBalance: typeof (again.data as any)?.credits_balance === "number" ? ((again.data as any).credits_balance as number) : null,
+      locale: typeof (again.data as any)?.locale === "string" ? ((again.data as any).locale as string) : null,
+      outputLanguage: typeof (again.data as any)?.output_language === "string" ? ((again.data as any).output_language as string) : null,
+    };
   } catch (e: any) {
     // During `next build`, Next may attempt static optimization; `cookies()` throws
     // `DYNAMIC_SERVER_USAGE` in that phase. This route is intentionally dynamic.
@@ -119,110 +129,51 @@ async function loadCreditsBalance(): Promise<number | null> {
     if (digest !== "DYNAMIC_SERVER_USAGE") {
       console.error("Unexpected error loading credits_balance", e);
     }
-    return null;
+    return { creditsBalance: null, locale: null, outputLanguage: null };
   }
 }
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
-  const creditsBalance = await loadCreditsBalance();
+  const { creditsBalance, locale, outputLanguage } = await loadProfileSettings();
 
   return (
-    <div className="h-dvh aurora-bg overflow-hidden">
-      <TelemetryInit />
+    <AppI18nProvider initialLocale={locale} initialOutputLanguage={outputLanguage}>
+      <div className="h-dvh aurora-bg overflow-hidden">
+        <TelemetryInit />
 
-      <div className="flex h-dvh min-w-0">
-        {/* Sidebar: fixed, never scrolls with page */}
-        <aside className="hidden md:flex fixed inset-y-0 left-0 w-[280px] z-40 flex-col bg-gradient-to-b from-teal-600 via-cyan-700 to-sky-800 text-white">
-          <div className="h-16 px-6 flex items-center justify-between">
-            <Link
-              href="/app/jobs"
-              className="font-semibold text-lg tracking-tight"
-            >
-              TenderPilot
-            </Link>
+        <div className="flex h-dvh min-w-0">
+          {/* Sidebar: fixed, never scrolls with page */}
+          <aside className="hidden md:flex fixed inset-y-0 left-0 w-[280px] z-40 flex-col bg-gradient-to-b from-teal-600 via-cyan-700 to-sky-800 text-white">
+            <div className="h-16 px-6 flex items-center justify-between">
+              <Link href="/app/jobs" className="font-semibold text-lg tracking-tight">
+                TenderPilot
+              </Link>
+            </div>
+
+            <Separator className="bg-white/15" />
+
+            {/* Nav scrolls only inside sidebar, footer pinned */}
+            <div className="flex min-h-0 flex-1 flex-col">
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                <SideNav />
+              </div>
+
+              <SidebarFooter creditsBalance={creditsBalance} />
+            </div>
+          </aside>
+
+          {/* Main column: only this scrolls */}
+          <div className="flex min-w-0 flex-1 flex-col md:pl-[280px]">
+            <AppHeader creditsBalance={creditsBalance} />
+
+            <main className="min-w-0 flex-1 overflow-y-auto px-4 py-6 md:px-8 md:py-8">
+              <div className="mx-auto max-w-7xl">
+                <AuthGate>{children}</AuthGate>
+              </div>
+            </main>
           </div>
-
-          <Separator className="bg-white/15" />
-
-          {/* Nav scrolls only inside sidebar, footer pinned */}
-          <div className="flex min-h-0 flex-1 flex-col">
-            <div className="min-h-0 flex-1 overflow-y-auto">
-              <SideNav />
-            </div>
-
-            <div className="border-t border-white/15 p-4 space-y-4">
-              <div className="rounded-2xl bg-white/12 p-4 ring-1 ring-white/15">
-                <p className="text-xs font-medium text-white/80">Credits</p>
-                <div className="mt-2 flex items-center justify-between">
-                  <Badge variant="secondary" className="rounded-full">
-                    {typeof creditsBalance === "number" ? creditsBalance : "—"}
-                  </Badge>
-                  <span className="text-xs font-medium text-white/80">
-                    remaining
-                  </span>
-                </div>
-                <p className="mt-3 text-xs text-white/75 leading-relaxed">
-                  Each tender review consumes 1 credit. Exports are gated on the
-                  free tier.
-                </p>
-              </div>
-
-              <div className="flex w-full items-center justify-between px-2">
-                <span className="text-xs font-medium text-white/80">Theme</span>
-                <div className="[&_button]:text-white [&_svg]:text-white">
-                  <ModeToggle />
-                </div>
-              </div>
-            </div>
-          </div>
-        </aside>
-
-        {/* Main column: only this scrolls */}
-        <div className="flex min-w-0 flex-1 flex-col md:pl-[280px]">
-          <header className="h-16 sticky top-0 z-30 border-b border-border bg-background/70 backdrop-blur flex items-center justify-between px-4 md:px-8">
-            <div className="flex items-center gap-3">
-              <div className="md:hidden">
-                <MobileNavDrawer creditsBalance={creditsBalance} />
-              </div>
-
-              <div className="min-w-0">
-                <p className="text-sm font-medium leading-none">
-                  <span className="hidden md:inline">TenderPilot</span>
-                  <span className="md:hidden">
-                    <AppPageTitle />
-                  </span>
-                </p>
-                <p className="hidden md:block text-xs text-muted-foreground">
-                  Go or no go in minutes. Draft bids faster.
-                </p>
-              </div>
-            </div>
-
-            <DropdownMenu>
-              <DropdownMenuTrigger className="outline-none">
-                <div className="flex items-center gap-2 rounded-full border border-border bg-card/70 px-2 py-1.5 shadow-sm backdrop-blur hover:opacity-90 transition">
-                  <Avatar className="h-7 w-7">
-                    <AvatarFallback>TP</AvatarFallback>
-                  </Avatar>
-                  <span className="hidden md:block text-sm pr-1">Account</span>
-                </div>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem asChild>
-                  <Link href="/app/account">Settings</Link>
-                </DropdownMenuItem>
-                <SignOutMenuItem />
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </header>
-
-          <main className="min-w-0 flex-1 overflow-y-auto px-4 py-6 md:px-8 md:py-8">
-            <div className="mx-auto max-w-7xl">
-              <AuthGate>{children}</AuthGate>
-            </div>
-          </main>
         </div>
       </div>
-    </div>
+    </AppI18nProvider>
   );
 }

@@ -42,7 +42,7 @@ export function BrandIcon({
   return (
     <Image
       src="/brand.jpg"
-      alt="TenderRay"
+      alt="TenderPilot"
       width={size}
       height={size}
       className={`object-contain ${className}`}

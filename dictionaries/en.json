@@ -627,5 +627,457 @@
       "privacy": "Privacy",
       "terms": "Terms"
     }
+  },
+  "app": {
+    "header": {
+      "tagline": "Go / Hold / No-Go in minutes. Start drafting with evidence."
+    },
+    "nav": {
+      "menu": "Menu",
+      "openMenu": "Open menu",
+      "closeMenu": "Close menu",
+      "newReview": "New review",
+      "tenders": "Tenders",
+      "dashboard": "Dashboard",
+      "account": "Account"
+    },
+    "credits": {
+      "title": "Credits",
+      "left": "left",
+      "help": "One review uses 1 credit. Exports are available on paid plans."
+    },
+    "common": {
+      "theme": "Theme",
+      "language": "Language",
+      "preparing": "Preparing…",
+      "remove": "Remove",
+      "signIn": "Sign in",
+      "notNow": "Not now",
+      "emailSupport": "Email support",
+      "dismiss": "Dismiss",
+      "refresh": "Refresh",
+      "all": "All",
+      "ready": "Ready",
+      "processing": "Processing",
+      "failed": "Failed",
+      "any": "Any",
+      "clearFilters": "Clear filters",
+      "loading": "Loading",
+      "sending": "Sending…",
+      "locateInPdf": "Locate in PDF",
+      "backToDashboard": "Back to dashboard",
+      "clear": "Clear",
+      "open": "Open",
+      "expand": "Expand",
+      "collapse": "Collapse",
+      "showMore": "Show more",
+      "showLess": "Show less",
+      "showAllCount": "Show all ({count})",
+      "saving": "Saving…",
+      "saveChanges": "Save changes",
+      "close": "Close",
+      "cancel": "Cancel",
+      "copy": "Copy",
+      "copied": "Copied",
+      "copyFailed": "Copy failed",
+      "more": "More",
+      "moreOptions": "More options",
+      "hideOptions": "Hide options",
+      "hideDetails": "Hide details",
+      "edit": "Edit",
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark",
+      "updated": "Updated",
+      "unknown": "Unknown",
+      "draftingSupport": "Drafting support only. Always verify against the source.",
+      "typeAndPressEnter": "Type and press Enter"
+    },
+    "decision": {
+      "go": "Go",
+      "hold": "Hold",
+      "noGo": "No-Go",
+      "unset": "Unset"
+    },
+    "upload": {
+      "title": "New review",
+      "subtitle": "Upload a PDF or DOCX. We’ll generate a decision cockpit with evidence.",
+      "disclaimer": "Drafting support only. Always verify requirements against the original tender documents.",
+      "ctaRun": "Run review",
+      "dropTitle": "Drag and drop your tender file here",
+      "dropHint": "Or click to browse your computer.",
+      "signInTitle": "Sign in to run a review",
+      "signInBody": "Sign in to continue. Your file is selected and ready.",
+      "noCreditsTitle": "You’re out of credits",
+      "noCreditsBody": "One review uses 1 credit and produces the decision cockpit plus exports.",
+      "upgrade": "Upgrade to Pro",
+      "footerHasFile": "You’ll be redirected to the decision cockpit after upload.",
+      "footerNoFile": "Select a file to continue."
+    },
+    "tenders": {
+      "h1": "Tenders",
+      "subtitle": "Review tenders fast. Open a tender to see Go / Hold / No-Go, risks, and evidence.",
+      "cardSubLoading": "Loading tenders from your workspace.",
+      "cardSubError": "We could not load your tenders.",
+      "cardSubDefault": "Search, filter, then open a tender for the decision cockpit.",
+      "searchPlaceholder": "Search tenders",
+      "filters": {
+        "status": "Status",
+        "decision": "Decision",
+        "deadline": "Deadline"
+      },
+      "deadline": {
+        "dueSoon": "Due soon",
+        "thisWeek": "This week",
+        "noDeadline": "No deadline"
+      },
+      "countShown": "{n} shown",
+      "loadingBody": "Fetching your tenders.",
+      "onboarding": {
+        "title": "Welcome to TenderPilot",
+        "body": "Upload a tender to get a fast Go / Hold / No-Go recommendation, key risks, and an execution-ready Bid Room.",
+        "cardEvidenceTitle": "Evidence-first trust",
+        "cardEvidenceBody": "Key claims link to supporting excerpts. Always verify in the original tender.",
+        "cardTimeTitle": "Estimated time",
+        "cardTimeBody": "Usually 1–3 minutes. Large files can take longer.",
+        "workflow": "Workflow: Upload → Decision cockpit → Bid Room tasks → Export",
+        "cta": "Upload your first tender"
+      },
+      "emptyTitle": "No tenders match your filters",
+      "emptyBody": "Try clearing filters, or upload a new tender to start.",
+      "openTender": "Open tender"
+    },
+    "tender": {
+      "single": "Tender",
+      "label": "Tender",
+      "notFound": "Tender not found or not accessible."
+    },
+    "bidroom": {
+      "title": "Bid Room",
+      "globalTitle": "Bid Room",
+      "globalSubtitle": "Manage open work items across all tenders you can access.",
+      "empty": "No open items.",
+      "filters": {
+        "owner": "Filter by owner",
+        "status": "Filter by status (todo/doing/blocked)"
+      },
+      "notStarted": "Bid Room not started"
+    },
+    "compliance": {
+      "title": "Compliance matrix",
+      "loadError": "Could not load compliance matrix.",
+      "loadingBody": "Preparing your compliance matrix.",
+      "notFinalTitle": "Results are not finalized",
+      "notFinalBody": "You can still set compliance status, but the requirement list may change until processing is complete.",
+      "searchPlaceholder": "Search requirement, proposal section, notes…",
+      "send": {
+        "cta": "Send to Bid Room",
+        "sent": "Sent to Bid Room",
+        "exists": "Already in Bid Room"
+      },
+      "coveredNoTask": "Covered — no task needed",
+      "noRows": "No rows match your current filters.",
+      "noReqs": "No requirements found yet."
+    },
+    "review": {
+      "decision": "Decision",
+      "teamDecision": "Team decision",
+      "drivers": {
+        "loading": "Preparing decision drivers.",
+        "hold": "Decision drivers: mandatory requirements and submission rules that can disqualify you.",
+        "caution": "Decision drivers: risks requiring validation before committing.",
+        "go": "No mandatory blockers detected in eligibility and submission requirements."
+      },
+      "exportsLocked": "Exports are available on paid plans. Upgrade or top up to unlock exports."
+    },
+    "account": {
+      "settings": "Settings",
+      "playbookTriggerNote": "If a playbook rule influences a decision, TenderPilot will show it as a trigger in the cockpit.",
+      "exports": {
+        "body": "Export from inside a tender to keep everything consistent with evidence.",
+        "openTenders": "Open tenders",
+        "title": "Exports"
+      },
+      "settingsSubtitle": "Profile, workspace, and preferences.",
+      "profile": {
+        "title": "Profile",
+        "nameLabel": "Name",
+        "namePlaceholder": "Your name",
+        "nameHelp": "Used on exports and reports.",
+        "emailLabel": "Email",
+        "signInLabel": "Sign in",
+        "signOut": "Sign out",
+        "userIdLabel": "User ID",
+        "authMethodEmail": "Email"
+      },
+      "appearance": {
+        "title": "Appearance",
+        "current": "Current"
+      },
+      "workspace": {
+        "title": "Workspace",
+        "nameLabel": "Workspace name",
+        "namePlaceholder": "Workspace",
+        "nameHelp": "Shown on exports and (later) for teams.",
+        "startPageLabel": "Start page"
+      },
+      "bidRoom": {
+        "title": "Bid Room",
+        "subtitle": "Track owners, status, and due dates."
+      },
+      "playbook": {
+        "title": "Bid Playbook",
+        "subtitle": "Rules that shape Go / Hold / No-Go. Not evidence.",
+        "setupRequired": "Setup required",
+        "policyBadge": "Policy",
+        "whatYouDo": "What you do",
+        "ruleOne": "{count} rule",
+        "ruleMany": "{count} rules",
+        "modalTitle": "Edit playbook rules",
+        "modalSubtitle": "These rules shape Go / Hold / No-Go. They are not used as evidence.",
+        "storageNotEnabled": "Playbook storage is not enabled yet. Apply the migration and refresh.",
+        "oneSentencePlaceholder": "One sentence summary",
+        "oneSentenceHelp": "Keep it short. This reduces generic noise.",
+        "oneSentenceFallback": "Add one sentence about what you deliver",
+        "industries": "Industries",
+        "industriesPlaceholder": "Public sector, IT, healthcare",
+        "regions": "Regions",
+        "regionsPlaceholder": "Austria, DACH, EU",
+        "workMode": "Work mode",
+        "modeRemote": "Remote",
+        "modeHybrid": "Hybrid",
+        "modeOnsite": "Onsite",
+        "hardRules": "Hard rules (max 10)",
+        "hardRulesPlaceholder": "No onsite work\nISO 27001 required\nNo fixed price contracts",
+        "triggerHint": "If a rule influences the decision, it will appear as a playbook trigger in the cockpit.",
+        "languages": "Languages",
+        "languagesPlaceholder": "EN, DE, IT",
+        "certifications": "Certifications",
+        "certificationsPlaceholder": "ISO 27001, TISAX",
+        "capacity": "Capacity",
+        "capacityLow": "Low",
+        "capacityMedium": "Medium",
+        "capacityHigh": "High",
+        "leadTimeWeeks": "Typical lead time (weeks)",
+        "savePlaybook": "Save playbook"
+      },
+      "billing": {
+        "title": "Billing",
+        "creditsNotUpdatedTitle": "Credits not updated yet",
+        "creditsNotUpdatedBody": "Your plan looks active, but your credit balance is 0. This usually means the Stripe webhook couldn’t grant monthly credits (missing DB schema or webhook not configured).",
+        "syncBilling": "Sync billing",
+        "current": "Current",
+        "creditsBalance": "Credits balance",
+        "periodEnds": "Period ends",
+        "usage": "Usage",
+        "tenders": "Tenders",
+        "processed": "Processed",
+        "inProgress": "In progress",
+        "manageBilling": "Manage billing",
+        "changePlan": "Change plan",
+        "upgradeMonthly": "Upgrade monthly",
+        "upgradeAnnual": "Upgrade annual",
+        "stripeNote": "Subscriptions and invoices are managed via Stripe.",
+        "statusActive": "active",
+        "statusFree": "free"
+      },
+      "help": {
+        "title": "Help",
+        "howItWorks": "How it works",
+        "workflowOverview": "Quick overview of the workflow.",
+        "privacy": "Privacy",
+        "terms": "Terms",
+        "contactSupportSoon": "Contact support (soon)"
+      },
+      "dataPrivacy": {
+        "title": "Data & privacy",
+        "body": "Tender files, extracted text, and results are stored in your workspace. You can delete individual tenders from the Tenders list, purge all tender data, or delete your entire account.",
+        "retentionTitle": "Retention",
+        "retentionBody": "Deletions are immediate (best effort). If a file was already removed or a legacy table is missing, the operation will still complete.",
+        "deleteAllTenderData": "Delete all tender data",
+        "deletingTenderData": "Deleting tender data…",
+        "deleteMyAccount": "Delete my account",
+        "deletingAccount": "Deleting account…",
+        "confirmPurge": "Delete ALL tender data (uploads, extracted text, results, bid room items) from your workspace?\n\nThis cannot be undone.",
+        "confirmDelete": "Delete your account and ALL stored data?\n\nThis will remove tenders, results, and your profile. This cannot be undone."
+      },
+      "notice": {
+        "accountLoadFailed": "Account load failed",
+        "accountSaveFailed": "Account save failed",
+        "playbookSaveFailed": "Playbook save failed",
+        "playbookCouldNotLoad": "Couldn’t load",
+        "couldNotLoadSettings": "Couldn’t load settings. Refresh and try again.",
+        "couldNotSaveShort": "Couldn’t save",
+        "couldNotSave": "Couldn’t save. Try again.",
+        "checkoutCanceled": "Checkout canceled.",
+        "paymentReceivedConfirming": "Payment received. Confirming your plan…",
+        "paymentReceivedSyncHint": "Payment received. If credits did not update yet, click Sync billing below.",
+        "planConfirmed": "Plan confirmed. Credits updated.",
+        "missingBillingSchema": "Billing schema missing in Supabase. Run supabase/stripe_billing_v1.sql.",
+        "billingSynced": "Billing synced.",
+        "billingSyncedFree": "Billing synced (free).",
+        "couldNotSyncBilling": "Couldn’t sync billing. Try again.",
+        "couldNotStartCheckout": "Couldn’t start checkout. Check Stripe env vars and try again.",
+        "couldNotOpenPortal": "Couldn’t open billing portal. Try upgrading first.",
+        "allTenderDataDeleted": "All tender data deleted.",
+        "couldNotDeleteTenderData": "Couldn’t delete your tender data. Try again.",
+        "couldNotDeleteAccount": "Couldn’t delete your account. Try again."
+      }
+    },
+    "exports": {
+      "bidPack": {
+        "sheets": {
+          "overview": "00_Overview",
+          "blockers": "01_Blockers",
+          "requirements": "02_Requirements",
+          "risks": "03_Risks",
+          "clarifications": "04_Clarifications",
+          "outline": "05_Outline",
+          "policyTriggers": "Policy Triggers",
+          "evidenceIndex": "99_EvidenceIndex"
+        }
+      },
+      "headers": {
+        "field": "Field",
+        "value": "Value",
+        "ref_key": "Ref key",
+        "type": "Type",
+        "requirement": "Requirement",
+        "owner": "Owner",
+        "status": "Status",
+        "due_at": "Due date",
+        "notes": "Notes",
+        "evidence_ids": "Evidence IDs",
+        "pages": "Pages",
+        "severity": "Severity",
+        "risk": "Risk",
+        "detail": "Detail",
+        "question": "Question",
+        "section": "Section",
+        "bullets": "Bullets",
+        "trigger_id": "Trigger",
+        "impact": "Impact",
+        "title": "Title",
+        "playbook_version": "Playbook v",
+        "evidence_id": "Evidence ID",
+        "page": "Page",
+        "anchor": "Anchor",
+        "kind": "Kind",
+        "excerpt": "Excerpt"
+      },
+      "overview": {
+        "tender": "Tender",
+        "created": "Created",
+        "status": "Status",
+        "decision": "Decision",
+        "why": "Why",
+        "deadline": "Submission deadline",
+        "notes": "Notes",
+        "notesBody": "Evidence IDs point to authoritative excerpts. Company context (if any) is not evidence."
+      }
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "subtitle": "High-signal triage for decisions, deadlines, and execution.",
+      "menu": {
+        "ariaLabel": "Dashboard menu",
+        "openTenders": "Open tenders",
+        "openBidRoom": "Open Bid Room",
+        "focusedView": "Focused view",
+        "fullView": "Full view"
+      },
+      "errors": {
+        "title": "Dashboard error",
+        "failedToLoad": "Failed to load dashboard"
+      },
+      "kpi": {
+        "portfolioTitle": "Portfolio",
+        "deadlinesTitle": "Deadlines",
+        "executionTitle": "Execution",
+        "decisionsTitle": "Decisions",
+        "basicsPresent": "basics present",
+        "aiExtractionHint": "Deadline/decision from AI extraction unless overridden.",
+        "basedOnWorkItems": "Based on team work items.",
+        "aiSuggestionHint": "AI suggestion unless overridden by team decision.",
+        "readyMissing": "{ready} ready • {missing} missing",
+        "portfolioBreakdown": "Ready {ready} • Missing decision {missingDecision} • Missing deadline {missingDeadline}",
+        "percentUrgent": "% urgent",
+        "urgentUnknown": "{urgent} urgent • {unknown} unknown",
+        "deadlineBreakdownBase": "Overdue {overdue} • 0-7d {next7} • 8-30d {next30} • 31-90d {next90}",
+        "percentDone": "% done",
+        "doneOpen": "{done} done • {open} open",
+        "executionBreakdown": "{done} done • {open} open • {blocked} blocked",
+        "percentDecided": "% decided",
+        "decidedUnknown": "{decided} decided • {unknown} unknown",
+        "decisionsBreakdown": "Go {go} • Hold {hold} • No-Go {noGo} • Missing {missing}",
+        "chart": {
+          "ready": "Ready",
+          "missingDecision": "Missing decision",
+          "missingDeadline": "Missing deadline",
+          "missingBoth": "Missing both",
+          "overdue": "Overdue",
+          "next7": "0-7d",
+          "next30": "8-30d",
+          "next90": "31-90d",
+          "done": "Done",
+          "blocked": "Blocked",
+          "open": "Open"
+        }
+      },
+      "filters": {
+        "owner": "Owner",
+        "decision": "Decision",
+        "window": "Window",
+        "next14Days": "Next 14 days",
+        "next30Days": "Next 30 days",
+        "next90Days": "Next 90 days"
+      },
+      "queues": {
+        "title": "Operational queues",
+        "subtitle": "Actionable queues for daily delivery. Works even when the tender PDF has no deadline or decision."
+      },
+      "badges": {
+        "needsTriage": "Needs triage",
+        "deadlineUnknown": "Deadline unknown",
+        "dueNext7": "Due next 7d",
+        "overdueItems": "Overdue items",
+        "blocked": "Blocked"
+      },
+      "sections": {
+        "needsTriage": "Needs triage",
+        "deadlineUnknown": "Deadline unknown",
+        "blockedItems": "Blocked items",
+        "unassignedItems": "Unassigned items",
+        "overdueWorkItems": "Overdue work items",
+        "clarificationsPending": "Clarifications pending"
+      },
+      "labels": {
+        "decision": "Decision",
+        "deadline": "Deadline",
+        "decisionUnset": "Decision: unset",
+        "deadlineUnset": "Deadline: unset",
+        "decisionMissing": "Decision missing",
+        "decisionUnknown": "Decision unknown",
+        "deadlineMissing": "Deadline missing",
+        "deadlineUnknown": "Deadline unknown",
+        "unassigned": "Unassigned",
+        "workItem": "Work item",
+        "clarification": "Clarification",
+        "noWorkItems": "No work items",
+        "openWorkItemOne": "{count} open work item",
+        "openWorkItemMany": "{count} open work items",
+        "itemsDone": "{done}/{total} items done"
+      },
+      "analytics": {
+        "toggleTitle": "Expand/collapse analytics",
+        "hiddenInStandup": "Hidden in standup mode",
+        "hiddenLabel": "Hidden",
+        "noWorkItemsYet": "No work items yet."
+      },
+      "blockers": {
+        "noneTitle": "No blockers",
+        "noneLabel": "None"
+      }
+    }
   }
 }

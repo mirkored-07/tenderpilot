@@ -627,5 +627,457 @@
       "privacy": "Confidentialité",
       "terms": "Conditions"
     }
+  },
+  "app": {
+    "header": {
+      "tagline": "Go / Hold / No-Go en quelques minutes. Rédigez avec preuves."
+    },
+    "nav": {
+      "menu": "Menu",
+      "openMenu": "Ouvrir le menu",
+      "closeMenu": "Fermer le menu",
+      "newReview": "Nouvelle analyse",
+      "tenders": "Appels d’offres",
+      "dashboard": "Dashboard",
+      "account": "Account"
+    },
+    "credits": {
+      "title": "Credits",
+      "left": "restants",
+      "help": "Une analyse utilise 1 crédit. Les exports sont disponibles sur les offres payantes."
+    },
+    "common": {
+      "theme": "Thème",
+      "language": "Langue",
+      "preparing": "Préparation…",
+      "remove": "Retirer",
+      "signIn": "Se connecter",
+      "notNow": "Pas maintenant",
+      "emailSupport": "Contacter le support",
+      "dismiss": "Fermer",
+      "refresh": "Actualiser",
+      "all": "Tous",
+      "ready": "Prêt",
+      "processing": "En cours",
+      "failed": "Échec",
+      "any": "Tous",
+      "clearFilters": "Réinitialiser les filtres",
+      "loading": "Chargement",
+      "sending": "Envoi…",
+      "locateInPdf": "Localiser dans le PDF",
+      "backToDashboard": "Retour au tableau de bord",
+      "clear": "Effacer",
+      "open": "Ouvrir",
+      "expand": "Développer",
+      "collapse": "Réduire",
+      "showMore": "Afficher plus",
+      "showLess": "Afficher moins",
+      "showAllCount": "Tout afficher ({count})",
+      "saving": "Enregistrement…",
+      "saveChanges": "Enregistrer les modifications",
+      "close": "Fermer",
+      "cancel": "Annuler",
+      "copy": "Copier",
+      "copied": "Copié",
+      "copyFailed": "Échec de la copie",
+      "more": "Plus",
+      "moreOptions": "Plus d’options",
+      "hideOptions": "Masquer les options",
+      "hideDetails": "Masquer les détails",
+      "edit": "Modifier",
+      "system": "Système",
+      "light": "Clair",
+      "dark": "Sombre",
+      "updated": "Mis à jour",
+      "unknown": "Inconnu",
+      "draftingSupport": "Aide à la rédaction uniquement. Vérifiez toujours avec la source.",
+      "typeAndPressEnter": "Saisissez puis appuyez sur Entrée"
+    },
+    "decision": {
+      "go": "Go",
+      "hold": "Hold",
+      "noGo": "No-Go",
+      "unset": "Unset"
+    },
+    "upload": {
+      "title": "Nouvelle analyse",
+      "subtitle": "Importez un PDF ou DOCX. Nous générons un cockpit de décision avec preuves.",
+      "disclaimer": "Aide à la rédaction uniquement. Vérifiez toujours les exigences dans les documents originaux.",
+      "ctaRun": "Lancer l’analyse",
+      "dropTitle": "Glissez-déposez le fichier de l’appel d’offres ici",
+      "dropHint": "Ou cliquez pour sélectionner un fichier.",
+      "signInTitle": "Connectez-vous pour lancer une analyse",
+      "signInBody": "Connectez-vous pour continuer. Votre fichier est sélectionné et prêt.",
+      "noCreditsTitle": "Plus de crédits",
+      "noCreditsBody": "Une analyse utilise 1 crédit et produit le cockpit de décision et les exports.",
+      "upgrade": "Passer à Pro",
+      "footerHasFile": "Après l’import, vous serez redirigé vers le cockpit de décision.",
+      "footerNoFile": "Sélectionnez un fichier pour continuer."
+    },
+    "tenders": {
+      "h1": "Appels d’offres",
+      "subtitle": "Analysez rapidement. Ouvrez un appel d’offres pour voir Go / Hold / No-Go, risques et preuves.",
+      "cardSubLoading": "Chargement des appels d’offres de votre espace.",
+      "cardSubError": "Impossible de charger vos appels d’offres.",
+      "cardSubDefault": "Recherchez, filtrez, puis ouvrez un appel d’offres dans le cockpit de décision.",
+      "searchPlaceholder": "Rechercher des appels d’offres",
+      "filters": {
+        "status": "Statut",
+        "decision": "Décision",
+        "deadline": "Échéance"
+      },
+      "deadline": {
+        "dueSoon": "Bientôt dû",
+        "thisWeek": "Cette semaine",
+        "noDeadline": "Pas d’échéance"
+      },
+      "countShown": "{n} affichés",
+      "loadingBody": "Récupération des appels d’offres.",
+      "onboarding": {
+        "title": "Bienvenue sur TenderPilot",
+        "body": "Importez un appel d’offres pour obtenir rapidement Go / Hold / No-Go, risques clés et un Bid Room prêt à l’exécution.",
+        "cardEvidenceTitle": "Preuves d’abord",
+        "cardEvidenceBody": "Les points clés renvoient à des extraits justificatifs. Vérifiez toujours l’original.",
+        "cardTimeTitle": "Temps estimé",
+        "cardTimeBody": "Généralement 1–3 minutes. Les gros fichiers peuvent prendre plus de temps.",
+        "workflow": "Workflow: Import → Cockpit de décision → Tâches Bid Room → Export",
+        "cta": "Importer votre premier appel d’offres"
+      },
+      "emptyTitle": "Aucun appel d’offres ne correspond à vos filtres",
+      "emptyBody": "Essayez de réinitialiser les filtres, ou importez un nouvel appel d’offres.",
+      "openTender": "Ouvrir l’appel d’offres"
+    },
+    "tender": {
+      "single": "Appel d’offres",
+      "label": "Appel d’offres",
+      "notFound": "Appel d’offres introuvable ou non accessible."
+    },
+    "bidroom": {
+      "title": "Bid Room",
+      "globalTitle": "Bid Room",
+      "globalSubtitle": "Gérez les tâches ouvertes sur tous les appels d’offres accessibles.",
+      "empty": "Aucune tâche ouverte.",
+      "filters": {
+        "owner": "Filtrer par owner",
+        "status": "Filtrer par statut (todo/doing/blocked)"
+      },
+      "notStarted": "Bid Room non démarré"
+    },
+    "compliance": {
+      "title": "Matrice de conformité",
+      "loadError": "Impossible de charger la matrice de conformité.",
+      "loadingBody": "Préparation de la matrice de conformité.",
+      "notFinalTitle": "Résultats non finalisés",
+      "notFinalBody": "Vous pouvez définir le statut, mais la liste des exigences peut évoluer jusqu’à la fin du traitement.",
+      "searchPlaceholder": "Rechercher exigence, section, notes…",
+      "send": {
+        "cta": "Envoyer au Bid Room",
+        "sent": "Envoyé au Bid Room",
+        "exists": "Déjà dans le Bid Room"
+      },
+      "coveredNoTask": "Couvert — aucune tâche nécessaire",
+      "noRows": "Aucune ligne ne correspond aux filtres actuels.",
+      "noReqs": "Aucune exigence disponible pour le moment."
+    },
+    "review": {
+      "decision": "Décision",
+      "teamDecision": "Décision d’équipe",
+      "drivers": {
+        "loading": "Préparation des facteurs de décision.",
+        "hold": "Facteurs de décision : exigences obligatoires et règles de soumission pouvant disqualifier.",
+        "caution": "Facteurs de décision : risques à valider avant d’engager des ressources.",
+        "go": "Aucun blocage obligatoire détecté dans l’éligibilité et les règles de soumission."
+      },
+      "exportsLocked": "Les exports sont disponibles sur les offres payantes. Passez à Pro ou rechargez pour les débloquer."
+    },
+    "account": {
+      "settings": "Paramètres",
+      "playbookTriggerNote": "Si une règle du playbook influence une décision, TenderPilot l’affiche comme déclencheur dans le cockpit.",
+      "exports": {
+        "body": "Exportez depuis un appel d’offres pour garder la cohérence avec les preuves.",
+        "openTenders": "Ouvrir les appels d’offres",
+        "title": "Exports"
+      },
+      "settingsSubtitle": "Profil, espace de travail et préférences.",
+      "profile": {
+        "title": "Profil",
+        "nameLabel": "Nom",
+        "namePlaceholder": "Votre nom",
+        "nameHelp": "Utilisé dans les exports et rapports.",
+        "emailLabel": "E-mail",
+        "signInLabel": "Connexion",
+        "signOut": "Se déconnecter",
+        "userIdLabel": "User ID",
+        "authMethodEmail": "E-mail"
+      },
+      "appearance": {
+        "title": "Apparence",
+        "current": "Actuel"
+      },
+      "workspace": {
+        "title": "Espace de travail",
+        "nameLabel": "Nom de l’espace",
+        "namePlaceholder": "Workspace",
+        "nameHelp": "Affiché dans les exports et (plus tard) pour les équipes.",
+        "startPageLabel": "Page de démarrage"
+      },
+      "bidRoom": {
+        "title": "Bid Room",
+        "subtitle": "Suivre owners, statut et échéances."
+      },
+      "playbook": {
+        "title": "Bid Playbook",
+        "subtitle": "Règles qui orientent Go / Hold / No-Go. Pas une preuve.",
+        "setupRequired": "Configuration requise",
+        "policyBadge": "Politique",
+        "whatYouDo": "Ce que vous faites",
+        "ruleOne": "{count} règle",
+        "ruleMany": "{count} règles",
+        "modalTitle": "Modifier les règles du playbook",
+        "modalSubtitle": "Ces règles orientent Go / Hold / No-Go. Elles ne sont pas utilisées comme preuve.",
+        "storageNotEnabled": "Le stockage du playbook n’est pas encore activé. Appliquez la migration et actualisez.",
+        "oneSentencePlaceholder": "Résumé en une phrase",
+        "oneSentenceHelp": "Restez bref. Cela réduit le bruit générique.",
+        "oneSentenceFallback": "Ajoutez une phrase sur ce que vous livrez",
+        "industries": "Secteurs",
+        "industriesPlaceholder": "Secteur public, IT, santé",
+        "regions": "Régions",
+        "regionsPlaceholder": "Austria, DACH, EU",
+        "workMode": "Mode de travail",
+        "modeRemote": "Remote",
+        "modeHybrid": "Hybride",
+        "modeOnsite": "Sur site",
+        "hardRules": "Règles strictes (max 10)",
+        "hardRulesPlaceholder": "Pas de sur site\nISO 27001 requis\nPas de contrats à prix fixe",
+        "triggerHint": "Si une règle influence la décision, elle apparaîtra comme déclencheur dans le cockpit.",
+        "languages": "Langues",
+        "languagesPlaceholder": "EN, DE, IT",
+        "certifications": "Certifications",
+        "certificationsPlaceholder": "ISO 27001, TISAX",
+        "capacity": "Capacité",
+        "capacityLow": "Faible",
+        "capacityMedium": "Moyenne",
+        "capacityHigh": "Élevée",
+        "leadTimeWeeks": "Délai typique (semaines)",
+        "savePlaybook": "Enregistrer le playbook"
+      },
+      "billing": {
+        "title": "Facturation",
+        "creditsNotUpdatedTitle": "Crédits non mis à jour",
+        "creditsNotUpdatedBody": "Votre plan semble actif, mais votre solde de crédits est à 0. Cela signifie souvent que le webhook Stripe n’a pas attribué les crédits mensuels (schéma DB manquant ou webhook non configuré).",
+        "syncBilling": "Synchroniser la facturation",
+        "current": "Actuel",
+        "creditsBalance": "Solde de crédits",
+        "periodEnds": "Fin de période",
+        "usage": "Usage",
+        "tenders": "Appels d’offres",
+        "processed": "Traités",
+        "inProgress": "En cours",
+        "manageBilling": "Gérer la facturation",
+        "changePlan": "Changer de plan",
+        "upgradeMonthly": "Passer au mensuel",
+        "upgradeAnnual": "Passer à l’annuel",
+        "stripeNote": "Les abonnements et factures sont gérés via Stripe.",
+        "statusActive": "actif",
+        "statusFree": "free"
+      },
+      "help": {
+        "title": "Aide",
+        "howItWorks": "Comment ça marche",
+        "workflowOverview": "Aperçu rapide du workflow.",
+        "privacy": "Confidentialité",
+        "terms": "Conditions",
+        "contactSupportSoon": "Contacter le support (bientôt)"
+      },
+      "dataPrivacy": {
+        "title": "Données & confidentialité",
+        "body": "Les fichiers, le texte extrait et les résultats sont stockés dans votre espace de travail. Vous pouvez supprimer des appels d’offres, purger toutes les données ou supprimer votre compte.",
+        "retentionTitle": "Rétention",
+        "retentionBody": "Les suppressions sont immédiates (best effort). Si un fichier a déjà été supprimé ou si une table legacy manque, l’opération se termine quand même.",
+        "deleteAllTenderData": "Supprimer toutes les données d’appels d’offres",
+        "deletingTenderData": "Suppression des données…",
+        "deleteMyAccount": "Supprimer mon compte",
+        "deletingAccount": "Suppression du compte…",
+        "confirmPurge": "Supprimer TOUTES les données (uploads, texte extrait, résultats, bid room) de votre workspace ?\n\nAction irréversible.",
+        "confirmDelete": "Supprimer votre compte et TOUTES les données ?\n\nSupprime appels d’offres, résultats et profil. Action irréversible."
+      },
+      "notice": {
+        "accountLoadFailed": "Échec du chargement du compte",
+        "accountSaveFailed": "Échec de l’enregistrement du compte",
+        "playbookSaveFailed": "Échec de l’enregistrement du playbook",
+        "playbookCouldNotLoad": "Impossible de charger",
+        "couldNotLoadSettings": "Impossible de charger les paramètres. Actualisez et réessayez.",
+        "couldNotSaveShort": "Impossible d’enregistrer",
+        "couldNotSave": "Impossible d’enregistrer. Réessayez.",
+        "checkoutCanceled": "Paiement annulé.",
+        "paymentReceivedConfirming": "Paiement reçu. Confirmation du plan…",
+        "paymentReceivedSyncHint": "Paiement reçu. Si les crédits ne sont pas mis à jour, cliquez sur Synchroniser la facturation.",
+        "planConfirmed": "Plan confirmé. Crédits mis à jour.",
+        "missingBillingSchema": "Schéma de facturation manquant dans Supabase. Exécutez supabase/stripe_billing_v1.sql.",
+        "billingSynced": "Facturation synchronisée.",
+        "billingSyncedFree": "Facturation synchronisée (free).",
+        "couldNotSyncBilling": "Impossible de synchroniser. Réessayez.",
+        "couldNotStartCheckout": "Impossible de démarrer le paiement. Vérifiez les variables Stripe.",
+        "couldNotOpenPortal": "Impossible d’ouvrir le portail. Essayez d’abord de passer à un plan payant.",
+        "allTenderDataDeleted": "Toutes les données ont été supprimées.",
+        "couldNotDeleteTenderData": "Impossible de supprimer les données. Réessayez.",
+        "couldNotDeleteAccount": "Impossible de supprimer le compte. Réessayez."
+      }
+    },
+    "exports": {
+      "bidPack": {
+        "sheets": {
+          "overview": "00_Vue_d_ensemble",
+          "blockers": "01_Blocages",
+          "requirements": "02_Exigences",
+          "risks": "03_Risques",
+          "clarifications": "04_Clarifications",
+          "outline": "05_Plan",
+          "policyTriggers": "Policy Triggers",
+          "evidenceIndex": "99_IndexPreuves"
+        }
+      },
+      "headers": {
+        "field": "Champ",
+        "value": "Valeur",
+        "ref_key": "Ref key",
+        "type": "Type",
+        "requirement": "Exigence",
+        "owner": "Owner",
+        "status": "Statut",
+        "due_at": "Échéance",
+        "notes": "Notes",
+        "evidence_ids": "IDs preuves",
+        "pages": "Pages",
+        "severity": "Sévérité",
+        "risk": "Risque",
+        "detail": "Détail",
+        "question": "Question",
+        "section": "Section",
+        "bullets": "Points",
+        "trigger_id": "Déclencheur",
+        "impact": "Impact",
+        "title": "Titre",
+        "playbook_version": "Playbook v",
+        "evidence_id": "ID preuve",
+        "page": "Page",
+        "anchor": "Ancre",
+        "kind": "Type",
+        "excerpt": "Extrait"
+      },
+      "overview": {
+        "tender": "Appel d’offres",
+        "created": "Créé",
+        "status": "Statut",
+        "decision": "Décision",
+        "why": "Pourquoi",
+        "deadline": "Date limite",
+        "notes": "Notes",
+        "notesBody": "Les IDs de preuves pointent vers des extraits faisant autorité. Le contexte entreprise (le cas échéant) n’est pas une preuve."
+      }
+    },
+    "dashboard": {
+      "title": "Tableau de bord",
+      "subtitle": "Triage à fort signal pour décisions, échéances et exécution.",
+      "menu": {
+        "ariaLabel": "Menu du tableau de bord",
+        "openTenders": "Ouvrir les appels d’offres",
+        "openBidRoom": "Ouvrir la Bid Room",
+        "focusedView": "Vue ciblée",
+        "fullView": "Vue complète"
+      },
+      "errors": {
+        "title": "Erreur du tableau de bord",
+        "failedToLoad": "Impossible de charger le tableau de bord"
+      },
+      "kpi": {
+        "portfolioTitle": "Portefeuille",
+        "deadlinesTitle": "Échéances",
+        "executionTitle": "Exécution",
+        "decisionsTitle": "Décisions",
+        "basicsPresent": "bases présentes",
+        "aiExtractionHint": "Échéance/décision issues de l’extraction IA sauf override.",
+        "basedOnWorkItems": "Basé sur les éléments de travail de l’équipe.",
+        "aiSuggestionHint": "Suggestion IA sauf override par décision de l’équipe.",
+        "readyMissing": "{ready} prêts • {missing} manquants",
+        "portfolioBreakdown": "Prêts {ready} • Décision manquante {missingDecision} • Échéance manquante {missingDeadline}",
+        "percentUrgent": "% urgentes",
+        "urgentUnknown": "{urgent} urgentes • {unknown} inconnues",
+        "deadlineBreakdownBase": "En retard {overdue} • 0-7j {next7} • 8-30j {next30} • 31-90j {next90}",
+        "percentDone": "% fait",
+        "doneOpen": "{done} faits • {open} ouverts",
+        "executionBreakdown": "{done} faits • {open} ouverts • {blocked} bloqués",
+        "percentDecided": "% décidé",
+        "decidedUnknown": "{decided} décidés • {unknown} inconnus",
+        "decisionsBreakdown": "Go {go} • Hold {hold} • No-Go {noGo} • Manquants {missing}",
+        "chart": {
+          "ready": "Prêt",
+          "missingDecision": "Décision manquante",
+          "missingDeadline": "Échéance manquante",
+          "missingBoth": "Les deux manquent",
+          "overdue": "En retard",
+          "next7": "0-7j",
+          "next30": "8-30j",
+          "next90": "31-90j",
+          "done": "Faits",
+          "blocked": "Bloqués",
+          "open": "Ouverts"
+        }
+      },
+      "filters": {
+        "owner": "Owner",
+        "decision": "Décision",
+        "window": "Fenêtre",
+        "next14Days": "14 prochains jours",
+        "next30Days": "30 prochains jours",
+        "next90Days": "90 prochains jours"
+      },
+      "queues": {
+        "title": "Files opérationnelles",
+        "subtitle": "Files actionnables pour la livraison au quotidien. Fonctionne même si le PDF ne contient ni échéance ni décision."
+      },
+      "badges": {
+        "needsTriage": "Triage requis",
+        "deadlineUnknown": "Échéance inconnue",
+        "dueNext7": "À faire sous 7j",
+        "overdueItems": "En retard",
+        "blocked": "Bloqués"
+      },
+      "sections": {
+        "needsTriage": "Triage requis",
+        "deadlineUnknown": "Échéance inconnue",
+        "blockedItems": "Éléments bloqués",
+        "unassignedItems": "Non attribués",
+        "overdueWorkItems": "Éléments en retard",
+        "clarificationsPending": "Clarifications en attente"
+      },
+      "labels": {
+        "decision": "Décision",
+        "deadline": "Échéance",
+        "decisionUnset": "Décision : non définie",
+        "deadlineUnset": "Échéance : non définie",
+        "decisionMissing": "Décision manquante",
+        "decisionUnknown": "Décision inconnue",
+        "deadlineMissing": "Échéance manquante",
+        "deadlineUnknown": "Échéance inconnue",
+        "unassigned": "Non attribué",
+        "workItem": "Élément de travail",
+        "clarification": "Clarification",
+        "noWorkItems": "Aucun élément",
+        "openWorkItemOne": "{count} élément ouvert",
+        "openWorkItemMany": "{count} éléments ouverts",
+        "itemsDone": "{done}/{total} terminés"
+      },
+      "analytics": {
+        "toggleTitle": "Développer/réduire les analytics",
+        "hiddenInStandup": "Masqué en mode standup",
+        "hiddenLabel": "Masqué",
+        "noWorkItemsYet": "Aucun élément pour le moment."
+      },
+      "blockers": {
+        "noneTitle": "Aucun blocage",
+        "noneLabel": "Aucun"
+      }
+    }
   }
 }

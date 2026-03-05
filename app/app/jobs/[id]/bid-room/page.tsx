@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 
 import { supabaseBrowser } from "@/lib/supabase/browser";
+import { useAppI18n } from "../../../_components/app-i18n-provider";
 import { track } from "@/lib/telemetry";
 
 import { BidRoomPanel } from "@/components/bidroom/BidRoomPanel";
@@ -54,6 +55,7 @@ function normalizeOutlineSections(rawDraft: any): Array<{ title: string; bullets
 }
 
 export default function JobBidRoomPage() {
+  const { t } = useAppI18n();
   const params = useParams();
   const jobId = String((params as any)?.id ?? "").trim();
 
@@ -92,7 +94,7 @@ const [metaDraft, setMetaDraft] = useState<{
         const { data: jobRow, error: jobErr } = await supabase.from("jobs").select("*").eq("id", jobId).maybeSingle();
         if (cancelled) return;
         if (jobErr || !jobRow) {
-          setError("Job not found or not accessible.");
+          setError(t("app.tender.notFound"));
           setJob(null);
           setResult(null);
           setLoading(false);
@@ -209,15 +211,15 @@ const [metaDraft, setMetaDraft] = useState<{
     <div className="mx-auto max-w-6xl space-y-4 p-4 md:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-lg font-semibold">Bid Room</p>
+          <p className="text-lg font-semibold">{t("app.bidroom.title")}</p>
           <p className="mt-1 text-sm text-muted-foreground">Work view: assign owners, track tasks, and coordinate the bid.</p>
           <p className="mt-1 text-sm text-muted-foreground">
             {job?.file_name ? (
               <>
-                Job: <span className="font-medium text-foreground">{String(job.file_name)}</span>
+                {t("app.tender.label")}: <span className="font-medium text-foreground">{String(job.file_name)}</span>
               </>
             ) : (
-              <>Job: {jobId}</>
+              <>{t("app.tender.label")}: {jobId}</>
             )}
           </p>
         </div>

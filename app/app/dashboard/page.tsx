@@ -6,6 +6,7 @@ import { MoreHorizontal, RefreshCw } from "lucide-react";
 
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { getJobDisplayName } from "@/lib/pilot-job-names";
+import { useAppI18n } from "../_components/app-i18n-provider";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -260,6 +261,7 @@ function daysUntil(deadline: Date, now: Date) {
 }
 
 export default function DashboardPage() {
+  const { t } = useAppI18n();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -344,7 +346,7 @@ export default function DashboardPage() {
       setWorkItems((workData as DbWorkItem[]) ?? []);
     } catch (e: any) {
       console.error(e);
-      setError(e?.message || "Failed to load dashboard");
+      setError(e?.message || t("app.dashboard.errors.failedToLoad"));
     } finally {
       setLoading(false);
     }
@@ -380,7 +382,7 @@ export default function DashboardPage() {
 
 		// Keep dashboard consistent with Job page: if AI did not provide a decision badge,
 		// the UI defaults to "Proceed with caution" (caution state), not "missing".
-		const extractedDecisionText = extractedDecisionTextRaw || "Proceed with caution";
+		const extractedDecisionText = extractedDecisionTextRaw || "Hold";
 
 
 
@@ -575,7 +577,7 @@ return {
   const deadlineHistogram = useMemo(() => {
     const now = new Date();
     const buckets = [
-      { label: "Overdue", value: 0 },
+      { label: t("app.dashboard.kpi.chart.overdue"), value: 0 },
       { label: "0-7d", value: 0 },
       { label: "8-30d", value: 0 },
       { label: "31-90d", value: 0 },
@@ -676,7 +678,7 @@ return {
             <p className="mt-1 text-sm text-muted-foreground">Loading…</p>
           </div>
           <Button variant="outline" className="rounded-full" onClick={loadAll}>
-            Refresh
+            {t("app.common.refresh")}
           </Button>
         </div>
         <Card className="rounded-2xl">
@@ -694,13 +696,13 @@ return {
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-          <p className="mt-1 text-sm text-muted-foreground">High-signal triage for decisions, deadlines, and execution.</p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("app.dashboard.title")}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t("app.dashboard.subtitle")}</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <Button asChild className="rounded-full">
-            <Link href="/app/upload">New bid</Link>
+            <Link href="/app/upload">{t("app.nav.newReview")}</Link>
           </Button>
 
           <Button
@@ -708,8 +710,8 @@ return {
             size="icon"
             className="hidden h-9 w-9 rounded-full sm:inline-flex"
             onClick={loadAll}
-            aria-label="Refresh"
-            title="Refresh"
+            aria-label={t("app.common.refresh")}
+            title={t("app.common.refresh")}
           >
             <RefreshCw className="h-4 w-4" />
           </Button>
@@ -720,18 +722,18 @@ return {
                 variant="outline"
                 size="icon"
                 className="h-9 w-9 rounded-full"
-                aria-label="Dashboard menu"
-                title="Menu"
+                aria-label={t("app.dashboard.menu.ariaLabel")}
+                title={t("app.nav.menu")}
               >
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuItem asChild>
-                <Link href="/app/jobs">Open jobs</Link>
+                <Link href="/app/jobs">{t("app.dashboard.menu.openTenders")}</Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href="/app/bid-room">Open global bid room</Link>
+                <Link href="/app/bid-room">{t("app.dashboard.menu.openBidRoom")}</Link>
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />
@@ -740,8 +742,8 @@ return {
                 value={standupMode ? "focused" : "full"}
                 onValueChange={(v) => setStandupMode(v === "focused")}
               >
-                <DropdownMenuRadioItem value="focused">Focused view</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="full">Full view</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="focused">{t("app.dashboard.menu.focusedView")}</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="full">{t("app.dashboard.menu.fullView")}</DropdownMenuRadioItem>
               </DropdownMenuRadioGroup>
 
               <DropdownMenuSeparator />
@@ -751,9 +753,7 @@ return {
                   e.preventDefault();
                   loadAll();
                 }}
-              >
-                Refresh
-              </DropdownMenuItem>
+              >{t("app.common.refresh")}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -763,7 +763,7 @@ return {
 
         <Card className="rounded-2xl border-red-200 bg-red-50">
           <CardContent className="p-4">
-            <p className="text-sm font-semibold text-red-700">Dashboard error</p>
+            <p className="text-sm font-semibold text-red-700">{t("app.dashboard.errors.title")}</p>
             <p className="mt-1 text-sm text-red-700">{error}</p>
           </CardContent>
         </Card>
@@ -773,7 +773,7 @@ return {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="rounded-2xl">
           <CardContent className="p-4">
-            <p className="text-sm font-semibold">Portfolio</p>
+            <p className="text-sm font-semibold">{t("app.dashboard.kpi.portfolioTitle")}</p>
 
             {(() => {
               const total = filteredRows.length;
@@ -792,28 +792,28 @@ return {
                   <div className="mt-3 flex items-center gap-4">
                     <DonutChart
                       parts={[
-                        { label: "Ready", value: ready },
-                        { label: "Missing decision", value: decisionOnly },
-                        { label: "Missing deadline", value: deadlineOnly },
-                        { label: "Missing both", value: bothMissing },
+                        { label: t("app.dashboard.kpi.chart.ready"), value: ready },
+                        { label: t("app.dashboard.kpi.chart.missingDecision"), value: decisionOnly },
+                        { label: t("app.dashboard.kpi.chart.missingDeadline"), value: deadlineOnly },
+                        { label: t("app.dashboard.kpi.chart.missingBoth"), value: bothMissing },
                       ]}
                       size={72}
                       strokeWidth={10}
                     />
 
                     <div className="min-w-0">
-                      <p className="text-xs text-muted-foreground">basics present</p>
+                      <p className="text-xs text-muted-foreground">{t("app.dashboard.kpi.basicsPresent")}</p>
                       <p className="text-2xl font-semibold leading-none">{basicsPct}%</p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {ready} ready • {total - ready} missing
+                        {t("app.dashboard.kpi.readyMissing", { ready, missing: total - ready })}
                       </p>
                     </div>
                   </div>
 
-                  <p className="mt-2 text-xs text-muted-foreground">Deadline/decision from AI extraction unless overridden.</p>
+                  <p className="mt-2 text-xs text-muted-foreground">{t("app.dashboard.kpi.aiExtractionHint")}</p>
 
                   <p className="mt-3 text-xs text-muted-foreground">
-                    Ready {ready} • Missing decision {missDecision} • Missing deadline {missDeadline}
+                    {t("app.dashboard.kpi.portfolioBreakdown", { ready, missingDecision: missDecision, missingDeadline: missDeadline })}
                   </p>
                 </>
               );
@@ -823,7 +823,7 @@ return {
 
         <Card className="rounded-2xl">
           <CardContent className="p-4">
-            <p className="text-sm font-semibold">Deadlines</p>
+            <p className="text-sm font-semibold">{t("app.dashboard.kpi.deadlinesTitle")}</p>
 
             {(() => {
               const overdue = deadlineHistogram[0]?.value || 0;
@@ -841,21 +841,21 @@ return {
                   <div className="mt-3 flex items-center gap-4">
                     <DonutChart
                       parts={[
-                        { label: "Overdue", value: overdue },
-                        { label: "0-7d", value: next7 },
-                        { label: "8-30d", value: next30 },
-                        { label: "31-90d", value: next90 },
-                        { label: "Unknown", value: unknown },
+                        { label: t("app.dashboard.kpi.chart.overdue"), value: overdue },
+                        { label: t("app.dashboard.kpi.chart.next7"), value: next7 },
+                        { label: t("app.dashboard.kpi.chart.next30"), value: next30 },
+                        { label: t("app.dashboard.kpi.chart.next90"), value: next90 },
+                        { label: t("app.common.unknown"), value: unknown },
                       ]}
                       size={72}
                       strokeWidth={10}
                     />
 
                     <div className="min-w-0">
-                      <p className="text-xs text-muted-foreground">% urgent</p>
+                      <p className="text-xs text-muted-foreground">{t("app.dashboard.kpi.percentUrgent")}</p>
                       <p className="text-2xl font-semibold leading-none">{urgentPct}%</p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {urgent} urgent • {unknown} unknown
+                        {t("app.dashboard.kpi.urgentUnknown", { urgent, unknown })}
                       </p>
                     </div>
                   </div>
@@ -875,7 +875,7 @@ return {
 
         <Card className="rounded-2xl">
           <CardContent className="p-4">
-            <p className="text-sm font-semibold">Execution</p>
+            <p className="text-sm font-semibold">{t("app.dashboard.kpi.executionTitle")}</p>
 
             {(() => {
               const total = kpiTotals.totalWork;
@@ -891,27 +891,27 @@ return {
                   <div className="mt-3 flex items-center gap-4">
                     <DonutChart
                       parts={[
-                        { label: "Done", value: done },
-                        { label: "Blocked", value: blocked },
-                        { label: "Open", value: openNonBlocked },
+                        { label: t("app.dashboard.kpi.chart.done"), value: done },
+                        { label: t("app.dashboard.kpi.chart.blocked"), value: blocked },
+                        { label: t("app.dashboard.kpi.chart.open"), value: openNonBlocked },
                       ]}
                       size={72}
                       strokeWidth={10}
                     />
 
                     <div className="min-w-0">
-                      <p className="text-xs text-muted-foreground">% done</p>
+                      <p className="text-xs text-muted-foreground">{t("app.dashboard.kpi.percentDone")}</p>
                       <p className="text-2xl font-semibold leading-none">{pct}%</p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {done} done • {open} open
+                        {t("app.dashboard.kpi.doneOpen", { done, open })}
                       </p>
                     </div>
                   </div>
 
-                  <p className="mt-2 text-xs text-muted-foreground">Based on team work items.</p>
+                  <p className="mt-2 text-xs text-muted-foreground">{t("app.dashboard.kpi.basedOnWorkItems")}</p>
 
                   <p className="mt-3 text-xs text-muted-foreground">
-                    {done} done • {open} open • {blocked} blocked
+                    {t("app.dashboard.kpi.doneOpen", { done, open })} • {blocked} blocked
                   </p>
                 </>
               );
@@ -921,7 +921,7 @@ return {
 
         <Card className="rounded-2xl">
           <CardContent className="p-4">
-            <p className="text-sm font-semibold">Decisions</p>
+            <p className="text-sm font-semibold">{t("app.dashboard.kpi.decisionsTitle")}</p>
 
             {(() => {
               const go = kpiDecisionBuckets.get("go") || 0;
@@ -941,25 +941,25 @@ return {
                         { label: "Go", value: go },
                         { label: "Hold", value: hold },
                         { label: "No-Go", value: nogo },
-                        { label: "Unknown", value: unknown },
+                        { label: t("app.common.unknown"), value: unknown },
                       ]}
                       size={72}
                       strokeWidth={10}
                     />
 
                     <div className="min-w-0">
-                      <p className="text-xs text-muted-foreground">% decided</p>
+                      <p className="text-xs text-muted-foreground">{t("app.dashboard.kpi.percentDecided")}</p>
                       <p className="text-2xl font-semibold leading-none">{pct}%</p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {decided} decided • {unknown} unknown
+                        {t("app.dashboard.kpi.decidedUnknown", { decided, unknown })}
                       </p>
                     </div>
                   </div>
 
-                  <p className="mt-2 text-xs text-muted-foreground">AI suggestion unless overridden by team decision.</p>
+                  <p className="mt-2 text-xs text-muted-foreground">{t("app.dashboard.kpi.aiSuggestionHint")}</p>
 
                   <p className="mt-3 text-xs text-muted-foreground">
-                    Go {go} • Hold {hold} • No-Go {nogo} • Missing {kpiTotals.missingDecision}
+                    {t("app.dashboard.kpi.decisionsBreakdown", { go, hold, noGo: nogo, missing: kpiTotals.missingDecision })}
                   </p>
                 </>
               );
@@ -971,7 +971,7 @@ return {
       {/* Filters */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <label className="text-xs text-muted-foreground">Owner</label>
+          <label className="text-xs text-muted-foreground">{t("app.dashboard.filters.owner")}</label>
           <select
             className="h-9 rounded-full border bg-background px-3 text-sm"
             value={ownerFilter}
@@ -979,35 +979,35 @@ return {
           >
             {owners.map((o) => (
               <option key={o} value={o}>
-                {o}
+                {o === "All" ? t("app.common.all") : o === "Unassigned" ? t("app.dashboard.labels.unassigned") : o}
               </option>
             ))}
           </select>
 
-          <label className="ml-2 text-xs text-muted-foreground">Decision</label>
+          <label className="ml-2 text-xs text-muted-foreground">{t("app.dashboard.filters.decision")}</label>
           <select
             className="h-9 rounded-full border bg-background px-3 text-sm"
             value={decisionFilter}
             onChange={(e) => setDecisionFilter(e.target.value)}
           >
-            <option value="All">All</option>
+            <option value="All">{t("app.common.all")}</option>
             <option value="go">Go</option>
             <option value="hold">Hold</option>
             <option value="no-go">No-Go</option>
-            <option value="unknown">Unknown</option>
+            <option value="unknown">{t("app.common.unknown")}</option>
           </select>
         </div>
 
         <div className="flex items-center gap-2">
-          <label className="text-xs text-muted-foreground">Window</label>
+          <label className="text-xs text-muted-foreground">{t("app.dashboard.filters.window")}</label>
           <select
             className="h-9 rounded-full border bg-background px-3 text-sm"
             value={windowDays}
             onChange={(e) => setWindowDays(parseInt(e.target.value, 10))}
           >
-            <option value={14}>Next 14 days</option>
-            <option value={30}>Next 30 days</option>
-            <option value={90}>Next 90 days</option>
+            <option value={14}>{t("app.dashboard.filters.next14Days")}</option>
+            <option value={30}>{t("app.dashboard.filters.next30Days")}</option>
+            <option value={90}>{t("app.dashboard.filters.next90Days")}</option>
           </select>
         </div>
       </div>
@@ -1017,9 +1017,9 @@ return {
         <CardContent className="p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold">Operational queues</p>
+              <p className="text-sm font-semibold">{t("app.dashboard.queues.title")}</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Actionable queues for daily delivery. Works even when the tender PDF has no deadline or decision.
+                {t("app.dashboard.queues.subtitle")}
               </p>
             </div>
 
@@ -1028,7 +1028,7 @@ return {
               className="text-xs text-muted-foreground underline-offset-2 hover:underline"
               onClick={() => setOpenSections((s) => ({ ...s, standup: !s.standup }))}
             >
-              {openSections.standup ? "Collapse" : "Expand"}
+              {openSections.standup ? t("app.common.collapse") : t("app.common.expand")}
             </button>
           </div>
 
@@ -1037,7 +1037,7 @@ return {
             {/* Needs triage */}
             <div className="rounded-xl border p-3">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">Needs triage</p>
+                <p className="text-sm font-medium">{t("app.dashboard.sections.needsTriage")}</p>
                 <span className="text-xs text-muted-foreground">{standupQueues.needsTriage.length}</span>
               </div>
               <div className="mt-2 space-y-1">
@@ -1063,7 +1063,7 @@ return {
                             className="mt-2 text-xs text-muted-foreground underline-offset-2 hover:underline"
                             onClick={() => setQueueExpand((s) => ({ ...s, needsTriage: !s.needsTriage }))}
                           >
-                            {expanded ? "Show less" : `Show all (${standupQueues.needsTriage.length})`}
+                            {expanded ? t("app.common.showLess") : t("app.common.showAllCount", { count: standupQueues.needsTriage.length })}
                           </button>
                         ) : null}
                       </>
@@ -1076,7 +1076,7 @@ return {
             {/* Deadline unknown */}
             <div className="rounded-xl border p-3">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">Deadline unknown</p>
+                <p className="text-sm font-medium">{t("app.dashboard.sections.deadlineUnknown")}</p>
                 <span className="text-xs text-muted-foreground">{standupQueues.deadlineUnknown.length}</span>
               </div>
               <div className="mt-2 space-y-1">
@@ -1102,7 +1102,7 @@ return {
                             className="mt-2 text-xs text-muted-foreground underline-offset-2 hover:underline"
                             onClick={() => setQueueExpand((s) => ({ ...s, deadlineUnknown: !s.deadlineUnknown }))}
                           >
-                            {expanded ? "Show less" : `Show all (${standupQueues.deadlineUnknown.length})`}
+                            {expanded ? t("app.common.showLess") : t("app.common.showAllCount", { count: standupQueues.deadlineUnknown.length })}
                           </button>
                         ) : null}
                       </>
@@ -1143,7 +1143,7 @@ return {
                             className="mt-2 text-xs text-muted-foreground underline-offset-2 hover:underline"
                             onClick={() => setQueueExpand((s) => ({ ...s, dueNext7: !s.dueNext7 }))}
                           >
-                            {expanded ? "Show less" : `Show all (${standupQueues.dueNext7.length})`}
+                            {expanded ? t("app.common.showLess") : t("app.common.showAllCount", { count: standupQueues.dueNext7.length })}
                           </button>
                         ) : null}
                       </>
@@ -1156,7 +1156,7 @@ return {
             {/* Overdue work items */}
             <div className="rounded-xl border p-3">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">Overdue work items</p>
+                <p className="text-sm font-medium">{t("app.dashboard.sections.overdueWorkItems")}</p>
                 <span className="text-xs text-muted-foreground">{standupQueues.overdueWorkItems.length}</span>
               </div>
               <div className="mt-2 space-y-1">
@@ -1173,7 +1173,7 @@ return {
                         {rows.map((wi) => (
                           <div key={`${wi.job_id}:${wi.type}:${wi.ref_key}`} className="flex items-center justify-between gap-2">
                             <Link className="text-sm underline-offset-2 hover:underline" href={`/app/jobs/${wi.job_id}`}>
-                              {String(wi.title || wi.ref_key || "Work item")}
+                              {String(wi.title || wi.ref_key || t("app.dashboard.labels.workItem"))}
                             </Link>
                             <span className="text-xs text-muted-foreground">
                               {wi.due_at ? new Date(wi.due_at).toLocaleDateString() : "—"}
@@ -1186,7 +1186,7 @@ return {
                             className="mt-2 text-xs text-muted-foreground underline-offset-2 hover:underline"
                             onClick={() => setQueueExpand((s) => ({ ...s, overdueWorkItems: !s.overdueWorkItems }))}
                           >
-                            {expanded ? "Show less" : `Show all (${standupQueues.overdueWorkItems.length})`}
+                            {expanded ? t("app.common.showLess") : t("app.common.showAllCount", { count: standupQueues.overdueWorkItems.length })}
                           </button>
                         ) : null}
                       </>
@@ -1199,7 +1199,7 @@ return {
             {/* Blocked items */}
             <div className="rounded-xl border p-3">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">Blocked items</p>
+                <p className="text-sm font-medium">{t("app.dashboard.sections.blockedItems")}</p>
                 <span className="text-xs text-muted-foreground">{standupQueues.blockedItems.length}</span>
               </div>
               <div className="mt-2 space-y-1">
@@ -1214,9 +1214,9 @@ return {
                         {rows.map((wi) => (
                           <div key={`${wi.job_id}:${wi.type}:${wi.ref_key}`} className="flex items-center justify-between gap-2">
                             <Link className="text-sm underline-offset-2 hover:underline" href={`/app/jobs/${wi.job_id}`}>
-                              {String(wi.title || wi.ref_key || "Work item")}
+                              {String(wi.title || wi.ref_key || t("app.dashboard.labels.workItem"))}
                             </Link>
-                            <span className="text-xs text-muted-foreground">{String(wi.owner_label ?? "Unassigned")}</span>
+                            <span className="text-xs text-muted-foreground">{wi.owner_label ? String(wi.owner_label) : t("app.dashboard.labels.unassigned")}</span>
                           </div>
                         ))}
                         {standupQueues.blockedItems.length > 6 ? (
@@ -1225,7 +1225,7 @@ return {
                             className="mt-2 text-xs text-muted-foreground underline-offset-2 hover:underline"
                             onClick={() => setQueueExpand((s) => ({ ...s, blockedItems: !s.blockedItems }))}
                           >
-                            {expanded ? "Show less" : `Show all (${standupQueues.blockedItems.length})`}
+                            {expanded ? t("app.common.showLess") : t("app.common.showAllCount", { count: standupQueues.blockedItems.length })}
                           </button>
                         ) : null}
                       </>
@@ -1238,7 +1238,7 @@ return {
             {/* Unassigned items */}
             <div className="rounded-xl border p-3">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">Unassigned items</p>
+                <p className="text-sm font-medium">{t("app.dashboard.sections.unassignedItems")}</p>
                 <span className="text-xs text-muted-foreground">{standupQueues.unassignedItems.length}</span>
               </div>
               <div className="mt-2 space-y-1">
@@ -1253,7 +1253,7 @@ return {
                         {rows.map((wi) => (
                           <div key={`${wi.job_id}:${wi.type}:${wi.ref_key}`} className="flex items-center justify-between gap-2">
                             <Link className="text-sm underline-offset-2 hover:underline" href={`/app/jobs/${wi.job_id}`}>
-                              {String(wi.title || wi.ref_key || "Work item")}
+                              {String(wi.title || wi.ref_key || t("app.dashboard.labels.workItem"))}
                             </Link>
                             <span className="text-xs text-muted-foreground">Owner: —</span>
                           </div>
@@ -1264,7 +1264,7 @@ return {
                             className="mt-2 text-xs text-muted-foreground underline-offset-2 hover:underline"
                             onClick={() => setQueueExpand((s) => ({ ...s, unassignedItems: !s.unassignedItems }))}
                           >
-                            {expanded ? "Show less" : `Show all (${standupQueues.unassignedItems.length})`}
+                            {expanded ? t("app.common.showLess") : t("app.common.showAllCount", { count: standupQueues.unassignedItems.length })}
                           </button>
                         ) : null}
                       </>
@@ -1277,7 +1277,7 @@ return {
             {/* Clarifications pending */}
             <div className="rounded-xl border p-3 lg:col-span-2">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">Clarifications pending</p>
+                <p className="text-sm font-medium">{t("app.dashboard.sections.clarificationsPending")}</p>
                 <span className="text-xs text-muted-foreground">{standupQueues.clarificationsPending.length}</span>
               </div>
               <div className="mt-2 space-y-1">
@@ -1294,9 +1294,9 @@ return {
                         {rows.map((wi) => (
                           <div key={`${wi.job_id}:${wi.type}:${wi.ref_key}`} className="flex items-center justify-between gap-2">
                             <Link className="text-sm underline-offset-2 hover:underline" href={`/app/jobs/${wi.job_id}`}>
-                              {String(wi.title || wi.ref_key || "Clarification")}
+                              {String(wi.title || wi.ref_key || t("app.dashboard.labels.clarification"))}
                             </Link>
-                            <span className="text-xs text-muted-foreground">{String(wi.owner_label ?? "Unassigned")}</span>
+                            <span className="text-xs text-muted-foreground">{wi.owner_label ? String(wi.owner_label) : t("app.dashboard.labels.unassigned")}</span>
                           </div>
                         ))}
                         {standupQueues.clarificationsPending.length > 8 ? (
@@ -1307,7 +1307,7 @@ return {
                               setQueueExpand((s) => ({ ...s, clarificationsPending: !s.clarificationsPending }))
                             }
                           >
-                            {expanded ? "Show less" : `Show all (${standupQueues.clarificationsPending.length})`}
+                            {expanded ? t("app.common.showLess") : t("app.common.showAllCount", { count: standupQueues.clarificationsPending.length })}
                           </button>
                         ) : null}
                       </>
@@ -1319,11 +1319,11 @@ return {
           </div>
           ) : (
             <div className="mt-4 flex flex-wrap gap-2">
-              <Badge variant="outline" className="rounded-full">Needs triage {standupQueues.needsTriage.length}</Badge>
-              <Badge variant="outline" className="rounded-full">Deadline unknown {standupQueues.deadlineUnknown.length}</Badge>
-              <Badge variant="outline" className="rounded-full">Due next 7d {standupQueues.dueNext7.length}</Badge>
-              <Badge variant="outline" className="rounded-full">Overdue items {standupQueues.overdueWorkItems.length}</Badge>
-              <Badge variant="outline" className="rounded-full">Blocked {standupQueues.blockedItems.length}</Badge>
+              <Badge variant="outline" className="rounded-full">{t("app.dashboard.badges.needsTriage")} {standupQueues.needsTriage.length}</Badge>
+              <Badge variant="outline" className="rounded-full">{t("app.dashboard.badges.deadlineUnknown")} {standupQueues.deadlineUnknown.length}</Badge>
+              <Badge variant="outline" className="rounded-full">{t("app.dashboard.badges.dueNext7")} {standupQueues.dueNext7.length}</Badge>
+              <Badge variant="outline" className="rounded-full">{t("app.dashboard.badges.overdueItems")} {standupQueues.overdueWorkItems.length}</Badge>
+              <Badge variant="outline" className="rounded-full">{t("app.dashboard.badges.blocked")} {standupQueues.blockedItems.length}</Badge>
             </div>
           )}
         </CardContent>
@@ -1384,7 +1384,7 @@ return {
                               className="rounded-full"
                               onClick={() => setQueueExpand((s) => ({ ...s, holdUnblock: !s.holdUnblock }))}
                             >
-                              {expanded ? "Show less" : `Show all (${standupQueues.holdUnblock.length})`}
+                              {expanded ? t("app.common.showLess") : t("app.common.showAllCount", { count: standupQueues.holdUnblock.length })}
                             </Button>
                           ) : null}
                         </div>
@@ -1411,7 +1411,7 @@ return {
               className="text-xs text-muted-foreground underline-offset-2 hover:underline"
               onClick={() => setOpenSections((s) => ({ ...s, attention: !s.attention }))}
             >
-              {openSections.attention ? "Show less" : "Show more"}
+              {openSections.attention ? t("app.common.showLess") : t("app.common.showMore")}
             </button>
           </div>
 
@@ -1436,15 +1436,15 @@ return {
                           </Link>
 
                           <p className="mt-1 text-xs text-muted-foreground">
-                            {r.missingDecision ? "Decision: unset" : `Decision: ${r.decisionBucket.toUpperCase()}`}
+                            {r.missingDecision ? t("app.dashboard.labels.decisionUnset") : `${t("app.dashboard.labels.decision")}: ${r.decisionBucket === "unknown" ? t("app.common.unknown") : r.decisionBucket === "no-go" ? "No-Go" : r.decisionBucket === "hold" ? "Hold" : "Go"}`}
                             {" • "}
                             {r.missingDeadline
-                              ? "Deadline: unset"
+                              ? t("app.dashboard.labels.deadlineUnset")
                               : r.deadline
                                 ? `Deadline: ${new Date(r.deadline).toLocaleDateString()}`
                                 : `Deadline: ${String(r.deadlineText || "unknown")}`}
                             {" • "}
-                            {r.total > 0 ? `${Math.max(0, r.total - r.done)} open work item${r.total - r.done === 1 ? "" : "s"}` : "No work items"}
+                            {(() => { const openCount = Math.max(0, r.total - r.done); if (r.total <= 0) return t("app.dashboard.labels.noWorkItems"); return openCount === 1 ? t("app.dashboard.labels.openWorkItemOne", { count: openCount }) : t("app.dashboard.labels.openWorkItemMany", { count: openCount }); })()}
                             {r.blocked > 0 ? ` • ${r.blocked} blocked` : ""}
                           </p>
                         </div>
@@ -1458,25 +1458,25 @@ return {
                             </Badge>
                           ) : (
                             <Badge variant="outline" className="rounded-full">
-                              No deadline
+                              {t("app.dashboard.labels.deadlineUnknown")}
                             </Badge>
                           )}
 
                           {r.total > 0 ? (
                             <Badge variant="outline" className="rounded-full">
-                              {r.done}/{r.total} done
+                              {t("app.dashboard.labels.itemsDone", { done: r.done, total: r.total })}
                             </Badge>
                           ) : null}
 
                           <div className="ml-1 flex items-center gap-2">
                             <Button asChild size="sm" variant="outline" className="rounded-full">
-                              <Link href={`/app/jobs/${r.job.id}`}>Open</Link>
+                              <Link href={`/app/jobs/${r.job.id}`}>{t("app.common.open")}</Link>
                             </Button>
                             <Button asChild size="sm" variant="outline" className="rounded-full">
-                              <Link href={`/app/jobs/${r.job.id}/bid-room`}>Bid Room</Link>
+                              <Link href={`/app/jobs/${r.job.id}/bid-room`}>{t("app.bidroom.title")}</Link>
                             </Button>
                             <Button asChild size="sm" variant="outline" className="rounded-full">
-                              <Link href={`/app/jobs/${r.job.id}/compliance`}>Coverage</Link>
+                              <Link href={`/app/jobs/${r.job.id}/compliance`}>{t("app.compliance.title")}</Link>
                             </Button>
                           </div>
                         </div>
@@ -1489,7 +1489,7 @@ return {
                         className="mt-2 text-xs text-muted-foreground underline-offset-2 hover:underline"
                         onClick={() => setOpenSections((s) => ({ ...s, attention: !s.attention }))}
                       >
-                        {expanded ? "Show less" : `Show all (${attentionBids.length})`}
+                        {expanded ? t("app.common.showLess") : t("app.common.showAllCount", { count: attentionBids.length })}
                       </button>
                     ) : null}
                   </>
@@ -1514,9 +1514,9 @@ return {
               className="text-xs text-muted-foreground underline-offset-2 hover:underline"
               onClick={() => setOpenSections((s) => ({ ...s, analytics: !s.analytics }))}
               disabled={standupMode}
-              title={standupMode ? "Hidden in standup mode" : "Expand/collapse analytics"}
+              title={standupMode ? t("app.dashboard.analytics.hiddenInStandup") : t("app.dashboard.analytics.toggleTitle")}
             >
-              {standupMode ? "Hidden" : openSections.analytics ? "Collapse" : "Expand"}
+              {standupMode ? t("app.dashboard.analytics.hiddenLabel") : openSections.analytics ? t("app.common.collapse") : t("app.common.expand")}
             </button>
           </div>
 
@@ -1528,7 +1528,7 @@ return {
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-sm font-semibold">Deadlines</p>
+                      <p className="text-sm font-semibold">{t("app.dashboard.kpi.deadlinesTitle")}</p>
                       <p className="mt-1 text-xs text-muted-foreground">
                         Distribution of deadlines across the visible portfolio.
                       </p>
@@ -1560,7 +1560,7 @@ return {
 
                   <div className="mt-4 space-y-2">
                     {workloadByOwner.length === 0 ? (
-                      <p className="text-xs text-muted-foreground">No work items yet.</p>
+                      <p className="text-xs text-muted-foreground">{t("app.dashboard.analytics.noWorkItemsYet")}</p>
                     ) : (
                       workloadByOwner.slice(0, 7).map(([owner, stats]) => (
                         <div key={owner} className="flex items-center justify-between">
@@ -1596,9 +1596,9 @@ return {
                 className="text-xs text-muted-foreground underline-offset-2 hover:underline"
                 onClick={() => setOpenSections((s) => ({ ...s, blockers: !s.blockers }))}
                 disabled={topBlockedItems.length === 0}
-                title={topBlockedItems.length === 0 ? "No blockers" : "Expand/collapse"}
+                title={topBlockedItems.length === 0 ? t("app.dashboard.blockers.noneTitle") : "Expand/collapse"}
               >
-                {topBlockedItems.length === 0 ? "None" : openSections.blockers ? "Collapse" : "Expand"}
+                {topBlockedItems.length === 0 ? t("app.dashboard.blockers.noneLabel") : openSections.blockers ? t("app.common.collapse") : t("app.common.expand")}
               </button>
             </div>
 
@@ -1654,7 +1654,7 @@ return {
                 className="text-xs text-muted-foreground underline-offset-2 hover:underline"
                 onClick={() => setOpenSections((s) => ({ ...s, bids: !s.bids }))}
               >
-                {openSections.bids ? "Collapse" : "Expand"}
+                {openSections.bids ? t("app.common.collapse") : t("app.common.expand")}
               </button>
             </div>
 
@@ -1682,11 +1682,11 @@ return {
                                 {r.displayName}
                               </Link>
                               <p className="mt-1 text-xs text-muted-foreground">
-                                {r.missingDecision ? "Decision missing" : r.decisionText || "Decision unknown"}
+                                {r.missingDecision ? t("app.dashboard.labels.decisionMissing") : r.decisionText || t("app.dashboard.labels.decisionUnknown")}
                                 {" • "}
-                                {r.missingDeadline ? "Deadline missing" : r.deadlineText || "Deadline unknown"}
+                                {r.missingDeadline ? t("app.dashboard.labels.deadlineMissing") : r.deadlineText || t("app.dashboard.labels.deadlineUnknown")}
                                 {" • "}
-                                {r.total > 0 ? `${r.done}/${r.total} items done` : "No work items"}
+                                {r.total > 0 ? t("app.dashboard.labels.itemsDone", { done: r.done, total: r.total }) : t("app.dashboard.labels.noWorkItems")}
                                 {r.blocked > 0 ? ` • ${r.blocked} blocked` : ""}
                               </p>
                             </div>
@@ -1715,7 +1715,7 @@ return {
                             className="mt-2 text-xs text-muted-foreground underline-offset-2 hover:underline"
                             onClick={() => setQueueExpand((s) => ({ ...s, __bidsAll: !s.__bidsAll }))}
                           >
-                            {expanded ? "Show less" : `Show all (${visibleRows.length})`}
+                            {expanded ? t("app.common.showLess") : t("app.common.showAllCount", { count: visibleRows.length })}
                           </button>
                         ) : null}
                       </>

@@ -492,9 +492,8 @@ async function runOpenAi(args: {
   };
 
   const instructions =
-    "You are TenderRay. Drafting support only. Not legal advice. Not procurement advice. " +
+    "You are TenderPilot. Drafting support only. Not legal advice. Not procurement advice. " +
     "Use executive, compliance grade language. No AI talk. " +
-    "Always write in the same language as the tender source text. " +
     "Avoid false certainty. If not present, write: Not found in extracted text.";
 
   const evidenceList = evidenceCandidates
@@ -512,7 +511,7 @@ Review the tender source text and produce a decision-first bid kit.
 
 Strict rules
 1. Grounding. Use only the evidence snippets provided. Do not guess. If a detail is not present, write: Not found in extracted text.
-2. Decision. Choose decisionBadge exactly as one of: Proceed, Proceed with caution, Hold – potential blocker. Provide decisionLine as one clear sentence.
+2. Decision. Choose decisionBadge exactly as one of: Go, Hold, No-Go. Provide decisionLine as one clear sentence.
 3. Submission deadline. If an explicit deadline date or time is present, copy it verbatim. Otherwise set submissionDeadline to: Not found in extracted text.
 4. Checklist. MUST means mandatory or disqualifying if missed. SHOULD means preferred or scoring. INFO is context.
 5. Evidence (STRICT). You MUST cite evidence_ids:

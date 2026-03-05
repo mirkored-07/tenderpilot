@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { useAppI18n } from "../_components/app-i18n-provider";
 
 type WorkItem = {
   id?: string;
@@ -29,6 +30,7 @@ function toDateOnly(x: string | null | undefined) {
 }
 
 export default function GlobalBidRoomPage() {
+  const { t } = useAppI18n();
   const [items, setItems] = useState<WorkItem[]>([]);
   const [jobsById, setJobsById] = useState<Map<string, any>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -128,7 +130,7 @@ export default function GlobalBidRoomPage() {
           </div>
           <Separator />
           {props.items.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No items.</p>
+            <p className="text-sm text-muted-foreground">{t("app.bidroom.empty")}</p>
           ) : (
             <div className="space-y-2">
               {props.items.map((it) => {
@@ -146,7 +148,7 @@ export default function GlobalBidRoomPage() {
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
                         <Button asChild size="sm" variant="outline" className="rounded-full">
-                          <Link href={`/app/jobs/${it.job_id}`}>Job</Link>
+                          <Link href={`/app/jobs/${it.job_id}`}>{t("app.tenders.openTender")}</Link>
                         </Button>
                         <Button asChild size="sm" className="rounded-full">
                           <Link href={`/app/jobs/${it.job_id}/bid-room`}>Bid Room</Link>
@@ -171,19 +173,19 @@ export default function GlobalBidRoomPage() {
     <div className="mx-auto max-w-6xl space-y-4 p-4 md:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-lg font-semibold">Global bid room</p>
-          <p className="mt-1 text-sm text-muted-foreground">One place to manage all open work items across jobs you can access.</p>
+          <p className="text-lg font-semibold">{t("app.bidroom.globalTitle")}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{t("app.bidroom.globalSubtitle")}</p>
         </div>
         <Button asChild variant="outline" className="rounded-full">
-          <Link href="/app/dashboard">Back to dashboard</Link>
+          <Link href="/app/dashboard">{t("app.common.backToDashboard")}</Link>
         </Button>
       </div>
 
       <Card className="rounded-2xl">
         <CardContent className="p-5">
           <div className="flex flex-wrap items-center gap-2">
-            <Input value={ownerFilter} onChange={(e) => setOwnerFilter(e.target.value)} placeholder="Filter by owner" className="max-w-[220px]" />
-            <Input value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} placeholder="Filter by status (todo/doing/blocked)" className="max-w-[260px]" />
+            <Input value={ownerFilter} onChange={(e) => setOwnerFilter(e.target.value)} placeholder={t("app.bidroom.filters.owner")} className="max-w-[220px]" />
+            <Input value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} placeholder={t("app.bidroom.filters.status")} className="max-w-[260px]" />
             <Badge variant="outline" className="rounded-full">
               Open items: {filtered.length}
             </Badge>

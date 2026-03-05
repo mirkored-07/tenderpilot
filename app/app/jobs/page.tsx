@@ -18,6 +18,7 @@ import {
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { getJobDisplayName } from "@/lib/pilot-job-names";
 import { track } from "@/lib/telemetry";
+import { useAppI18n } from "../_components/app-i18n-provider";
 
 type JobStatus = "queued" | "processing" | "done" | "failed";
 
@@ -223,6 +224,7 @@ function isDoneStatus(s?: string | null) {
 }
 
 export default function JobsPage() {
+  const { t } = useAppI18n();
   const ONBOARDING_DISMISS_KEY = "tp_onboarding_jobs_empty_dismissed_v1";
 
   const [statusFilter, setStatusFilter] = useState<"all" | "ready" | "processing" | "failed">("all");
@@ -531,11 +533,34 @@ export default function JobsPage() {
       });
   }, [jobs, jobResults, jobMeta, workByJob, statusFilter, decisionFilter, deadlineFilter, query, listTick]);
 
-  const statusLabel = statusFilter === "all" ? "All" : statusFilter === "ready" ? "Ready" : statusFilter === "failed" ? "Failed" : "Processing";
+  const statusLabel =
+    statusFilter === "all"
+      ? t("app.common.all")
+      : statusFilter === "ready"
+        ? t("app.common.ready")
+        : statusFilter === "failed"
+          ? t("app.common.failed")
+          : t("app.common.processing");
+
   const decisionLabel =
-    decisionFilter === "all" ? "Any" : decisionFilter === "no-go" ? "No-Go" : decisionFilter === "unset" ? "Unset" : decisionFilter === "hold" ? "Hold" : "Go";
+    decisionFilter === "all"
+      ? t("app.common.any")
+      : decisionFilter === "no-go"
+        ? t("app.decision.noGo")
+        : decisionFilter === "unset"
+          ? t("app.decision.unset")
+          : decisionFilter === "hold"
+            ? t("app.decision.hold")
+            : t("app.decision.go");
+
   const deadlineLabel =
-    deadlineFilter === "all" ? "Any" : deadlineFilter === "due-soon" ? "Due soon" : deadlineFilter === "this-week" ? "This week" : "No deadline";
+    deadlineFilter === "all"
+      ? t("app.common.any")
+      : deadlineFilter === "due-soon"
+        ? t("app.tenders.deadline.dueSoon")
+        : deadlineFilter === "this-week"
+          ? t("app.tenders.deadline.thisWeek")
+          : t("app.tenders.deadline.noDeadline");
 
   const shouldShowOnboarding = !loading && jobs.length === 0 && !onboardingDismissed;
 
@@ -554,8 +579,8 @@ export default function JobsPage() {
       {/* Header */}
       <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Jobs</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Triage tenders fast. Open analysis for the decision cockpit, then move to bid room or proposal coverage.</p>
+          <h1 className="text-2xl font-semibold tracking-tight">{t("app.tenders.h1")}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t("app.tenders.subtitle")}</p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -564,11 +589,11 @@ export default function JobsPage() {
             className="rounded-full"
             onClick={loadJobs}
           >
-            Refresh
+            {t("app.common.refresh")}
           </Button>
 
           <Button asChild className="rounded-full">
-            <Link href="/app/upload">New tender review</Link>
+            <Link href="/app/upload">{t("app.nav.newReview")}</Link>
           </Button>
         </div>
       </div>
@@ -576,13 +601,13 @@ export default function JobsPage() {
       {/* Content */}
       <Card className="rounded-2xl">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base">Tenders</CardTitle>
+          <CardTitle className="text-base">{t("app.nav.tenders")}</CardTitle>
           <p className="text-sm text-muted-foreground">
             {loading
-              ? "Loading tenders from your workspace."
+              ? t("app.tenders.cardSubLoading")
               : loadError
-              ? "We could not load your tenders."
-              : "Search, filter, then open analysis for the decision cockpit."}
+              ? t("app.tenders.cardSubError")
+              : t("app.tenders.cardSubDefault")}
           </p>
           {loadError && (
             <p className="mt-2 text-xs text-destructive">{loadError}</p>
@@ -599,7 +624,7 @@ export default function JobsPage() {
                 <Input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search tenders"
+                  placeholder={t("app.tenders.searchPlaceholder")}
                   className="rounded-full"
                 />
               </div>
@@ -608,15 +633,15 @@ export default function JobsPage() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" className="rounded-full">
-                      Status: {statusLabel}
+                      {t("app.tenders.filters.status")}: {statusLabel}
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">
                     {[
-                      { v: "all", label: "All" },
-                      { v: "ready", label: "Ready" },
-                      { v: "processing", label: "Processing" },
-                      { v: "failed", label: "Failed" },
+                      { v: "all", label: t("app.common.all") },
+                      { v: "ready", label: t("app.common.ready") },
+                      { v: "processing", label: t("app.common.processing") },
+                      { v: "failed", label: t("app.common.failed") },
                     ].map((o) => (
                       <DropdownMenuItem
                         key={o.v}
@@ -634,16 +659,16 @@ export default function JobsPage() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" className="rounded-full">
-                      Decision: {decisionLabel}
+                      {t("app.tenders.filters.decision")}: {decisionLabel}
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">
                     {[
-                      { v: "all", label: "Any" },
-                      { v: "go", label: "Go" },
-                      { v: "hold", label: "Hold" },
-                      { v: "no-go", label: "No-Go" },
-                      { v: "unset", label: "Unset" },
+                      { v: "all", label: t("app.common.any") },
+                      { v: "go", label: t("app.decision.go") },
+                      { v: "hold", label: t("app.decision.hold") },
+                      { v: "no-go", label: t("app.decision.noGo") },
+                      { v: "unset", label: t("app.decision.unset") },
                     ].map((o) => (
                       <DropdownMenuItem
                         key={o.v}
@@ -661,15 +686,15 @@ export default function JobsPage() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" className="rounded-full">
-                      Deadline: {deadlineLabel}
+                      {t("app.tenders.filters.deadline")}: {deadlineLabel}
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">
                     {[
-                      { v: "all", label: "Any" },
-                      { v: "due-soon", label: "Due soon" },
-                      { v: "this-week", label: "This week" },
-                      { v: "no-deadline", label: "No deadline" },
+                      { v: "all", label: t("app.common.any") },
+                      { v: "due-soon", label: t("app.tenders.deadline.dueSoon") },
+                      { v: "this-week", label: t("app.tenders.deadline.thisWeek") },
+                      { v: "no-deadline", label: t("app.tenders.deadline.noDeadline") },
                     ].map((o) => (
                       <DropdownMenuItem
                         key={o.v}
@@ -686,41 +711,39 @@ export default function JobsPage() {
               </div>
             </div>
 
-            {!loading ? <p className="text-xs text-muted-foreground">{rows.length} shown</p> : null}
+            {!loading ? <p className="text-xs text-muted-foreground">{t("app.tenders.countShown", { n: rows.length })}</p> : null}
           </div>
 
           {loading ? (
             <div className="rounded-2xl border p-8 text-center">
-              <p className="text-sm font-medium">Loading</p>
-              <p className="mt-1 text-sm text-muted-foreground">Fetching your tenders.</p>
+              <p className="text-sm font-medium">{t("app.common.loading")}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{t("app.tenders.loadingBody")}</p>
             </div>
           ) : shouldShowOnboarding ? (
             <div className="rounded-2xl border bg-gradient-to-b from-muted/40 to-background p-8">
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold">Welcome to TenderPilot</p>
+                  <p className="text-sm font-semibold">{t("app.tenders.onboarding.title")}</p>
                   <p className="mt-2 text-sm text-muted-foreground">
-                    Upload a tender document to get a fast Go Hold No Go recommendation, key risks, and a drafting ready workspace.
+                    {t("app.tenders.onboarding.body")}
                   </p>
 
                   <div className="mt-5 grid gap-3 sm:grid-cols-2">
                     <div className="rounded-2xl border bg-background/60 p-4">
-                      <p className="text-sm font-medium">Evidence first trust</p>
+                      <p className="text-sm font-medium">{t("app.tenders.onboarding.cardEvidenceTitle")}</p>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Important claims link to supporting excerpts. Always verify in the original tender document.
+                        {t("app.tenders.onboarding.cardEvidenceBody")}
                       </p>
                     </div>
                     <div className="rounded-2xl border bg-background/60 p-4">
-                      <p className="text-sm font-medium">Estimated time</p>
+                      <p className="text-sm font-medium">{t("app.tenders.onboarding.cardTimeTitle")}</p>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Usually 1 to 3 minutes. Large files can take longer.
+                        {t("app.tenders.onboarding.cardTimeBody")}
                       </p>
                     </div>
                   </div>
 
-                  <p className="mt-5 text-xs text-muted-foreground">
-                    Flow: upload → extract → evaluate → decision cockpit.
-                  </p>
+                  <p className="mt-5 text-xs text-muted-foreground">{t("app.tenders.onboarding.workflow")}</p>
                 </div>
 
                 <div className="flex shrink-0 flex-col gap-2">
@@ -729,18 +752,18 @@ export default function JobsPage() {
                     className="rounded-full"
                     onClick={() => track("first_run_onboarding_upload_cta", { location: "jobs_list" })}
                   >
-                    <Link href="/app/upload">Upload your first tender</Link>
+                    <Link href="/app/upload">{t("app.tenders.onboarding.cta")}</Link>
                   </Button>
                   <Button variant="ghost" className="rounded-full" onClick={dismissOnboarding}>
-                    Dismiss
+                    {t("app.common.notNow")}
                   </Button>
                 </div>
               </div>
             </div>
           ) : rows.length === 0 ? (
             <div className="rounded-2xl border p-8 text-center">
-              <p className="text-sm font-medium">No tenders found</p>
-              <p className="mt-1 text-sm text-muted-foreground">Try clearing filters, or upload a new tender to start.</p>
+              <p className="text-sm font-medium">{t("app.tenders.emptyTitle")}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{t("app.tenders.emptyBody")}</p>
               <div className="mt-4 flex items-center justify-center gap-2">
                 <Button
                   variant="outline"
@@ -752,10 +775,10 @@ export default function JobsPage() {
                     setDeadlineFilter("all");
                   }}
                 >
-                  Clear filters
+                  {t("app.common.clearFilters")}
                 </Button>
                 <Button asChild className="rounded-full">
-                  <Link href="/app/upload">New tender review</Link>
+                  <Link href="/app/upload">{t("app.nav.newReview")}</Link>
                 </Button>
               </div>
             </div>
@@ -822,7 +845,7 @@ export default function JobsPage() {
                             {r.overdueItems > 0 ? ` · ${r.overdueItems} overdue` : ""}
                           </span>
                         ) : (
-                          <span className="text-muted-foreground">Bid Room not started</span>
+                          <span className="text-muted-foreground">{t("app.bidroom.notStarted")}</span>
                         )}
                       </div>
 
@@ -847,7 +870,7 @@ export default function JobsPage() {
                             router.push(`/app/jobs/${job.id}/compliance`);
                           }}
                         >
-                          Proposal coverage
+                          {t("app.compliance.title")}
                         </Button>
 
                         <DropdownMenu>
@@ -872,7 +895,7 @@ export default function JobsPage() {
                                 router.push(`/app/jobs/${job.id}`);
                               }}
                             >
-                              Open analysis
+                              {t("app.tenders.openTender")}
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={(e) => {
