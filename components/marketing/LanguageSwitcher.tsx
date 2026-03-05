@@ -49,7 +49,7 @@ function setLocaleCookie(locale: Locale) {
 }
 
 export function LanguageSwitcher({
-  label = "Language",
+  label,
   showLabel = false,
 }: {
   label?: string;
@@ -63,6 +63,50 @@ export function LanguageSwitcher({
   const current = getLocaleFromPath(pathname);
   const currentTag = current.toUpperCase();
 
+  const [resolvedLabel, setResolvedLabel] = React.useState<string>(label ?? "Language");
+
+  React.useEffect(() => {
+    if (label) {
+      setResolvedLabel(label);
+      return;
+    }
+
+    const getCookieLocale = (): Locale | null => {
+      try {
+        const raw = document.cookie || "";
+        const m = raw.match(/(?:^|;\s*)tp_locale=([^;]+)/);
+        const v = m ? decodeURIComponent(m[1]) : "";
+        if (v === "en" || v === "de" || v === "it" || v === "es" || v === "fr") return v;
+      } catch {
+        // ignore
+      }
+      return null;
+    };
+
+    const effective: Locale = getCookieLocale() ?? current;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        let mod: any = null;
+        if (effective === "de") mod = await import("@/dictionaries/de.json");
+        else if (effective === "it") mod = await import("@/dictionaries/it.json");
+        else if (effective === "es") mod = await import("@/dictionaries/es.json");
+        else if (effective === "fr") mod = await import("@/dictionaries/fr.json");
+        else mod = await import("@/dictionaries/en.json");
+
+        const txt = mod?.default?.landing?.nav?.language;
+        if (!cancelled && typeof txt === "string" && txt.trim()) setResolvedLabel(txt);
+      } catch {
+        // keep fallback
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [label, current]);
+
   const onSelect = (locale: Locale) => {
     setLocaleCookie(locale);
     const nextUrl = buildTargetPath(pathname, search, locale);
@@ -72,10 +116,12 @@ export function LanguageSwitcher({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-9 rounded-full px-3 gap-2" aria-label={label}>
+        <Button variant="ghost" className="h-9 rounded-full px-3 gap-2" aria-label={resolvedLabel}>
           <Languages className="h-4 w-4" />
           <span className="text-xs font-semibold tracking-wide">{currentTag}</span>
-          {showLabel ? <span className="text-sm text-muted-foreground">{label}</span> : null}
+          {showLabel ? (
+            <span className="text-sm text-muted-foreground">{resolvedLabel}</span>
+          ) : null}
         </Button>
       </DropdownMenuTrigger>
 

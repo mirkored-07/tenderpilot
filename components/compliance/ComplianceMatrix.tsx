@@ -327,8 +327,8 @@ export function ComplianceMatrix(props: {
       if (error) throw error;
       setSendState((p) => ({ ...p, [k]: "sent" }));
       setToast({
-        title: "Sent to Bid Room",
-        description: "Execution item created for this gap.",
+        title: t("app.compliance.send.sent"),
+        description: t("app.compliance.send.sentDesc"),
         action: workHref ? "OPEN_BID_ROOM" : undefined,
       });
     } catch (e: any) {
@@ -584,7 +584,7 @@ export function ComplianceMatrix(props: {
             Audit lens for requirements. Set compliance stance and map where each requirement is addressed in the proposal.
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            This is not task tracking. Use Bid Room for owners, due dates, and operational status.
+            {t("app.compliance.helper.notTaskTracking")}
           </p>
         </div>
 
@@ -779,7 +779,7 @@ export function ComplianceMatrix(props: {
 
                         <p className="mt-2 text-sm font-medium leading-snug text-foreground/90">{clampText(r.text, 280)}</p>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          Evidence: {r.evidenceIds?.length ? `${r.evidenceIds.length} id(s)` : "—"}
+                          {t("app.compliance.labels.evidenceCount", { count: r.evidenceIds?.length ?? 0 })}
                           {evResolved?.page ? <span className="ml-2">• PDF page {evResolved.page}</span> : null}
                         </p>
                       </div>
@@ -1008,7 +1008,7 @@ export function ComplianceMatrix(props: {
                             return (
                               <Card className="rounded-2xl">
                                 <CardContent className="p-4 text-sm text-muted-foreground">
-                                  Evidence {drawerEvidenceId} was not found in the job evidence map.
+                                  {t("app.compliance.errors.evidenceNotFound", { id: drawerEvidenceId })}
                                 </CardContent>
                               </Card>
                             );

@@ -36,6 +36,32 @@ type SampleDict = {
     primaryCta: string;
     secondaryCta: string;
   };
+  tabs: {
+    cockpit: string;
+    evidence: string;
+    bidroom: string;
+    compliance: string;
+    dashboard: string;
+  };
+  labels: {
+    reviewReady: string;
+    disclaimer: string;
+    back: string;
+    downloadBidPack: string;
+    structuredDriversOnly: string;
+    sendToBidRoom: string;
+
+    // Optional labels used with fallbacks in the component
+    copyReadyList?: string;
+    switchEvidence?: string;
+    matchFor?: string;
+
+    // Optional labels present in some dictionaries
+    ready?: string;
+    textExtracted?: string;
+    openBidRoom?: string;
+    backToJob?: string;
+  };
   data: {
     fileName: string;
     submissionDeadline: string;
@@ -49,6 +75,12 @@ type SampleDict = {
     sourceExcerpt: string;
   };
 };
+
+type RootDict = {
+  samplePage: SampleDict;
+  app: any;
+};
+
 
 type Evidence = {
   id: string;
@@ -179,16 +211,22 @@ export function SampleOutputContent({
   dict,
 }: {
   localePrefix: LocalePrefix;
-  dict: SampleDict;
+  dict: RootDict;
 }) {
   const homeHref = localePrefix || "/";
   const howItWorksHref = `${localePrefix}/how-it-works`;
   const primaryCtaHref = loginWithNextHref("/app/upload");
 
+  const sp = dict.samplePage;
+
+  const app = dict.app || {};
+  const common = app.common || {};
+  const source = app.review?.source || {};
+
   const [view, setView] = useState<"cockpit" | "evidence" | "bidroom" | "compliance" | "dashboard">("cockpit");
 
   const evidenceById: Record<string, Evidence> = useMemo(() => {
-    const must = dict.data.mustItems;
+    const must = sp.data.mustItems;
     const e004: Evidence = {
       id: "E004",
       page: 1,
@@ -210,7 +248,7 @@ export function SampleOutputContent({
       locateSnippet: "MUST: The system MUST provide a list of requirements grouped as MUST / SHOULD / INFO.",
     };
     return { E004: e004, E005: e005 };
-  }, [dict.data.mustItems]);
+  }, [sp.data.mustItems]);
 
   const [evidenceId, setEvidenceId] = useState<"E004" | "E005">("E004");
   const [showEvidenceExcerpt, setShowEvidenceExcerpt] = useState(true);
@@ -221,7 +259,7 @@ export function SampleOutputContent({
 
   const activeEvidence = evidenceById[evidenceId];
 
-  const blockers = dict.data.mustItems.map((m) => m.title).slice(0, 3);
+  const blockers = sp.data.mustItems.map((m) => m.title).slice(0, 3);
 
   function openEvidence(id: "E004" | "E005") {
     setEvidenceId(id);
@@ -243,19 +281,19 @@ export function SampleOutputContent({
 
   const tabs = useMemo(
     () => [
-      { value: "cockpit", label: "Cockpit" },
-      { value: "evidence", label: "Evidence & Source" },
-      { value: "bidroom", label: "Bid Room" },
-      { value: "compliance", label: "Proposal coverage" },
-      { value: "dashboard", label: "Dashboard" },
+      { value: "cockpit", label: sp.tabs.cockpit },
+      { value: "evidence", label: sp.tabs.evidence },
+      { value: "bidroom", label: sp.tabs.bidroom },
+      { value: "compliance", label: sp.tabs.compliance },
+      { value: "dashboard", label: sp.tabs.dashboard },
     ],
-    []
+    [sp.tabs]
   );
 
   // Static reference text (kept short but looks real)
   const referenceText = useMemo(() => {
-    return `[PAGE 1]\n\nTenderPilot Test RFP (v1)\n\nPurpose: This is a small synthetic tender document designed to test extraction of MUST / SHOULD / INFO requirements, risks, and clarifications.\n\n1. Scope\n\nThe supplier shall provide an in-vehicle data collection solution and a short implementation plan. The buyer will evaluate compliance, clarity, and delivery feasibility.\n\n2. Requirements (explicit keywords)\n\nMUST: The solution MUST support PDF and DOCX uploads and process one file per bid kit.\n\nMUST: The system MUST provide a list of requirements grouped as MUST / SHOULD / INFO.\n\nMUST: The supplier MUST deliver within 4 weeks from contract signature.\n\nSHOULD: The supplier SHOULD provide a short draft response outline with headings.\n\nSHOULD: The supplier SHOULD include a risk register with High / Medium / Low severity.\n\nINFO: The buyer prefers email communication and expects weekly status updates.\n\n3. Commercial & Legal\n\n${dict.data.sourceExcerpt}`;
-  }, [dict.data.sourceExcerpt]);
+    return `[PAGE 1]\n\nTenderPilot Test RFP (v1)\n\nPurpose: This is a small synthetic tender document designed to test extraction of MUST / SHOULD / INFO requirements, risks, and clarifications.\n\n1. Scope\n\nThe supplier shall provide an in-vehicle data collection solution and a short implementation plan. The buyer will evaluate compliance, clarity, and delivery feasibility.\n\n2. Requirements (explicit keywords)\n\nMUST: The solution MUST support PDF and DOCX uploads and process one file per bid kit.\n\nMUST: The system MUST provide a list of requirements grouped as MUST / SHOULD / INFO.\n\nMUST: The supplier MUST deliver within 4 weeks from contract signature.\n\nSHOULD: The supplier SHOULD provide a short draft response outline with headings.\n\nSHOULD: The supplier SHOULD include a risk register with High / Medium / Low severity.\n\nINFO: The buyer prefers email communication and expects weekly status updates.\n\n3. Commercial & Legal\n\n${sp.data.sourceExcerpt}`;
+  }, [sp.data.sourceExcerpt]);
 
   return (
     <div className="min-h-screen bg-background aurora-bg overflow-x-hidden">
@@ -270,11 +308,11 @@ export function SampleOutputContent({
 
             <div className="flex items-center gap-3">
               <Button asChild variant="outline" className="hidden sm:inline-flex rounded-full border-white/10">
-                <Link href={howItWorksHref}>{dict.header.secondaryCta}</Link>
+                <Link href={howItWorksHref}>{sp.header.secondaryCta}</Link>
               </Button>
               <Button asChild className="rounded-full bg-primary text-primary-foreground">
                 <Link href={primaryCtaHref}>
-                  {dict.header.primaryCta} <ArrowRight className="ml-2 h-4 w-4" />
+                  {sp.header.primaryCta} <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
 
@@ -289,8 +327,8 @@ export function SampleOutputContent({
 
       <main className="mx-auto max-w-7xl px-4 py-14 md:px-8">
         <div className="max-w-3xl mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight">{dict.header.title}</h1>
-          <p className="mt-4 text-muted-foreground text-lg">{dict.header.subtitle}</p>
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight">{sp.header.title}</h1>
+          <p className="mt-4 text-muted-foreground text-lg">{sp.header.subtitle}</p>
         </div>
 
         <div className="mt-8 flex justify-center">
@@ -306,7 +344,7 @@ export function SampleOutputContent({
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-lg font-semibold truncate">{dict.data.fileName}</p>
+                  <p className="text-lg font-semibold truncate">{sp.data.fileName}</p>
                   <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-200 dark:ring-emerald-500/25">
                     Ready
                   </span>
@@ -314,8 +352,8 @@ export function SampleOutputContent({
                     Text extracted
                   </span>
                 </div>
-                <p className="mt-1 text-sm text-muted-foreground">Your tender review is ready.</p>
-                <p className="mt-1 text-xs text-muted-foreground">Drafting support only. Always verify against the original tender document.</p>
+                <p className="mt-1 text-sm text-muted-foreground">{sp.labels.reviewReady}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{sp.labels.disclaimer}</p>
               </div>
 
               <div className="flex flex-wrap items-center gap-2 justify-start md:justify-end">
@@ -324,11 +362,11 @@ export function SampleOutputContent({
                   onClick={() => setView("dashboard")}
                   className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-xs font-semibold hover:bg-muted/30"
                 >
-                  <ArrowLeft className="h-4 w-4" /> Back
+                  <ArrowLeft className="h-4 w-4" /> {sp.labels.back}
                 </button>
 
                 <Button className="rounded-full w-full sm:w-auto" disabled>
-                  Download Bid Pack (Excel)
+                  {sp.labels.downloadBidPack}
                 </Button>
 
                 <Button variant="outline" className="rounded-full" disabled>
@@ -349,11 +387,11 @@ export function SampleOutputContent({
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-muted-foreground">Decision</p>
                         <div className="mt-2 flex flex-wrap items-center gap-2">
-                          <span className={["inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold", pillDecision(dict.data.decisionBadge)].join(" ")}
+                          <span className={["inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold", pillDecision(sp.data.decisionBadge)].join(" ")}
                           >
-                            {dict.data.decisionBadge}
+                            {sp.data.decisionBadge}
                           </span>
-                          <div className={["inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold", pillDecision(dict.data.decisionBadge)].join(" ")}
+                          <div className={["inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold", pillDecision(sp.data.decisionBadge)].join(" ")}
                           >
                             Fixable blockers remaining: 6
                           </div>
@@ -385,7 +423,7 @@ export function SampleOutputContent({
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div>
                         <p className="text-sm font-semibold">Decision drivers</p>
-                        <p className="mt-1 text-xs text-muted-foreground">Structured drivers only. Verify using Evidence & Source.</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{sp.labels.structuredDriversOnly}</p>
                       </div>
                     </div>
 
@@ -393,7 +431,7 @@ export function SampleOutputContent({
                       <div className="rounded-2xl border border-border bg-muted/30 p-4">
                         <p className="text-xs font-semibold">Blockers</p>
                         <div className="mt-3 space-y-2">
-                          {dict.data.mustItems.slice(0, 5).map((m, i) => (
+                          {sp.data.mustItems.slice(0, 5).map((m, i) => (
                             <div key={i} className="rounded-xl border border-border bg-card p-3">
                               <p className="text-sm text-foreground/90 leading-relaxed">• {m.title}</p>
                               <div className="mt-2 flex justify-end">
@@ -414,7 +452,7 @@ export function SampleOutputContent({
                       <div className="rounded-2xl border border-border bg-muted/30 p-4">
                         <p className="text-xs font-semibold">Strategic risks</p>
                         <ul className="mt-3 space-y-2 text-sm text-foreground/90">
-                          {dict.data.risks.slice(0, 5).map((r, i) => (
+                          {sp.data.risks.slice(0, 5).map((r, i) => (
                             <li key={i} className="leading-relaxed">• {r.title}</li>
                           ))}
                         </ul>
@@ -435,13 +473,13 @@ export function SampleOutputContent({
                         <div className="flex items-center justify-between gap-3">
                           <div>
                             <p className="text-xs font-semibold">Clarification questions</p>
-                            <p className="mt-1 text-xs text-muted-foreground">Copy-ready list for the contracting authority.</p>
+                            <p className="mt-1 text-xs text-muted-foreground">{sp.labels.copyReadyList ?? "Copy-ready list for the contracting authority."}</p>
                           </div>
                           <Button
                             variant="outline"
                             className="rounded-full w-full sm:w-auto"
                             onClick={async () => {
-                              const text = dict.data.questions.map((q) => `- ${q.q}`).join("\n");
+                              const text = sp.data.questions.map((q) => `- ${q.q}`).join("\n");
                               const ok = await safeCopy(text);
                               if (ok) {
                                 setCopied("questions");
@@ -449,11 +487,11 @@ export function SampleOutputContent({
                               }
                             }}
                           >
-                            {copied === "questions" ? "Copied" : "Copy"}
+                            {copied === "questions" ? (common.copied ?? "Copied") : (common.copy ?? "Copy")}
                           </Button>
                         </div>
                         <div className="mt-3 grid gap-2 md:grid-cols-2">
-                          {dict.data.questions.slice(0, 4).map((q, i) => (
+                          {sp.data.questions.slice(0, 4).map((q, i) => (
                             <div key={i} className="rounded-lg border border-border bg-card p-3">
                               <p className="text-sm text-foreground/90">{q.q}</p>
                               <p className="mt-1 text-[11px] text-muted-foreground">{q.why}</p>
@@ -473,10 +511,8 @@ export function SampleOutputContent({
                   <CardContent className="p-7 md:p-10">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div>
-                        <p className="text-sm font-semibold">Evidence & Source</p>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Verification-only reference. Use “Locate in source” as best-effort highlight, then confirm in the original PDF.
-                        </p>
+                        <p className="text-sm font-semibold">{sp.tabs.evidence}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{source.sectionSubtitle ?? ""}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -485,14 +521,10 @@ export function SampleOutputContent({
                 <div ref={referenceRef} className="space-y-4">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                     <div>
-                      <p className="text-sm font-semibold">Reference text (verification only)</p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Best-effort highlight. Always confirm exact wording and formatting in the original tender document.
-                      </p>
+                      <p className="text-sm font-semibold">{source.title ?? "Source text"}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{source.subtitle ?? ""}</p>
                     </div>
-                    <Button variant="outline" className="rounded-full w-full sm:w-auto" disabled>
-                      Reference text
-                    </Button>
+                    <Button variant="outline" className="rounded-full w-full sm:w-auto" disabled>{source.openReferenceText ?? "Open reference text"}</Button>
                   </div>
 
                   {/* Evidence excerpt */}
@@ -500,13 +532,13 @@ export function SampleOutputContent({
                     <CardContent className="p-5">
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div>
-                          <p className="text-sm font-semibold">Evidence excerpt</p>
+                          <p className="text-sm font-semibold">{source.evidenceExcerptTitle ?? "Evidence excerpt"}</p>
                           <p className="mt-1 text-sm text-muted-foreground">
-                            ID: <span className="font-medium text-foreground">{activeEvidence.id}</span> • Page {activeEvidence.page}
+                            {source.idLabel ?? "Evidence ID"}: <span className="font-medium text-foreground">{activeEvidence.id}</span> • {source.pageLabel ?? "Page"} {activeEvidence.page}
                           </p>
 
                           <div className="mt-3 flex flex-wrap items-center gap-2">
-                            <span className="text-xs text-muted-foreground">Switch evidence:</span>
+                            <span className="text-xs text-muted-foreground">{sp.labels.switchEvidence ?? "Switch evidence:"}</span>
                             {(["E004", "E005"] as const).map((eid) => {
                               const active = eid === evidenceId;
                               return (
@@ -530,7 +562,7 @@ export function SampleOutputContent({
                           </div>
 
                           <p className="mt-2 text-xs text-muted-foreground">
-                            Excerpt is authoritative (from the pipeline evidence map). “Locate in source” is best-effort—verify in the original PDF.
+                            {source.excerptAuthoritativeNote ?? ""}
                           </p>
                         </div>
 
@@ -552,7 +584,7 @@ export function SampleOutputContent({
                               window.setTimeout(() => referenceRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
                             }}
                           >
-                            Locate in source (best-effort)
+                            {source.locateBestEffort ?? "Locate (approximate)"}
                           </Button>
 
                           <Button
@@ -566,7 +598,7 @@ export function SampleOutputContent({
                               }
                             }}
                           >
-                            {copied === "excerpt" ? "Copied" : "Copy excerpt"}
+                            {copied === "excerpt" ? (common.copied ?? "Copied") : (common.copy ?? "Copy")}
                           </Button>
 
                           <Button
@@ -596,12 +628,12 @@ export function SampleOutputContent({
                       <CardContent className="p-5">
                         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                           <div>
-                            <p className="text-sm font-semibold">Locate in source (best-effort)</p>
+                            <p className="text-sm font-semibold">{source.locate ?? "Locate in source"}</p>
                             <p className="mt-1 text-sm text-muted-foreground">
-                              Match for: <span className="font-medium text-foreground">{activeEvidence.query}</span>
+                              {sp.labels.matchFor ?? "Match for"}: <span className="font-medium text-foreground">{activeEvidence.query}</span>
                             </p>
                             <p className="mt-2 text-xs text-muted-foreground">
-                              This view highlights a best-effort match in the extracted Source text. Use it as a pointer only: locate the same clause in the original PDF (search the phrase) and verify the exact wording and formatting.
+                              {source.verificationFooter ?? ""}
                             </p>
                           </div>
 
@@ -617,10 +649,10 @@ export function SampleOutputContent({
                                 }
                               }}
                             >
-                              {copied === "phrase" ? "Copied" : "Copy phrase"}
+                              {copied === "phrase" ? (common.copied ?? "Copied") : (common.copy ?? "Copy")}
                             </Button>
                             <Button variant="outline" className="rounded-full w-full sm:w-auto" onClick={() => setShowLocate(false)}>
-                              Close locate view
+                              {source.closeLocateView ?? "Close locate view"}
                             </Button>
                           </div>
                         </div>
@@ -635,8 +667,8 @@ export function SampleOutputContent({
                   {/* Search */}
                   <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
-                      <p className="text-sm font-semibold">Search within reference text</p>
-                      <p className="mt-1 text-xs text-muted-foreground">Best-effort highlight. Always confirm in the original PDF for legal wording.</p>
+                      <p className="text-sm font-semibold">{source.searchTitle ?? "Search"}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{source.subtitle ?? ""}</p>
                     </div>
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                       <div className="flex w-full items-center gap-2 rounded-full border border-border bg-background px-4 py-2">
@@ -644,7 +676,7 @@ export function SampleOutputContent({
                         <input
                           value={searchPhrase}
                           onChange={(e) => setSearchPhrase(e.target.value)}
-                          placeholder="Search phrase..."
+                          placeholder={source.searchPhrasePlaceholder ?? "Search phrase…"}
                           className="w-full sm:w-[260px] bg-transparent text-sm outline-none"
                         />
                       </div>
@@ -681,7 +713,7 @@ export function SampleOutputContent({
                   <div>
                     <p className="text-xl font-semibold">Bid Room</p>
                     <p className="mt-1 text-sm text-muted-foreground">Work view: assign owners, track tasks, and coordinate the bid.</p>
-                    <p className="mt-1 text-xs text-muted-foreground">Job: {dict.data.fileName}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Job: {sp.data.fileName}</p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Button variant="outline" className="rounded-full" onClick={() => setView("compliance")}
@@ -756,7 +788,7 @@ export function SampleOutputContent({
                       </div>
 
                       <div className="p-4 space-y-3">
-                        {dict.data.mustItems.slice(0, 4).map((m, i) => (
+                        {sp.data.mustItems.slice(0, 4).map((m, i) => (
                           <div key={i} className="rounded-2xl border border-border bg-background p-4">
                             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                               <div className="min-w-0">
@@ -771,9 +803,7 @@ export function SampleOutputContent({
                                 >
                                   Open evidence
                                 </Button>
-                                <Button variant="outline" className="rounded-full w-full sm:w-auto" disabled>
-                                  Locate in PDF
-                                </Button>
+                                <Button variant="outline" className="rounded-full w-full sm:w-auto" disabled>{common.locateInPdf ?? "Locate in PDF"}</Button>
                               </div>
                             </div>
 
@@ -796,7 +826,7 @@ export function SampleOutputContent({
               <div className="space-y-6">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <p className="text-xl font-semibold">Proposal coverage</p>
+                    <p className="text-xl font-semibold">{sp.tabs.compliance}</p>
                     <p className="mt-1 text-sm text-muted-foreground">
                       Audit lens for requirements. Set compliance stance and map where each requirement is addressed in the proposal.
                     </p>
@@ -870,7 +900,7 @@ export function SampleOutputContent({
                     <p className="mt-1 text-xs text-muted-foreground">Set stance, map proposal section, justify with evidence.</p>
 
                     <div className="mt-4 space-y-4">
-                      {dict.data.mustItems.slice(0, 3).map((m, i) => (
+                      {sp.data.mustItems.slice(0, 3).map((m, i) => (
                         <div key={i} className="rounded-2xl border border-border bg-background p-4">
                           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                             <div className="min-w-0">
@@ -913,16 +943,14 @@ export function SampleOutputContent({
                                 >
                                   Evidence
                                 </Button>
-                                <Button variant="outline" className="rounded-full w-full sm:w-auto" disabled>
-                                  Locate in PDF
-                                </Button>
+                                <Button variant="outline" className="rounded-full w-full sm:w-auto" disabled>{common.locateInPdf ?? "Locate in PDF"}</Button>
                                 <Button
                                   className="rounded-full ml-auto"
                                   onClick={() => {
                                     setView("bidroom");
                                   }}
                                 >
-                                  Send to Bid Room
+                                  {sp.labels.sendToBidRoom}
                                 </Button>
                               </div>
                             </div>
@@ -1046,11 +1074,11 @@ export function SampleOutputContent({
           <div className="mt-4 flex items-center justify-center gap-3">
             <Button asChild size="lg" className="rounded-full px-10 h-12">
               <Link href={primaryCtaHref}>
-                {dict.header.primaryCta} <ArrowRight className="ml-2 h-5 w-5" />
+                {sp.header.primaryCta} <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="rounded-full px-10 h-12">
-              <Link href={howItWorksHref}>{dict.header.secondaryCta}</Link>
+              <Link href={howItWorksHref}>{sp.header.secondaryCta}</Link>
             </Button>
           </div>
         </div>

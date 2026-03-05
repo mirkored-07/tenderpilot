@@ -9,5 +9,5 @@ export const metadata: Metadata = {
 
 export default async function SamplePage() {
   const dict = (await import("@/dictionaries/de.json")).default as any;
-  return <SampleOutputContent localePrefix="/de" dict={dict.samplePage} />;
+  return <SampleOutputContent localePrefix="/de" dict={dict} />;
 }

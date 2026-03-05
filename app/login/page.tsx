@@ -1,4 +1,6 @@
 import LoginClient from "./LoginClient";
+import { cookies } from "next/headers";
+import { AppI18nProvider } from "@/app/app/_components/app-i18n-provider";
 
 export const dynamic = "force-dynamic";
 
@@ -24,5 +26,12 @@ export default async function LoginPage({
   const nextParam = sp.next;
   const nextPath = safeNextPath(Array.isArray(nextParam) ? nextParam[0] : nextParam);
 
-  return <LoginClient nextPath={nextPath} />;
+  const cookieStore = await cookies();
+  const cookieLocale = cookieStore.get("tp_locale")?.value ?? null;
+
+  return (
+    <AppI18nProvider initialLocale={cookieLocale} initialOutputLanguage={cookieLocale}>
+      <LoginClient nextPath={nextPath} />
+    </AppI18nProvider>
+  );
 }

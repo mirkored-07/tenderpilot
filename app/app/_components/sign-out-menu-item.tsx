@@ -1,23 +1,23 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+
 import { supabaseBrowser } from "@/lib/supabase/browser";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { useAppI18n } from "./app-i18n-provider";
 
 export function SignOutMenuItem() {
   const router = useRouter();
+  const { t } = useAppI18n();
 
   return (
     <DropdownMenuItem
-      onSelect={async (e) => {
-        e.preventDefault();
-        const supabase = supabaseBrowser();
-        await supabase.auth.signOut();
-        router.replace("/login");
-        router.refresh();
+      onClick={async () => {
+        await supabaseBrowser().auth.signOut();
+        router.push("/");
       }}
     >
-      Sign out
+      {t("app.account.profile.signOut")}
     </DropdownMenuItem>
   );
 }

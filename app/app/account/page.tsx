@@ -1346,7 +1346,7 @@ export default function AccountPage() {
                   onClick={signOut}
                   className="rounded-full"
                 >
-                  Sign out
+                  {t("app.account.profile.signOut")}
                 </Button>
               </div>
 
@@ -1362,7 +1362,7 @@ export default function AccountPage() {
                         className="rounded-full h-8 px-3"
                         onClick={copyUserId}
                       >
-                        Copy
+                        {t("app.common.copy")}
                       </Button>
                     </div>
                   </div>

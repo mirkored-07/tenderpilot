@@ -4884,16 +4884,16 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
               value={renameInput}
               onChange={(e) => setRenameInput(e.target.value)}
               className="mt-4 w-full rounded-xl border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-              placeholder={t("app.review.actions.assignOwnerPlaceholder")}
+              placeholder={t("app.review.rename.placeholder")}
               autoFocus
             />
 
             <div className="mt-4 flex justify-end gap-2">
               <Button variant="outline" className="rounded-full" onClick={() => setRenaming(false)}>
-                Cancel
+                {t("app.common.cancel")}
               </Button>
               <Button className="rounded-full" onClick={handleRenameSave}>
-                Save
+                {t("app.common.save")}
               </Button>
             </div>
           </div>

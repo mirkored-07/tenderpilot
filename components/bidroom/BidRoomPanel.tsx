@@ -530,7 +530,7 @@ export function BidRoomPanel(props: {
                         setHideDone(false);
                       }}
                     >
-                      Reset filters
+                      {t("app.common.resetFilters")}
                     </Button>
                   </div>
                 </div>
@@ -538,10 +538,10 @@ export function BidRoomPanel(props: {
 
               {(
                 [
-                  { key: "requirement" as const, label: "Requirements" },
-                  { key: "risk" as const, label: "Risks" },
-                  { key: "clarification" as const, label: "Clarifications" },
-                  { key: "outline" as const, label: "Outline" },
+                  { key: "requirement" as const, label: t("app.bidroom.panel.typeGroups.requirement") },
+                  { key: "risk" as const, label: t("app.bidroom.panel.typeGroups.risk") },
+                  { key: "clarification" as const, label: t("app.bidroom.panel.typeGroups.clarification") },
+                  { key: "outline" as const, label: t("app.bidroom.panel.typeGroups.outline") },
                 ] as const
               ).map((g) => {
                 const rows = groupedRows[g.key] ?? [];
@@ -565,10 +565,10 @@ export function BidRoomPanel(props: {
                         const notesIsOpen = notesOpen.has(key) || Boolean(notes);
 
                         const typeBadge = (() => {
-                          if (r.type === "requirement") return "Requirement";
-                          if (r.type === "risk") return "Risk";
-                          if (r.type === "clarification") return "Clarification";
-                          return "Outline";
+                          if (r.type === "requirement") return t("app.bidroom.panel.typeGroups.requirement");
+                          if (r.type === "risk") return t("app.bidroom.panel.typeGroups.risk");
+                          if (r.type === "clarification") return t("app.bidroom.panel.typeGroups.clarification");
+                          return t("app.bidroom.panel.typeGroups.outline");
                         })();
 
                         return (
@@ -598,7 +598,7 @@ export function BidRoomPanel(props: {
                                   onClick={() => showEvidenceByIds(r.evidenceIds)}
                                   disabled={!hasEvidence && evidenceById.size === 0}
                                 >
-                                  Open evidence
+                                  {t("app.bidroom.actions.openEvidence")}
                                 </Button>
                                 <Button
                                   type="button"
@@ -612,7 +612,7 @@ export function BidRoomPanel(props: {
                                     openPdfAt({ page: cand?.page ?? null });
                                   }}
                                 >
-                                  Locate in PDF
+                                  {t("app.common.locateInPdf")}
                                 </Button>
                               </div>
                             </div>
@@ -761,7 +761,7 @@ export function BidRoomPanel(props: {
                                     })
                                   }
                                 >
-                                  Add note
+                                  {t("app.bidroom.actions.addNote")}
                                 </Button>
                               )}
                             </div>
@@ -784,22 +784,22 @@ export function BidRoomPanel(props: {
                 <div>
                   <p className="text-sm font-semibold">{t("app.bidroom.evidence.title")}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Excerpt is authoritative. “Locate in PDF” is best-effort.
+                    {t("app.bidroom.evidence.subtitle")}
                   </p>
                 </div>
                 <Button variant="outline" size="sm" className="rounded-full" onClick={() => setEvidenceOpen(false)}>
-                  Close
+                  {t("app.common.close")}
                 </Button>
               </div>
 
               <div className="p-5 space-y-4">
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <Badge variant="outline" className="rounded-full">ID: {evidenceFocus?.id || "—"}</Badge>
+                  <Badge variant="outline" className="rounded-full">{t("app.bidroom.evidence.labels.id")}: {evidenceFocus?.id || "—"}</Badge>
                   {typeof evidenceFocus?.page === "number" ? (
-                    <Badge variant="outline" className="rounded-full">Page: {evidenceFocus?.page}</Badge>
+                    <Badge variant="outline" className="rounded-full">{t("app.bidroom.evidence.labels.page")}: {evidenceFocus?.page}</Badge>
                   ) : null}
                   {evidenceFocus?.anchor ? (
-                    <Badge variant="outline" className="rounded-full">Anchor: {evidenceFocus.anchor}</Badge>
+                    <Badge variant="outline" className="rounded-full">{t("app.bidroom.evidence.labels.anchor")}: {evidenceFocus.anchor}</Badge>
                   ) : null}
                 </div>
 
@@ -824,7 +824,7 @@ export function BidRoomPanel(props: {
                     className="rounded-full"
                     onClick={() => openPdfAt({ page: evidenceFocus?.page ?? null })}
                   >
-                    Locate in PDF (best-effort)
+                    {t("app.common.locateInPdf")} (best-effort)
                   </Button>
                   <Button variant="outline" size="sm" className="rounded-full" onClick={() => openPdfAt()}>
                     Open PDF

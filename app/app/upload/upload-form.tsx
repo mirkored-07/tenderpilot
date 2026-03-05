@@ -265,14 +265,30 @@ export default function UploadForm() {
         }
       }
 
-      if (message.toLowerCase().includes("no credits")) {
+      const lower = message.toLowerCase();
+
+      if (lower.includes("no credits")) {
         setNoCredits(true);
         track("upload_failed", { message: "no_credits" });
         setPhase("idle");
         return;
       }
 
-      setError(message);
+      if (lower.includes("account setup incomplete") || lower.includes("missing profile")) {
+        setError(t("app.upload.errors.accountSetupIncomplete"));
+        track("upload_failed", { message: "account_setup_incomplete" });
+        setPhase("idle");
+        return;
+      }
+
+      if (lower.includes("failed to create job")) {
+        setError(t("app.upload.errors.createJobFailed"));
+        track("upload_failed", { message: "create_job_failed" });
+        setPhase("idle");
+        return;
+      }
+
+      setError(message || t("app.upload.errors.uploadFailedShort"));
       track("upload_failed", { message });
       setPhase("idle");
     }
@@ -336,10 +352,10 @@ export default function UploadForm() {
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="secondary" className="rounded-full">
-              PDF or DOCX
+              {t("app.upload.badges.formats")}
             </Badge>
             <Badge variant="secondary" className="rounded-full">
-              Up to {formatBytes(MAX_FILE_BYTES)}
+              {t("app.upload.badges.maxSize", { max: formatBytes(MAX_FILE_BYTES) })}
             </Badge>
           </div>
 

@@ -226,7 +226,8 @@
   "landing": {
     "nav": {
       "cta": "Empezar ahora",
-      "theme": "Tema"
+      "theme": "Tema",
+      "language": "Idioma"
     },
     "hero": {
       "badge": "Modelo de IA especializado en licitaciones",
@@ -425,7 +426,10 @@
       "bidroom": "Bid Room",
       "exports": "Exportaciones",
       "outline": "Esquema",
-      "source": "Extracto"
+      "source": "Extracto",
+      "cockpit": "Cockpit",
+      "evidence": "Evidencia y fuente",
+      "dashboard": "Panel"
     },
     "tabContent": {
       "complianceTitle": "Matriz (MUST)",
@@ -441,7 +445,7 @@
       "fileName": "EU_Tender_Software_Services_2026.pdf",
       "submissionDeadline": "14 May 2026 — 12:00 CET",
       "decisionBadge": "HOLD",
-      "decisionLine": "HOLD — Two blockers need clarification before bidding: acceptance testing and SLA penalties.",
+      "decisionLine": "Hold: dos bloqueadores deben aclararse antes de presentar oferta: pruebas de aceptación y penalizaciones SLA.",
       "mustItems": [
         {
           "title": "Acceptance test criteria and sign-off timeline must be defined",
@@ -539,7 +543,20 @@
       "risks": "Riesgos",
       "clarifications": "Aclaraciones",
       "workItems": "Tareas",
-      "evidence": "Evidencia"
+      "evidence": "Evidencia",
+      "ready": "Listo",
+      "textExtracted": "Texto extraído",
+      "reviewReady": "Tu análisis está listo.",
+      "disclaimer": "Solo apoyo a la redacción. Verifica siempre con el documento original.",
+      "back": "Volver",
+      "downloadBidPack": "Descargar Bid Pack (Excel)",
+      "openBidRoom": "Abrir Bid Room",
+      "sendToBidRoom": "Enviar al Bid Room",
+      "backToJob": "Volver al dossier",
+      "structuredDriversOnly": "Solo señales estructuradas. Verifica en Evidencia y fuente.",
+      "switchEvidence": "Cambiar evidencia:",
+      "matchFor": "Coincidencia para",
+      "copyReadyList": "Lista lista para copiar para la entidad contratante."
     }
   },
   "pricingPage": {
@@ -703,7 +720,9 @@
       "noneDetected": "None detected",
       "queued": "Queued",
       "removeItemAria": "Remove item",
-      "saved": "Saved"
+      "saved": "Saved",
+      "save": "Guardar",
+      "resetFilters": "Restablecer filtros"
     },
     "decision": {
       "go": "Go",
@@ -724,7 +743,28 @@
       "noCreditsBody": "Una revisión usa 1 crédito y produce el cockpit de decisión y las exportaciones.",
       "upgrade": "Mejorar a Pro",
       "footerHasFile": "Tras la carga, serás redirigido al cockpit de decisión.",
-      "footerNoFile": "Selecciona un archivo para continuar."
+      "footerNoFile": "Selecciona un archivo para continuar.",
+      "errors": {
+        "unreadable": "No pudimos leer este archivo. Prueba con otro archivo.",
+        "empty": "Este archivo parece vacío.",
+        "tooLarge": "El archivo es demasiado grande (máx. {max}).",
+        "unsupported": "Tipo de archivo no compatible. Sube un PDF o un DOCX.",
+        "uploadFailed": "La carga falló. Inténtalo de nuevo.",
+        "uploadFailedShort": "La carga falló.",
+        "accountSetupIncomplete": "La configuración de la cuenta está incompleta. Cierra sesión e inicia sesión otra vez.",
+        "createJobFailed": "No se pudo iniciar el análisis. Inténtalo de nuevo."
+      },
+      "phases": {
+        "checkingSession": "Comprobando sesión…",
+        "uploading": "Subiendo…",
+        "creatingJob": "Iniciando análisis…",
+        "extractingText": "Extrayendo texto…",
+        "redirecting": "Abriendo análisis…"
+      },
+      "badges": {
+        "formats": "PDF o DOCX",
+        "maxSize": "Hasta {max}"
+      }
     },
     "tenders": {
       "h1": "Licitaciones",
@@ -806,6 +846,12 @@
         "notes": {
           "none": "No evidence IDs available for this item. Verify in the original PDF.",
           "notFound": "Evidence ID not found in the evidence map. Verify in the original PDF."
+        },
+        "subtitle": "Los extractos son textuales. “Localizar en PDF” ayuda a ir al punto, pero puede no ser exacto.",
+        "labels": {
+          "id": "ID",
+          "page": "Página",
+          "anchor": "Ancla"
         }
       },
       "labels": {
@@ -846,6 +892,12 @@
           "title": "No matching items",
           "body": "Try adjusting filters or clearing your search.",
           "clearSearch": "Clear search"
+        },
+        "typeGroups": {
+          "requirement": "Requisitos",
+          "risk": "Riesgos",
+          "clarification": "Aclaraciones",
+          "outline": "Esquema"
         }
       },
       "fields": {
@@ -863,6 +915,10 @@
         "risk": "Risk",
         "clarification": "Clarification",
         "outline": "Outline"
+      },
+      "actions": {
+        "addNote": "Añadir nota",
+        "openEvidence": "Abrir evidencia"
       }
     },
     "compliance": {
@@ -876,11 +932,12 @@
         "cta": "Enviar al Bid Room",
         "sent": "Enviado al Bid Room",
         "exists": "Ya está en el Bid Room",
-        "noteBase": "From Compliance Matrix — Status: {status}",
+        "noteBase": "Desde la matriz de cumplimiento. Estado: {status}",
         "noteProposal": "Proposal: {proposal}",
-        "noteNote": "Note: {note}"
+        "noteNote": "Note: {note}",
+        "sentDesc": "Se creó una tarea para este gap."
       },
-      "coveredNoTask": "Cubierto — no se necesita tarea",
+      "coveredNoTask": "Cubierto, no hace falta tarea",
       "noRows": "No hay filas que coincidan con los filtros actuales.",
       "noReqs": "Aún no hay requisitos.",
       "actions": {
@@ -900,7 +957,8 @@
         "sendFailed": "Could not send to Bid Room.",
         "sendFailedWithMsg": "Could not send to Bid Room: {msg}",
         "saveFailed": "Could not save changes.",
-        "saveFailedWithMsg": "Could not save changes: {msg}"
+        "saveFailedWithMsg": "Could not save changes: {msg}",
+        "evidenceNotFound": "La evidencia {id} no se encontró en esta licitación. Verifícalo en el PDF."
       },
       "fields": {
         "stance": "Status",
@@ -941,7 +999,11 @@
         "noEvidenceIds": "No evidence IDs listed. Verify in the original PDF."
       },
       "helper": {
-        "setStance": "Set status and optionally add a note."
+        "setStance": "Set status and optionally add a note.",
+        "notTaskTracking": "Aquí controlas la cobertura. Para responsables, fechas y estado, usa el Bid Room."
+      },
+      "labels": {
+        "evidenceCount": "IDs de evidencia: {count}"
       }
     },
     "review": {
@@ -1008,7 +1070,7 @@
         "extracting": "Extracting requirements, risks, clarifications, and a short draft…",
         "resultsReady": "Results are ready.",
         "autoUpdates": "Results appear automatically on this page",
-        "stepsHint": "You can leave this tab open — it will update automatically.",
+        "stepsHint": "Puedes dejar esta pestaña abierta. Se actualizará automáticamente.",
         "startNewReview": "Start a new review"
       },
       "driversTitle": "Decision drivers",
@@ -1121,7 +1183,8 @@
       },
       "rename": {
         "title": "Rename tender",
-        "subtitle": "Choose a short, clear name your team will recognize."
+        "subtitle": "Choose a short, clear name your team will recognize.",
+        "placeholder": "Nombre de la licitación"
       },
       "source": {
         "idLabel": "Evidence ID",
@@ -1130,7 +1193,7 @@
         "evidenceExcerptTitle": "Evidence excerpt",
         "excerptAuthoritativeNote": "Evidence excerpts are verbatim. Always verify against the original PDF.",
         "locate": "Locate in source",
-        "locateBestEffort": "Locate (best effort)",
+        "locateBestEffort": "Localizar (aprox.)",
         "openOriginalPdf": "Open original PDF",
         "noSourceTextYet": "Source text is not available yet.",
         "hiddenTitle": "Source hidden",
@@ -1171,7 +1234,7 @@
           "general": "Confirm in the tender source."
         },
         "email": {
-          "subject": "Clarification questions – {tender}",
+          "subject": "Preguntas de aclaración sobre {tender}",
           "intro": "Hello,\n\nWe are preparing our tender response and would appreciate clarification on the points below.\nThank you.\n\n"
         }
       },
@@ -1468,7 +1531,7 @@
         },
         "buyerEmail": {
           "subjectLabel": "Subject",
-          "subject": "Clarification questions – {tender}",
+          "subject": "Preguntas de aclaración sobre {tender}",
           "greeting": "Hello,",
           "intro": "We are preparing our tender response and would appreciate clarification on the points below.",
           "thanks": "Thank you."
@@ -1687,6 +1750,15 @@
         "typical_lead_time_weeks": "Lead time",
         "certifications": "Certifications",
         "non_negotiables": "Non-negotiables"
+      }
+    },
+    "auth": {
+      "login": {
+        "title": "Iniciar sesión",
+        "subtitle": "Te enviaremos un enlace seguro por correo.",
+        "emailPlaceholder": "tu@empresa.com",
+        "cta": "Enviar enlace",
+        "sent": "Revisa tu correo y abre el enlace."
       }
     }
   }
