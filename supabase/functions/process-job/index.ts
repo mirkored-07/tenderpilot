@@ -669,13 +669,14 @@ function parseOpenAiJsonFromResponse(resp: any): any {
 async function runOpenAi(args: {
   apiKey: string;
   model: string;
+  targetLanguage: string;
   extractedText: string;
   evidenceCandidates: EvidenceCandidate[];
   maxOutputTokens: number;
   timeoutMs?: number;
   workspacePlaybook?: { playbook: any; version: number | null } | null;
 }): Promise<AiOutput> {
-  const { apiKey, model, extractedText, evidenceCandidates, maxOutputTokens, timeoutMs, workspacePlaybook } = args;
+  const { apiKey, model, targetLanguage, extractedText, evidenceCandidates, maxOutputTokens, timeoutMs, workspacePlaybook } = args;
 
   const schema = {
     type: "object",
@@ -773,8 +774,6 @@ async function runOpenAi(args: {
     required: ["executive_summary", "checklist", "risks", "buyer_questions", "proposal_draft", "policy_triggers"],
   };
 
-  const { output: outputLang } = await loadUserLanguagesAdmin(supabaseAdmin, job.user_id);
-  const targetLanguage = langName(outputLang);
 
   const instructions =
     "You are TenderPilot. Drafting support only. Not legal advice. Not procurement advice. " +
@@ -1550,6 +1549,9 @@ let extractedText = "";
         });
       }
 
+      const { output: outputLang } = await loadUserLanguagesAdmin(supabaseAdmin, job.user_id);
+      const targetLanguage = langName(outputLang);
+
       await logEvent(supabaseAdmin, job, "info", "OpenAI started", { model, maxOutputTokens, remaining_ms: remaining });
 
       // Configurable OpenAI timeout cap (default 35s)
@@ -1564,7 +1566,7 @@ let extractedText = "";
         ),
       );
 
-      aiOut = await runOpenAi({ apiKey, model, extractedText: clipped, evidenceCandidates, maxOutputTokens, timeoutMs, workspacePlaybook });
+      aiOut = await runOpenAi({ apiKey, model, targetLanguage, extractedText: clipped, evidenceCandidates, maxOutputTokens, timeoutMs, workspacePlaybook });
       await logEvent(supabaseAdmin, job, "info", "OpenAI completed", { model, maxOutputTokens });
     }
 
