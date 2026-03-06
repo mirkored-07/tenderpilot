@@ -118,6 +118,10 @@ export function ComplianceMatrix(props: {
   const { jobId, checklist, backHref, workHref } = props;
 
   const { t } = useAppI18n();
+  const tx = (key: string, fallback: string, vars?: Record<string, string | number>) => {
+    const value = t(key as any, vars as any);
+    return value === key ? fallback : value;
+  };
 
   const [cmItems, setCmItems] = useState<any[]>([]);
   const [workError, setWorkError] = useState<string | null>(null);
@@ -304,7 +308,7 @@ export function ComplianceMatrix(props: {
         setSendState((p) => ({ ...p, [k]: "exists" }));
         setToast({
           title: t("app.compliance.send.exists"),
-          description: "This requirement already exists as an execution item.",
+          description: tx("app.compliance.send.existsDesc", "This requirement already exists as an execution item."),
           action: workHref ? "OPEN_BID_ROOM" : undefined,
         });
         return;
@@ -581,7 +585,7 @@ export function ComplianceMatrix(props: {
         <div>
           <h1 className="text-xl font-semibold">{t("app.compliance.proposalCoverage")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Audit lens for requirements. Set compliance stance and map where each requirement is addressed in the proposal.
+            {tx("app.compliance.helper.subtitle", "Audit lens for requirements. Set compliance stance and map where each requirement is addressed in the proposal.")}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             {t("app.compliance.helper.notTaskTracking")}
@@ -597,7 +601,7 @@ export function ComplianceMatrix(props: {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="h-9 w-9 rounded-full p-0" aria-label="More actions">
+              <Button variant="outline" className="h-9 w-9 rounded-full p-0" aria-label={tx("app.common.moreActions", "More actions")}>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -630,7 +634,7 @@ export function ComplianceMatrix(props: {
                       window.location.href = backHref;
                     }}
                   >
-                    Back to job
+                    {t("app.compliance.actions.backToJob")}
                   </DropdownMenuItem>
                 </>
               ) : null}
@@ -651,23 +655,23 @@ export function ComplianceMatrix(props: {
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">{t("app.compliance.view.gate")}</p>
             <p className="mt-1 text-sm font-semibold">
-              {summary.mustGaps === 0 ? "Submission-ready (MUST covered)" : `MUST gaps: ${summary.mustGaps}`}
+              {summary.mustGaps === 0 ? t("app.compliance.summary.submissionReady") : t("app.compliance.summary.mustGaps", { count: summary.mustGaps })}
             </p>
-            <p className="mt-1 text-xs text-muted-foreground">MUST TBD: {summary.mustTbd} • Partial: {summary.mustPartial} • Non-compliant: {summary.mustNon}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t("app.compliance.summary.mustBreakdown", { tbd: summary.mustTbd, partial: summary.mustPartial, non: summary.mustNon })}</p>
           </CardContent>
         </Card>
         <Card className="rounded-2xl">
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">{t("app.compliance.view.gaps")}</p>
             <p className="mt-1 text-sm font-semibold">{summary.gaps} / {summary.total}</p>
-            <p className="mt-1 text-xs text-muted-foreground">TBD: {summary.tbd} • Partial: {summary.partial} • Non-compliant: {summary.non}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t("app.compliance.summary.gapsBreakdown", { tbd: summary.tbd, partial: summary.partial, non: summary.non })}</p>
           </CardContent>
         </Card>
         <Card className="rounded-2xl">
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">{t("app.compliance.view.covered")}</p>
             <p className="mt-1 text-sm font-semibold">{summary.compliant + summary.na} / {summary.total}</p>
-            <p className="mt-1 text-xs text-muted-foreground">Compliant: {summary.compliant} • N/A: {summary.na}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t("app.compliance.summary.coveredBreakdown", { compliant: summary.compliant, na: summary.na })}</p>
           </CardContent>
         </Card>
       </div>
@@ -724,7 +728,7 @@ export function ComplianceMatrix(props: {
                     className="h-8 rounded-full px-3 text-xs"
                     onClick={() => setViewMode("GAPS")}
                   >
-                    Gaps
+                    {t("app.compliance.view.gapsOnly")}
                   </Button>
                   <Button
                     type="button"
@@ -732,7 +736,7 @@ export function ComplianceMatrix(props: {
                     className="h-8 rounded-full px-3 text-xs"
                     onClick={() => setViewMode("ALL")}
                   >
-                    Full
+                    {t("app.compliance.view.full")}
                   </Button>
                 </div>
               </div>
@@ -745,7 +749,7 @@ export function ComplianceMatrix(props: {
       <Card className="rounded-2xl">
         <CardContent className="p-0">
           <div className="px-4 py-3 text-xs font-semibold text-muted-foreground">
-            {viewMode === "GAPS" ? "Gaps queue" : "Full matrix"}
+            {viewMode === "GAPS" ? t("app.compliance.view.gapsQueue") : t("app.compliance.view.fullMatrix")}
             <span className="ml-2 font-normal">{t("app.compliance.helper.setStance")}</span>
           </div>
           <Separator />
@@ -780,7 +784,7 @@ export function ComplianceMatrix(props: {
                         <p className="mt-2 text-sm font-medium leading-snug text-foreground/90">{clampText(r.text, 280)}</p>
                         <p className="mt-1 text-xs text-muted-foreground">
                           {t("app.compliance.labels.evidenceCount", { count: r.evidenceIds?.length ?? 0 })}
-                          {evResolved?.page ? <span className="ml-2">• PDF page {evResolved.page}</span> : null}
+                          {evResolved?.page ? <span className="ml-2">• {t("app.compliance.labels.pdfPage", { page: evResolved.page })}</span> : null}
                         </p>
                       </div>
 
@@ -823,7 +827,7 @@ export function ComplianceMatrix(props: {
                             <label className="text-[11px] font-medium text-muted-foreground">{t("app.compliance.fields.proposalSection")}</label>
                             <Input
                               value={proposalSection}
-                              placeholder="e.g. 2.1 / Annex A"
+                              placeholder={t("app.compliance.placeholders.proposalSection")}
                               className="mt-1 h-9"
                               disabled={savingKey === r.cm_ref_key}
                               onChange={(e) => {
@@ -858,7 +862,7 @@ export function ComplianceMatrix(props: {
                             <label className="text-[11px] font-medium text-muted-foreground">{t("app.compliance.fields.auditNote")}</label>
                             <Input
                               value={note}
-                              placeholder="Why this stance (short, audit-friendly)"
+                              placeholder={t("app.compliance.placeholders.auditNote")}
                               className="mt-1 h-9"
                               disabled={savingKey === r.cm_ref_key}
                               onChange={(e) => {
@@ -892,7 +896,7 @@ export function ComplianceMatrix(props: {
                               onClick={() => openEvidenceDrawer(r, firstEv)}
                               disabled={!r.evidenceIds?.length}
                             >
-                              Evidence
+                              {t("app.compliance.actions.evidence")}
                             </Button>
                             <Button
                               type="button"
@@ -946,11 +950,11 @@ export function ComplianceMatrix(props: {
               <div>
                 <p className="text-sm font-semibold">{t("app.compliance.drawer.evidenceJustification")}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Excerpt is authoritative. Locate in PDF is best-effort.
+                  {tx("app.compliance.drawer.authoritativeNote", "Excerpt is authoritative. Locate in PDF is best-effort.")}
                 </p>
               </div>
               <Button variant="outline" className="h-8 rounded-full px-3 text-xs" onClick={() => setDrawerOpen(false)}>
-                Close
+                {t("app.common.close")}
               </Button>
             </div>
 
@@ -998,7 +1002,7 @@ export function ComplianceMatrix(props: {
                             className="h-8 rounded-full px-3 text-xs"
                             onClick={() => openPdfAtEvidence(drawerEvidenceId)}
                           >
-                            Locate in PDF
+                            {t("app.common.locateInPdf")}
                           </Button>
                         </div>
 
@@ -1018,10 +1022,10 @@ export function ComplianceMatrix(props: {
                               <CardContent className="p-4 space-y-2">
                                 <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
                                   <span className="font-mono">{ev.id}</span>
-                                  {typeof ev.page === "number" ? <span>• page {ev.page}</span> : null}
+                                  {typeof ev.page === "number" ? <span>• {t("app.compliance.labels.page", { page: ev.page })}</span> : null}
                                   {ev.anchor ? <span className="truncate">• {ev.anchor}</span> : null}
                                 </div>
-                                <p className="text-sm leading-relaxed whitespace-pre-wrap">{ev.excerpt || "(No excerpt stored)"}</p>
+                                <p className="text-sm leading-relaxed whitespace-pre-wrap">{ev.excerpt || t("app.compliance.drawer.noExcerpt")}</p>
                               </CardContent>
                             </Card>
                           );

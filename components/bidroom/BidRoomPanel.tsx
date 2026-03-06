@@ -64,6 +64,10 @@ export function BidRoomPanel(props: {
   const { jobId, checklist, risks, questions, outlineSections, canDownload } = props;
 
   const { t } = useAppI18n();
+  const tx = (key: string, fallback: string, vars?: Record<string, string | number>) => {
+    const value = t(key as any, vars as any);
+    return value === key ? fallback : value;
+  };
 
   const [workItems, setWorkItems] = useState<any[]>([]);
   const [workError, setWorkError] = useState<string | null>(null);
@@ -477,7 +481,7 @@ export function BidRoomPanel(props: {
 
       const msg = String((safe as any)?.message ?? "").toLowerCase();
       const looksLikeRls = msg.includes("row-level security") || msg.includes("violates row-level security") || msg.includes("permission denied");
-      setWorkError(looksLikeRls ? "Bid Room save is blocked by your Supabase policy. Run the job_work_items RLS SQL from the repo, then try again." : t("app.bidroom.panel.saveFailed"));
+      setWorkError(looksLikeRls ? tx("app.bidroom.errors.policyBlockedSave", "Bid Room save is blocked by your Supabase policy. Run the job_work_items RLS SQL from the repo, then try again.") : t("app.bidroom.panel.saveFailed"));
       // Roll back optimistic UI to the last known server state (best-effort).
       try { await refreshWorkSafe(); } catch { /* ignore */ }
     } finally {
