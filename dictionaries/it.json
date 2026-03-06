@@ -1095,7 +1095,8 @@
         "printDialogFailed": "Could not open the print dialog. Please try again.",
         "bidPackExportFailed": "Could not export the Bid Pack. Please try again.",
         "exportCsvFailed": "Could not export {type} CSV. Please try again.",
-        "teamDecisionSaveFailed": "Could not save team decision. Please try again."
+        "teamDecisionSaveFailed": "Could not save team decision. Please try again.",
+        "resultsNotReadyAfterComplete": "La revisione della gara è completata, ma i risultati non sono ancora disponibili. Aggiorna la pagina tra un momento oppure riapri la gara dalla tua lista."
       },
       "progress": {
         "needsAttentionTitle": "Something needs attention",
@@ -1210,7 +1211,9 @@
         "strategicRisks": "Strategic risks",
         "noStrategicRisks": "No strategic risks detected.",
         "immediateActions": "Immediate actions",
-        "noActions": "No immediate actions suggested."
+        "noActions": "No immediate actions suggested.",
+        "clarifications": "Chiarimenti",
+        "tenderOutline": "Struttura della gara"
       },
       "failed": {
         "title": "Review failed",
@@ -1249,7 +1252,8 @@
         "showPreview": "Show preview",
         "showFullText": "Show full text",
         "pageLabel": "Page",
-        "verificationFooter": "Always verify against the original PDF. Evidence excerpts are the source of truth."
+        "verificationFooter": "Always verify against the original PDF. Evidence excerpts are the source of truth.",
+        "find": "Trova"
       },
       "clarifications": {
         "categories": {
@@ -1307,6 +1311,13 @@
       },
       "support": {
         "emailRequestLine": "Email Request Line"
+      },
+      "nextActionWhy": {
+        "clarifications": "Risolvi presto i punti aperti per ridurre il rischio di gara.",
+        "risks": "Valuta impatto e mitigazione prima di impegnarti.",
+        "outline": "Usa la struttura per stimare lo sforzo e assegnare i responsabili.",
+        "blockers": "Conferma i requisiti obbligatori prima di investire nella risposta.",
+        "source": "Verifica le regole di presentazione direttamente nel testo di gara."
       }
     },
     "account": {

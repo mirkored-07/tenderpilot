@@ -1095,7 +1095,8 @@
         "printDialogFailed": "Could not open the print dialog. Please try again.",
         "bidPackExportFailed": "Could not export the Bid Pack. Please try again.",
         "exportCsvFailed": "Could not export {type} CSV. Please try again.",
-        "teamDecisionSaveFailed": "Could not save team decision. Please try again."
+        "teamDecisionSaveFailed": "Could not save team decision. Please try again.",
+        "resultsNotReadyAfterComplete": "The tender review completed, but the results are not available yet. Refresh this page in a moment or reopen the tender from your list."
       },
       "progress": {
         "needsAttentionTitle": "Something needs attention",
@@ -1290,7 +1291,9 @@
         "strategicRisks": "Strategic risks",
         "noStrategicRisks": "No strategic risks detected.",
         "immediateActions": "Immediate actions",
-        "noActions": "No immediate actions suggested."
+        "noActions": "No immediate actions suggested.",
+        "clarifications": "Clarifications",
+        "tenderOutline": "Tender outline"
       },
       "failed": {
         "title": "Review failed",
@@ -1332,7 +1335,8 @@
         "verificationFooter": "Always verify against the original PDF. Evidence excerpts are the source of truth.",
         "matchFor": "Match for:",
         "bestEffortPointer": "This view highlights a best-effort match in the extracted source text. Use it as a pointer only: locate the same clause in the original PDF, search the phrase, and verify the exact wording and formatting.",
-        "exactMatchNotFound": "Exact match not found in extracted text. OCR and layout differences are common. Use the evidence snippet above and search the phrase in the original PDF."
+        "exactMatchNotFound": "Exact match not found in extracted text. OCR and layout differences are common. Use the evidence snippet above and search the phrase in the original PDF.",
+        "find": "Find"
       },
       "clarifications": {
         "categories": {
@@ -1390,6 +1394,13 @@
       },
       "support": {
         "emailRequestLine": "Email Request Line"
+      },
+      "nextActionWhy": {
+        "clarifications": "Resolve unknowns early to reduce bid risk.",
+        "risks": "Validate impact and mitigation before committing.",
+        "outline": "Use the outline to estimate effort and assign owners.",
+        "blockers": "Confirm mandatory requirements before investing in the response.",
+        "source": "Verify submission rules directly in the tender text."
       }
     },
     "account": {

@@ -1095,7 +1095,8 @@
         "printDialogFailed": "Could not open the print dialog. Please try again.",
         "bidPackExportFailed": "Could not export the Bid Pack. Please try again.",
         "exportCsvFailed": "Could not export {type} CSV. Please try again.",
-        "teamDecisionSaveFailed": "Could not save team decision. Please try again."
+        "teamDecisionSaveFailed": "Could not save team decision. Please try again.",
+        "resultsNotReadyAfterComplete": "L’analyse de l’appel d’offres est terminée, mais les résultats ne sont pas encore disponibles. Actualisez cette page dans un instant ou rouvrez l’appel d’offres depuis votre liste."
       },
       "progress": {
         "needsAttentionTitle": "Something needs attention",
@@ -1210,7 +1211,9 @@
         "strategicRisks": "Strategic risks",
         "noStrategicRisks": "No strategic risks detected.",
         "immediateActions": "Immediate actions",
-        "noActions": "No immediate actions suggested."
+        "noActions": "No immediate actions suggested.",
+        "clarifications": "Clarifications",
+        "tenderOutline": "Structure de l’appel d’offres"
       },
       "failed": {
         "title": "Review failed",
@@ -1249,7 +1252,8 @@
         "showPreview": "Show preview",
         "showFullText": "Show full text",
         "pageLabel": "Page",
-        "verificationFooter": "Always verify against the original PDF. Evidence excerpts are the source of truth."
+        "verificationFooter": "Always verify against the original PDF. Evidence excerpts are the source of truth.",
+        "find": "Trouver"
       },
       "clarifications": {
         "categories": {
@@ -1307,6 +1311,13 @@
       },
       "support": {
         "emailRequestLine": "Email Request Line"
+      },
+      "nextActionWhy": {
+        "clarifications": "Résolvez les points ouverts tôt pour réduire le risque de réponse.",
+        "risks": "Validez l’impact et l’atténuation avant de vous engager.",
+        "outline": "Utilisez la structure pour estimer l’effort et attribuer les responsables.",
+        "blockers": "Confirmez les exigences obligatoires avant d’investir dans la réponse.",
+        "source": "Vérifiez directement les règles de soumission dans le texte de l’appel d’offres."
       }
     },
     "account": {

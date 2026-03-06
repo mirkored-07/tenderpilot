@@ -401,6 +401,14 @@ export default function DashboardPage() {
 
 
       const deadlineText = meta?.deadline_override ? String(meta.deadline_override) : extractedDeadlineText;
+      const decisionLabel =
+        bucket === "go"
+          ? t("app.decision.go")
+          : bucket === "hold"
+            ? t("app.decision.hold")
+            : bucket === "no-go"
+              ? t("app.decision.noGo")
+              : "";
 
       const dueSoon = hasValidDeadline ? daysUntil(deadline as Date, now) : null;
       const missingDeadline = !hasValidDeadline;
@@ -418,6 +426,7 @@ export default function DashboardPage() {
         job,
         displayName,
         decisionText,
+        decisionLabel,
         decisionBucket: bucket,
         deadlineText,
         deadline: deadline ? (deadline as Date).toISOString() : null,
@@ -1539,7 +1548,7 @@ return {
                                 {r.displayName}
                               </Link>
                               <p className="mt-1 text-xs text-muted-foreground">
-                                {r.missingDecision ? t("app.dashboard.labels.decisionMissing") : r.decisionText || t("app.dashboard.labels.decisionUnknown")}
+                                {r.missingDecision ? t("app.dashboard.labels.decisionMissing") : r.decisionLabel || t("app.dashboard.labels.decisionUnknown")}
                                 {" • "}
                                 {r.missingDeadline ? t("app.dashboard.labels.deadlineMissing") : r.deadlineText || t("app.dashboard.labels.deadlineUnknown")}
                                 {" • "}

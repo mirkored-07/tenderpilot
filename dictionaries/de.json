@@ -1095,7 +1095,8 @@
         "printDialogFailed": "Could not open the print dialog. Please try again.",
         "bidPackExportFailed": "Could not export the Bid Pack. Please try again.",
         "exportCsvFailed": "Could not export {type} CSV. Please try again.",
-        "teamDecisionSaveFailed": "Could not save team decision. Please try again."
+        "teamDecisionSaveFailed": "Could not save team decision. Please try again.",
+        "resultsNotReadyAfterComplete": "Die Ausschreibungsprüfung ist abgeschlossen, aber die Ergebnisse sind noch nicht verfügbar. Aktualisiere die Seite in einem Moment oder öffne die Ausschreibung erneut aus deiner Liste."
       },
       "progress": {
         "needsAttentionTitle": "Something needs attention",
@@ -1210,7 +1211,9 @@
         "strategicRisks": "Strategic risks",
         "noStrategicRisks": "No strategic risks detected.",
         "immediateActions": "Immediate actions",
-        "noActions": "No immediate actions suggested."
+        "noActions": "No immediate actions suggested.",
+        "clarifications": "Klärungen",
+        "tenderOutline": "Ausschreibungsstruktur"
       },
       "failed": {
         "title": "Review failed",
@@ -1249,7 +1252,8 @@
         "showPreview": "Show preview",
         "showFullText": "Show full text",
         "pageLabel": "Page",
-        "verificationFooter": "Always verify against the original PDF. Evidence excerpts are the source of truth."
+        "verificationFooter": "Always verify against the original PDF. Evidence excerpts are the source of truth.",
+        "find": "Finden"
       },
       "clarifications": {
         "categories": {
@@ -1307,6 +1311,13 @@
       },
       "support": {
         "emailRequestLine": "Email Request Line"
+      },
+      "nextActionWhy": {
+        "clarifications": "Offene Punkte früh klären, um das Angebotsrisiko zu senken.",
+        "risks": "Auswirkungen und Gegenmaßnahmen vor einer Zusage prüfen.",
+        "outline": "Nutze die Struktur, um Aufwand abzuschätzen und Verantwortliche zuzuweisen.",
+        "blockers": "Pflichtanforderungen bestätigen, bevor du weiter in die Antwort investierst.",
+        "source": "Einreichungsregeln direkt im Ausschreibungstext prüfen."
       }
     },
     "account": {

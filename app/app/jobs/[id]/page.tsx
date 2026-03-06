@@ -249,17 +249,23 @@ function buildRationaleDrivers(args: {
   const confidenceLabel = tx ? tx("app.exports.tenderBrief.meta.confidence") : "Confidence";
 
   const out: string[] = [];
+  const pickText = (key: string, fallback: string, vars?: Record<string, string | number>) => {
+    if (!tx) return fallback;
+    const value = tx(key, vars);
+    return value && value !== key ? value : fallback;
+  };
+
   out.push(`${coverageLabel}: ${String(args.coverage).toUpperCase()}`);
   out.push(`${confidenceLabel}: ${String(args.confidence).toUpperCase()}`);
 
-  // One truthful “driver” line (re-uses existing copy keys if available)
-  if (args.mustItems?.length) out.push(tx ? tx("app.review.drivers.hold") : "Decision drivers: mandatory requirements and submission rules that can disqualify you.");
-  else if (args.risksCount >= 3) out.push(tx ? tx("app.review.drivers.caution") : "Decision drivers: risks requiring validation before committing.");
-  else out.push(tx ? tx("app.review.drivers.go") : "No mandatory blockers detected in eligibility and submission requirements.");
+  // One truthful “driver” line (re-uses existing copy keys where available)
+  if (args.mustItems?.length) out.push(pickText("app.review.drivers.hold", "Decision drivers: mandatory requirements and submission rules that can disqualify you."));
+  else if (args.risksCount >= 3) out.push(pickText("app.review.drivers.caution", "Decision drivers: risks requiring validation before committing."));
+  else out.push(pickText("app.review.drivers.go", "No mandatory blockers detected in eligibility and submission requirements."));
 
   // Counts (use existing metric keys where possible)
-  out.push(tx ? tx("app.review.metrics.risks", { count: args.risksCount }) : `${args.risksCount} risks`);
-  out.push(tx ? tx("app.review.metrics.questions", { count: args.clarificationsCount }) : `${args.clarificationsCount} questions`);
+  out.push(pickText("app.review.metrics.risks", `${args.risksCount} risks`, { count: args.risksCount }));
+  out.push(pickText("app.review.metrics.questions", `${args.clarificationsCount} questions`, { count: args.clarificationsCount }));
 
   return out.filter((x) => String(x ?? "").trim()).slice(0, 5);
 }
@@ -1645,9 +1651,7 @@ setWorkItems((wiRows as any[]) ?? []);
 
           doneWithoutResult += 1;
           if (doneWithoutResult >= DONE_GRACE_POLLS) {
-            setError(
-              "The job completed, but the results are not available yet. Please refresh the page in a moment or re-open the job from your jobs list."
-            );
+            setError(t("app.review.errors.resultsNotReadyAfterComplete"));
             stopPolling();
             return;
           }

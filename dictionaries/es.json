@@ -1095,7 +1095,8 @@
         "printDialogFailed": "Could not open the print dialog. Please try again.",
         "bidPackExportFailed": "Could not export the Bid Pack. Please try again.",
         "exportCsvFailed": "Could not export {type} CSV. Please try again.",
-        "teamDecisionSaveFailed": "Could not save team decision. Please try again."
+        "teamDecisionSaveFailed": "Could not save team decision. Please try again.",
+        "resultsNotReadyAfterComplete": "La revisión de la licitación terminó, pero los resultados aún no están disponibles. Actualiza esta página en un momento o vuelve a abrir la licitación desde tu lista."
       },
       "progress": {
         "needsAttentionTitle": "Something needs attention",
@@ -1210,7 +1211,9 @@
         "strategicRisks": "Strategic risks",
         "noStrategicRisks": "No strategic risks detected.",
         "immediateActions": "Immediate actions",
-        "noActions": "No immediate actions suggested."
+        "noActions": "No immediate actions suggested.",
+        "clarifications": "Aclaraciones",
+        "tenderOutline": "Estructura de la licitación"
       },
       "failed": {
         "title": "Review failed",
@@ -1249,7 +1252,8 @@
         "showPreview": "Show preview",
         "showFullText": "Show full text",
         "pageLabel": "Page",
-        "verificationFooter": "Always verify against the original PDF. Evidence excerpts are the source of truth."
+        "verificationFooter": "Always verify against the original PDF. Evidence excerpts are the source of truth.",
+        "find": "Buscar"
       },
       "clarifications": {
         "categories": {
@@ -1307,6 +1311,13 @@
       },
       "support": {
         "emailRequestLine": "Email Request Line"
+      },
+      "nextActionWhy": {
+        "clarifications": "Resuelve pronto los puntos abiertos para reducir el riesgo de la licitación.",
+        "risks": "Valida el impacto y la mitigación antes de comprometerte.",
+        "outline": "Usa la estructura para estimar el esfuerzo y asignar responsables.",
+        "blockers": "Confirma los requisitos obligatorios antes de invertir en la respuesta.",
+        "source": "Verifica las reglas de presentación directamente en el texto de la licitación."
       }
     },
     "account": {
