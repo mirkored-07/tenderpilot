@@ -25,6 +25,12 @@ function formatPlanStatus(raw: string | null | undefined, t: (key: string) => st
   const value = String(raw ?? "").trim().toLowerCase();
   if (!value) return t("app.account.billing.statusPending");
   if (value === "active") return t("app.account.billing.statusActive");
+  if (value === "trialing") return t("app.account.billing.statusTrialing");
+  if (value === "past_due") return t("app.account.billing.statusPastDue");
+  if (value === "incomplete") return t("app.account.billing.statusIncomplete");
+  if (value === "unpaid") return t("app.account.billing.statusUnpaid");
+  if (value === "incomplete_expired") return t("app.account.billing.statusExpired");
+  if (value === "canceled" || value === "cancelled") return t("app.account.billing.statusCanceled");
   return value.replaceAll("_", " ");
 }
 
@@ -49,6 +55,12 @@ export function AccountBillingCard({
   const isPro = billing?.planTier === "pro";
   const creditsBalance = Number(billing?.credits ?? 0);
   const hasCreditsForFreeExports = !isPro && Number.isFinite(creditsBalance) && creditsBalance > 0;
+  const normalizedStatus = String(billing?.planStatus ?? "").trim().toLowerCase();
+  const planNeedsAttention =
+    isPro &&
+    Boolean(normalizedStatus) &&
+    normalizedStatus !== "active" &&
+    normalizedStatus !== "trialing";
 
   return (
     <Card id="billing" className="rounded-2xl">
@@ -68,6 +80,13 @@ export function AccountBillingCard({
             {billingNotice.text}
           </div>
         )}
+
+        {planNeedsAttention ? (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+            <p className="font-medium">{t("app.account.billing.statusNeedsAttentionTitle")}</p>
+            <p className="mt-1 text-xs text-amber-900/80">{t("app.account.billing.statusNeedsAttentionBody")}</p>
+          </div>
+        ) : null}
 
         {isPro && typeof billing?.credits === "number" && billing.credits < 1 ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
@@ -151,12 +170,7 @@ export function AccountBillingCard({
 
         {isPro ? (
           <div className="flex flex-col gap-2 sm:flex-row">
-            <Button
-              type="button"
-              className="rounded-full"
-              onClick={onOpenBillingPortal}
-              disabled={billingBusy}
-            >
+            <Button type="button" className="rounded-full" onClick={onOpenBillingPortal} disabled={billingBusy}>
               {t("app.account.billing.manageBilling")}
             </Button>
 
@@ -171,7 +185,7 @@ export function AccountBillingCard({
             </Button>
           </div>
         ) : (
-          <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <Button
               type="button"
               className="rounded-full"
@@ -190,6 +204,18 @@ export function AccountBillingCard({
             >
               {t("app.account.billing.upgradeAnnual")}
             </Button>
+
+            {billing?.hasCustomer ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="rounded-full"
+                onClick={onOpenBillingPortal}
+                disabled={billingBusy}
+              >
+                {t("app.account.billing.manageBilling")}
+              </Button>
+            ) : null}
 
             {billing?.hasCustomer ? (
               <Button

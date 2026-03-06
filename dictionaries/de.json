@@ -1430,9 +1430,17 @@
         "exportAccessPaid": "In Pro enthalten",
         "exportAccessCredit": "Mit Credit nutzbar",
         "exportAccessCreditsAvailable": "Verfügbar, solange Credits vorhanden sind",
-        "exportAccessLocked": "Upgrade zum Freischalten",
-        "paidPlanHelp": "Aktives Pro enthält Exporte auch dann, wenn Ihr aktueller Credit-Saldo 0 ist. Credits werden weiterhin für neue Reviews verwendet.",
-        "freePlanHelp": "Free kann exportieren, solange Credits vorhanden sind. Wechseln Sie zu Pro für monatlich wiederkehrende Credits und enthaltene Exporte."
+        "exportAccessLocked": "Auf Pro upgraden, um Exporte freizuschalten",
+        "paidPlanHelp": "Pro enthält wiederkehrende monatliche Credits und Exporte. Wenn die Abrechnung nach Checkout oder Verlängerung veraltet wirkt, synchronisiere sie hier erneut.",
+        "freePlanHelp": "Free kann exportieren, solange Credits verfügbar sind. Sobald die Credits 0 erreichen, werden Exporte gesperrt, bis du auf Pro wechselst.",
+        "statusTrialing": "Testphase",
+        "statusPastDue": "überfällig",
+        "statusIncomplete": "unvollständig",
+        "statusUnpaid": "unbezahlt",
+        "statusExpired": "abgelaufen",
+        "statusCanceled": "gekündigt",
+        "statusNeedsAttentionTitle": "Abrechnungsstatus benötigt Aufmerksamkeit",
+        "statusNeedsAttentionBody": "Dein Stripe-Abonnement ist derzeit nicht vollständig aktiv. Öffne die Abrechnung, prüfe Zahlungsdaten oder Abo-Änderungen und synchronisiere danach hier erneut."
       },
       "help": {
         "title": "Hilfe",
@@ -1471,7 +1479,7 @@
         "billingSyncedFree": "Abrechnung synchronisiert. Sie sind im Free-Plan.",
         "couldNotSyncBilling": "Abrechnung konnte nicht synchronisiert werden. Erneut versuchen.",
         "couldNotStartCheckout": "Checkout konnte nicht gestartet werden. Stripe-Env prüfen und erneut versuchen.",
-        "couldNotOpenPortal": "Billing-Portal konnte nicht geöffnet werden. Erst upgraden.",
+        "couldNotOpenPortal": "Das Abrechnungsportal konnte nicht geöffnet werden. Synchronisiere die Abrechnung oder upgrade zuerst und versuche es dann erneut.",
         "allTenderDataDeleted": "Alle Ausschreibungsdaten gelöscht.",
         "couldNotDeleteTenderData": "Ausschreibungsdaten konnten nicht gelöscht werden. Erneut versuchen.",
         "couldNotDeleteAccount": "Konto konnte nicht gelöscht werden. Erneut versuchen."

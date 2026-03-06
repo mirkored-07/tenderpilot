@@ -36,15 +36,41 @@ export async function POST(req: NextRequest) {
 
     if (profErr) throw profErr;
 
-    const customerId = prof?.stripe_customer_id;
+    let customerId = prof?.stripe_customer_id;
     if (!customerId) {
       return NextResponse.json(
-        { error: "no_stripe_customer", hint: "Upgrade first." },
+        { error: "no_stripe_customer", hint: "Upgrade first or sync billing." },
         { status: 400 }
       );
     }
 
     const stripe = getStripe();
+    try {
+      await stripe.customers.retrieve(customerId);
+    } catch (err: any) {
+      if (err?.code === "resource_missing") {
+        const clear = await admin
+          .from("profiles")
+          .update({
+            stripe_customer_id: null,
+            stripe_subscription_id: null,
+            stripe_price_id: null,
+            plan_tier: "free",
+            plan_status: null,
+            current_period_end: null,
+          })
+          .eq("id", user.id);
+
+        if (clear.error) throw clear.error;
+
+        return NextResponse.json(
+          { error: "no_stripe_customer", hint: "Upgrade first or sync billing." },
+          { status: 400 }
+        );
+      }
+      throw err;
+    }
+
     const base = appUrl(req);
 
     const session = await stripe.billingPortal.sessions.create({

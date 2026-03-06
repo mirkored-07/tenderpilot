@@ -1503,11 +1503,19 @@
         "exportAccessLabel": "Export access",
         "exportAccessPaid": "Included with Pro",
         "exportAccessCredit": "Use a credit",
-        "paidPlanHelp": "Active Pro includes exports even when your current credit balance is 0. Credits are still used for new reviews.",
-        "freePlanHelp": "Free can export while credits remain. Upgrade to Pro for recurring monthly credits and included exports.",
+        "paidPlanHelp": "Pro includes recurring monthly credits and exports. If billing looks stale after checkout or renewal, sync billing here.",
+        "freePlanHelp": "Free can export while credits remain. When credits reach 0, exports lock until you upgrade to Pro.",
         "statusPending": "pending sync",
         "exportAccessCreditsAvailable": "Available while credits remain",
-        "exportAccessLocked": "Upgrade to unlock"
+        "exportAccessLocked": "Upgrade to Pro to unlock",
+        "statusTrialing": "trialing",
+        "statusPastDue": "past due",
+        "statusIncomplete": "incomplete",
+        "statusUnpaid": "unpaid",
+        "statusExpired": "expired",
+        "statusCanceled": "canceled",
+        "statusNeedsAttentionTitle": "Billing status needs attention",
+        "statusNeedsAttentionBody": "Your Stripe subscription is not fully active right now. Open billing to review payment details or subscription changes, then sync billing here."
       },
       "help": {
         "title": "Help",
@@ -1546,7 +1554,7 @@
         "billingSyncedFree": "Billing synced (free).",
         "couldNotSyncBilling": "Couldn’t sync billing. Try again.",
         "couldNotStartCheckout": "Couldn’t start checkout. Check Stripe env vars and try again.",
-        "couldNotOpenPortal": "Couldn’t open billing portal. Try upgrading first.",
+        "couldNotOpenPortal": "Couldn’t open billing portal. Sync billing or upgrade, then try again.",
         "allTenderDataDeleted": "All tender data deleted.",
         "couldNotDeleteTenderData": "Couldn’t delete your tender data. Try again.",
         "couldNotDeleteAccount": "Couldn’t delete your account. Try again."

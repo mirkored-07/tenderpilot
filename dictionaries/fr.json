@@ -1430,9 +1430,17 @@
         "exportAccessPaid": "Inclus avec Pro",
         "exportAccessCredit": "Utiliser un crédit",
         "exportAccessCreditsAvailable": "Disponible tant qu’il reste des crédits",
-        "exportAccessLocked": "Passez à Pro pour débloquer",
-        "paidPlanHelp": "Le plan Pro actif inclut les exports même si votre solde actuel est de 0. Les crédits sont toujours utilisés pour les nouvelles revues.",
-        "freePlanHelp": "Le plan Free peut exporter tant qu’il reste des crédits. Passez à Pro pour des crédits mensuels récurrents et les exports inclus."
+        "exportAccessLocked": "Passez à Pro pour débloquer les exports",
+        "paidPlanHelp": "Pro inclut des crédits mensuels récurrents et les exports. Si la facturation semble en retard après le checkout ou le renouvellement, synchronisez-la ici.",
+        "freePlanHelp": "Free peut exporter tant qu’il reste des crédits. Quand le solde atteint 0, les exports se bloquent jusqu’au passage à Pro.",
+        "statusTrialing": "essai",
+        "statusPastDue": "en retard",
+        "statusIncomplete": "incomplet",
+        "statusUnpaid": "impayé",
+        "statusExpired": "expiré",
+        "statusCanceled": "annulé",
+        "statusNeedsAttentionTitle": "Le statut de facturation demande une action",
+        "statusNeedsAttentionBody": "Votre abonnement Stripe n’est pas entièrement actif pour le moment. Ouvrez la facturation pour vérifier le paiement ou les changements d’abonnement, puis synchronisez ici."
       },
       "help": {
         "title": "Aide",
@@ -1471,7 +1479,7 @@
         "billingSyncedFree": "Facturation synchronisée. Vous êtes sur le plan Free.",
         "couldNotSyncBilling": "Impossible de synchroniser. Réessayez.",
         "couldNotStartCheckout": "Impossible de démarrer le paiement. Vérifiez les variables Stripe.",
-        "couldNotOpenPortal": "Impossible d’ouvrir le portail. Essayez d’abord de passer à un plan payant.",
+        "couldNotOpenPortal": "Impossible d’ouvrir le portail de facturation. Synchronisez la facturation ou passez à une offre supérieure, puis réessayez.",
         "allTenderDataDeleted": "Toutes les données ont été supprimées.",
         "couldNotDeleteTenderData": "Impossible de supprimer les données. Réessayez.",
         "couldNotDeleteAccount": "Impossible de supprimer le compte. Réessayez."

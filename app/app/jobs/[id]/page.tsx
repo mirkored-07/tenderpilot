@@ -13,15 +13,14 @@ import { track } from "@/lib/telemetry";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAppI18n } from "../../_components/app-i18n-provider";
 import { JobPageFeedback } from "./_components/job-page-feedback";
 import { JobPageHeader } from "./_components/job-page-header";
-import { FailedStatePanel } from "./_components/job-status-panels";
 import { JobPageReferencePanels } from "./_components/job-page-reference-panels";
+import { JobPageSourceViewer } from "./_components/job-page-source-viewer";
+import { FailedStatePanel } from "./_components/job-status-panels";
 
 type JobStatus = "queued" | "processing" | "done" | "failed";
 
@@ -4198,127 +4197,27 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
             }}
             onCloseSourceFocus={() => setSourceFocus(null)}
           />
-          {!showReferenceText ? (
-            <Card className="mt-4 rounded-2xl border-dashed">
-              <CardContent className="p-5">
-                <p className="text-sm font-medium">{t("app.review.source.hiddenTitle")}</p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {t("app.review.source.hiddenBody")}
-                </p>
-                <div className="mt-4 flex flex-wrap items-center gap-2">
-                  <Button className="rounded-full" onClick={() => setShowReferenceText(true)}>
-                    {t("app.review.source.openReferenceText")}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <>
-              <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm font-semibold">{t("app.review.source.searchTitle")}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {t("app.review.source.searchSubtitle")}
-                  </p>
-                </div>
-                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-                  <input
-                    value={sourceQuery}
-                    onChange={(e) => setSourceQuery(e.target.value)}
-                    placeholder={t("app.review.source.searchPhrasePlaceholder")}
-                    className="w-full min-w-[260px] rounded-full border bg-background px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-ring sm:w-[320px]"
-                  />
-                  <Button
-                    type="button"
-                    className="rounded-full"
-                    variant="outline"
-                    onClick={() => {
-                      const q = String(sourceQuery ?? "").trim();
-                      if (!q) return;
-                      openTabAndScroll();
-                      window.setTimeout(() => onJumpToSource(q), 0);
-                    }}
-                    disabled={!extractedText}
-                  >
-                    {t("app.common.find")}
-                  </Button>
-                </div>
-              </div>
 
-
-          {(() => {
-            const fullText = extractedText || "";
-            const isLarge = fullText.length > SOURCE_TEXT_PREVIEW_LIMIT;
-
-            const visibleText = !isLarge || showFullSourceText ? fullText : fullText.slice(0, SOURCE_TEXT_PREVIEW_LIMIT);
-
-            return (
-              <>
-                <ScrollArea className="mt-4 h-[520px] rounded-2xl border bg-muted/20">
-				  <div className="w-full overflow-x-auto">
-					<pre
-					  className="min-w-max whitespace-pre p-4 text-xs leading-relaxed"
-					  style={{ scrollbarGutter: "stable both-edges" }}
-					>
-						  {(() => {
-							const raw = visibleText || "";
-							if (!raw) return t("app.review.source.noSourceTextYet");
-
-							const hs = sourceFocus?.highlightStart;
-							const he = sourceFocus?.highlightEnd;
-
-							// If we do not have reliable highlight bounds, always render the raw source text.
-							if (hs === null || hs === undefined || he === null || he === undefined) {
-							  return raw;
-							}
-
-							const start = Math.max(0, Math.min(hs, raw.length));
-							const end = Math.max(start, Math.min(he, raw.length));
-
-							// Degenerate bounds: fall back to raw text.
-							if (end <= start) return raw;
-
-							const before = raw.slice(0, start);
-							const mid = raw.slice(start, end);
-							const after = raw.slice(end);
-
-							return (
-							  <>
-								{before}
-								<span
-								  ref={sourceAnchorRef}
-								  className="bg-yellow-200/50 border-l-4 border-yellow-500 px-2 py-1 rounded-md"
-								>
-								  {mid}
-								</span>
-								{after}
-							  </>
-							);
-						  })()}
-					</pre>
-				  </div>
-				</ScrollArea>
-
-
-
-                {isLarge && (
-                  <div className="mt-2 flex justify-end">
-                    <Button variant="ghost" size="sm" onClick={() => setShowFullSourceText((v) => !v)}>
-                      {showFullSourceText ? t("app.review.source.showPreview") : t("app.review.source.showFullText")}
-                    </Button>
-                  </div>
-                )}
-              </>
-            );
-          })()}
-
-            </>
-          )}
-
-          <Separator className="my-4" />
-          <p className="text-xs text-muted-foreground">
-            {t("app.review.source.verificationFooter")}
-          </p>
+          <JobPageSourceViewer
+            t={t}
+            showReferenceText={showReferenceText}
+            onOpenReferenceText={() => setShowReferenceText(true)}
+            sourceQuery={sourceQuery}
+            onSourceQueryChange={setSourceQuery}
+            onFindSource={() => {
+              const q = String(sourceQuery ?? "").trim();
+              if (!q) return;
+              openTabAndScroll();
+              window.setTimeout(() => onJumpToSource(q), 0);
+            }}
+            canFindSource={Boolean(extractedText)}
+            sourceText={String(extractedText ?? "")}
+            previewLimit={SOURCE_TEXT_PREVIEW_LIMIT}
+            showFullSourceText={showFullSourceText}
+            onToggleShowFullSourceText={() => setShowFullSourceText((v) => !v)}
+            sourceFocus={sourceFocus}
+            sourceAnchorRef={sourceAnchorRef}
+          />
         </TabsContent>
       </Tabs>
 

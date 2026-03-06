@@ -1430,9 +1430,17 @@
         "exportAccessPaid": "Incluido con Pro",
         "exportAccessCredit": "Usa un crédito",
         "exportAccessCreditsAvailable": "Disponible mientras queden créditos",
-        "exportAccessLocked": "Mejora para desbloquearlo",
-        "paidPlanHelp": "Pro activo incluye exportaciones incluso cuando tu saldo actual es 0. Los créditos se siguen usando para nuevas revisiones.",
-        "freePlanHelp": "Free puede exportar mientras queden créditos. Mejora a Pro para tener créditos mensuales recurrentes y exportaciones incluidas."
+        "exportAccessLocked": "Pásate a Pro para desbloquear las exportaciones",
+        "paidPlanHelp": "Pro incluye créditos mensuales recurrentes y exportaciones. Si la facturación parece desactualizada después del checkout o la renovación, sincronízala aquí.",
+        "freePlanHelp": "Free puede exportar mientras queden créditos. Cuando los créditos llegan a 0, las exportaciones se bloquean hasta que pases a Pro.",
+        "statusTrialing": "prueba",
+        "statusPastDue": "vencido",
+        "statusIncomplete": "incompleto",
+        "statusUnpaid": "impagado",
+        "statusExpired": "caducado",
+        "statusCanceled": "cancelado",
+        "statusNeedsAttentionTitle": "El estado de facturación requiere atención",
+        "statusNeedsAttentionBody": "Tu suscripción de Stripe no está completamente activa ahora mismo. Abre la facturación para revisar el pago o los cambios de suscripción y luego sincroniza aquí."
       },
       "help": {
         "title": "Ayuda",
@@ -1471,7 +1479,7 @@
         "billingSyncedFree": "Facturación sincronizada. Estás en el plan Free.",
         "couldNotSyncBilling": "No se pudo sincronizar. Reintenta.",
         "couldNotStartCheckout": "No se pudo iniciar el pago. Revisa variables Stripe.",
-        "couldNotOpenPortal": "No se pudo abrir el portal. Prueba primero a mejorar el plan.",
+        "couldNotOpenPortal": "No se pudo abrir el portal de facturación. Sincroniza la facturación o actualiza el plan y vuelve a intentarlo.",
         "allTenderDataDeleted": "Todos los datos eliminados.",
         "couldNotDeleteTenderData": "No se pudieron borrar los datos. Reintenta.",
         "couldNotDeleteAccount": "No se pudo eliminar la cuenta. Reintenta."

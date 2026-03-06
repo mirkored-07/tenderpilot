@@ -1430,9 +1430,17 @@
         "exportAccessPaid": "Incluso con Pro",
         "exportAccessCredit": "Usa un credito",
         "exportAccessCreditsAvailable": "Disponibile finché restano crediti",
-        "exportAccessLocked": "Fai upgrade per sbloccarlo",
-        "paidPlanHelp": "Pro attivo include gli export anche quando il saldo crediti attuale è 0. I crediti vengono comunque usati per nuove review.",
-        "freePlanHelp": "Free può esportare finché restano crediti. Passa a Pro per crediti mensili ricorrenti e export inclusi."
+        "exportAccessLocked": "Passa a Pro per sbloccare le esportazioni",
+        "paidPlanHelp": "Pro include crediti mensili ricorrenti ed esportazioni. Se la fatturazione sembra non aggiornata dopo il checkout o il rinnovo, sincronizzala qui.",
+        "freePlanHelp": "Free può esportare finché restano crediti. Quando i crediti arrivano a 0, le esportazioni si bloccano finché non passi a Pro.",
+        "statusTrialing": "prova",
+        "statusPastDue": "in ritardo",
+        "statusIncomplete": "incompleto",
+        "statusUnpaid": "non pagato",
+        "statusExpired": "scaduto",
+        "statusCanceled": "annullato",
+        "statusNeedsAttentionTitle": "Lo stato della fatturazione richiede attenzione",
+        "statusNeedsAttentionBody": "Il tuo abbonamento Stripe non è pienamente attivo in questo momento. Apri la fatturazione per controllare i dati di pagamento o le modifiche all'abbonamento, poi sincronizza qui."
       },
       "help": {
         "title": "Aiuto",
@@ -1471,7 +1479,7 @@
         "billingSyncedFree": "Fatturazione sincronizzata. Sei nel piano Free.",
         "couldNotSyncBilling": "Impossibile sincronizzare. Riprova.",
         "couldNotStartCheckout": "Impossibile avviare il checkout. Verifica le env Stripe e riprova.",
-        "couldNotOpenPortal": "Impossibile aprire il portale fatturazione. Prova prima l’upgrade.",
+        "couldNotOpenPortal": "Impossibile aprire il portale di fatturazione. Sincronizza la fatturazione o passa a un piano superiore, poi riprova.",
         "allTenderDataDeleted": "Tutti i dati gara eliminati.",
         "couldNotDeleteTenderData": "Impossibile eliminare i dati gara. Riprova.",
         "couldNotDeleteAccount": "Impossibile eliminare l’account. Riprova."
