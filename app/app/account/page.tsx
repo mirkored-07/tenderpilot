@@ -15,6 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { useTheme } from "next-themes";
 import { X, Pencil } from "lucide-react";
 import { useAppI18n } from "../_components/app-i18n-provider";
+import { AccountBillingCard } from "./_components/account-billing-card";
 
 type ProfileRow = {
   id: string;
@@ -1530,180 +1531,15 @@ export default function AccountPage() {
 
         {/* Column C */}
         <div className="space-y-6 lg:col-span-4">
-          <Card id="billing" className="rounded-2xl">
-            <CardHeader className="pb-3">
-              <CardTitle>{t("app.account.billing.title")}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {billingNotice && (
-                <div
-                  className={cn(
-                    "rounded-2xl border p-3 text-sm",
-                    billingNotice.kind === "ok"
-                      ? "border-emerald-200 bg-emerald-50 text-emerald-900"
-                      : "border-red-200 bg-red-50 text-red-800"
-                  )}
-                >
-                  {billingNotice.text}
-                </div>
-              )}
-
-              {billing?.planTier === "pro" && typeof billing?.credits === "number" && billing.credits < 1 ? (
-                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-                  <p className="font-medium">{t("app.account.billing.creditsNotUpdatedTitle")}</p>
-                  <p className="mt-1 text-xs text-amber-900/80">
-                    Your plan looks active, but your credit balance is 0. This usually means the Stripe webhook
-                    couldn’t grant monthly credits (missing DB schema or webhook not configured).
-                  </p>
-                  <div className="mt-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="rounded-full"
-                      onClick={() => syncBillingNow()}
-                      disabled={billingBusy}
-                    >
-                      Sync billing
-                    </Button>
-                  </div>
-                </div>
-              ) : null}
-
-              <div className="flex items-center justify-between gap-3">
-                <p className="text-sm">
-                  <span className="text-muted-foreground">{t("app.account.billing.current")}</span>{" "}
-                  <span className="font-medium">
-                    {billing?.planTier === "pro" ? "Pro" : "Free"}
-                  </span>
-                </p>
-                <Badge variant="secondary" className="rounded-full">
-                  {billing?.planTier === "pro"
-				  ? billing?.planStatus
-					? String(billing.planStatus).replaceAll("_", " ")
-					: t("app.account.billing.statusActive")
-				  : t("app.account.billing.statusFree")}
-                </Badge>
-              </div>
-
-              <div className="rounded-2xl border bg-muted/20 p-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      {t("app.account.billing.creditsBalance")}
-                    </p>
-                    <p className="mt-1 text-2xl font-semibold">
-                      {billing?.credits ?? "–"}
-                    </p>
-                  </div>
-
-                  {billing?.periodEnd ? (
-                    <div className="text-right">
-                      <p className="text-xs text-muted-foreground">
-                        {t("app.account.billing.periodEnds")}
-                      </p>
-                      <p className="mt-1 text-sm font-medium">
-                        {new Date(billing.periodEnd).toLocaleDateString()}
-                      </p>
-                    </div>
-                  ) : null}
-                </div>
-
-                <Separator className="my-4" />
-
-                <p className="text-xs text-muted-foreground">{t("app.account.billing.usage")}</p>
-                <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  <div>
-                    <p className="text-sm font-semibold">
-                      {usage ? usage.totalJobs : "–"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{t("app.account.billing.tenders")}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold">
-                      {usage ? usage.doneJobs : "–"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{t("app.account.billing.processed")}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold">
-                      {usage ? usage.inProgressJobs : "–"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{t("app.account.billing.inProgress")}</p>
-                  </div>
-                </div>
-              </div>
-
-              {billing?.planTier === "pro" ? (
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <Button
-                    type="button"
-                    className="rounded-full"
-                    onClick={openBillingPortal}
-                    disabled={billingBusy}
-                  >
-                    Manage billing
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="rounded-full"
-                    onClick={() => startCheckout("yearly")}
-                    disabled={billingBusy}
-                  >
-                    Change plan
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="rounded-full"
-                    onClick={() => syncBillingNow()}
-                    disabled={billingBusy}
-                  >
-                    Sync billing
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-2 sm:flex-row">
-                  <Button
-                    type="button"
-                    className="rounded-full"
-                    onClick={() => startCheckout("monthly")}
-                    disabled={billingBusy}
-                  >
-                    Upgrade monthly
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="rounded-full"
-                    onClick={() => startCheckout("yearly")}
-                    disabled={billingBusy}
-                  >
-                    Upgrade annual
-                  </Button>
-
-                  {billing?.hasCustomer ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="rounded-full"
-                      onClick={() => syncBillingNow()}
-                      disabled={billingBusy}
-                    >
-                      Sync billing
-                    </Button>
-                  ) : null}
-                </div>
-              )}
-
-              <p className="text-xs text-muted-foreground">
-                {t("app.account.billing.stripeNote")}
-              </p>
-            </CardContent>
-          </Card>
+          <AccountBillingCard
+            billingNotice={billingNotice}
+            billing={billing}
+            usage={usage}
+            billingBusy={billingBusy}
+            onOpenBillingPortal={openBillingPortal}
+            onStartCheckout={startCheckout}
+            onSyncBilling={() => syncBillingNow()}
+          />
 
           <Card className="rounded-2xl">
             <CardHeader className="pb-3">

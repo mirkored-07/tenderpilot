@@ -1398,7 +1398,14 @@
         "upgradeAnnual": "Upgrade annual",
         "stripeNote": "Subscriptions and invoices are managed via Stripe.",
         "statusActive": "active",
-        "statusFree": "free"
+        "statusFree": "free",
+        "planLabelPro": "Pro",
+        "planLabelFree": "Free",
+        "exportAccessLabel": "Export access",
+        "exportAccessPaid": "Included with Pro",
+        "exportAccessCredit": "Use a credit",
+        "paidPlanHelp": "Active Pro includes exports even when your current credit balance is 0. Credits are used for new reviews.",
+        "freePlanHelp": "Free uses credits one by one. Upgrade to Pro for recurring credits and export access."
       },
       "help": {
         "title": "Help",

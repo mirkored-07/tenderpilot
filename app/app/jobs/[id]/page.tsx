@@ -9,7 +9,6 @@ import { stableRefKey } from "@/lib/bid-workflow/keys";
 import { getJobDisplayName, setJobDisplayName, clearJobDisplayName } from "@/lib/pilot-job-names";
 
 import { track } from "@/lib/telemetry";
-import { hasPaidExportsAccess } from "@/lib/billing-entitlements";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -921,13 +920,6 @@ function normalizeQuestions(raw: any): string[] {
   return [];
 }
 
-function normalizeEvidenceIdList(raw: any): string[] {
-  return Array.isArray(raw)
-    ? raw.map((x: any) => String(x ?? "").trim()).filter(Boolean)
-    : [];
-}
-
-
 type PolicyTriggerUi = {
   key: string;
   impact: string;
@@ -1533,7 +1525,6 @@ const [savingMeta, setSavingMeta] = useState(false);
   // Monetization (free tier): used to gate exports
   const [notice, setNotice] = useState<string | null>(null);
   const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
-  const [planTier, setPlanTier] = useState<"free" | "pro" | null>(null);
   const [creditsLoading, setCreditsLoading] = useState(false);
 
 	const [tab, setTab] = useState<AnalysisTab>("text");
@@ -1689,28 +1680,18 @@ const [savingMeta, setSavingMeta] = useState(false);
           if (uid) {
             const { data: profileRow, error: profErr } = await supabase
               .from("profiles")
-              .select("credits_balance,plan_tier")
+              .select("credits_balance")
               .eq("id", uid)
               .maybeSingle();
             if (profErr) console.warn(profErr);
             const bal = typeof (profileRow as any)?.credits_balance === "number" ? (profileRow as any).credits_balance : 0;
-            const tier = String((profileRow as any)?.plan_tier ?? "free").toLowerCase() === "pro" ? "pro" : "free";
-            if (mountedRef.current) {
-              setCreditsBalance(bal);
-              setPlanTier(tier);
-            }
+            if (mountedRef.current) setCreditsBalance(bal);
           } else {
-            if (mountedRef.current) {
-              setCreditsBalance(0);
-              setPlanTier("free");
-            }
+            if (mountedRef.current) setCreditsBalance(0);
           }
         } catch (e) {
           console.warn("credits_balance load failed", e);
-          if (mountedRef.current) {
-            setCreditsBalance(0);
-            setPlanTier("free");
-          }
+          if (mountedRef.current) setCreditsBalance(0);
         } finally {
           if (mountedRef.current) setCreditsLoading(false);
         }
@@ -2036,9 +2017,8 @@ setWorkItems((wiRows as any[]) ?? []);
 
   const canDownload = useMemo(() => Boolean(job && job.status === "done"), [job]);
   const creditsKnown = typeof creditsBalance === "number";
-  const paidExports = useMemo(() => hasPaidExportsAccess(planTier), [planTier]);
-  const exportLocked = useMemo(() => canDownload && !paidExports && creditsKnown && (creditsBalance as number) < 1, [canDownload, paidExports, creditsKnown, creditsBalance]);
-  const canExport = useMemo(() => canDownload && (paidExports || !creditsKnown || (creditsBalance as number) > 0), [canDownload, paidExports, creditsKnown, creditsBalance]);
+  const exportLocked = useMemo(() => canDownload && creditsKnown && (creditsBalance as number) < 1, [canDownload, creditsKnown, creditsBalance]);
+  const canExport = useMemo(() => canDownload && (!creditsKnown || (creditsBalance as number) > 0), [canDownload, creditsKnown, creditsBalance]);
   const unlockExportsHref = "mailto:support@tenderpilot.com?subject=Unlock%20TenderPilot%20Exports";
   const canDelete = Boolean(job) && !showProgress;
 
@@ -2202,18 +2182,6 @@ setWorkItems((wiRows as any[]) ?? []);
       .filter(Boolean);
   }, [checklist]);
 
-  const mustChecklistItems = useMemo(() => {
-    return (checklist ?? [])
-      .filter((i) => String(i?.type ?? i?.level ?? i?.priority ?? "").toUpperCase().includes("MUST"))
-      .map((item: any) => ({
-        text: String(item?.text ?? item?.requirement ?? "").trim(),
-        source: String(item?.source ?? "").trim(),
-        evidenceIds: normalizeEvidenceIdList(item?.evidence_ids ?? item?.evidenceIds ?? item?.evidence),
-        needsVerification: Boolean(item?.needs_verification),
-        verificationReason: String(item?.verification_reason ?? "").trim(),
-      }))
-      .filter((item) => item.text);
-  }, [checklist]);
 
 
   const blockersReadiness = useMemo(() => {
@@ -2292,7 +2260,7 @@ setWorkItems((wiRows as any[]) ?? []);
       if (!isMust) continue;
       const text = String((item as any)?.text ?? (item as any)?.requirement ?? "").trim();
       const idsRaw = (item as any)?.evidence_ids ?? (item as any)?.evidenceIds ?? (item as any)?.evidence ?? null;
-      const ids = normalizeEvidenceIdList(idsRaw);
+      const ids = Array.isArray(idsRaw) ? idsRaw.map((x: any) => String(x ?? "").trim()).filter(Boolean) : [];
       if (!text || !ids.length) continue;
       map.set(text, ids);
     }
@@ -2314,7 +2282,7 @@ setWorkItems((wiRows as any[]) ?? []);
       const typeRaw = String((it as any)?.type ?? (it as any)?.level ?? (it as any)?.priority ?? "");
       const isMust = typeRaw.toUpperCase().includes("MUST");
       const idsRaw = (it as any)?.evidence_ids ?? (it as any)?.evidenceIds ?? (it as any)?.evidence ?? null;
-      const ids = normalizeEvidenceIdList(idsRaw);
+      const ids = Array.isArray(idsRaw) ? idsRaw.map((x: any) => String(x ?? "").trim()).filter(Boolean) : [];
       const resolved = ids.some((id: string) => idSet.has(id));
 
       overallTotal += 1;
@@ -2328,35 +2296,6 @@ setWorkItems((wiRows as any[]) ?? []);
 
     return { mustTotal, mustCovered, overallTotal, overallCovered };
   }, [checklist, knownEvidenceIds]);
-
-  const verifiedMustItems = useMemo(() => {
-    const idSet = new Set(knownEvidenceIds);
-    return mustChecklistItems.filter((item) => item.evidenceIds.some((id) => idSet.has(id)));
-  }, [mustChecklistItems, knownEvidenceIds]);
-
-  const verificationMustItems = useMemo(() => {
-    const idSet = new Set(knownEvidenceIds);
-    return mustChecklistItems.filter((item) => !item.evidenceIds.some((id) => idSet.has(id)));
-  }, [mustChecklistItems, knownEvidenceIds]);
-
-function openVerificationReview(item: { text: string; source?: string; verificationReason?: string }) {
-  const query = String(item.source || item.text || "").trim();
-  setEvidenceFocus({
-    id: "",
-    excerpt: "",
-    page: null,
-    anchor: null,
-    note: item.verificationReason || t("app.review.evidenceNotes.noEvidenceId"),
-    allIds: null,
-  });
-  setShowEvidenceExcerpt(false);
-  if (query && extractedText) {
-    openTabAndScroll();
-    window.setTimeout(() => onJumpToSource(query), 0);
-    return;
-  }
-  openTabAndScroll();
-}
 
 function showEvidenceByIds(evidenceIds: string[] | undefined, fallbackQuery: string) {
   const ids = Array.isArray(evidenceIds) ? evidenceIds.map((x) => String(x ?? "").trim()).filter(Boolean) : [];
@@ -2408,13 +2347,7 @@ function showEvidenceByIds(evidenceIds: string[] | undefined, fallbackQuery: str
     });
   }
 
-  // No exact evidence excerpt available. Still open Source text and try a best-effort locate using the item text.
-  if (String(fallbackQuery ?? "").trim() && extractedText) {
-    openTabAndScroll();
-    window.setTimeout(() => onJumpToSource(String(fallbackQuery)), 0);
-    return;
-  }
-
+  // No candidate excerpt to jump to → still open Source text so the user can search manually.
   openTabAndScroll();
 }
 
@@ -4353,24 +4286,15 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
                     ) : null}
                   </div>
 
-                  {verdictState === "hold" && (verifiedMustItems.length || verificationMustItems.length) ? (
-                    verifiedMustItems.length ? (
-                      <div className="rounded-2xl border border-rose-200/40 bg-rose-500/5 p-4 dark:border-rose-500/20 dark:bg-rose-500/10">
-                        <p className="text-xs font-semibold text-rose-900 dark:text-rose-200">{t("app.review.topBlockersTitle")}</p>
-                        <ul className="mt-2 space-y-2 text-sm text-rose-950/90 dark:text-rose-100">
-                          {verifiedMustItems.slice(0, 3).map((item, i) => (
-                            <li key={i} className="leading-relaxed">• {item.text}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    ) : (
-                      <div className="rounded-2xl border border-amber-200/50 bg-amber-500/5 p-4 dark:border-amber-500/25 dark:bg-amber-500/10">
-                        <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">{t("app.common.needsAttention")}</p>
-                        <p className="mt-2 text-sm text-amber-950/90 dark:text-amber-100">
-                          Blockers were detected, but they still need manual source review before they should be treated as evidence-linked blockers.
-                        </p>
-                      </div>
-                    )
+                  {verdictState === "hold" && (mustItems ?? []).length ? (
+                    <div className="rounded-2xl border border-rose-200/40 bg-rose-500/5 p-4 dark:border-rose-500/20 dark:bg-rose-500/10">
+                      <p className="text-xs font-semibold text-rose-900 dark:text-rose-200">{t("app.review.topBlockersTitle")}</p>
+                      <ul className="mt-2 space-y-2 text-sm text-rose-950/90 dark:text-rose-100">
+                        {(mustItems ?? []).slice(0, 3).map((itemText, i) => (
+                          <li key={i} className="leading-relaxed">• {itemText}</li>
+                        ))}
+                      </ul>
+                    </div>
                   ) : null}
                 </div>
               )}
@@ -4403,54 +4327,24 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
             <div className="mt-6 grid gap-5 md:grid-cols-3">
               <div className="rounded-2xl border border-border bg-muted/30 p-4">
                 <p className="text-xs font-semibold">{t("app.review.sections.blockers")}</p>
-                {verifiedMustItems.length || verificationMustItems.length ? (
-                  <div className="mt-3 space-y-3">
-                    {verifiedMustItems.slice(0, 5).map((item, i) => (
-                      <div key={`verified-${i}`} className="rounded-xl border border-border bg-card p-3">
-                        <p className="text-sm text-foreground/80 leading-relaxed">• {item.text}</p>
+                {(mustItems ?? []).length ? (
+                  <div className="mt-3 space-y-2">
+                    {(mustItems ?? []).slice(0, 5).map((itemText, i) => (
+                      <div key={i} className="rounded-xl border border-border bg-card p-3">
+                        <p className="text-sm text-foreground/80 leading-relaxed">• {itemText}</p>
                         <div className="mt-2 flex justify-end">
                           <Button
                             variant="outline"
                             size="sm"
                             className="rounded-full"
-                            onClick={() => showEvidenceByIds(item.evidenceIds, item.text)}
-                            disabled={!extractedText}
+                            onClick={() => showEvidenceByIds(mustEvidenceIdsByText.get(itemText) ?? undefined, itemText)}
+                            disabled={((mustEvidenceIdsByText.get(itemText)?.length ?? 0) === 0) && !extractedText}
                           >
                             {t("app.bidroom.actions.openEvidence")}
                           </Button>
                         </div>
                       </div>
                     ))}
-
-                    {verificationMustItems.length ? (
-                      <div className="rounded-xl border border-dashed border-amber-300/60 bg-amber-500/5 p-3 dark:border-amber-500/25 dark:bg-amber-500/10">
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="text-xs font-semibold text-amber-900 dark:text-amber-200">{t("app.common.needsAttention")}</p>
-                          <span className="text-[11px] text-muted-foreground">{verificationMustItems.length}</span>
-                        </div>
-                        <div className="mt-3 space-y-2">
-                          {verificationMustItems.slice(0, 5).map((item, i) => (
-                            <div key={`verify-${i}`} className="rounded-xl border border-border bg-card p-3">
-                              <p className="text-sm text-foreground/80 leading-relaxed">• {item.text}</p>
-                              <p className="mt-2 text-xs text-muted-foreground">
-                                {item.verificationReason || "No exact evidence excerpt is linked yet. Review the source text before treating this as decision-grade."}
-                              </p>
-                              <div className="mt-2 flex justify-end">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="rounded-full"
-                                  onClick={() => openVerificationReview(item)}
-                                  disabled={!extractedText}
-                                >
-                                  {t("app.review.source.locateBestEffort")}
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : null}
                   </div>
                 ) : (
                   <p className="mt-3 text-sm text-muted-foreground">{t("app.common.noneDetected")}</p>
@@ -4738,18 +4632,16 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
                     )}
                   </div>
                   <div className="flex flex-col gap-2">
-                    {evidenceFocus.excerpt ? (
-                      <Button
-                        className="rounded-full"
-                        onClick={() => {
-                          track("evidence_opened", { jobId, evidenceId: evidenceFocus?.id ?? null });
-                          setShowEvidenceExcerpt(true);
-                          window.setTimeout(() => evidenceExcerptRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
-                        }}
-                      >
-                        {t("app.review.source.openEvidenceExcerpt")}
-                      </Button>
-                    ) : null}
+                    <Button
+                      className="rounded-full"
+                      onClick={() => {
+                        track("evidence_opened", { jobId, evidenceId: evidenceFocus?.id ?? null });
+                        setShowEvidenceExcerpt(true);
+                        window.setTimeout(() => evidenceExcerptRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
+                      }}
+                    >
+                      {t("app.review.source.openEvidenceExcerpt")}
+                    </Button>
 
                     {evidenceFocus.excerpt ? (
                       <Button
@@ -4803,7 +4695,7 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
                     ) : null}
 
                     <Button variant="outline" className="rounded-full" onClick={() => setEvidenceFocus(null)}>
-                      {t("app.common.close")}
+                      Close
                     </Button>
                   </div>
                 </div>
