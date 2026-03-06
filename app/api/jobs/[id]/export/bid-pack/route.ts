@@ -8,6 +8,7 @@ import { stableRefKey } from "@/lib/bid-workflow/keys";
 import { loadDict } from "@/lib/i18n/dict";
 import { normalizeLocale } from "@/lib/i18n/locales";
 import { tFromDict } from "@/lib/i18n/t";
+import { canExportForProfile } from "@/lib/billing-entitlements";
 
 function supabaseAdmin() {
   return createClient(
@@ -134,7 +135,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
   try {
     const res = await admin
       .from("profiles")
-      .select("credits_balance,locale")
+      .select("credits_balance,plan_tier,locale")
       .eq("id", userRes.user.id)
       .maybeSingle();
     if (res.error) throw res.error;
@@ -143,7 +144,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     // If locale column does not exist yet, keep export path working.
     const res = await admin
       .from("profiles")
-      .select("credits_balance")
+      .select("credits_balance,plan_tier")
       .eq("id", userRes.user.id)
       .maybeSingle();
     profileRow = res.data as any;
@@ -152,10 +153,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
     }
   }
 
-  const credits = profileRow?.credits_balance;
-  const creditsBalance = typeof credits === "number" ? credits : 0;
-
-  if (creditsBalance < 1) {
+  if (!canExportForProfile(profileRow)) {
     return NextResponse.json({ error: "no_export_entitlement" }, { status: 402 });
   }
 

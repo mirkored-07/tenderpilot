@@ -578,7 +578,7 @@
     "hero": {
       "badge": "Tarifs",
       "title": "Des tarifs simples pour les équipes appels d’offres",
-      "subtitle": "Commencez gratuitement et passez à une offre supérieure lorsque vous avez besoin de plus de volume. Les offres payantes incluent un prix de lancement pour une durée limitée.",
+      "subtitle": "Commencez gratuitement puis passez à l’offre supérieure quand vous avez besoin de plus de volume. Pro est disponible dès maintenant. Les offres Business passent par un early access pendant la finalisation de la facturation workspace partagée.",
       "cta": "Commencer gratuitement"
     },
     "ui": {
@@ -616,23 +616,23 @@
         "note": "Idéal pour consultants et bid managers."
       },
       "team": {
-        "name": "Team",
-        "price": "€199 / mois",
-        "after": "Puis €249 / mois",
-        "limited": "Prix de lancement pour une durée limitée",
+        "name": "Business",
+        "price": "Sur demande",
+        "after": "Offre workspace partagée via early access",
+        "limited": "Early access",
         "includes": [
-          "100 crédits par mois",
-          "Exports: Bid Pack (Excel) et CSV",
-          "Plus de volume pour petites équipes",
-          "Support prioritaire"
+          "Pack workspace partagé en cours de déploiement",
+          "Plus de volume et onboarding guidé",
+          "Support prioritaire et aide au paramétrage",
+          "Idéal pour les équipes visant un usage multi-utilisateur"
         ],
-        "cta": "Passer à Team",
-        "note": "Idéal pour petites équipes avec plus de volume."
+        "cta": "Demander un early access",
+        "note": "Pro est disponible dès aujourd’hui. Business passe par un early access jusqu’à la mise en ligne de la facturation multi-utilisateur."
       }
     },
     "credits": {
       "title": "Qu’est-ce qu’un crédit ?",
-      "text": "Un crédit lance une analyse d’appel d’offres et génère le cockpit de décision. Les offres payantes incluent les exports et plus de crédits mensuels."
+      "text": "Un crédit lance une revue d’appel d’offres et génère le decision cockpit. Pro inclut les exports et des crédits mensuels. L’accès Business est géré séparément pendant le déploiement."
     },
     "faq": {
       "title": "FAQ",

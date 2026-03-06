@@ -578,7 +578,7 @@
     "hero": {
       "badge": "Prezzi",
       "title": "Prezzi semplici per i team che rispondono ai bandi",
-      "subtitle": "Inizia gratis e passa al piano superiore quando ti serve più volume. I piani a pagamento includono un prezzo di lancio per un periodo limitato.",
+      "subtitle": "Inizia gratis e passa a un piano superiore quando ti serve più volume. Pro è disponibile oggi. I piani Business sono gestiti tramite early access finché la fatturazione condivisa del workspace non sarà finalizzata.",
       "cta": "Inizia gratis"
     },
     "ui": {
@@ -616,23 +616,23 @@
         "note": "Ideale per consulenti e bid manager."
       },
       "team": {
-        "name": "Team",
-        "price": "€199 / mese",
-        "after": "Poi €249 / mese",
-        "limited": "Prezzo di lancio per un periodo limitato",
+        "name": "Business",
+        "price": "Su richiesta",
+        "after": "Piano workspace condiviso tramite early access",
+        "limited": "Early access",
         "includes": [
-          "100 crediti al mese",
-          "Export: Bid Pack (Excel) e CSV",
-          "Più volume per piccoli team",
-          "Supporto prioritario"
+          "Pacchetto workspace condiviso in rollout",
+          "Più volume e onboarding guidato",
+          "Supporto prioritario e aiuto nel setup",
+          "Ideale per team che prevedono uso multiutente"
         ],
-        "cta": "Passa a Team",
-        "note": "Ideale per piccoli team con più volume."
+        "cta": "Richiedi early access",
+        "note": "Puoi usare Pro già oggi. Business è gestito tramite early access finché la fatturazione multiutente non sarà attiva."
       }
     },
     "credits": {
       "title": "Cos’è un credito?",
-      "text": "Un credito avvia una revisione del bando e genera il decision cockpit. I piani a pagamento includono export e più crediti mensili."
+      "text": "Un credito avvia una revisione del bando e genera il decision cockpit. Pro include export e crediti mensili. L’accesso Business viene gestito separatamente durante il rollout."
     },
     "faq": {
       "title": "FAQ",

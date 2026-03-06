@@ -9,6 +9,7 @@ import { stableRefKey } from "@/lib/bid-workflow/keys";
 import { getJobDisplayName, setJobDisplayName, clearJobDisplayName } from "@/lib/pilot-job-names";
 
 import { track } from "@/lib/telemetry";
+import { hasPaidExportsAccess } from "@/lib/billing-entitlements";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -1532,6 +1533,7 @@ const [savingMeta, setSavingMeta] = useState(false);
   // Monetization (free tier): used to gate exports
   const [notice, setNotice] = useState<string | null>(null);
   const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
+  const [planTier, setPlanTier] = useState<"free" | "pro" | null>(null);
   const [creditsLoading, setCreditsLoading] = useState(false);
 
 	const [tab, setTab] = useState<AnalysisTab>("text");
@@ -1687,18 +1689,28 @@ const [savingMeta, setSavingMeta] = useState(false);
           if (uid) {
             const { data: profileRow, error: profErr } = await supabase
               .from("profiles")
-              .select("credits_balance")
+              .select("credits_balance,plan_tier")
               .eq("id", uid)
               .maybeSingle();
             if (profErr) console.warn(profErr);
             const bal = typeof (profileRow as any)?.credits_balance === "number" ? (profileRow as any).credits_balance : 0;
-            if (mountedRef.current) setCreditsBalance(bal);
+            const tier = String((profileRow as any)?.plan_tier ?? "free").toLowerCase() === "pro" ? "pro" : "free";
+            if (mountedRef.current) {
+              setCreditsBalance(bal);
+              setPlanTier(tier);
+            }
           } else {
-            if (mountedRef.current) setCreditsBalance(0);
+            if (mountedRef.current) {
+              setCreditsBalance(0);
+              setPlanTier("free");
+            }
           }
         } catch (e) {
           console.warn("credits_balance load failed", e);
-          if (mountedRef.current) setCreditsBalance(0);
+          if (mountedRef.current) {
+            setCreditsBalance(0);
+            setPlanTier("free");
+          }
         } finally {
           if (mountedRef.current) setCreditsLoading(false);
         }
@@ -2024,8 +2036,9 @@ setWorkItems((wiRows as any[]) ?? []);
 
   const canDownload = useMemo(() => Boolean(job && job.status === "done"), [job]);
   const creditsKnown = typeof creditsBalance === "number";
-  const exportLocked = useMemo(() => canDownload && creditsKnown && (creditsBalance as number) < 1, [canDownload, creditsKnown, creditsBalance]);
-  const canExport = useMemo(() => canDownload && (!creditsKnown || (creditsBalance as number) > 0), [canDownload, creditsKnown, creditsBalance]);
+  const paidExports = useMemo(() => hasPaidExportsAccess(planTier), [planTier]);
+  const exportLocked = useMemo(() => canDownload && !paidExports && creditsKnown && (creditsBalance as number) < 1, [canDownload, paidExports, creditsKnown, creditsBalance]);
+  const canExport = useMemo(() => canDownload && (paidExports || !creditsKnown || (creditsBalance as number) > 0), [canDownload, paidExports, creditsKnown, creditsBalance]);
   const unlockExportsHref = "mailto:support@tenderpilot.com?subject=Unlock%20TenderPilot%20Exports";
   const canDelete = Boolean(job) && !showProgress;
 

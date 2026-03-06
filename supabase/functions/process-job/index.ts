@@ -363,15 +363,19 @@ function estimateTokensFromChars(chars: number): number {
 
 function estimateUsd(args: { model: string; inputTokens: number; outputTokens: number }): number {
   // Prices per 1M tokens (USD)
+  // gpt-5-mini:   $0.25 input, $2.00 output
   // gpt-4.1-mini: $0.40 input, $1.60 output
   // gpt-4o-mini:  $0.15 input, $0.60 output
   // gpt-4.1-nano: $0.10 input, $0.40 output
   const m = args.model;
 
-  let inPerM = 0.40;
-  let outPerM = 1.60;
+  let inPerM = 0.25;
+  let outPerM = 2.00;
 
-  if (m === "gpt-4o-mini") {
+  if (m === "gpt-5-mini") {
+    inPerM = 0.25;
+    outPerM = 2.00;
+  } else if (m === "gpt-4o-mini") {
     inPerM = 0.15;
     outPerM = 0.60;
   } else if (m === "gpt-4.1-nano") {
@@ -933,73 +937,49 @@ async function runOpenAi(args: {
 
   const instructions =
     "You are TenderPilot. Drafting support only. Not legal advice. Not procurement advice. " +
-    "Use executive, compliance grade language. No AI talk. " +
+    "Use executive, compliance-grade language with a cautious tone. No AI meta commentary. " +
     `The tender source language is ${sourceLanguageName}. ` +
     `Write all narrative content in ${targetLanguage}. ` +
     "Keep decisionBadge exactly as Go, Hold, or No-Go. " +
     "Do not translate, rewrite, paraphrase, or normalize source evidence; you do not output excerpts, only evidence_ids. " +
     "Interpret procurement wording in the source language accurately, including legal or disqualifying phrasing. " +
-    "Avoid false certainty. If not present, write: Not found in extracted text.";
-
-  const evidenceList = evidenceCandidates
-    .map((e) => {
-      const page = e.page != null ? ` [PAGE ${e.page}]` : "";
-      const anchor = e.anchor ? ` ${e.anchor}` : "";
-      return `${e.id}${page}${anchor}: ${e.excerpt}`;
-    })
-    .join("\n\n");
-
-  const playbookJson = (() => {
-    try {
-      const pb = workspacePlaybook?.playbook;
-      if (!pb || typeof pb !== "object") return "Not provided.";
-      const raw = JSON.stringify(pb, null, 2);
-      if (!raw) return "Not provided.";
-      const cap = 3500;
-      return raw.length > cap ? raw.slice(0, cap) + "\n[TRUNCATED]" : raw;
-    } catch {
-      return "Not provided.";
-    }
-  })();
-
-  const playbookVersionLabel = workspacePlaybook?.version ? String(workspacePlaybook.version) : "Not provided";
-
+    "If evidence is incomplete, say so clearly and push uncertainty into buyer_questions.";
 
   const userPrompt = `Task
-Review the tender source text and produce a decision-first bid kit.
+Review the tender evidence pack and produce a decision-first bid kit.
 
 Workspace Bid Playbook (policy constraints, NOT evidence)
 Version: ${playbookVersionLabel}
 ${playbookJson}
 
 Strict rules
-1. Grounding. Use only the evidence snippets provided. Do not guess. If a detail is not present, write: Not found in extracted text.
+1. Grounding. Use only the evidence snippets provided below. Treat them as the full citable record for this run. Do not rely on hidden assumptions or uncited source text.
 2. Decision. Choose decisionBadge exactly as one of: Go, Hold, No-Go. Provide decisionLine as one clear sentence.
-3. Submission deadline. If an explicit deadline date or time is present, copy it verbatim. Otherwise set submissionDeadline to: Not found in extracted text.
-4. Checklist. MUST means mandatory or disqualifying if missed. SHOULD means preferred or scoring. INFO is context.
+3. Submission deadline. If an explicit deadline date or time is present in the evidence, copy it verbatim. Otherwise set submissionDeadline to: Not found in extracted text.
+4. Checklist. MUST means mandatory or disqualifying if missed. SHOULD means preferred, scored, or commercially important. INFO is context.
 5. Evidence (STRICT). You MUST cite evidence_ids:
-   - For each MUST checklist item: include at least one evidence id that directly proves it.
-   - For each risk: include at least one evidence id that supports it.
-   - Do not invent clause numbers or cross-references (e.g., ITT 24.1). Cite only evidence ids.
-   - If you cannot support a MUST or a risk with evidence, return evidence_ids as [] instead of guessing and keep the wording cautious.
-6. Playbook (STRICT). The playbook is policy, not evidence:
+   - For every MUST checklist item: include at least one evidence id that directly supports it.
+   - For every risk: include at least one evidence id that directly supports it.
+   - Do not invent clause numbers, section numbers, or cross-references. Cite only evidence ids.
+   - If you cannot support a MUST or risk with evidence, either omit it or keep the wording explicitly cautious and return evidence_ids as [].
+6. Executive summary (STRICT).
+   - keyFindings must reflect evidence-backed facts or clearly framed absences from evidence.
+   - nextActions should be operational and tied to what is missing, risky, or urgent in the evidence.
+   - topRisks must stay aligned with the risks array. Do not introduce unsupported new risks here.
+7. Playbook (STRICT). The playbook is policy, not evidence:
    - Never cite the playbook as evidence.
    - If the playbook influences decision, prioritization, or required actions, add entries to policy_triggers.
-   - When you claim a conflict with the playbook, cite evidence ids that support the tender-side requirement driving the conflict.
-7. Policy triggers output (REQUIRED):
-   - policy_triggers must be an array. If no playbook constraints apply, return an empty array.
-   - Each trigger must be one line, auditable, and map to a playbook key.
-8. Deduplication. Do not repeat checklist items verbatim inside the executive summary.
-9. Missing info. Put ambiguities or missing info into buyer_questions.
+   - When you claim a conflict with the playbook, rely on evidence ids that support the tender-side requirement driving the conflict.
+8. Policy triggers output (REQUIRED).
+   - policy_triggers must be an array. If no playbook constraints apply, return [].
+   - Each trigger must be short, auditable, and map to exactly one playbook key.
+9. Missing info. Put unresolved ambiguities, unanswered buyer-side questions, or evidence gaps into buyer_questions.
 10. Language handling. The source tender text is in ${sourceLanguageName}. Analyse obligations, exclusions, submission instructions, qualifications, and deadlines in that source language. Keep evidence verbatim in the source language and cite only evidence_ids.
 11. Proposal draft. Keep proposal_draft concise: maximum 8 short sections and under 900 words.
+12. Priority. Prefer precision over coverage. If the evidence pack does not prove something, do not state it as fact.
 
-Evidence snippets (use ONLY these; cite their ids in evidence_ids):
-${evidenceList}
-
-Tender source text (context only; do not cite directly):
-${extractedText}`;
-
+Evidence snippets (the ONLY citable basis for this run; cite their ids in evidence_ids):
+${evidenceList}`;
 
   const buildBody = (tokenBudget: number) => ({
     model,
@@ -1746,7 +1726,7 @@ let extractedText = "";
 
 
     // AI analysis
-    const model = String(Deno.env.get("TP_OPENAI_MODEL") ?? "gpt-4.1-mini");
+    const model = String(Deno.env.get("TP_OPENAI_MODEL") ?? "gpt-5-mini");
     const maxInputChars = parseNumberEnv("TP_MAX_INPUT_CHARS", 120_000);
     const maxOutputTokens = parseNumberEnv("TP_MAX_OUTPUT_TOKENS", 3200);
     const maxUsdPerJob = parseNumberEnv("TP_MAX_USD_PER_JOB", 0.05);

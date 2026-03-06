@@ -578,7 +578,7 @@
     "hero": {
       "badge": "Pricing",
       "title": "Simple pricing for tender teams",
-      "subtitle": "Start free, upgrade when you need more volume. Paid tiers include a limited-time launch price.",
+      "subtitle": "Start free, upgrade when you need more volume. Pro is available today. Business plans are handled via early access while shared workspace billing is being finalized.",
       "cta": "Start free"
     },
     "ui": {
@@ -616,23 +616,23 @@
         "note": "Best for solo consultants and bid managers."
       },
       "team": {
-        "name": "Team",
-        "price": "€199 / month",
-        "after": "Then €249 / month",
-        "limited": "Limited-time launch price",
+        "name": "Business",
+        "price": "Custom",
+        "after": "Shared workspace plan via early access",
+        "limited": "Join early access",
         "includes": [
-          "100 credits per month",
-          "Exports: Bid Pack (Excel) and CSV",
-          "Higher volume for small teams",
-          "Priority support"
+          "Shared workspace packaging in rollout",
+          "Higher volume and guided onboarding",
+          "Priority support and setup help",
+          "Best for teams planning multi-user use"
         ],
-        "cta": "Start Team",
-        "note": "Best for small teams with higher volume."
+        "cta": "Join early access",
+        "note": "Use Pro today. Business is handled through early access until multi-user billing is live."
       }
     },
     "credits": {
       "title": "What is a credit?",
-      "text": "One credit runs one tender review and generates the decision cockpit. Paid tiers include exports and more monthly credits."
+      "text": "One credit runs one tender review and generates the decision cockpit. Paid Pro includes exports and monthly credits. Business access is handled separately during rollout."
     },
     "faq": {
       "title": "FAQ",

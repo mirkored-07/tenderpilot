@@ -165,6 +165,7 @@ export function PricingContent({
 }) {
   const accessMode = getAccessMode();
   const primaryCtaHref = accessMode === "public" ? loginWithNextHref("/app/upload") : "#early-access";
+  const businessCtaHref = "#early-access";
 
   const homeHref = localePrefix || "/";
   const howItWorksHref = `${localePrefix}/how-it-works`;
@@ -304,7 +305,7 @@ export function PricingContent({
             after={dict.tiers.team.after}
             limited={dict.tiers.team.limited}
             includes={dict.tiers.team.includes}
-            ctaHref={primaryCtaHref}
+            ctaHref={businessCtaHref}
             ctaLabel={dict.tiers.team.cta}
             note={dict.tiers.team.note}
           />

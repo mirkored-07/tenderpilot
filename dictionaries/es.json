@@ -578,7 +578,7 @@
     "hero": {
       "badge": "Precios",
       "title": "Precios simples para equipos de licitaciones",
-      "subtitle": "Empieza gratis y sube de plan cuando necesites más volumen. Los planes de pago incluyen un precio de lanzamiento por tiempo limitado.",
+      "subtitle": "Empieza gratis y mejora cuando necesites más volumen. Pro está disponible hoy. Los planes Business se gestionan mediante acceso anticipado mientras terminamos la facturación compartida del workspace.",
       "cta": "Empezar gratis"
     },
     "ui": {
@@ -616,23 +616,23 @@
         "note": "Ideal para consultores y bid managers."
       },
       "team": {
-        "name": "Team",
-        "price": "€199 / mes",
-        "after": "Luego €249 / mes",
-        "limited": "Precio de lanzamiento por tiempo limitado",
+        "name": "Business",
+        "price": "A medida",
+        "after": "Plan de workspace compartido mediante acceso anticipado",
+        "limited": "Acceso anticipado",
         "includes": [
-          "100 créditos al mes",
-          "Exportaciones: Bid Pack (Excel) y CSV",
-          "Más volumen para equipos pequeños",
-          "Soporte prioritario"
+          "Paquete de workspace compartido en despliegue",
+          "Más volumen y onboarding guiado",
+          "Soporte prioritario y ayuda de configuración",
+          "Ideal para equipos con uso multiusuario previsto"
         ],
-        "cta": "Pasar a Team",
-        "note": "Ideal para equipos pequeños con más volumen."
+        "cta": "Solicitar acceso anticipado",
+        "note": "Puedes usar Pro hoy mismo. Business se gestiona mediante acceso anticipado hasta que la facturación multiusuario esté activa."
       }
     },
     "credits": {
       "title": "¿Qué es un crédito?",
-      "text": "Un crédito ejecuta un análisis de licitación y genera el panel de decisión. Los planes de pago incluyen exportaciones y más créditos mensuales."
+      "text": "Un crédito ejecuta una revisión de licitación y genera el decision cockpit. Pro incluye exportaciones y créditos mensuales. El acceso Business se gestiona por separado durante el despliegue."
     },
     "faq": {
       "title": "FAQ",

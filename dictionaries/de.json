@@ -578,7 +578,7 @@
     "hero": {
       "badge": "Preise",
       "title": "Klare Preise für Ausschreibungsteams",
-      "subtitle": "Kostenlos starten und upgraden, wenn mehr Volumen nötig ist. Bezahlte Tarife enthalten einen zeitlich begrenzten Launch-Preis.",
+      "subtitle": "Starte kostenlos und upgrade bei mehr Volumen. Pro ist heute verfügbar. Business-Pläne laufen aktuell über Early Access, während gemeinsames Workspace-Billing finalisiert wird.",
       "cta": "Kostenlos starten"
     },
     "ui": {
@@ -616,23 +616,23 @@
         "note": "Für Solo-Berater und Bid Manager."
       },
       "team": {
-        "name": "Team",
-        "price": "€199 / Monat",
-        "after": "Danach €249 / Monat",
-        "limited": "Launch-Preis für begrenzte Zeit",
+        "name": "Business",
+        "price": "Individuell",
+        "after": "Gemeinsamer Workspace-Plan über Early Access",
+        "limited": "Early Access",
         "includes": [
-          "100 Credits pro Monat",
-          "Exporte: Bid Pack (Excel) und CSV",
-          "Mehr Volumen für kleine Teams",
-          "Priorisierter Support"
+          "Workspace-Paketierung für Teams im Rollout",
+          "Mehr Volumen und begleitetes Onboarding",
+          "Priorisierter Support und Setup-Hilfe",
+          "Ideal für Teams mit geplantem Mehrbenutzer-Einsatz"
         ],
-        "cta": "Team starten",
-        "note": "Für kleine Teams mit höherem Volumen."
+        "cta": "Early Access anfragen",
+        "note": "Pro ist heute nutzbar. Business läuft über Early Access, bis Multi-User-Billing live ist."
       }
     },
     "credits": {
       "title": "Was ist ein Credit?",
-      "text": "Ein Credit startet eine Tender-Analyse und erzeugt das Decision Cockpit. Bezahlte Tarife enthalten Exporte und mehr monatliche Credits."
+      "text": "Ein Credit startet eine Tender-Prüfung und erzeugt das Decision Cockpit. Bezahltes Pro enthält Exporte und monatliche Credits. Business-Zugänge werden während des Rollouts separat betreut."
     },
     "faq": {
       "title": "FAQ",
