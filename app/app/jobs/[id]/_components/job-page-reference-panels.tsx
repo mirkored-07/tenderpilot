@@ -22,11 +22,6 @@ type SourceFocusLike = {
   highlightEnd: number | null;
 };
 
-function tr(t: TranslateFn, key: string, fallback: string, vars?: Record<string, string | number>) {
-  const value = t(key, vars);
-  return !value || value === key ? fallback : value;
-}
-
 export function JobPageReferencePanels(props: {
   t: TranslateFn;
   evidenceFocus: EvidenceFocusLike | null;
@@ -65,13 +60,19 @@ export function JobPageReferencePanels(props: {
           <CardContent className="p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-sm font-semibold">{tr(t, "app.review.source.evidenceTitle", "Evidence excerpt")}</p>
+                <p className="text-sm font-semibold">{t("app.review.source.evidenceExcerptTitle")}</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  <span className="font-medium text-foreground">{evidenceFocus.id}</span>
+                  {evidenceFocus.id ? (
+                    <>
+                      {t("app.review.source.idLabel")} <span className="font-medium text-foreground">{evidenceFocus.id}</span>
+                    </>
+                  ) : (
+                    <>{t("app.review.source.evidenceLabel")}</>
+                  )}
                   {typeof evidenceFocus.page === "number" ? (
                     <> • {t("app.review.source.pageLabel")} {evidenceFocus.page}</>
                   ) : null}
-                  {evidenceFocus.anchor ? <><> • </><span className="text-foreground/70">{evidenceFocus.anchor}</span></> : null}
+                  {evidenceFocus.anchor ? <> • <span className="text-foreground/70">{evidenceFocus.anchor}</span></> : null}
                 </p>
 
                 {Array.isArray(evidenceFocus.allIds) && evidenceFocus.allIds.length > 1 ? (
@@ -119,7 +120,7 @@ export function JobPageReferencePanels(props: {
                 ) : null}
 
                 <Button variant="outline" className="rounded-full" onClick={onCloseEvidence}>
-                  {tr(t, "app.common.close", "Close")}
+                  {t("app.common.close")}
                 </Button>
               </div>
             </div>
@@ -140,15 +141,9 @@ export function JobPageReferencePanels(props: {
               <div>
                 <p className="text-sm font-semibold">{t("app.review.source.locateBestEffort")}</p>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {tr(t, "app.review.source.matchFor", "Match for:")} <span className="font-medium text-foreground">{sourceFocus.query}</span>
+                  {t("app.review.source.matchFor")} <span className="font-medium text-foreground">{sourceFocus.query}</span>
                 </p>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {tr(
-                    t,
-                    "app.review.source.pointerOnlyNote",
-                    "This view highlights a best-effort match in the extracted Source text. Use it as a pointer only: locate the same clause in the original PDF and verify the exact wording and formatting."
-                  )}
-                </p>
+                <p className="mt-2 text-xs text-muted-foreground">{t("app.review.source.bestEffortPointer")}</p>
               </div>
               <div className="flex flex-col gap-2">
                 <Button variant="outline" className="rounded-full" onClick={onCopySourcePhrase}>
