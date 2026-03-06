@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useAppI18n } from "@/app/app/_components/app-i18n-provider";
 
 type ChecklistItem = {
   type?: "MUST" | "SHOULD" | "INFO";
@@ -49,6 +50,7 @@ export default function BuyerQuestions({
   selectedMap,
   onToggleSelected,
 }: Props) {
+  const { t } = useAppI18n();
   const [copied, setCopied] = useState<string | null>(null);
   const [selectedLocal, setSelectedLocal] = useState<Record<number, false>>({});
   const [showDraft, setShowDraft] = useState(false);
@@ -114,21 +116,21 @@ export default function BuyerQuestions({
 
   function buildInternalNote(items: { text: string }[]) {
     const lines: string[] = [];
-    lines.push(`Clarifications (${items.length})`);
+    lines.push(t("app.review.questionsPanel.internalNoteTitle", { count: items.length }));
     lines.push("");
     for (const q of items) lines.push(`- ${q.text}`);
     return lines.join("\n");
   }
 
   function buildEmailDraft(items: { text: string }[]) {
-    const name = String(tenderName ?? "").trim() || "Tender";
-    const subject = `Clarification questions – ${name}`;
+    const name = String(tenderName ?? "").trim() || t("app.tender.label");
+    const subject = t("app.review.questionsPanel.emailSubject", { tender: name });
 
     const lines: string[] = [];
-    lines.push("Hello,");
+    lines.push(t("app.review.questionsPanel.emailGreeting"));
     lines.push("");
-    lines.push("We are preparing our tender response and would appreciate clarification on the points below.");
-    lines.push("Thank you.");
+    lines.push(t("app.review.questionsPanel.emailIntro"));
+    lines.push(t("app.review.questionsPanel.emailThanks"));
     lines.push("");
     for (let i = 0; i < items.length; i++) {
       lines.push(`${i + 1}. ${items[i].text}`);
@@ -160,14 +162,14 @@ export default function BuyerQuestions({
   const emailDraft = useMemo(() => {
     if (!draftItems.length) return null;
     return buildEmailDraft(draftItems);
-  }, [draftItems, tenderName]);
+  }, [draftItems, tenderName, t]);
 
   const selectionHint = useMemo(() => {
     if (totalCount === 0) return "";
-    if (selectedCount === totalCount) return `Includes: All questions (${totalCount}).`;
-    if (selectedCount === 0) return "Includes: 0 questions (none selected).";
-    return `Includes: ${selectedCount} selected question${selectedCount === 1 ? "" : "s"}.`;
-  }, [selectedCount, totalCount]);
+    if (selectedCount === totalCount) return t("app.review.questionsPanel.selectionHintAll", { count: totalCount });
+    if (selectedCount === 0) return t("app.review.questionsPanel.selectionHintNone");
+    return t("app.review.questionsPanel.selectionHintSelected", { count: selectedCount });
+  }, [selectedCount, totalCount, t]);
 
   const { pricingConstraints, complianceConstraints } = useMemo(() => {
     const pick = (s: unknown) => String(s ?? "").trim();
@@ -261,15 +263,15 @@ export default function BuyerQuestions({
         <CardContent className="p-5">
           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <div>
-              <p className="text-sm font-semibold">Clarifications</p>
+              <p className="text-sm font-semibold">{t("app.review.questionsPanel.title")}</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Select questions to reduce ambiguity before you commit effort.
+                {t("app.review.questionsPanel.subtitle")}
               </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="secondary" className="rounded-full">
-                Selected: {selectedCount} / {totalCount}
+{t("app.review.questionsPanel.selectedBadge", { selected: selectedCount, total: totalCount })}
               </Badge>
 
               <Button
@@ -281,7 +283,7 @@ export default function BuyerQuestions({
                 }}
                 disabled={!emailDraft}
               >
-                {copied === "email_draft" ? "Copied" : "Copy email draft"}
+                {copied === "email_draft" ? t("app.review.questionsPanel.copied") : t("app.review.questionsPanel.copyEmailDraft")}
               </Button>
 
               <Button
@@ -291,7 +293,7 @@ export default function BuyerQuestions({
                 onClick={() => setShowDraft((v) => !v)}
                 disabled={totalCount === 0}
               >
-                {showDraft ? "Hide preview" : "Preview"}
+                {showDraft ? t("app.review.questionsPanel.hidePreview") : t("app.review.questionsPanel.preview")}
               </Button>
 
               <Button
@@ -301,7 +303,7 @@ export default function BuyerQuestions({
                 onClick={() => safeCopyText(buildRawList(selectedItems), "selected")}
                 disabled={selectedCount === 0}
               >
-                {copied === "selected" ? "Copied" : "Copy selected"}
+                {copied === "selected" ? t("app.review.questionsPanel.copied") : t("app.review.questionsPanel.copySelected")}
               </Button>
 
               <Button
@@ -311,7 +313,7 @@ export default function BuyerQuestions({
                 onClick={() => safeCopyText(buildRawList(questions), "all")}
                 disabled={totalCount === 0}
               >
-                {copied === "all" ? "Copied" : "Copy all"}
+                {copied === "all" ? t("app.review.questionsPanel.copied") : t("app.review.questionsPanel.copyAll")}
               </Button>
 
               <Button
@@ -323,7 +325,7 @@ export default function BuyerQuestions({
                 }
                 disabled={totalCount === 0}
               >
-                {copied === "internal" ? "Copied" : "Copy internal note"}
+                {copied === "internal" ? t("app.review.questionsPanel.copied") : t("app.review.questionsPanel.copyInternalNote")}
               </Button>
 
               <Button
@@ -333,7 +335,7 @@ export default function BuyerQuestions({
                 onClick={() => setShowExtracts((v) => !v)}
                 disabled={pricingConstraints.length === 0 && complianceConstraints.length === 0}
               >
-                {showExtracts ? "Hide quick extracts" : "Quick extracts"}
+                {showExtracts ? t("app.review.questionsPanel.hideQuickExtracts") : t("app.review.questionsPanel.quickExtracts")}
               </Button>
             </div>
           </div>
@@ -342,9 +344,9 @@ export default function BuyerQuestions({
             <div className="mt-4 rounded-2xl border bg-muted/20 p-4">
               <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                 <div>
-                  <p className="text-xs font-semibold">Quick extracts</p>
+                  <p className="text-xs font-semibold">{t("app.review.questionsPanel.quickExtractsTitle")}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Based on existing extracted items only. If nothing is detected, buttons stay disabled.
+                    {t("app.review.questionsPanel.quickExtractsSubtitle")}
                   </p>
                 </div>
               </div>
@@ -356,12 +358,12 @@ export default function BuyerQuestions({
                   className="rounded-full"
                   disabled={pricingConstraints.length === 0}
                   onClick={() => {
-                    const txt = formatExtract("Pricing constraints", pricingConstraints);
+                    const txt = formatExtract(t("app.review.questionsPanel.pricingConstraints"), pricingConstraints);
                     if (!txt) return;
                     safeCopyText(txt, "pricing");
                   }}
                 >
-                  {copied === "pricing" ? "Copied" : "Copy pricing constraints"}
+                  {copied === "pricing" ? t("app.review.questionsPanel.copied") : t("app.review.questionsPanel.copyPricingConstraints")}
                 </Button>
 
                 <Button
@@ -370,17 +372,17 @@ export default function BuyerQuestions({
                   className="rounded-full"
                   disabled={complianceConstraints.length === 0}
                   onClick={() => {
-                    const txt = formatExtract("Compliance constraints", complianceConstraints);
+                    const txt = formatExtract(t("app.review.questionsPanel.complianceConstraints"), complianceConstraints);
                     if (!txt) return;
                     safeCopyText(txt, "compliance");
                   }}
                 >
-                  {copied === "compliance" ? "Copied" : "Copy compliance constraints"}
+                  {copied === "compliance" ? t("app.review.questionsPanel.copied") : t("app.review.questionsPanel.copyComplianceConstraints")}
                 </Button>
               </div>
 
               <p className="mt-3 text-xs text-muted-foreground">
-                Tip: paste these into the buyer email or your internal update when pricing/compliance gates are critical.
+                {t("app.review.questionsPanel.quickExtractsTip")}
               </p>
             </div>
           ) : null}
@@ -389,7 +391,7 @@ export default function BuyerQuestions({
             <div className="mt-4 rounded-2xl border bg-muted/20 p-4">
               <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                 <div>
-                  <p className="text-xs font-semibold">Email draft preview</p>
+                  <p className="text-xs font-semibold">{t("app.review.questionsPanel.emailDraftPreview")}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {selectionHint}
                   </p>
@@ -399,12 +401,12 @@ export default function BuyerQuestions({
               {emailDraft ? (
                 <div className="mt-3 space-y-3">
                   <div>
-                    <p className="text-xs font-semibold">Subject</p>
+                    <p className="text-xs font-semibold">{t("app.review.questionsPanel.subject")}</p>
                     <p className="mt-1 text-sm">{emailDraft.subject}</p>
                   </div>
 
                   <div>
-                    <p className="text-xs font-semibold">Body</p>
+                    <p className="text-xs font-semibold">{t("app.review.questionsPanel.body")}</p>
                     <pre className="mt-2 max-h-72 overflow-auto whitespace-pre-wrap text-sm text-muted-foreground">
                       {emailDraft.body}
                     </pre>
@@ -412,7 +414,7 @@ export default function BuyerQuestions({
                 </div>
               ) : (
                 <div className="mt-3 rounded-xl border bg-background/60 p-3">
-                  <p className="text-sm text-muted-foreground">Select one or more questions above to generate a buyer email draft.</p>
+                  <p className="text-sm text-muted-foreground">{t("app.review.questionsPanel.selectForDraft")}</p>
                 </div>
               )}
             </div>
@@ -423,9 +425,9 @@ export default function BuyerQuestions({
       {questions.length === 0 ? (
         <Card className="rounded-2xl">
           <CardContent className="p-6">
-            <p className="text-sm font-medium">No clarifications suggested</p>
+            <p className="text-sm font-medium">{t("app.review.questionsPanel.emptyTitle")}</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              The document looks consistent based on the TenderPilot information.
+              {t("app.review.questionsPanel.emptyBody")}
             </p>
           </CardContent>
         </Card>
@@ -455,7 +457,7 @@ export default function BuyerQuestions({
                         return next;
                       });
                     }}
-                      aria-label="Select question"
+                      aria-label={t("app.review.questionsPanel.selectQuestionAria")}
                     />
                     <p className="min-w-0 text-sm leading-relaxed">{q.text}</p>
                   </div>
@@ -467,7 +469,7 @@ export default function BuyerQuestions({
                       className="rounded-full"
                       onClick={() => safeCopyText(q.text, `q_${idx}`)}
                     >
-                      {copied === `q_${idx}` ? "Copied" : "Copy"}
+                      {copied === `q_${idx}` ? t("app.review.questionsPanel.copied") : t("app.common.copy")}
                     </Button>
 
                     <Button
@@ -476,7 +478,7 @@ export default function BuyerQuestions({
                       className="rounded-full"
                       onClick={() => onJumpToSource(q.anchor)}
                     >
-                      Locate in source (best-effort)
+                      {t("app.review.questionsPanel.locateInSource")}
                     </Button>
                   </div>
                 </div>

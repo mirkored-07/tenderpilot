@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { useAppI18n } from "@/app/app/_components/app-i18n-provider";
 
 type Props = {
   risks: any[];
@@ -40,10 +41,10 @@ function normalizeSeverity(v?: any): RiskSeverity {
   return "medium";
 }
 
-function severityBadge(sev: RiskSeverity) {
-  if (sev === "high") return <Badge variant="destructive" className="rounded-full">High</Badge>;
-  if (sev === "medium") return <Badge variant="secondary" className="rounded-full">Medium</Badge>;
-  return <Badge variant="outline" className="rounded-full">Low</Badge>;
+function severityBadge(sev: RiskSeverity, t: (key: string) => string) {
+  if (sev === "high") return <Badge variant="destructive" className="rounded-full">{t("app.review.risksPanel.severity.high")}</Badge>;
+  if (sev === "medium") return <Badge variant="secondary" className="rounded-full">{t("app.review.risksPanel.severity.medium")}</Badge>;
+  return <Badge variant="outline" className="rounded-full">{t("app.review.risksPanel.severity.low")}</Badge>;
 }
 
 function findExcerpt(text: string, query: string) {
@@ -146,6 +147,7 @@ export default function Risks({
   onShowEvidence,
   knownEvidenceIds,
 }: Props) {
+  const { t } = useAppI18n();
   const [filter, setFilter] = useState<RiskSeverity | "ALL">("ALL");
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<string | null>(null);
@@ -265,9 +267,9 @@ export default function Risks({
         <CardContent className="p-5 space-y-3">
           <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <div>
-              <p className="text-sm font-semibold">Risks</p>
+              <p className="text-sm font-semibold">{t("app.review.risksPanel.title")}</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                Start with High risks. Evidence snippets are authoritative when available; source highlighting is best-effort.
+                {t("app.review.risksPanel.subtitle")}
               </p>
             </div>
 
@@ -282,7 +284,7 @@ export default function Risks({
                 className="rounded-full"
                 onClick={() => setFilter("ALL")}
               >
-                All
+                {t("app.common.all")}
               </Button>
               <Button
                 type="button"
@@ -290,7 +292,7 @@ export default function Risks({
                 className="rounded-full"
                 onClick={() => setFilter("high")}
               >
-                High <span className="ml-2 text-xs opacity-70">{counts.high}</span>
+                {t("app.review.risksPanel.severity.high")} <span className="ml-2 text-xs opacity-70">{counts.high}</span>
               </Button>
               <Button
                 type="button"
@@ -298,7 +300,7 @@ export default function Risks({
                 className="rounded-full"
                 onClick={() => setFilter("medium")}
               >
-                Medium <span className="ml-2 text-xs opacity-70">{counts.medium}</span>
+                {t("app.review.risksPanel.severity.medium")} <span className="ml-2 text-xs opacity-70">{counts.medium}</span>
               </Button>
               <Button
                 type="button"
@@ -306,7 +308,7 @@ export default function Risks({
                 className="rounded-full"
                 onClick={() => setFilter("low")}
               >
-                Low <span className="ml-2 text-xs opacity-70">{counts.low}</span>
+                {t("app.review.risksPanel.severity.low")} <span className="ml-2 text-xs opacity-70">{counts.low}</span>
               </Button>
               <Button
                 type="button"
@@ -320,7 +322,7 @@ export default function Risks({
                   });
                 }}
               >
-                Needs verification <span className="ml-2 text-xs opacity-70">{needsVerCount}</span>
+                {t("app.review.risksPanel.needsVerification")} <span className="ml-2 text-xs opacity-70">{needsVerCount}</span>
               </Button>
             </div>
 
@@ -328,7 +330,7 @@ export default function Risks({
               <Input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Search risks…"
+                placeholder={t("app.review.risksPanel.searchPlaceholder")}
                 className="rounded-2xl"
               />
             </div>
@@ -340,15 +342,15 @@ export default function Risks({
         <Card className="rounded-2xl">
           <CardContent className="p-6 space-y-3">
             <div>
-              <p className="text-sm font-semibold">No risks detected</p>
+              <p className="text-sm font-semibold">{t("app.review.risksPanel.emptyTitle")}</p>
               <p className="mt-1 text-sm text-muted-foreground">
-                If the tender contains complex tables or scanned content, risks may not be captured reliably. Review the source to verify.
+                {t("app.review.risksPanel.emptyBody")}
               </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
               <Button className="rounded-full" onClick={() => onJumpToSource("")}>
-                Review source text
+                {t("app.review.risksPanel.reviewSourceText")}
               </Button>
               <Button
                 variant="outline"
@@ -358,7 +360,7 @@ export default function Risks({
                   setQ("");
                 }}
               >
-                Reset filters
+                {t("app.review.risksPanel.resetFilters")}
               </Button>
             </div>
           </CardContent>
@@ -390,10 +392,10 @@ export default function Risks({
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0 space-y-2">
                         <div className="flex items-center gap-2 flex-wrap">
-                          {severityBadge(r.severity)}
+                          {severityBadge(r.severity, t)}
                           {needsVer ? (
                             <Badge variant="outline" className="rounded-full">
-                              Needs verification
+                              {t("app.review.risksPanel.needsVerification")}
                             </Badge>
                           ) : null}
                           <span className="text-sm font-medium text-foreground">{r.title}</span>
@@ -413,7 +415,7 @@ export default function Risks({
                       {/* Multi-evidence chips (resolvable only) */}
                       {hasEvidence && resolvable.length > 1 ? (
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-xs text-muted-foreground mr-1">Evidence</span>
+                          <span className="text-xs text-muted-foreground mr-1">{t("app.review.risksPanel.evidence")}</span>
                           {resolvable.slice(0, 12).map((eid) => {
                             const isActive = eid === activeId;
                             return (
@@ -427,7 +429,7 @@ export default function Risks({
                                     : "bg-background text-foreground border-border hover:bg-muted/40",
                                 ].join(" ")}
                                 onClick={() => setSelectedEvidence((prev) => ({ ...prev, [r.id]: eid }))}
-                                title={`Use ${eid}`}
+                                title={t("app.review.risksPanel.useEvidenceId", { id: eid })}
                               >
                                 {eid}
                               </button>
@@ -443,7 +445,7 @@ export default function Risks({
                           className="rounded-full"
                           onClick={() => handleEvidence(r)}
                         >
-                          {onShowEvidence && (hasEvidence || !!activeId) ? "Open evidence excerpt" : "Locate in source (best-effort)"}
+                          {onShowEvidence && (hasEvidence || !!activeId) ? t("app.review.risksPanel.openEvidenceExcerpt") : t("app.review.risksPanel.locateInSource")}
                         </Button>
 
                         {/* Optional: keep a manual jump path even when evidence exists */}
@@ -454,19 +456,19 @@ export default function Risks({
                             className="rounded-full"
                             onClick={() => onJumpToSource(r.title)}
                           >
-                            Locate in source (best-effort)
+                            {t("app.review.risksPanel.locateInSource")}
                           </Button>
                         ) : null}
                       </div>
 
                       <div className="rounded-2xl border bg-muted/20 p-4">
-                        <p className="text-xs text-muted-foreground">Source excerpt (best-effort)</p>
+                        <p className="text-xs text-muted-foreground">{t("app.review.risksPanel.sourceExcerpt")}</p>
                         <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
                           {excerpt
                             ? excerpt
                             : hasEvidence
-                              ? "Couldn’t auto-extract an excerpt here. Use the evidence snippet (authoritative); highlighting is best-effort."
-                              : "No excerpt found. Review the source text to verify."}
+                              ? t("app.review.risksPanel.missingExcerptWithEvidence")
+                              : t("app.review.risksPanel.missingExcerptWithoutEvidence")}
                         </p>
                       </div>
                     </div>
