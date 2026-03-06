@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
 import { supabaseBrowser } from "@/lib/supabase/browser";
@@ -10,16 +10,16 @@ import { getJobDisplayName, setJobDisplayName, clearJobDisplayName } from "@/lib
 
 import { track } from "@/lib/telemetry";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ArrowLeft, MoreHorizontal } from "lucide-react";
 import { useAppI18n } from "../../_components/app-i18n-provider";
+import { JobPageFeedback } from "./_components/job-page-feedback";
+import { JobPageHeader } from "./_components/job-page-header";
 import { FailedStatePanel } from "./_components/job-status-panels";
 
 type JobStatus = "queued" | "processing" | "done" | "failed";
@@ -3590,290 +3590,69 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="truncate text-2xl font-semibold tracking-tight">{displayName || job?.file_name || t("app.review.titleFallback")}</h1>
+      <JobPageHeader
+        title={displayName || job?.file_name || t("app.review.titleFallback")}
+        showProgress={showProgress}
+        showFailed={showFailed}
+        showReady={showReady}
+        lastProgressEvent={lastProgressEvent ? {
+          message: String(lastProgressEvent.message ?? ""),
+          createdAtText: lastProgressEvent.created_at ? formatDate(lastProgressEvent.created_at) : null,
+        } : null}
+        statusBadge={statusBadge(job?.status ?? "queued", t)}
+        extractionBadge={showReady || showFailed ? extractionBadge : null}
+        t={t}
+        onRetryAnalysis={triggerProcessingOnce}
+        canRetryAnalysis={Boolean(job)}
+        canDownload={canDownload}
+        exportLocked={exportLocked}
+        unlockExportsHref={unlockExportsHref}
+        canExport={canExport}
+        exporting={exporting}
+        creditsLoading={creditsLoading}
+        onExportBidPack={async (source) => {
+          if (!canDownload || exporting !== null) return;
+          track("export_bid_pack_clicked", source === "menu" ? { jobId, source: "menu" } : { jobId });
+          setExporting("xlsx");
+          try {
+            await exportBidPackXlsx();
+          } finally {
+            setExporting(null);
+          }
+        }}
+        onExportTenderBriefPdf={async () => {
+          if (!canDownload || exporting !== null) return;
+          setExporting("brief");
+          try {
+            await exportTenderBriefPdf();
+          } finally {
+            setExporting(null);
+          }
+        }}
+        onExportSummaryTxt={async () => {
+          if (!canDownload || exporting !== null) return;
+          setExporting("summary");
+          try {
+            await exportSummaryTxt();
+          } finally {
+            setExporting(null);
+          }
+        }}
+        onExportCsv={exportCsv}
+        onRename={() => setRenaming(true)}
+        canRename={Boolean(job) && !showProgress}
+        onDelete={handleDelete}
+        canDelete={canDelete}
+      />
 
-            {(job?.status === "queued" || job?.status === "processing") && (
-              <Button variant="secondary" className="rounded-full" onClick={triggerProcessingOnce} disabled={!job}>
-                {t("app.review.actions.retryAnalysis")}
-              </Button>
-            )}
-
-            {statusBadge(job?.status ?? "queued", t)}
-
-            {(showReady || showFailed) ? (
-              <Badge variant="secondary" className="rounded-full" title={extractionBadge.title}>
-                {extractionBadge.label}
-              </Badge>
-            ) : null}
-          </div>
-
-          <div className="mt-1 text-sm text-muted-foreground">
-            {showProgress
-              ? t("app.review.state.progress")
-              : showFailed
-              ? t("app.review.state.failed")
-              : t("app.review.state.ready")}
-
-          {showProgress && lastProgressEvent && (
-            <p className="mt-2 text-xs text-muted-foreground">
-              <span className="font-medium">{t("app.review.state.lastUpdateLabel")}</span>{" "}
-              <span>{lastProgressEvent.message}</span>
-              {lastProgressEvent.created_at ? (
-                <span className="ml-2">({formatDate(lastProgressEvent.created_at)})</span>
-              ) : null}
-            </p>
-          )}
-          </div>
-
-          <p className="mt-2 text-sm text-muted-foreground">{t("app.common.draftingSupport")}</p>
-        </div>
-
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          <Button asChild variant="ghost" className="h-9 rounded-full px-3">
-            <Link href="/app/jobs" className="inline-flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              <span>{t("app.common.back")}</span>
-            </Link>
-          </Button>
-
-
-          {canDownload ? (
-            exportLocked ? (
-              <Button asChild variant="outline" className="h-9 rounded-full px-4">
-                <a href={unlockExportsHref}>{t("app.review.actions.unlockExports")}</a>
-              </Button>
-            ) : (
-              <Button
-                className="h-9 rounded-full px-4"
-                disabled={!canExport || exporting !== null || creditsLoading}
-                onClick={async () => {
-                  if (!canDownload || exporting !== null) return;
-                  track("export_bid_pack_clicked", { jobId });
-                  setExporting("xlsx");
-                  try {
-                    await exportBidPackXlsx();
-                  } finally {
-                    setExporting(null);
-                  }
-                }}
-              >
-                {exporting === "xlsx" ? t("app.common.preparing") : t("app.review.actions.downloadBidPack")}
-              </Button>
-            )
-          ) : null}
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-9 w-9 rounded-full"
-                disabled={exporting !== null}
-                aria-label={t("app.review.actions.menuAria")}
-              >
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-
-            <DropdownMenuContent align="end" className="min-w-[240px]">
-              <DropdownMenuItem
-                disabled={!job || showProgress}
-                onSelect={(e) => {
-                  e.preventDefault();
-                  if (!job || showProgress) return;
-                  setRenaming(true);
-                }}
-              >
-                {t("app.review.actions.rename")}
-              </DropdownMenuItem>
-
-              <DropdownMenuSeparator />
-
-              {canDownload ? (
-                <>
-                  {exportLocked ? (
-                <>
-                  <DropdownMenuItem asChild>
-                    <a href={unlockExportsHref}>{t("app.review.actions.unlockExports")}</a>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                </>
-              ) : null}
-
-              <DropdownMenuItem
-                disabled={!canExport || exporting !== null || creditsLoading}
-                onSelect={async (e) => {
-                  e.preventDefault();
-                  if (!canDownload || exporting !== null) return;
-                  setExporting("brief");
-                  try {
-                    await exportTenderBriefPdf();
-                  } finally {
-                    setExporting(null);
-                  }
-                }}
-              >
-                {exporting === "brief" ? t("app.common.preparing") : t("app.review.actions.exportTenderBriefPdf")}
-              </DropdownMenuItem>
-
-              <DropdownMenuItem
-                disabled={!canExport || exporting !== null || creditsLoading}
-                onSelect={async (e) => {
-                  e.preventDefault();
-                  if (!canDownload || exporting !== null) return;
-                  track("export_bid_pack_clicked", { jobId, source: "menu" });
-                  setExporting("xlsx");
-                  try {
-                    await exportBidPackXlsx();
-                  } finally {
-                    setExporting(null);
-                  }
-                }}
-              >
-                {exporting === "xlsx" ? t("app.common.preparing") : t("app.review.actions.downloadBidPack")}
-              </DropdownMenuItem>
-
-              <DropdownMenuSeparator />
-
-              <DropdownMenuItem
-                disabled={!canExport || creditsLoading}
-                onSelect={(e) => {
-                  e.preventDefault();
-                  exportCsv("overview");
-                }}
-              >
-                {t("app.review.actions.exportCsvOverview")}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                disabled={!canExport || creditsLoading}
-                onSelect={(e) => {
-                  e.preventDefault();
-                  exportCsv("requirements");
-                }}
-              >
-                {t("app.review.actions.exportCsvRequirements")}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                disabled={!canExport || creditsLoading}
-                onSelect={(e) => {
-                  e.preventDefault();
-                  exportCsv("risks");
-                }}
-              >
-                {t("app.review.actions.exportCsvRisks")}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                disabled={!canExport || creditsLoading}
-                onSelect={(e) => {
-                  e.preventDefault();
-                  exportCsv("clarifications");
-                }}
-              >
-                {t("app.review.actions.exportCsvClarifications")}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                disabled={!canExport || creditsLoading}
-                onSelect={(e) => {
-                  e.preventDefault();
-                  exportCsv("outline");
-                }}
-              >
-                {t("app.review.actions.exportCsvOutline")}
-              </DropdownMenuItem>
-
-              <DropdownMenuSeparator />
-
-              <DropdownMenuItem
-                disabled={!canExport || exporting !== null || creditsLoading}
-                onSelect={async (e) => {
-                  e.preventDefault();
-                  if (!canDownload || exporting !== null) return;
-                  setExporting("summary");
-                  try {
-                    await exportSummaryTxt();
-                  } finally {
-                    setExporting(null);
-                  }
-                }}
-              >
-                {exporting === "summary" ? t("app.common.preparing") : t("app.review.actions.downloadSummary")}
-              </DropdownMenuItem>
-
-              <DropdownMenuSeparator />
-
-              
-                </>
-              ) : (
-                <>
-                  <DropdownMenuItem disabled>{t("app.review.exportsNotReady")}</DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                </>
-              )}
-
-              <DropdownMenuItem
-                disabled={!canDelete}
-                className="text-red-600 focus:text-red-600 dark:text-red-300 dark:focus:text-red-300"
-                onSelect={(e) => {
-                  e.preventDefault();
-                  if (!canDelete) return;
-                  handleDelete();
-                }}
-              >
-                {t("app.common.delete")}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </div>
-
-{notice ? (
-        <Card className="rounded-2xl border bg-muted/30">
-          <CardContent className="p-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <p className="text-sm text-foreground/80">{notice}</p>
-            <div className="flex shrink-0 gap-2">
-              <Button asChild variant="outline" size="sm" className="rounded-full">
-                <a href={unlockExportsHref}>{t("app.review.actions.unlockExports")}</a>
-              </Button>
-              <Button variant="ghost" size="sm" className="rounded-full" onClick={() => setNotice(null)}>
-                Dismiss
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      ) : null}
-
-{error ? (
-        <Card className="rounded-2xl border-red-200 bg-red-50 dark:border-red-500/25 dark:bg-red-500/10">
-          <CardContent className="p-4">
-            <p className="text-sm text-red-700 dark:text-red-200">{error}</p>
-          </CardContent>
-        </Card>
-      ) : null}
-
-     {showProgress ? (
-        <Card className="rounded-2xl">
-          <CardContent className="space-y-3 py-5">
-            <div className="flex flex-col gap-1 md:flex-row md:items-center md:justify-between">
-              <p className="text-sm font-medium">{t("app.review.progress.working")}</p>
-              <p className="text-xs text-muted-foreground">{t("app.review.progress.autoUpdates")}</p>
-            </div>
-
-            <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
-              <div className="absolute left-0 top-0 h-full w-2/3 rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-blue-500 animate-pulse" />
-            </div>
-
-            <p className="text-xs text-muted-foreground">{t("app.review.progress.extracting")}</p>
-
-            <p className="text-xs text-muted-foreground">
-              {t("app.review.progress.stepsHint")}
-            </p>
-          </CardContent>
-        </Card>
-      ) : null}
+      <JobPageFeedback
+        notice={notice}
+        unlockExportsHref={unlockExportsHref}
+        onDismissNotice={() => setNotice(null)}
+        error={error}
+        showProgress={showProgress}
+        t={t}
+      />
 	{showFailed ? (
         <FailedStatePanel
           jobId={jobId}
