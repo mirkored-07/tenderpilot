@@ -4356,7 +4356,7 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
                     }}
                     disabled={!extractedText}
                   >
-                    Find
+                    {t("app.common.find")}
                   </Button>
                 </div>
               </div>

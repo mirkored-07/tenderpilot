@@ -1465,11 +1465,11 @@ export default function AccountPage() {
                 <div className="flex items-center gap-2">
                   {!playbookEnabled ? (
                     <Badge variant="destructive" className="rounded-full">
-                      Setup required
+                      {t("app.account.playbook.setupRequired")}
                     </Badge>
                   ) : (
                     <Badge variant="secondary" className="rounded-full">
-                      Policy
+                      {t("app.account.playbook.policyBadge")}
                     </Badge>
                   )}
 
@@ -1480,7 +1480,7 @@ export default function AccountPage() {
                     onClick={() => setPlaybookOpen(true)}
                   >
                     <Pencil className="h-4 w-4 mr-2" />
-                    Edit
+                    {t("app.common.edit")}
                   </Button>
                 </div>
               </div>

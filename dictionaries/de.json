@@ -738,7 +738,8 @@
       "removeItemAria": "Remove item",
       "saved": "Saved",
       "save": "Speichern",
-      "resetFilters": "Filter zurücksetzen"
+      "resetFilters": "Filter zurücksetzen",
+      "find": "Suchen"
     },
     "decision": {
       "go": "Go",
@@ -1700,7 +1701,13 @@
         "title": "Analytics",
         "workloadByOwner": "Workload by owner",
         "ownerRow": "{total} Punkte • {blocked} blockiert • {overdue} überfällig",
-        "expandHint": "Zum Anzeigen der Analysen erweitern."
+        "expandHint": "Zum Anzeigen der Analysen erweitern.",
+        "subtitle": "Verteilung der Fristen und Überblick über die Arbeitslast.",
+        "deadlinesSubtitle": "Verteilung der Fristen im sichtbaren Portfolio.",
+        "bidsCount": "{count} Ausschreibungen",
+        "deadlineBreakdown": "Überfällig {overdue} • 0-7 T. {next7} • 8-30 T. {next30} • 31-90 T. {next90} • Unbekannt {unknown}",
+        "workloadSubtitle": "Wer offene Arbeit trägt und wo die Blocker liegen.",
+        "ownersCount": "{count} Verantwortliche"
       },
       "blockers": {
         "noneTitle": "Keine Blocker",

@@ -738,7 +738,8 @@
       "removeItemAria": "Remove item",
       "saved": "Saved",
       "save": "Enregistrer",
-      "resetFilters": "Réinitialiser les filtres"
+      "resetFilters": "Réinitialiser les filtres",
+      "find": "Trouver"
     },
     "decision": {
       "go": "Go",
@@ -1700,7 +1701,13 @@
         "title": "Analytics",
         "workloadByOwner": "Workload by owner",
         "ownerRow": "{total} éléments • {blocked} bloqués • {overdue} en retard",
-        "expandHint": "Développez pour voir les analyses."
+        "expandHint": "Développez pour voir les analyses.",
+        "subtitle": "Répartition des échéances et vue d’ensemble de la charge de travail.",
+        "deadlinesSubtitle": "Répartition des échéances dans le portefeuille visible.",
+        "bidsCount": "{count} appels d’offres",
+        "deadlineBreakdown": "En retard {overdue} • 0-7 j {next7} • 8-30 j {next30} • 31-90 j {next90} • Inconnu {unknown}",
+        "workloadSubtitle": "Qui porte le travail ouvert et où se trouvent les blocages.",
+        "ownersCount": "{count} responsables"
       },
       "blockers": {
         "noneTitle": "Aucun blocage",

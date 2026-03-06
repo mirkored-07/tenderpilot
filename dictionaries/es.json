@@ -738,7 +738,8 @@
       "removeItemAria": "Remove item",
       "saved": "Saved",
       "save": "Guardar",
-      "resetFilters": "Restablecer filtros"
+      "resetFilters": "Restablecer filtros",
+      "find": "Buscar"
     },
     "decision": {
       "go": "Go",
@@ -1700,7 +1701,13 @@
         "title": "Analytics",
         "workloadByOwner": "Workload by owner",
         "ownerRow": "{total} elementos • {blocked} bloqueados • {overdue} vencidos",
-        "expandHint": "Amplía para ver los análisis."
+        "expandHint": "Amplía para ver los análisis.",
+        "subtitle": "Distribución de plazos y visión general de la carga de trabajo.",
+        "deadlinesSubtitle": "Distribución de plazos en la cartera visible.",
+        "bidsCount": "{count} licitaciones",
+        "deadlineBreakdown": "Vencidas {overdue} • 0-7 d {next7} • 8-30 d {next30} • 31-90 d {next90} • Desconocido {unknown}",
+        "workloadSubtitle": "Quién lleva el trabajo abierto y dónde están los bloqueos.",
+        "ownersCount": "{count} responsables"
       },
       "blockers": {
         "noneTitle": "Sin bloqueos",

@@ -1372,7 +1372,7 @@ return {
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-sm font-semibold">{t("app.dashboard.analytics.title")}</p>
-              <p className="mt-1 text-xs text-muted-foreground">Deadline distribution and workload overview.</p>
+              <p className="mt-1 text-xs text-muted-foreground">{t("app.dashboard.analytics.subtitle")}</p>
             </div>
 
             <button
@@ -1387,7 +1387,7 @@ return {
           </div>
 
           {standupMode ? (
-            <p className="mt-3 text-xs text-muted-foreground">Hidden in standup mode.</p>
+            <p className="mt-3 text-xs text-muted-foreground">{t("app.dashboard.analytics.hiddenInStandup")}</p>
           ) : openSections.analytics ? (
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <Card className="rounded-2xl">
@@ -1396,17 +1396,15 @@ return {
                     <div>
                       <p className="text-sm font-semibold">{t("app.dashboard.kpi.deadlinesTitle")}</p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        Distribution of deadlines across the visible portfolio.
+                        {t("app.dashboard.analytics.deadlinesSubtitle")}
                       </p>
                     </div>
-                    <p className="text-xs text-muted-foreground">{filteredRows.length} bids</p>
+                    <p className="text-xs text-muted-foreground">{t("app.dashboard.analytics.bidsCount", { count: filteredRows.length })}</p>
                   </div>
                   <div className="mt-4 space-y-2">
                     <SegmentedBar parts={deadlineHistogram} />
                     <p className="text-xs text-muted-foreground">
-                      Overdue {deadlineHistogram[0].value} • 0-7d {deadlineHistogram[1].value} • 8-30d{" "}
-                      {deadlineHistogram[2].value} • 31-90d {deadlineHistogram[3].value} • Unknown{" "}
-                      {deadlineHistogram[4].value}
+                      {t("app.dashboard.analytics.deadlineBreakdown", { overdue: deadlineHistogram[0].value, next7: deadlineHistogram[1].value, next30: deadlineHistogram[2].value, next90: deadlineHistogram[3].value, unknown: deadlineHistogram[4].value })}
                     </p>
                   </div>
                 </CardContent>
@@ -1418,10 +1416,10 @@ return {
                     <div>
                       <p className="text-sm font-semibold">{t("app.dashboard.analytics.workloadByOwner")}</p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        Who is carrying open work and where the blockers are.
+                        {t("app.dashboard.analytics.workloadSubtitle")}
                       </p>
                     </div>
-                    <p className="text-xs text-muted-foreground">{workloadByOwner.length} owners</p>
+                    <p className="text-xs text-muted-foreground">{t("app.dashboard.analytics.ownersCount", { count: workloadByOwner.length })}</p>
                   </div>
 
                   <div className="mt-4 space-y-2">

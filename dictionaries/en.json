@@ -738,7 +738,8 @@
       "removeItemAria": "Remove item",
       "saved": "Saved",
       "save": "Save",
-      "resetFilters": "Reset filters"
+      "resetFilters": "Reset filters",
+      "find": "Find"
     },
     "decision": {
       "go": "Go",
@@ -1790,7 +1791,13 @@
         "title": "Analytics",
         "workloadByOwner": "Workload by owner",
         "ownerRow": "{total} items • {blocked} blocked • {overdue} overdue",
-        "expandHint": "Expand to view analytics."
+        "expandHint": "Expand to view analytics.",
+        "subtitle": "Deadline distribution and workload overview.",
+        "deadlinesSubtitle": "Distribution of deadlines across the visible portfolio.",
+        "bidsCount": "{count} bids",
+        "deadlineBreakdown": "Overdue {overdue} • 0-7d {next7} • 8-30d {next30} • 31-90d {next90} • Unknown {unknown}",
+        "workloadSubtitle": "Who is carrying open work and where the blockers are.",
+        "ownersCount": "{count} owners"
       },
       "blockers": {
         "noneTitle": "No blockers",
