@@ -739,7 +739,8 @@
       "saved": "Saved",
       "save": "Enregistrer",
       "resetFilters": "Réinitialiser les filtres",
-      "find": "Trouver"
+      "find": "Trouver",
+      "moreActions": "Plus d’actions"
     },
     "decision": {
       "go": "Go",
@@ -854,7 +855,8 @@
         "loadWorkFailed": "Work items could not be loaded.",
         "noPdf": "No PDF is attached to this tender.",
         "noSignedUrl": "Could not create a signed PDF link.",
-        "openPdfFailed": "Could not open the PDF."
+        "openPdfFailed": "Could not open the PDF.",
+        "policyBlockedSave": "L’enregistrement dans la Bid Room est bloqué par votre politique Supabase. Exécutez le SQL RLS de job_work_items depuis le dépôt, puis réessayez."
       },
       "evidence": {
         "title": "Evidence",
@@ -952,7 +954,8 @@
         "noteBase": "Depuis la matrice de conformité. Statut : {status}",
         "noteProposal": "Proposal: {proposal}",
         "noteNote": "Note: {note}",
-        "sentDesc": "Élément d’exécution créé pour cet écart."
+        "sentDesc": "Élément d’exécution créé pour cet écart.",
+        "existsDesc": "Cette exigence existe déjà comme élément d’exécution."
       },
       "coveredNoTask": "Couvert, aucune tâche nécessaire",
       "noRows": "Aucune ligne ne correspond aux filtres actuels.",
@@ -964,35 +967,35 @@
         "evidence": "Preuve",
         "backToJob": "Retour au dossier"
       },
-      "openProposalCoverage": "Open proposal coverage",
-      "proposalCoverage": "Proposal coverage",
+      "openProposalCoverage": "Ouvrir la couverture de la proposition",
+      "proposalCoverage": "Couverture de la proposition",
       "badges": {
-        "gap": "Gap"
+        "gap": "Écart"
       },
       "errors": {
         "noPdf": "No PDF is attached to this tender.",
         "openPdfFailed": "Could not open the PDF.",
-        "overlaysLoadFailed": "Could not load overlays. Please refresh the page.",
-        "sendFailed": "Could not send to Bid Room.",
+        "overlaysLoadFailed": "Impossible de charger les surcouches. Veuillez actualiser la page.",
+        "sendFailed": "Impossible d’envoyer vers la Bid Room.",
         "sendFailedWithMsg": "Could not send to Bid Room: {msg}",
-        "saveFailed": "Could not save changes.",
+        "saveFailed": "Impossible d’enregistrer les modifications.",
         "saveFailedWithMsg": "Could not save changes: {msg}",
         "evidenceNotFound": "La preuve {id} est introuvable pour cet appel d’offres. Vérifiez dans le PDF."
       },
       "fields": {
-        "stance": "Status",
-        "proposalSection": "Proposal section",
-        "auditNote": "Audit note"
+        "stance": "Statut",
+        "proposalSection": "Section de la proposition",
+        "auditNote": "Note d’audit"
       },
       "filters": {
-        "view": "View",
-        "allStatuses": "All statuses",
-        "allLevels": "All levels"
+        "view": "Vue",
+        "allStatuses": "Tous les statuts",
+        "allLevels": "Tous les niveaux"
       },
       "view": {
         "gate": "Gate",
-        "gaps": "Gaps",
-        "covered": "Covered",
+        "gaps": "Écarts",
+        "covered": "Couvert",
         "gapsOnly": "Écarts",
         "full": "Complète",
         "gapsQueue": "File des écarts",
@@ -1005,10 +1008,10 @@
         "info": "Info"
       },
       "status": {
-        "compliant": "Compliant",
-        "partial": "Partial",
-        "noncompliant": "Non-compliant",
-        "tbd": "TBD",
+        "compliant": "Conforme",
+        "partial": "Partiel",
+        "noncompliant": "Non conforme",
+        "tbd": "À définir",
         "na": "N/A"
       },
       "stats": {
@@ -1016,16 +1019,17 @@
         "evidenceMap": "{count} evidence IDs"
       },
       "drawer": {
-        "noRequirementSelected": "Select a requirement to see details and evidence.",
-        "authoritativeExcerpt": "Authoritative excerpt",
+        "noRequirementSelected": "Sélectionnez une exigence pour voir les détails et les preuves.",
+        "authoritativeExcerpt": "Extrait faisant foi",
         "evidenceJustification": "Evidence justification",
         "noEvidenceIds": "No evidence IDs listed. Verify in the original PDF.",
         "authoritativeNote": "L’extrait fait foi. « Localiser dans le PDF » est en best effort.",
         "noExcerpt": "(Aucun extrait enregistré)"
       },
       "helper": {
-        "setStance": "Set status and optionally add a note.",
-        "notTaskTracking": "Ici, vous suivez la couverture. Pour les responsables, dates et statuts, utilisez le Bid Room."
+        "setStance": "Définissez le statut et ajoutez éventuellement une note.",
+        "notTaskTracking": "Ici, vous suivez la couverture. Pour les responsables, dates et statuts, utilisez le Bid Room.",
+        "subtitle": "Vue d’audit des exigences. Définissez le statut de conformité et indiquez où chaque exigence est traitée dans la proposition."
       },
       "labels": {
         "evidenceCount": "IDs de preuve : {count}",
@@ -1146,7 +1150,12 @@
         "dueBeforeSubmission": "Due: Before submission"
       },
       "labels": {
-        "tenderOutline": "Tender outline"
+        "tenderOutline": "Structure de l’appel d’offres",
+        "requirements": "Exigences",
+        "risks": "Risques",
+        "clarifications": "Clarifications",
+        "source": "Source",
+        "compliance": "Conformité"
       },
       "doneWhen": {
         "checklist": "Done when: requirement wording is verified in portal/PDF and any mandatory form/template is identified.",
@@ -1254,7 +1263,10 @@
         "showFullText": "Show full text",
         "pageLabel": "Page",
         "verificationFooter": "Always verify against the original PDF. Evidence excerpts are the source of truth.",
-        "find": "Trouver"
+        "find": "Trouver",
+        "matchFor": "Correspondance pour :",
+        "bestEffortPointer": "Cette vue met en évidence une correspondance best effort dans le texte source extrait. Utilisez-la uniquement comme repère : retrouvez la même clause dans le PDF original et vérifiez la formulation et la mise en page exactes.",
+        "exactMatchNotFound": "Aucune correspondance exacte trouvée dans le texte extrait. Les différences d’OCR et de mise en page sont fréquentes. Utilisez l’extrait de preuve ci-dessus et recherchez la phrase dans le PDF original."
       },
       "clarifications": {
         "categories": {
@@ -1562,8 +1574,8 @@
         },
         "meta": {
           "created": "Created",
-          "coverage": "Coverage",
-          "confidence": "Confidence",
+          "coverage": "Couverture",
+          "confidence": "Fiabilité",
           "submissionDeadline": "Submission deadline",
           "deadlinePresentVerify": "Deadline detected — verify in the PDF."
         },

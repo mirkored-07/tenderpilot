@@ -739,7 +739,8 @@
       "saved": "Saved",
       "save": "Guardar",
       "resetFilters": "Restablecer filtros",
-      "find": "Buscar"
+      "find": "Buscar",
+      "moreActions": "Más acciones"
     },
     "decision": {
       "go": "Go",
@@ -854,7 +855,8 @@
         "loadWorkFailed": "Work items could not be loaded.",
         "noPdf": "No PDF is attached to this tender.",
         "noSignedUrl": "Could not create a signed PDF link.",
-        "openPdfFailed": "Could not open the PDF."
+        "openPdfFailed": "Could not open the PDF.",
+        "policyBlockedSave": "El guardado en Bid Room está bloqueado por tu política de Supabase. Ejecuta el SQL RLS de job_work_items del repositorio y vuelve a intentarlo."
       },
       "evidence": {
         "title": "Evidence",
@@ -952,7 +954,8 @@
         "noteBase": "Desde la matriz de cumplimiento. Estado: {status}",
         "noteProposal": "Proposal: {proposal}",
         "noteNote": "Note: {note}",
-        "sentDesc": "Se creó una tarea para este gap."
+        "sentDesc": "Se creó una tarea para este gap.",
+        "existsDesc": "Este requisito ya existe como elemento de ejecución."
       },
       "coveredNoTask": "Cubierto, no hace falta tarea",
       "noRows": "No hay filas que coincidan con los filtros actuales.",
@@ -964,35 +967,35 @@
         "evidence": "Evidencia",
         "backToJob": "Volver al expediente"
       },
-      "openProposalCoverage": "Open proposal coverage",
-      "proposalCoverage": "Proposal coverage",
+      "openProposalCoverage": "Abrir cobertura de la propuesta",
+      "proposalCoverage": "Cobertura de la propuesta",
       "badges": {
-        "gap": "Gap"
+        "gap": "Brecha"
       },
       "errors": {
         "noPdf": "No PDF is attached to this tender.",
         "openPdfFailed": "Could not open the PDF.",
-        "overlaysLoadFailed": "Could not load overlays. Please refresh the page.",
-        "sendFailed": "Could not send to Bid Room.",
+        "overlaysLoadFailed": "No se pudieron cargar las superposiciones. Actualiza la página.",
+        "sendFailed": "No se pudo enviar a la Bid Room.",
         "sendFailedWithMsg": "Could not send to Bid Room: {msg}",
-        "saveFailed": "Could not save changes.",
+        "saveFailed": "No se pudieron guardar los cambios.",
         "saveFailedWithMsg": "Could not save changes: {msg}",
         "evidenceNotFound": "La evidencia {id} no se encontró en esta licitación. Verifícalo en el PDF."
       },
       "fields": {
-        "stance": "Status",
-        "proposalSection": "Proposal section",
-        "auditNote": "Audit note"
+        "stance": "Estado",
+        "proposalSection": "Sección de la propuesta",
+        "auditNote": "Nota de auditoría"
       },
       "filters": {
-        "view": "View",
-        "allStatuses": "All statuses",
-        "allLevels": "All levels"
+        "view": "Vista",
+        "allStatuses": "Todos los estados",
+        "allLevels": "Todos los niveles"
       },
       "view": {
         "gate": "Gate",
-        "gaps": "Gaps",
-        "covered": "Covered",
+        "gaps": "Brechas",
+        "covered": "Cubierto",
         "gapsOnly": "Brechas",
         "full": "Completa",
         "gapsQueue": "Cola de brechas",
@@ -1005,10 +1008,10 @@
         "info": "Info"
       },
       "status": {
-        "compliant": "Compliant",
-        "partial": "Partial",
-        "noncompliant": "Non-compliant",
-        "tbd": "TBD",
+        "compliant": "Conforme",
+        "partial": "Parcial",
+        "noncompliant": "No conforme",
+        "tbd": "Pendiente",
         "na": "N/A"
       },
       "stats": {
@@ -1016,16 +1019,17 @@
         "evidenceMap": "{count} evidence IDs"
       },
       "drawer": {
-        "noRequirementSelected": "Select a requirement to see details and evidence.",
-        "authoritativeExcerpt": "Authoritative excerpt",
+        "noRequirementSelected": "Selecciona un requisito para ver detalles y evidencias.",
+        "authoritativeExcerpt": "Extracto de referencia",
         "evidenceJustification": "Evidence justification",
         "noEvidenceIds": "No evidence IDs listed. Verify in the original PDF.",
         "authoritativeNote": "El extracto es la referencia principal. \"Localizar en PDF\" es best effort.",
         "noExcerpt": "(No hay extracto guardado)"
       },
       "helper": {
-        "setStance": "Set status and optionally add a note.",
-        "notTaskTracking": "Aquí controlas la cobertura. Para responsables, fechas y estado, usa el Bid Room."
+        "setStance": "Define el estado y, si quieres, añade una nota.",
+        "notTaskTracking": "Aquí controlas la cobertura. Para responsables, fechas y estado, usa el Bid Room.",
+        "subtitle": "Vista de auditoría para requisitos. Define el estado de cumplimiento e indica dónde se aborda cada requisito en la propuesta."
       },
       "labels": {
         "evidenceCount": "IDs de evidencia: {count}",
@@ -1146,7 +1150,12 @@
         "dueBeforeSubmission": "Due: Before submission"
       },
       "labels": {
-        "tenderOutline": "Tender outline"
+        "tenderOutline": "Estructura de la licitación",
+        "requirements": "Requisitos",
+        "risks": "Riesgos",
+        "clarifications": "Aclaraciones",
+        "source": "Fuente",
+        "compliance": "Cumplimiento"
       },
       "doneWhen": {
         "checklist": "Done when: requirement wording is verified in portal/PDF and any mandatory form/template is identified.",
@@ -1240,7 +1249,7 @@
         "hiddenTitle": "Source hidden",
         "hiddenBody": "For very large tenders, the source text is hidden by default for performance.",
         "closeLocateView": "Close locate view",
-        "sectionTitle": "Source",
+        "sectionTitle": "Fuente",
         "sectionSubtitle": "Evidence excerpts are verbatim. Use Locate in source to verify.",
         "title": "Source text",
         "subtitle": "Search and verify key clauses in the extracted text, then cross-check the PDF.",
@@ -1254,7 +1263,10 @@
         "showFullText": "Show full text",
         "pageLabel": "Page",
         "verificationFooter": "Always verify against the original PDF. Evidence excerpts are the source of truth.",
-        "find": "Buscar"
+        "find": "Buscar",
+        "matchFor": "Coincidencia para:",
+        "bestEffortPointer": "Esta vista resalta una coincidencia best effort en el texto fuente extraído. Úsala solo como referencia: localiza la misma cláusula en el PDF original y verifica el texto y el formato exactos.",
+        "exactMatchNotFound": "No se encontró una coincidencia exacta en el texto extraído. Las diferencias de OCR y maquetación son comunes. Usa el fragmento de evidencia de arriba y busca la frase en el PDF original."
       },
       "clarifications": {
         "categories": {
@@ -1562,8 +1574,8 @@
         },
         "meta": {
           "created": "Created",
-          "coverage": "Coverage",
-          "confidence": "Confidence",
+          "coverage": "Cobertura",
+          "confidence": "Confianza",
           "submissionDeadline": "Submission deadline",
           "deadlinePresentVerify": "Deadline detected — verify in the PDF."
         },

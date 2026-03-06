@@ -739,7 +739,8 @@
       "saved": "Saved",
       "save": "Save",
       "resetFilters": "Reset filters",
-      "find": "Find"
+      "find": "Find",
+      "moreActions": "More actions"
     },
     "decision": {
       "go": "Go",
@@ -854,7 +855,8 @@
         "loadWorkFailed": "Work items could not be loaded.",
         "noPdf": "No PDF is attached to this tender.",
         "noSignedUrl": "Could not create a signed PDF link.",
-        "openPdfFailed": "Could not open the PDF."
+        "openPdfFailed": "Could not open the PDF.",
+        "policyBlockedSave": "Bid Room save is blocked by your Supabase policy. Run the job_work_items RLS SQL from the repo, then try again."
       },
       "evidence": {
         "title": "Evidence",
@@ -952,7 +954,8 @@
         "noteBase": "From Compliance Matrix. Status: {status}",
         "noteProposal": "Proposal: {proposal}",
         "noteNote": "Note: {note}",
-        "sentDesc": "Execution item created for this gap."
+        "sentDesc": "Execution item created for this gap.",
+        "existsDesc": "This requirement already exists as an execution item."
       },
       "coveredNoTask": "Covered, no task needed",
       "noRows": "No rows match your current filters.",
@@ -1025,7 +1028,8 @@
       },
       "helper": {
         "setStance": "Set status and optionally add a note.",
-        "notTaskTracking": "This is coverage tracking. Use Bid Room for owners, due dates, and status."
+        "notTaskTracking": "This is coverage tracking. Use Bid Room for owners, due dates, and status.",
+        "subtitle": "Audit lens for requirements. Set compliance stance and map where each requirement is addressed in the proposal."
       },
       "labels": {
         "evidenceCount": "Evidence IDs: {count}",

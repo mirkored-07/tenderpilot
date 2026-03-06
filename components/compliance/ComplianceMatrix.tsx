@@ -1057,7 +1057,7 @@ export function ComplianceMatrix(props: {
                 variant="ghost"
                 className="h-8 w-8 rounded-full p-0"
                 onClick={() => setToast(null)}
-                aria-label="Dismiss"
+                aria-label={t("app.common.dismiss")}
               >
                 <X className="h-4 w-4" />
               </Button>
