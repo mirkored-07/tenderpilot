@@ -1059,7 +1059,7 @@
         "caution": "Factores de decisión: riesgos a validar antes de comprometer recursos.",
         "go": "No se detectaron bloqueos obligatorios en elegibilidad y reglas de entrega."
       },
-      "exportsLocked": "Las exportaciones están disponibles en planes de pago. Mejora o recarga para desbloquear.",
+      "exportsLocked": "Las exportaciones están disponibles con Pro o mientras queden créditos en el plan Free.",
       "titleFallback": "Tender review",
       "invalidLink": "This tender link is invalid.",
       "empty": {
@@ -1337,7 +1337,7 @@
       "settings": "Ajustes",
       "playbookTriggerNote": "Si una regla del playbook influye en una decisión, TenderPilot la mostrará como disparador en el cockpit.",
       "exports": {
-        "body": "Exporta desde dentro de una licitación para mantener coherencia con evidencias.",
+        "body": "Exporta directamente desde una licitación. Pro incluye exportaciones. Free puede exportar mientras queden créditos.",
         "openTenders": "Abrir licitaciones",
         "title": "Exportaciones"
       },
@@ -1422,7 +1422,17 @@
         "upgradeAnnual": "Mejorar anual",
         "stripeNote": "Suscripciones y facturas se gestionan vía Stripe.",
         "statusActive": "activo",
-        "statusFree": "free"
+        "statusFree": "Free",
+        "statusPending": "sincronización pendiente",
+        "planLabelPro": "Pro",
+        "planLabelFree": "Free",
+        "exportAccessLabel": "Acceso a exportaciones",
+        "exportAccessPaid": "Incluido con Pro",
+        "exportAccessCredit": "Usa un crédito",
+        "exportAccessCreditsAvailable": "Disponible mientras queden créditos",
+        "exportAccessLocked": "Mejora para desbloquearlo",
+        "paidPlanHelp": "Pro activo incluye exportaciones incluso cuando tu saldo actual es 0. Los créditos se siguen usando para nuevas revisiones.",
+        "freePlanHelp": "Free puede exportar mientras queden créditos. Mejora a Pro para tener créditos mensuales recurrentes y exportaciones incluidas."
       },
       "help": {
         "title": "Ayuda",
@@ -1458,7 +1468,7 @@
         "planConfirmed": "Plan confirmado. Créditos actualizados.",
         "missingBillingSchema": "Falta el esquema de facturación en Supabase. Ejecuta supabase/stripe_billing_v1.sql.",
         "billingSynced": "Facturación sincronizada.",
-        "billingSyncedFree": "Facturación sincronizada (free).",
+        "billingSyncedFree": "Facturación sincronizada. Estás en el plan Free.",
         "couldNotSyncBilling": "No se pudo sincronizar. Reintenta.",
         "couldNotStartCheckout": "No se pudo iniciar el pago. Revisa variables Stripe.",
         "couldNotOpenPortal": "No se pudo abrir el portal. Prueba primero a mejorar el plan.",

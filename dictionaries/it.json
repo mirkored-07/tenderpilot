@@ -1059,7 +1059,7 @@
         "caution": "Driver decisionali: rischi da validare prima di impegnare risorse.",
         "go": "Nessun blocco obbligatorio rilevato nei requisiti di idoneità e invio."
       },
-      "exportsLocked": "Gli export sono disponibili nei piani a pagamento. Passa a Pro o ricarica per sbloccarli.",
+      "exportsLocked": "Gli export sono disponibili con Pro oppure finché nel piano Free restano crediti.",
       "titleFallback": "Tender review",
       "invalidLink": "This tender link is invalid.",
       "empty": {
@@ -1337,7 +1337,7 @@
       "settings": "Impostazioni",
       "playbookTriggerNote": "Se una regola del playbook influisce sulla decisione, TenderPilot la mostrerà come trigger nel cockpit.",
       "exports": {
-        "body": "Esporta dall’interno di una gara per mantenere coerenza con le evidenze.",
+        "body": "Esporta direttamente dall’interno di una gara. Pro include gli export. Free può esportare finché restano crediti.",
         "openTenders": "Apri gare",
         "title": "Export"
       },
@@ -1422,7 +1422,17 @@
         "upgradeAnnual": "Upgrade annuale",
         "stripeNote": "Abbonamenti e fatture sono gestiti tramite Stripe.",
         "statusActive": "attivo",
-        "statusFree": "free"
+        "statusFree": "Free",
+        "statusPending": "sincronizzazione in sospeso",
+        "planLabelPro": "Pro",
+        "planLabelFree": "Free",
+        "exportAccessLabel": "Accesso agli export",
+        "exportAccessPaid": "Incluso con Pro",
+        "exportAccessCredit": "Usa un credito",
+        "exportAccessCreditsAvailable": "Disponibile finché restano crediti",
+        "exportAccessLocked": "Fai upgrade per sbloccarlo",
+        "paidPlanHelp": "Pro attivo include gli export anche quando il saldo crediti attuale è 0. I crediti vengono comunque usati per nuove review.",
+        "freePlanHelp": "Free può esportare finché restano crediti. Passa a Pro per crediti mensili ricorrenti e export inclusi."
       },
       "help": {
         "title": "Aiuto",
@@ -1458,7 +1468,7 @@
         "planConfirmed": "Piano confermato. Crediti aggiornati.",
         "missingBillingSchema": "Schema fatturazione mancante in Supabase. Esegui supabase/stripe_billing_v1.sql.",
         "billingSynced": "Fatturazione sincronizzata.",
-        "billingSyncedFree": "Fatturazione sincronizzata (free).",
+        "billingSyncedFree": "Fatturazione sincronizzata. Sei nel piano Free.",
         "couldNotSyncBilling": "Impossibile sincronizzare. Riprova.",
         "couldNotStartCheckout": "Impossibile avviare il checkout. Verifica le env Stripe e riprova.",
         "couldNotOpenPortal": "Impossibile aprire il portale fatturazione. Prova prima l’upgrade.",

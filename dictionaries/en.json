@@ -1059,7 +1059,7 @@
         "caution": "Decision drivers: risks requiring validation before committing.",
         "go": "No mandatory blockers detected in eligibility and submission requirements."
       },
-      "exportsLocked": "Exports are available on paid plans. Upgrade or top up to unlock exports.",
+      "exportsLocked": "Exports are available with Pro, or while free credits remain.",
       "titleFallback": "Tender review",
       "invalidLink": "This tender link is invalid.",
       "empty": {
@@ -1412,7 +1412,7 @@
       "settings": "Settings",
       "playbookTriggerNote": "If a playbook rule influences a decision, TenderPilot will show it as a trigger in the cockpit.",
       "exports": {
-        "body": "Export from inside a tender to keep everything consistent with evidence.",
+        "body": "Export from inside a tender. Pro includes exports. Free can export while credits remain.",
         "openTenders": "Open tenders",
         "title": "Exports"
       },
@@ -1503,8 +1503,11 @@
         "exportAccessLabel": "Export access",
         "exportAccessPaid": "Included with Pro",
         "exportAccessCredit": "Use a credit",
-        "paidPlanHelp": "Active Pro includes exports even when your current credit balance is 0. Credits are used for new reviews.",
-        "freePlanHelp": "Free uses credits one by one. Upgrade to Pro for recurring credits and export access."
+        "paidPlanHelp": "Active Pro includes exports even when your current credit balance is 0. Credits are still used for new reviews.",
+        "freePlanHelp": "Free can export while credits remain. Upgrade to Pro for recurring monthly credits and included exports.",
+        "statusPending": "pending sync",
+        "exportAccessCreditsAvailable": "Available while credits remain",
+        "exportAccessLocked": "Upgrade to unlock"
       },
       "help": {
         "title": "Help",

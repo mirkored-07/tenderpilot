@@ -1059,7 +1059,7 @@
         "caution": "Facteurs de décision : risques à valider avant d’engager des ressources.",
         "go": "Aucun blocage obligatoire détecté dans l’éligibilité et les règles de soumission."
       },
-      "exportsLocked": "Les exports sont disponibles sur les offres payantes. Passez à Pro ou rechargez pour les débloquer.",
+      "exportsLocked": "Les exports sont disponibles avec Pro, ou tant qu’il reste des crédits sur le plan Free.",
       "titleFallback": "Tender review",
       "invalidLink": "This tender link is invalid.",
       "empty": {
@@ -1337,7 +1337,7 @@
       "settings": "Paramètres",
       "playbookTriggerNote": "Si une règle du playbook influence une décision, TenderPilot l’affiche comme déclencheur dans le cockpit.",
       "exports": {
-        "body": "Exportez depuis un appel d’offres pour garder la cohérence avec les preuves.",
+        "body": "Exportez directement depuis un appel d’offres. Pro inclut les exports. Free peut exporter tant qu’il reste des crédits.",
         "openTenders": "Ouvrir les appels d’offres",
         "title": "Exports"
       },
@@ -1422,7 +1422,17 @@
         "upgradeAnnual": "Passer à l’annuel",
         "stripeNote": "Les abonnements et factures sont gérés via Stripe.",
         "statusActive": "actif",
-        "statusFree": "free"
+        "statusFree": "Free",
+        "statusPending": "synchronisation en attente",
+        "planLabelPro": "Pro",
+        "planLabelFree": "Free",
+        "exportAccessLabel": "Accès aux exports",
+        "exportAccessPaid": "Inclus avec Pro",
+        "exportAccessCredit": "Utiliser un crédit",
+        "exportAccessCreditsAvailable": "Disponible tant qu’il reste des crédits",
+        "exportAccessLocked": "Passez à Pro pour débloquer",
+        "paidPlanHelp": "Le plan Pro actif inclut les exports même si votre solde actuel est de 0. Les crédits sont toujours utilisés pour les nouvelles revues.",
+        "freePlanHelp": "Le plan Free peut exporter tant qu’il reste des crédits. Passez à Pro pour des crédits mensuels récurrents et les exports inclus."
       },
       "help": {
         "title": "Aide",
@@ -1458,7 +1468,7 @@
         "planConfirmed": "Plan confirmé. Crédits mis à jour.",
         "missingBillingSchema": "Schéma de facturation manquant dans Supabase. Exécutez supabase/stripe_billing_v1.sql.",
         "billingSynced": "Facturation synchronisée.",
-        "billingSyncedFree": "Facturation synchronisée (free).",
+        "billingSyncedFree": "Facturation synchronisée. Vous êtes sur le plan Free.",
         "couldNotSyncBilling": "Impossible de synchroniser. Réessayez.",
         "couldNotStartCheckout": "Impossible de démarrer le paiement. Vérifiez les variables Stripe.",
         "couldNotOpenPortal": "Impossible d’ouvrir le portail. Essayez d’abord de passer à un plan payant.",

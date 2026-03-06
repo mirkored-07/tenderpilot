@@ -101,7 +101,7 @@ export async function createJobAction(input: {
 
     if (msg.toUpperCase().includes("NO_CREDITS")) {
       throw new Error(
-        "No credits remaining. Please contact support to upgrade or top up."
+        "No credits remaining. Upgrade to Pro to continue reviewing tenders."
       );
     }
 

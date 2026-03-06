@@ -1059,7 +1059,7 @@
         "caution": "Decision Drivers: Risiken, die vor dem Commit geprüft werden sollten.",
         "go": "Keine Pflicht-Blocker in Eignung und Einreichanforderungen erkannt."
       },
-      "exportsLocked": "Exporte sind in bezahlten Plänen verfügbar. Upgrade oder Top-up, um Exporte freizuschalten.",
+      "exportsLocked": "Exporte sind mit Pro verfügbar oder solange im Free-Plan noch Credits vorhanden sind.",
       "titleFallback": "Tender review",
       "invalidLink": "This tender link is invalid.",
       "empty": {
@@ -1337,7 +1337,7 @@
       "settings": "Einstellungen",
       "playbookTriggerNote": "Wenn eine Playbook-Regel eine Entscheidung beeinflusst, zeigt TenderPilot sie als Trigger im Cockpit.",
       "exports": {
-        "body": "Exportiere innerhalb einer Ausschreibung, damit alles konsistent mit Evidenz bleibt.",
+        "body": "Exportieren Sie direkt aus einer Ausschreibung. Pro enthält Exporte. Free kann exportieren, solange Credits vorhanden sind.",
         "openTenders": "Ausschreibungen öffnen",
         "title": "Exporte"
       },
@@ -1422,7 +1422,17 @@
         "upgradeAnnual": "Jährlich upgraden",
         "stripeNote": "Abos und Rechnungen werden über Stripe verwaltet.",
         "statusActive": "aktiv",
-        "statusFree": "free"
+        "statusFree": "Free",
+        "statusPending": "Synchronisierung ausstehend",
+        "planLabelPro": "Pro",
+        "planLabelFree": "Free",
+        "exportAccessLabel": "Exportzugang",
+        "exportAccessPaid": "In Pro enthalten",
+        "exportAccessCredit": "Mit Credit nutzbar",
+        "exportAccessCreditsAvailable": "Verfügbar, solange Credits vorhanden sind",
+        "exportAccessLocked": "Upgrade zum Freischalten",
+        "paidPlanHelp": "Aktives Pro enthält Exporte auch dann, wenn Ihr aktueller Credit-Saldo 0 ist. Credits werden weiterhin für neue Reviews verwendet.",
+        "freePlanHelp": "Free kann exportieren, solange Credits vorhanden sind. Wechseln Sie zu Pro für monatlich wiederkehrende Credits und enthaltene Exporte."
       },
       "help": {
         "title": "Hilfe",
@@ -1458,7 +1468,7 @@
         "planConfirmed": "Plan bestätigt. Credits aktualisiert.",
         "missingBillingSchema": "Abrechnungs-Schema fehlt in Supabase. Führen Sie supabase/stripe_billing_v1.sql aus.",
         "billingSynced": "Abrechnung synchronisiert.",
-        "billingSyncedFree": "Abrechnung synchronisiert (free).",
+        "billingSyncedFree": "Abrechnung synchronisiert. Sie sind im Free-Plan.",
         "couldNotSyncBilling": "Abrechnung konnte nicht synchronisiert werden. Erneut versuchen.",
         "couldNotStartCheckout": "Checkout konnte nicht gestartet werden. Stripe-Env prüfen und erneut versuchen.",
         "couldNotOpenPortal": "Billing-Portal konnte nicht geöffnet werden. Erst upgraden.",

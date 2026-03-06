@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { hasPaidExportsAccess } from "@/lib/billing-entitlements";
 import { useAppI18n } from "../../_components/app-i18n-provider";
 
 type BillingSnapshot = {
@@ -24,7 +23,8 @@ type UsageSnapshot = {
 
 function formatPlanStatus(raw: string | null | undefined, t: (key: string) => string) {
   const value = String(raw ?? "").trim().toLowerCase();
-  if (!value) return t("app.account.billing.statusActive");
+  if (!value) return t("app.account.billing.statusPending");
+  if (value === "active") return t("app.account.billing.statusActive");
   return value.replaceAll("_", " ");
 }
 
@@ -47,7 +47,8 @@ export function AccountBillingCard({
 }) {
   const { t } = useAppI18n();
   const isPro = billing?.planTier === "pro";
-  const hasPaidExports = hasPaidExportsAccess(billing?.planTier);
+  const creditsBalance = Number(billing?.credits ?? 0);
+  const hasCreditsForFreeExports = !isPro && Number.isFinite(creditsBalance) && creditsBalance > 0;
 
   return (
     <Card id="billing" className="rounded-2xl">
@@ -116,9 +117,11 @@ export function AccountBillingCard({
             <div>
               <p className="text-xs text-muted-foreground">{t("app.account.billing.exportAccessLabel")}</p>
               <p className="mt-1 text-sm font-medium">
-                {hasPaidExports
+                {isPro
                   ? t("app.account.billing.exportAccessPaid")
-                  : t("app.account.billing.exportAccessCredit")}
+                  : hasCreditsForFreeExports
+                  ? t("app.account.billing.exportAccessCreditsAvailable")
+                  : t("app.account.billing.exportAccessLocked")}
               </p>
             </div>
           </div>
@@ -155,16 +158,6 @@ export function AccountBillingCard({
               disabled={billingBusy}
             >
               {t("app.account.billing.manageBilling")}
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-full"
-              onClick={() => onStartCheckout("yearly")}
-              disabled={billingBusy}
-            >
-              {t("app.account.billing.changePlan")}
             </Button>
 
             <Button
