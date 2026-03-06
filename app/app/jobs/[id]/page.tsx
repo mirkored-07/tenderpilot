@@ -20,7 +20,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAppI18n } from "../../_components/app-i18n-provider";
 import { JobPageFeedback } from "./_components/job-page-feedback";
 import { JobPageHeader } from "./_components/job-page-header";
-import { JobPageReferencePanels } from "./_components/job-page-reference-panels";
 import { FailedStatePanel } from "./_components/job-status-panels";
 
 type JobStatus = "queued" | "processing" | "done" | "failed";
@@ -2343,111 +2342,111 @@ const executive = useMemo(() => {
 
   // Fallback action 1
   if (mustItems.length) {
-    const text = "Verify potential blockers (MUST requirements)";
+    const text = t("app.review.nextActions.fallback.requirementsText");
     const evidenceQuery = evidenceForAction("checklist", text);
-	const meta = classifyOwnerAndEta({ text, target: "checklist", label: "Compliance" });
-    const doneWhen = classifyDoneWhen({ text, target: "checklist", label: "Compliance" });
+	const meta = classifyOwnerAndEta({ text, target: "checklist", label: t("app.review.labels.compliance"), tx: t });
+    const doneWhen = classifyDoneWhen({ text, target: "checklist", label: t("app.review.labels.compliance"), tx: t });
     out.push({
       text,
       target: "checklist",
-      label: "Requirements",
-      why: "Confirm eligibility and mandatory items before investing in the response.",
+      label: t("app.review.labels.requirements"),
+      why: t("app.review.nextActions.fallback.requirementsWhy"),
       metric: metricForAction("checklist", text),
       evidenceQuery,
       evidencePreview: evidencePreviewForQuery(evidenceQuery),
 	  owner: meta.owner,
       eta: meta.eta,
       doneWhen,
-      dueMoment: dueMomentForAction({ actionText: text, label: "Requirements", target: "checklist" }),
+      dueMoment: dueMomentForAction({ actionText: text, label: t("app.review.labels.requirements"), target: "checklist" }),
 
     });
   } else if (executive?.topRisks?.length) {
-    const text = "Validate the top risks and mitigations";
+    const text = t("app.review.nextActions.fallback.risksText");
     const evidenceQuery = evidenceForAction("risks", text);
-    const meta = classifyOwnerAndEta({ text, target: "risks", label: "Risks" });
-    const doneWhen = classifyDoneWhen({ text, target: "risks", label: "Risks" });
+    const meta = classifyOwnerAndEta({ text, target: "risks", label: t("app.review.labels.risks"), tx: t });
+    const doneWhen = classifyDoneWhen({ text, target: "risks", label: t("app.review.labels.risks"), tx: t });
 
     out.push({
       text,
       target: "risks",
-      label: "Risks",
-      why: "Surface exposure and negotiation points early.",
+      label: t("app.review.labels.risks"),
+      why: t("app.review.nextActions.fallback.risksWhy"),
       metric: metricForAction("risks", text),
       evidenceQuery,
       evidencePreview: evidencePreviewForQuery(evidenceQuery),
       owner: meta.owner,
       eta: meta.eta,
       doneWhen,
-      dueMoment: dueMomentForAction({ actionText: text, label: "Risks", target: "risks" }),
+      dueMoment: dueMomentForAction({ actionText: text, label: t("app.review.labels.risks"), target: "risks" }),
     });
 
   } else {
-    const text = "Confirm mandatory submission requirements";
+    const text = t("app.review.nextActions.fallback.sourceRequirementsText");
     const evidenceQuery = evidenceForAction("text", text);
-    const meta = classifyOwnerAndEta({ text, target: "text", label: "Source" });
-    const doneWhen = classifyDoneWhen({ text, target: "text", label: "Source" });
+    const meta = classifyOwnerAndEta({ text, target: "text", label: t("app.review.labels.source"), tx: t });
+    const doneWhen = classifyDoneWhen({ text, target: "text", label: t("app.review.labels.source"), tx: t });
 
     out.push({
       text,
       target: "text",
-      label: "Source",
-      why: "Verify submission rules directly in the tender text.",
+      label: t("app.review.labels.source"),
+      why: t("app.review.nextActions.fallback.sourceRequirementsWhy"),
       metric: metricForAction("text", text),
       evidenceQuery,
       evidencePreview: evidencePreviewForQuery(evidenceQuery),
       owner: meta.owner,
       eta: meta.eta,
       doneWhen,
-      dueMoment: dueMomentForAction({ actionText: text, label: "Source", target: "text" }),
+      dueMoment: dueMomentForAction({ actionText: text, label: t("app.review.labels.source"), target: "text" }),
     });
   }
 
   // Fallback action 2
   {
-    const text = "Confirm deadline and submission method";
+    const text = t("app.review.nextActions.fallback.sourceDeadlineText");
     const evidenceQuery = evidenceForAction("text", text);
-    const meta = classifyOwnerAndEta({ text, target: "text", label: "Source" });
-    const doneWhen = classifyDoneWhen({ text, target: "text", label: "Source" });
+    const meta = classifyOwnerAndEta({ text, target: "text", label: t("app.review.labels.source"), tx: t });
+    const doneWhen = classifyDoneWhen({ text, target: "text", label: t("app.review.labels.source"), tx: t });
 
     out.push({
       text,
       target: "text",
-      label: "Source",
-      why: "Avoid last-minute surprises with portal, format, and deadlines.",
+      label: t("app.review.labels.source"),
+      why: t("app.review.nextActions.fallback.sourceDeadlineWhy"),
       metric: metricForAction("text", text),
       evidenceQuery,
       evidencePreview: evidencePreviewForQuery(evidenceQuery),
       owner: meta.owner,
       eta: meta.eta,
       doneWhen,
-      dueMoment: dueMomentForAction({ actionText: text, label: "Source", target: "text" }),
+      dueMoment: dueMomentForAction({ actionText: text, label: t("app.review.labels.source"), target: "text" }),
     });
 
   }
 
   // Fallback action 3
   if (questions.length) {
-    const text = "Draft clarifications to the buyer";
+    const text = t("app.review.nextActions.fallback.clarificationsText");
     const evidenceQuery = evidenceForAction("questions", text);
-    const meta = classifyOwnerAndEta({ text, target: "questions", label: "Clarifications" });
-    const doneWhen = classifyDoneWhen({ text, target: "questions", label: "Clarifications" });
+    const meta = classifyOwnerAndEta({ text, target: "questions", label: t("app.review.labels.clarifications"), tx: t });
+    const doneWhen = classifyDoneWhen({ text, target: "questions", label: t("app.review.labels.clarifications"), tx: t });
 
     out.push({
       text,
       target: "questions",
-      label: "Clarifications",
-      why: "Align unknowns early to avoid rework and reduce bid risk.",
+      label: t("app.review.labels.clarifications"),
+      why: t("app.review.nextActions.fallback.clarificationsWhy"),
       metric: metricForAction("questions", text),
       evidenceQuery,
       evidencePreview: evidencePreviewForQuery(evidenceQuery),
       owner: meta.owner,
       eta: meta.eta,
       doneWhen,
-      dueMoment: dueMomentForAction({ actionText: text, label: "Clarifications", target: "questions" }),
+      dueMoment: dueMomentForAction({ actionText: text, label: t("app.review.labels.clarifications"), target: "questions" }),
     });
 
   } else if (hasDraftForUi) {
-    const text = "Review the tender outline and estimate effort";
+    const text = t("app.review.nextActions.fallback.outlineText");
     const evidenceQuery = evidenceForAction("draft", text);
     const meta = classifyOwnerAndEta({ text, target: "draft", label: t("app.review.labels.tenderOutline"), tx: t });
     const doneWhen = classifyDoneWhen({ text, target: "draft", label: t("app.review.labels.tenderOutline"), tx: t });
@@ -2456,7 +2455,7 @@ const executive = useMemo(() => {
       text,
       target: "draft",
       label: t("app.review.labels.tenderOutline"),
-      why: "Use the outline to estimate effort and assign owners fast.",
+      why: t("app.review.nextActions.fallback.outlineWhy"),
       metric: metricForAction("draft", text),
       evidenceQuery,
       evidencePreview: evidencePreviewForQuery(evidenceQuery),
@@ -2467,23 +2466,23 @@ const executive = useMemo(() => {
     });
 
     } else {
-    const text = "Scan the tender for mandatory forms and formatting";
+    const text = t("app.review.nextActions.fallback.sourceFormattingText");
     const evidenceQuery = evidenceForAction("text", text);
-    const meta = classifyOwnerAndEta({ text, target: "text", label: "Source" });
-    const doneWhen = classifyDoneWhen({ text, target: "text", label: "Source" });
+    const meta = classifyOwnerAndEta({ text, target: "text", label: t("app.review.labels.source"), tx: t });
+    const doneWhen = classifyDoneWhen({ text, target: "text", label: t("app.review.labels.source"), tx: t });
 
     out.push({
       text,
       target: "text",
-      label: "Source",
-      why: "Catch hidden submission rules that can invalidate the response.",
+      label: t("app.review.labels.source"),
+      why: t("app.review.nextActions.fallback.sourceFormattingWhy"),
       metric: metricForAction("text", text),
       evidenceQuery,
       evidencePreview: evidencePreviewForQuery(evidenceQuery),
       owner: meta.owner,
       eta: meta.eta,
       doneWhen,
-      dueMoment: dueMomentForAction({ actionText: text, label: "Source", target: "text" }),
+      dueMoment: dueMomentForAction({ actionText: text, label: t("app.review.labels.source"), target: "text" }),
     });
 
   }
@@ -2827,7 +2826,7 @@ const executive = useMemo(() => {
       // Never highlight the wrong clause. If we can't find an exact match, show an explicit message.
       const msg = evidenceOverride
         ? t("app.review.evidenceNotes.noExactClauseFound")
-        : "Exact match not found in extracted text (OCR/layout differences are common). Use the evidence snippet above and search the phrase in the original PDF.";
+        : t("app.review.source.exactMatchNotFound");
       setSourceFocus({ query: displayQuery, snippet: msg, idx: null, highlightStart: null, highlightEnd: null });
       openTabAndScroll();
       return;
@@ -4107,93 +4106,210 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
 		       
 
         <TabsContent value="text">
-          <JobPageReferencePanels
-            t={t}
-            evidenceFocus={evidenceFocus}
-            copiedSection={copiedSection}
-            showEvidenceExcerpt={showEvidenceExcerpt}
-            evidenceExcerptRef={evidenceExcerptRef}
-            onSwitchEvidenceId={(eid) => {
-              const cand = evidenceById.get(String(eid));
-              if (!cand) {
-                setEvidenceFocus((prev) =>
-                  prev
-                    ? {
-                        ...prev,
-                        id: String(eid),
-                        excerpt: "",
-                        page: null,
-                        anchor: null,
-                        note: t("app.bidroom.evidence.notes.notFound"),
-                      }
-                    : prev
-                );
-                return;
-              }
+          {evidenceFocus ? (
+            <Card className="rounded-2xl">
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold">{t("app.review.source.evidenceExcerptTitle")}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {evidenceFocus.id ? (
+                        <>{t("app.review.source.idLabel")} <span className="font-medium text-foreground">{evidenceFocus.id}</span></>
+                      ) : (
+                        <>{t("app.review.source.evidenceLabel")}</>
+                      )}
+                      {typeof evidenceFocus.page === "number" ? (
+                        <> • {t("app.review.source.pageLabel")} {evidenceFocus.page}</>
+                      ) : null}
+                      {evidenceFocus.anchor ? (
+                        <> • <span className="text-foreground/70">{evidenceFocus.anchor}</span></>
+                      ) : null}
+                    </p>
 
-              const ex = String((cand as any)?.excerpt ?? "").trim();
-              setEvidenceFocus((prev) =>
-                prev
-                  ? {
-                      ...prev,
-                      id: String((cand as any)?.id ?? eid),
-                      excerpt: ex,
-                      page: (cand as any)?.page ?? null,
-                      anchor: (cand as any)?.anchor ?? null,
-                      note: null,
-                    }
-                  : prev
-              );
+                    {Array.isArray(evidenceFocus.allIds) && evidenceFocus.allIds.length > 1 ? (
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <span className="text-xs text-muted-foreground">{t("app.review.source.switchEvidence")}</span>
+                        {evidenceFocus.allIds.slice(0, 12).map((eid) => {
+                          const active = String(eid) === String(evidenceFocus.id);
+                          return (
+                            <Button
+                              key={eid}
+                              type="button"
+                              size="sm"
+                              variant={active ? "default" : "outline"}
+                              className="rounded-full"
+                              onClick={() => {
+                                const cand = evidenceById.get(String(eid));
+                                if (!cand) {
+                                  setEvidenceFocus((prev) =>
+                                    prev
+                                      ? {
+                                          ...prev,
+                                          id: String(eid),
+                                          excerpt: "",
+                                          page: null,
+                                          anchor: null,
+                                          note:
+                                            t("app.bidroom.evidence.notes.notFound"),
+                                        }
+                                      : prev
+                                  );
+                                  return;
+                                }
 
-              track("evidence_opened", { jobId, evidenceId: String((cand as any)?.id ?? eid) });
-              setShowEvidenceExcerpt(true);
-              openTabAndScroll();
-              if (ex) window.setTimeout(() => onJumpToSource(ex), 0);
-            }}
-            onOpenEvidenceExcerpt={() => {
-              track("evidence_opened", { jobId, evidenceId: evidenceFocus?.id ?? null });
-              setShowEvidenceExcerpt(true);
-              window.setTimeout(() => evidenceExcerptRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
-            }}
-            onLocateEvidence={() => {
-              const ex = String(evidenceFocus?.excerpt ?? "").trim();
-              const hay = String(extractedText ?? "");
-              const hasExact = ex ? hay.toLowerCase().includes(ex.toLowerCase()) : false;
+                                const ex = String((cand as any)?.excerpt ?? "").trim();
+                                setEvidenceFocus((prev) =>
+                                  prev
+                                    ? {
+                                        ...prev,
+                                        id: String((cand as any)?.id ?? eid),
+                                        excerpt: ex,
+                                        page: (cand as any)?.page ?? null,
+                                        anchor: (cand as any)?.anchor ?? null,
+                                        note: null,
+                                      }
+                                    : prev
+                                );
 
-              if (hasExact) {
-                onJumpToSource(ex);
-                return;
-              }
+                                track("evidence_opened", { jobId, evidenceId: String((cand as any)?.id ?? eid) });
+                                setShowEvidenceExcerpt(true);
+                                openTabAndScroll();
+                                if (ex) window.setTimeout(() => onJumpToSource(ex), 0);
+                              }}
+                            >
+                              {eid}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    ) : null}
 
-              const p = evidenceFocus?.page;
-              if (p !== null && p !== undefined) {
-                const pageNum = Number(p);
-                if (!Number.isNaN(pageNum)) {
-                  jumpToPageMarker(pageNum, t("app.review.evidenceNotes.jumpedToMarkerGeneric"));
-                  return;
-                }
-              }
+                    {evidenceFocus.note ? (
+                      <p className="mt-2 text-xs text-muted-foreground">{evidenceFocus.note}</p>
+                    ) : (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        {t("app.review.source.excerptAuthoritativeNote")}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      className="rounded-full"
+                      onClick={() => {
+                        track("evidence_opened", { jobId, evidenceId: evidenceFocus?.id ?? null });
+                        setShowEvidenceExcerpt(true);
+                        window.setTimeout(() => evidenceExcerptRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
+                      }}
+                    >
+                      {t("app.review.source.openEvidenceExcerpt")}
+                    </Button>
 
-              onJumpToSource(ex);
-            }}
-            onCopyEvidenceExcerpt={async () => {
-              const ok = await safeCopy(String(evidenceFocus?.excerpt ?? ""));
-              if (ok) {
-                setCopiedSection("evidence");
-                window.setTimeout(() => setCopiedSection(null), 1200);
-              }
-            }}
-            onCloseEvidence={() => setEvidenceFocus(null)}
-            sourceFocus={sourceFocus}
-            onCopySourcePhrase={async () => {
-              const ok = await safeCopy(String(sourceFocus?.query ?? ""));
-              if (ok) {
-                setCopiedSection("sourcePhrase");
-                window.setTimeout(() => setCopiedSection(null), 1200);
-              }
-            }}
-            onCloseSourceFocus={() => setSourceFocus(null)}
-          />
+                    {evidenceFocus.excerpt ? (
+                      <Button
+                        variant="outline"
+                        className="rounded-full"
+                        onClick={() => {
+                          const ex = String(evidenceFocus.excerpt ?? "").trim();
+                          const hay = String(extractedText ?? "");
+                          const hasExact = ex ? hay.toLowerCase().includes(ex.toLowerCase()) : false;
+
+                          if (hasExact) {
+                            onJumpToSource(ex);
+                            return;
+                          }
+
+                          const p = evidenceFocus.page;
+                          if (p !== null && p !== undefined) {
+                            const pageNum = Number(p);
+                            if (!Number.isNaN(pageNum)) {
+                              jumpToPageMarker(
+                                pageNum,
+                                t("app.review.evidenceNotes.jumpedToMarkerGeneric")
+                              );
+                              return;
+                            }
+                          }
+
+                          // fallback (keeps safe behavior)
+                          onJumpToSource(ex);
+                        }}
+                        disabled={!extractedText}
+                      >
+                        {t("app.review.source.locateBestEffort")}
+                      </Button>
+                    ) : null}
+
+                    {evidenceFocus.excerpt ? (
+                      <Button
+                        variant="outline"
+                        className="rounded-full"
+                        onClick={async () => {
+                          const ok = await safeCopy(evidenceFocus.excerpt);
+                          if (ok) {
+                            setCopiedSection("evidence");
+                            window.setTimeout(() => setCopiedSection(null), 1200);
+                          }
+                        }}
+                      >
+                        {copiedSection === "evidence" ? t("app.common.copied") : t("app.review.actions.copyExcerpt")}
+                      </Button>
+                    ) : null}
+
+                    <Button variant="outline" className="rounded-full" onClick={() => setEvidenceFocus(null)}>
+                      {t("app.common.close")}
+                    </Button>
+                  </div>
+                </div>
+
+                {showEvidenceExcerpt && evidenceFocus.excerpt ? (
+                  <div ref={evidenceExcerptRef} className="mt-4 rounded-2xl border bg-muted/20 p-4">
+                    <p className="text-sm text-muted-foreground leading-relaxed">{evidenceFocus.excerpt}</p>
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {sourceFocus ? (
+            <Card className="rounded-2xl">
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold">{t("app.review.source.locateBestEffort")}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {t("app.review.source.matchFor")} <span className="font-medium text-foreground">{sourceFocus.query}</span>
+                    </p>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {t("app.review.source.bestEffortPointer")}
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      variant="outline"
+                      className="rounded-full"
+                      onClick={async () => {
+                        const ok = await safeCopy(sourceFocus.query);
+                        if (ok) {
+                          setCopiedSection("sourcePhrase");
+                          window.setTimeout(() => setCopiedSection(null), 1200);
+                        }
+                      }}
+                    >
+                      {copiedSection === "sourcePhrase" ? t("app.common.copied") : t("app.review.actions.copyPhrase")}
+                    </Button>
+
+                    <Button variant="outline" className="rounded-full" onClick={() => setSourceFocus(null)}>
+                      {t("app.review.source.closeLocateView")}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="mt-4 rounded-2xl border bg-muted/20 p-4">
+                  <p className="text-sm text-muted-foreground leading-relaxed">{sourceFocus.snippet}</p>
+                </div>
+              </CardContent>
+            </Card>
+          ) : null}
           {!showReferenceText ? (
             <Card className="mt-4 rounded-2xl border-dashed">
               <CardContent className="p-5">

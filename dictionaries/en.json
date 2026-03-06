@@ -738,8 +738,7 @@
       "removeItemAria": "Remove item",
       "saved": "Saved",
       "save": "Save",
-      "resetFilters": "Reset filters",
-      "moreActions": "More actions"
+      "resetFilters": "Reset filters"
     },
     "decision": {
       "go": "Go",
@@ -854,8 +853,7 @@
         "loadWorkFailed": "Work items could not be loaded.",
         "noPdf": "No PDF is attached to this tender.",
         "noSignedUrl": "Could not create a signed PDF link.",
-        "openPdfFailed": "Could not open the PDF.",
-        "policyBlockedSave": "Bid Room save is blocked by your Supabase policy. Run the job_work_items RLS SQL from the repo, then try again."
+        "openPdfFailed": "Could not open the PDF."
       },
       "evidence": {
         "title": "Evidence",
@@ -953,8 +951,7 @@
         "noteBase": "From Compliance Matrix. Status: {status}",
         "noteProposal": "Proposal: {proposal}",
         "noteNote": "Note: {note}",
-        "sentDesc": "Execution item created for this gap.",
-        "existsDesc": "This requirement already exists as an execution item."
+        "sentDesc": "Execution item created for this gap."
       },
       "coveredNoTask": "Covered, no task needed",
       "noRows": "No rows match your current filters.",
@@ -1027,8 +1024,7 @@
       },
       "helper": {
         "setStance": "Set status and optionally add a note.",
-        "notTaskTracking": "This is coverage tracking. Use Bid Room for owners, due dates, and status.",
-        "subtitle": "Audit lens for requirements. Set compliance stance and map where each requirement is addressed in the proposal."
+        "notTaskTracking": "This is coverage tracking. Use Bid Room for owners, due dates, and status."
       },
       "labels": {
         "evidenceCount": "Evidence IDs: {count}",
@@ -1145,10 +1141,31 @@
       "nextActions": {
         "dueToday": "Due: Today",
         "dueBeforePricing": "Due: Before pricing sign-off",
-        "dueBeforeSubmission": "Due: Before submission"
+        "dueBeforeSubmission": "Due: Before submission",
+        "fallback": {
+          "requirementsText": "Verify potential blockers (MUST requirements)",
+          "requirementsWhy": "Confirm eligibility and mandatory items before investing in the response.",
+          "risksText": "Validate the top risks and mitigations",
+          "risksWhy": "Surface exposure and negotiation points early.",
+          "sourceRequirementsText": "Confirm mandatory submission requirements",
+          "sourceRequirementsWhy": "Verify submission rules directly in the tender text.",
+          "sourceDeadlineText": "Confirm deadline and submission method",
+          "sourceDeadlineWhy": "Avoid last-minute surprises with portal, format, and deadlines.",
+          "clarificationsText": "Draft clarifications to the buyer",
+          "clarificationsWhy": "Align unknowns early to avoid rework and reduce bid risk.",
+          "outlineText": "Review the tender outline and estimate effort",
+          "outlineWhy": "Use the outline to estimate effort and assign owners fast.",
+          "sourceFormattingText": "Scan the tender for mandatory forms and formatting",
+          "sourceFormattingWhy": "Catch hidden submission rules that can invalidate the response."
+        }
       },
       "labels": {
-        "tenderOutline": "Tender outline"
+        "tenderOutline": "Tender outline",
+        "requirements": "Requirements",
+        "risks": "Risks",
+        "clarifications": "Clarifications",
+        "source": "Source",
+        "compliance": "Compliance"
       },
       "doneWhen": {
         "checklist": "Done when: requirement wording is verified in portal/PDF and any mandatory form/template is identified.",
@@ -1312,7 +1329,10 @@
         "showPreview": "Show preview",
         "showFullText": "Show full text",
         "pageLabel": "Page",
-        "verificationFooter": "Always verify against the original PDF. Evidence excerpts are the source of truth."
+        "verificationFooter": "Always verify against the original PDF. Evidence excerpts are the source of truth.",
+        "matchFor": "Match for:",
+        "bestEffortPointer": "This view highlights a best-effort match in the extracted source text. Use it as a pointer only: locate the same clause in the original PDF, search the phrase, and verify the exact wording and formatting.",
+        "exactMatchNotFound": "Exact match not found in extracted text. OCR and layout differences are common. Use the evidence snippet above and search the phrase in the original PDF."
       },
       "clarifications": {
         "categories": {
@@ -1775,7 +1795,12 @@
         "title": "Needs attention",
         "empty": "Nothing urgent right now.",
         "holdTitle": "Hold tenders",
-        "holdEmpty": "No tenders are currently in Hold."
+        "holdEmpty": "No tenders are currently in Hold.",
+        "subtitle": "Highest priority bids based on missing fields, deadlines, and blockers.",
+        "holdOpenActionsOne": "{count} unblock action open",
+        "holdOpenActionsMany": "{count} unblock actions open",
+        "targetDecision": "Target decision",
+        "quickTip": "Tip: Missing deadlines and decisions are common when the tender PDF does not contain them. Use job metadata overrides to keep your workflow usable."
       },
       "actions": {
         "addOverride": "Add override"

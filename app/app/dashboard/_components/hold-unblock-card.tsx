@@ -5,11 +5,6 @@ import { Card, CardContent } from "@/components/ui/card";
 
 type TranslateFn = (key: string, vars?: Record<string, string | number>) => string;
 
-function tr(t: TranslateFn, key: string, fallback: string, vars?: Record<string, string | number>) {
-  const value = t(key, vars);
-  return !value || value === key ? fallback : value;
-}
-
 export function HoldUnblockCard(props: {
   t: TranslateFn;
   rows: any[];
@@ -56,13 +51,13 @@ export function HoldUnblockCard(props: {
                       <p className="truncate text-sm font-medium">{r.displayName}</p>
                       <p className="mt-1 text-xs text-muted-foreground">
                         {openCount === 1
-                          ? tr(t, "app.dashboard.attention.openUnblockActionOne", "1 unblock action open")
-                          : tr(t, "app.dashboard.attention.openUnblockActionMany", `${openCount} unblock actions open`, { count: openCount })}
-                        {targetTxt ? ` • ${tr(t, "app.dashboard.attention.targetDecision", `target decision: ${targetTxt}`, { date: targetTxt })}` : ""}
+                          ? t("app.dashboard.attention.holdOpenActionsOne", { count: openCount })
+                          : t("app.dashboard.attention.holdOpenActionsMany", { count: openCount })}
+                        {targetTxt ? ` • ${t("app.dashboard.attention.targetDecision")}: ${targetTxt}` : ""}
                       </p>
                     </div>
                     <Link href={`/app/jobs/${jid}`} className="text-xs text-foreground/80 underline hover:text-foreground">
-                      {tr(t, "app.common.open", "Open")}
+                      {t("app.common.open")}
                     </Link>
                   </div>
                 </div>
