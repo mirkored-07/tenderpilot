@@ -331,7 +331,10 @@
     "header": {
       "backToHome": "Volver al inicio",
       "sample": "Ejemplo",
-      "cta": "Empezar ahora"
+      "cta": "Empezar ahora",
+      "language": "Idioma",
+      "theme": "Tema",
+      "menu": "Menú"
     },
     "hero": {
       "titleA": "Del PDF al cockpit de decisión",
@@ -556,7 +559,19 @@
       "structuredDriversOnly": "Solo señales estructuradas. Verifica en Evidencia y fuente.",
       "switchEvidence": "Cambiar evidencia:",
       "matchFor": "Coincidencia para",
-      "copyReadyList": "Lista lista para copiar para la entidad contratante."
+      "copyReadyList": "Lista lista para copiar para la entidad contratante.",
+      "topBlockers": "Bloqueadores principales",
+      "fixableBlockersRemaining": "Quedan 6 bloqueadores corregibles",
+      "decisionDrivers": "Factores de decisión",
+      "blockers": "Bloqueadores",
+      "strategicRisks": "Riesgos estratégicos",
+      "immediateActions": "Acciones inmediatas",
+      "previewNote": "Vista previa estática. En el workspace real, cada bloqueador, aclaración y fila de cumplimiento enlaza con evidencia en la fuente.",
+      "immediateActionItems": [
+        "Confirmar el formato esperado de la respuesta preliminar (viñetas o texto corrido).",
+        "Aclarar si existen plantillas obligatorias para las secciones comerciales y legales.",
+        "Confirmar el modelo de despliegue preferido (nube del comprador o SaaS)."
+      ]
     }
   },
   "pricingPage": {
@@ -569,7 +584,8 @@
     "ui": {
       "theme": "Tema",
       "tipLabel": "Consejo",
-      "tipText": "Sube una licitación y obtén un panel de decisión en pocos minutos."
+      "tipText": "Sube una licitación y obtén un panel de decisión en pocos minutos.",
+      "language": "Idioma"
     },
     "tiers": {
       "free": {

@@ -233,7 +233,7 @@
       "badge": "Specialized Tender AI Model",
       "title_line1": "Stop Reading.",
       "title_line2": "Start Deciding.",
-      "description": "Upload tender PDFs or DOCX and get a Go/Hold/No-Go decision cockpit with evidence, MUST blockers, risks, and clarifications — plus a Compliance Matrix, Bid Room tasks, and export-ready outputs.",
+      "description": "Upload a tender PDF or DOCX and get a Go/Hold/No-Go decision cockpit with evidence, MUST blockers, risks, clarifications, a Compliance Matrix, and Bid Room work items.",
       "primary_cta": "Start now",
       "secondary_cta": "See Sample Output",
       "validated_prefix": "Validated in private pilots by",
@@ -244,7 +244,7 @@
     },
     "features": {
       "section_title": "From tender document to bid-ready pack",
-      "section_subtitle": "Decision cockpit, compliance matrix, execution tasks, and exports — built for bid managers.",
+      "section_subtitle": "Decision cockpit, compliance review, evidence, and execution tasks built for bid managers and tender consultants.",
       "cards": {
         "executive": {
           "title": "Decision cockpit",
@@ -304,7 +304,7 @@
     },
     "zero_training": {
       "title": "Zero-Training Policy:",
-      "text": "We do not use your tender data to train our models."
+      "text": "Your tender data stays isolated to your workspace and is not used to train models."
     },
     "early_access": {
       "title": "Cut Tender Evaluation Time by 90%",
@@ -318,26 +318,29 @@
     },
     "get_started": {
       "title": "Start in 30 seconds",
-      "description": "Magic link sign-in. No password. Upload immediately and get your decision cockpit.",
+      "description": "Magic link sign-in. Upload immediately and get a decision cockpit with evidence, blockers, and next actions.",
       "bullets": [
         "Upload a tender and get Go/Hold/No-Go with evidence",
         "Track MUST items in the Compliance Matrix",
         "Turn clarifications into tasks in the Bid Room"
       ],
-      "note": "You’ll land in the app and can upload immediately."
+      "note": "One file per review. Delete jobs and uploaded files from your account at any time."
     }
   },
   "howItWorksPage": {
     "header": {
       "backToHome": "Back to Home",
       "sample": "Sample output",
-      "cta": "Start now"
+      "cta": "Start now",
+      "language": "Language",
+      "theme": "Theme",
+      "menu": "Menu"
     },
     "hero": {
       "titleA": "From PDF to a decision cockpit",
       "titleB": "in",
       "highlight": "in four steps",
-      "subtitle": "We don’t write the proposal. We help you decide whether it’s worth writing — with evidence and checklists."
+      "subtitle": "We help bid teams decide faster with evidence, blockers, and execution-ready next steps. We do not auto-write the proposal for you."
     },
     "steps": [
       {
@@ -381,7 +384,7 @@
     "header": {
       "backToHome": "Back to home",
       "title": "Sample output",
-      "subtitle": "Example decision cockpit — MUST items, risks, clarifications, compliance matrix, bid room tasks, exports.",
+      "subtitle": "Example review workspace with decision, evidence, compliance tracking, and Bid Room follow-up.",
       "primaryCta": "Try it now",
       "secondaryCta": "How it works"
     },
@@ -556,7 +559,19 @@
       "structuredDriversOnly": "Structured drivers only. Verify using Evidence & source.",
       "switchEvidence": "Switch evidence:",
       "matchFor": "Match for",
-      "copyReadyList": "Copy-ready list for the contracting authority."
+      "copyReadyList": "Copy-ready list for the contracting authority.",
+      "topBlockers": "Top blockers",
+      "fixableBlockersRemaining": "Fixable blockers remaining: 6",
+      "decisionDrivers": "Decision drivers",
+      "blockers": "Blockers",
+      "strategicRisks": "Strategic risks",
+      "immediateActions": "Immediate actions",
+      "previewNote": "Static preview. In the real workspace, every blocker, clarification, and compliance row links back to evidence in the source.",
+      "immediateActionItems": [
+        "Confirm expected format of draft response (bullets vs narrative).",
+        "Clarify whether mandatory templates exist for commercial and legal sections.",
+        "Confirm the preferred deployment model (buyer cloud vs SaaS)."
+      ]
     }
   },
   "pricingPage": {
@@ -569,7 +584,8 @@
     "ui": {
       "theme": "Theme",
       "tipLabel": "Tip",
-      "tipText": "Upload a tender and get a decision cockpit in minutes."
+      "tipText": "Upload a tender and get a decision cockpit in minutes.",
+      "language": "Language"
     },
     "tiers": {
       "free": {
@@ -631,7 +647,7 @@
         },
         {
           "q": "How do you handle privacy and isolation?",
-          "a": "Access is isolated per user and documents are served via signed links."
+          "a": "Access is isolated per user, uploaded documents are served through signed links, and tender data is not used for model training."
         }
       ]
     },

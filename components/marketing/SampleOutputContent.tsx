@@ -23,6 +23,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ModeToggle } from "@/components/mode-toggle";
 import LanguageSwitcherSlot from "@/components/marketing/LanguageSwitcherSlot";
+import { LanguageSwitcher } from "@/components/marketing/LanguageSwitcher";
 import { loginWithNextHref } from "@/lib/access-mode";
 
 type LocalePrefix = "" | "/en" | "/de" | "/it" | "/fr" | "/es";
@@ -55,12 +56,24 @@ type SampleDict = {
     copyReadyList?: string;
     switchEvidence?: string;
     matchFor?: string;
+    decision?: string;
+    topBlockers?: string;
+    fixableBlockersRemaining?: string;
+    decisionDrivers?: string;
+    blockers?: string;
+    strategicRisks?: string;
+    immediateActions?: string;
+    immediateActionItems?: string[];
+    previewNote?: string;
 
     // Optional labels present in some dictionaries
     ready?: string;
     textExtracted?: string;
     openBidRoom?: string;
     backToJob?: string;
+  };
+  sections?: {
+    bulletsTitle?: string;
   };
   data: {
     fileName: string;
@@ -222,6 +235,10 @@ export function SampleOutputContent({
   const app = dict.app || {};
   const common = app.common || {};
   const source = app.review?.source || {};
+  const bidroom = app.bidroom || {};
+  const compliance = app.compliance || {};
+  const dashboard = app.dashboard || {};
+  const navApp = app.nav || {};
 
   const [view, setView] = useState<"cockpit" | "evidence" | "bidroom" | "compliance" | "dashboard">("cockpit");
 
@@ -306,8 +323,8 @@ export function SampleOutputContent({
               <span className="hidden sm:inline">TenderPilot</span>
             </Link>
 
-            <div className="flex items-center gap-3">
-              <Button asChild variant="outline" className="hidden sm:inline-flex rounded-full border-white/10">
+            <div className="hidden sm:flex items-center gap-3">
+              <Button asChild variant="outline" className="rounded-full border-white/10">
                 <Link href={howItWorksHref}>{sp.header.secondaryCta}</Link>
               </Button>
               <Button asChild className="rounded-full bg-primary text-primary-foreground">
@@ -321,6 +338,32 @@ export function SampleOutputContent({
                 <ModeToggle />
               </div>
             </div>
+
+            <details className="relative sm:hidden">
+              <summary className="cursor-pointer list-none rounded-full border border-white/10 bg-background/70 dark:bg-zinc-900/50 px-3 py-2 text-sm font-medium text-foreground backdrop-blur-md [&::-webkit-details-marker]:hidden">
+                {navApp.menu ?? "Menu"}
+              </summary>
+
+              <div className="absolute right-0 mt-2 w-64 rounded-2xl border border-white/10 bg-background/95 dark:bg-zinc-900/95 p-2 shadow-xl backdrop-blur-xl ring-1 ring-black/5">
+                <Link href={howItWorksHref} className="block rounded-xl px-3 py-2 text-sm hover:bg-white/5 text-muted-foreground hover:text-foreground">
+                  {sp.header.secondaryCta}
+                </Link>
+                <Link href={primaryCtaHref} className="block rounded-xl px-3 py-2 text-sm font-medium text-blue-400 hover:bg-blue-500/10">
+                  {sp.header.primaryCta}
+                </Link>
+
+                <div className="mt-2 space-y-3 border-t border-white/10 px-3 pt-3 pb-1">
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-sm text-muted-foreground">{common.language ?? "Language"}</span>
+                    <LanguageSwitcher />
+                  </div>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-sm text-muted-foreground">{common.theme ?? "Theme"}</span>
+                    <ModeToggle />
+                  </div>
+                </div>
+              </div>
+            </details>
           </div>
         </div>
       </header>
@@ -346,10 +389,10 @@ export function SampleOutputContent({
                 <div className="flex items-center gap-2 flex-wrap">
                   <p className="text-lg font-semibold truncate">{sp.data.fileName}</p>
                   <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-200 dark:ring-emerald-500/25">
-                    Ready
+                    {sp.labels.ready ?? "Ready"}
                   </span>
                   <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold bg-slate-50 text-slate-800 ring-1 ring-slate-200 dark:bg-slate-500/10 dark:text-slate-200 dark:ring-slate-500/20">
-                    Text extracted
+                    {sp.labels.textExtracted ?? "Text extracted"}
                   </span>
                 </div>
                 <p className="mt-1 text-sm text-muted-foreground">{sp.labels.reviewReady}</p>
@@ -385,7 +428,7 @@ export function SampleOutputContent({
                   <CardContent className="p-7 md:p-10">
                     <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs text-muted-foreground">Decision</p>
+                        <p className="text-xs text-muted-foreground">{sp.labels.decision ?? dashboard.labels?.decision ?? "Decision"}</p>
                         <div className="mt-2 flex flex-wrap items-center gap-2">
                           <span className={["inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold", pillDecision(sp.data.decisionBadge)].join(" ")}
                           >
@@ -393,12 +436,12 @@ export function SampleOutputContent({
                           </span>
                           <div className={["inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold", pillDecision(sp.data.decisionBadge)].join(" ")}
                           >
-                            Fixable blockers remaining: 6
+                            {sp.labels.fixableBlockersRemaining ?? "Fixable blockers remaining: 6"}
                           </div>
                         </div>
 
                         <div className="mt-5 rounded-2xl border border-rose-200/40 bg-rose-500/5 p-4 dark:border-rose-500/20 dark:bg-rose-500/10">
-                          <p className="text-xs font-semibold text-rose-900 dark:text-rose-200">Top blockers</p>
+                          <p className="text-xs font-semibold text-rose-900 dark:text-rose-200">{sp.labels.topBlockers ?? "Top blockers"}</p>
                           <ul className="mt-2 space-y-2 text-sm text-rose-950/90 dark:text-rose-100">
                             {blockers.map((t, i) => (
                               <li key={i} className="leading-relaxed">• {t}</li>
@@ -410,7 +453,7 @@ export function SampleOutputContent({
                       <div className="shrink-0">
                         <Button className="rounded-full" onClick={() => setView("bidroom")}
                         >
-                          Open Bid Room
+                          {sp.labels.openBidRoom ?? bidroom.openBidRoom ?? "Open Bid Room"}
                         </Button>
                       </div>
                     </div>
@@ -422,14 +465,14 @@ export function SampleOutputContent({
                   <CardContent className="p-7 md:p-10">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div>
-                        <p className="text-sm font-semibold">Decision drivers</p>
+                        <p className="text-sm font-semibold">{sp.labels.decisionDrivers ?? "Decision drivers"}</p>
                         <p className="mt-1 text-xs text-muted-foreground">{sp.labels.structuredDriversOnly}</p>
                       </div>
                     </div>
 
                     <div className="mt-6 grid gap-5 md:grid-cols-3">
                       <div className="rounded-2xl border border-border bg-muted/30 p-4">
-                        <p className="text-xs font-semibold">Blockers</p>
+                        <p className="text-xs font-semibold">{sp.labels.blockers ?? "Blockers"}</p>
                         <div className="mt-3 space-y-2">
                           {sp.data.mustItems.slice(0, 5).map((m, i) => (
                             <div key={i} className="rounded-xl border border-border bg-card p-3">
@@ -441,7 +484,7 @@ export function SampleOutputContent({
                                   className="rounded-full"
                                   onClick={() => openEvidence(i % 2 === 0 ? "E004" : "E005")}
                                 >
-                                  Open evidence
+                                  {bidroom.actions?.openEvidence ?? compliance.actions?.evidence ?? "Open evidence"}
                                 </Button>
                               </div>
                             </div>
@@ -450,7 +493,7 @@ export function SampleOutputContent({
                       </div>
 
                       <div className="rounded-2xl border border-border bg-muted/30 p-4">
-                        <p className="text-xs font-semibold">Strategic risks</p>
+                        <p className="text-xs font-semibold">{sp.labels.strategicRisks ?? "Strategic risks"}</p>
                         <ul className="mt-3 space-y-2 text-sm text-foreground/90">
                           {sp.data.risks.slice(0, 5).map((r, i) => (
                             <li key={i} className="leading-relaxed">• {r.title}</li>
@@ -459,25 +502,32 @@ export function SampleOutputContent({
                       </div>
 
                       <div className="rounded-2xl border border-border bg-muted/30 p-4">
-                        <p className="text-xs font-semibold">Immediate actions</p>
+                        <p className="text-xs font-semibold">{sp.labels.immediateActions ?? "Immediate actions"}</p>
                         <ul className="mt-3 space-y-2 text-sm text-foreground/90">
-                          <li className="leading-relaxed">• Confirm expected format of draft response (bullets vs narrative).</li>
-                          <li className="leading-relaxed">• Clarify if mandatory templates exist for commercial and legal sections.</li>
-                          <li className="leading-relaxed">• Verify deployment environment preference (buyer cloud vs SaaS).</li>
+                          {(sp.labels.immediateActionItems?.length
+                            ? sp.labels.immediateActionItems
+                            : [
+                                "Confirm expected format of draft response (bullets vs narrative).",
+                                "Clarify whether mandatory templates exist for commercial and legal sections.",
+                                "Confirm the preferred deployment model (buyer cloud vs SaaS).",
+                              ]
+                          ).map((item, index) => (
+                            <li key={index} className="leading-relaxed">• {item}</li>
+                          ))}
                         </ul>
                       </div>
                     </div>
 
                     <div className="mt-5">
                       <div className="rounded-xl border border-border bg-muted/30 p-3">
-                        <div className="flex items-center justify-between gap-3">
-                          <div>
-                            <p className="text-xs font-semibold">Clarification questions</p>
+                        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold">{sp.sections?.bulletsTitle ?? "Clarification questions"}</p>
                             <p className="mt-1 text-xs text-muted-foreground">{sp.labels.copyReadyList ?? "Copy-ready list for the contracting authority."}</p>
                           </div>
                           <Button
                             variant="outline"
-                            className="rounded-full w-full sm:w-auto"
+                            className="self-start rounded-full px-5 min-w-[96px] shrink-0"
                             onClick={async () => {
                               const text = sp.data.questions.map((q) => `- ${q.q}`).join("\n");
                               const ok = await safeCopy(text);
@@ -573,7 +623,7 @@ export function SampleOutputContent({
                               setShowEvidenceExcerpt(true);
                             }}
                           >
-                            Open evidence excerpt
+                            {source.openEvidenceExcerpt ?? "Open evidence excerpt"}
                           </Button>
 
                           <Button
@@ -609,7 +659,7 @@ export function SampleOutputContent({
                               setShowLocate(false);
                             }}
                           >
-                            Close
+                            {common.close ?? "Close"}
                           </Button>
                         </div>
                       </div>
@@ -694,7 +744,7 @@ export function SampleOutputContent({
 
                   {/* Reference text box */}
                   <div className="rounded-2xl border border-border bg-card p-5">
-                    <div className="text-xs text-muted-foreground mb-3">Reference text</div>
+                    <div className="text-xs text-muted-foreground mb-3">{source.openReferenceText ?? "Reference text"}</div>
                     <div className="whitespace-pre-wrap font-mono text-[12px] leading-relaxed text-foreground/90">
                       {highlightText(referenceText, searchPhrase)}
                     </div>
@@ -711,18 +761,18 @@ export function SampleOutputContent({
               <div className="space-y-6">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <p className="text-xl font-semibold">Bid Room</p>
-                    <p className="mt-1 text-sm text-muted-foreground">Work view: assign owners, track tasks, and coordinate the bid.</p>
+                    <p className="text-xl font-semibold">{bidroom.title ?? "Bid Room"}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{bidroom.panel?.subtitle ?? "Work view: assign owners, track tasks, and coordinate the bid."}</p>
                     <p className="mt-1 text-xs text-muted-foreground">Job: {sp.data.fileName}</p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
                     <Button variant="outline" className="rounded-full" onClick={() => setView("compliance")}
                     >
-                      Compliance matrix
+                      {compliance.title ?? sp.tabs.compliance}
                     </Button>
                     <Button variant="outline" className="rounded-full" onClick={() => setView("cockpit")}
                     >
-                      Back to job
+                      {sp.labels.backToJob ?? bidroom.backToJob ?? "Back to job"}
                     </Button>
                   </div>
                 </div>
@@ -748,7 +798,7 @@ export function SampleOutputContent({
                   <CardContent className="p-5">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div>
-                        <p className="text-sm font-semibold">Bid Room</p>
+                        <p className="text-sm font-semibold">{bidroom.title ?? "Bid Room"}</p>
                         <p className="mt-1 text-xs text-muted-foreground">
                           Assign owners, track status, and leave short notes. This overlays the evidence-first results (it does not change them).
                         </p>
@@ -758,33 +808,33 @@ export function SampleOutputContent({
                           Open original PDF
                         </Button>
                         <Button variant="outline" className="rounded-full w-full sm:w-auto" disabled>
-                          Export Bid Pack
+                          {bidroom.panel?.exportBidPack ?? "Export Bid Pack"}
                         </Button>
                       </div>
                     </div>
 
                     <div className="mt-4 flex flex-wrap items-center gap-2">
-                      {chip("Items: 12")}
-                      {chip("Done: 0")}
-                      {chip("Blocked: 0")}
+                      {chip(bidroom.panel?.stats?.items ? bidroom.panel.stats.items.replace("{count}", "12") : "Items: 12")}
+                      {chip(bidroom.panel?.stats?.done ? bidroom.panel.stats.done.replace("{count}", "0") : "Done: 0")}
+                      {chip(bidroom.panel?.stats?.blocked ? bidroom.panel.stats.blocked.replace("{count}", "0") : "Blocked: 0")}
                       <div className="ml-auto flex flex-wrap items-center gap-2">
-                        <div className="rounded-full border border-border bg-background px-4 py-2 text-xs text-muted-foreground">Search items…</div>
+                        <div className="rounded-full border border-border bg-background px-4 py-2 text-xs text-muted-foreground">{bidroom.panel?.searchPlaceholder ?? "Search items…"}</div>
                         <div className="rounded-full border border-border bg-background px-4 py-2 text-xs text-muted-foreground inline-flex items-center gap-2">
-                          All types <ChevronDown className="h-4 w-4" />
+                          {bidroom.panel?.filters?.allTypes ?? "All types"} <ChevronDown className="h-4 w-4" />
                         </div>
                         <div className="rounded-full border border-border bg-background px-4 py-2 text-xs text-muted-foreground inline-flex items-center gap-2">
-                          All status <ChevronDown className="h-4 w-4" />
+                          {bidroom.panel?.filters?.allStatus ?? "All status"} <ChevronDown className="h-4 w-4" />
                         </div>
                         <Button variant="outline" className="rounded-full w-full sm:w-auto" disabled>
-                          Hiding done
+                          {bidroom.panel?.hideDone?.hiding ?? "Hiding done"}
                         </Button>
                       </div>
                     </div>
 
                     <div className="mt-4 rounded-2xl border border-border bg-card">
                       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-                        <p className="text-xs font-semibold">Work items</p>
-                        <p className="text-xs text-muted-foreground">Operational overlay only. This does not change the AI decision.</p>
+                        <p className="text-xs font-semibold">{bidroom.panel?.table?.title ?? "Work items"}</p>
+                        <p className="text-xs text-muted-foreground">{bidroom.panel?.table?.note ?? "Operational overlay only. This does not change the AI decision."}</p>
                       </div>
 
                       <div className="p-4 space-y-3">
@@ -793,7 +843,7 @@ export function SampleOutputContent({
                             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                               <div className="min-w-0">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  {chip("Requirement · MUST", "text-xs")}
+                                  {chip(`${bidroom.types?.requirement ?? "Requirement"} · ${compliance.level?.must ?? "MUST"}`, "text-xs")}
                                   <span className="text-xs text-muted-foreground">requirement_{(1000 + i).toString(16)}</span>
                                 </div>
                                 <p className="mt-2 text-sm text-foreground/90 leading-relaxed">{m.title}</p>
@@ -801,17 +851,17 @@ export function SampleOutputContent({
                               <div className="flex items-center gap-2 shrink-0">
                                 <Button variant="outline" className="rounded-full" onClick={() => openEvidence(i % 2 === 0 ? "E004" : "E005")}
                                 >
-                                  Open evidence
+                                  {bidroom.actions?.openEvidence ?? compliance.actions?.evidence ?? "Open evidence"}
                                 </Button>
                                 <Button variant="outline" className="rounded-full w-full sm:w-auto" disabled>{common.locateInPdf ?? "Locate in PDF"}</Button>
                               </div>
                             </div>
 
                             <div className="mt-3 grid gap-2 md:grid-cols-4">
-                              <div className="rounded-full border border-border bg-background px-4 py-2 text-xs text-muted-foreground">Owner</div>
-                              <div className="rounded-full border border-border bg-background px-4 py-2 text-xs text-muted-foreground">Todo</div>
+                              <div className="rounded-full border border-border bg-background px-4 py-2 text-xs text-muted-foreground">{bidroom.fields?.ownerPlaceholder ?? "Owner"}</div>
+                              <div className="rounded-full border border-border bg-background px-4 py-2 text-xs text-muted-foreground">{bidroom.status?.todo ?? "Todo"}</div>
                               <div className="rounded-full border border-border bg-background px-4 py-2 text-xs text-muted-foreground">dd/mm/yyyy</div>
-                              <div className="rounded-full border border-border bg-background px-4 py-2 text-xs text-muted-foreground">Add note</div>
+                              <div className="rounded-full border border-border bg-background px-4 py-2 text-xs text-muted-foreground">{bidroom.actions?.addNote ?? "Add note"}</div>
                             </div>
                           </div>
                         ))}
@@ -828,16 +878,16 @@ export function SampleOutputContent({
                   <div>
                     <p className="text-xl font-semibold">{sp.tabs.compliance}</p>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Audit lens for requirements. Set compliance stance and map where each requirement is addressed in the proposal.
+                      {compliance.helper?.setStance ?? "Audit lens for requirements. Set compliance stance and map where each requirement is addressed in the proposal."}
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      This is not task tracking. Use Bid Room for owners, due dates, and operational status.
+                      {compliance.helper?.notTaskTracking ?? "This is not task tracking. Use Bid Room for owners, due dates, and operational status."}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Button className="rounded-full" onClick={() => setView("bidroom")}
                     >
-                      Open Bid Room
+                      {compliance.actions?.openBidRoom ?? sp.labels.openBidRoom ?? "Open Bid Room"}
                     </Button>
                     <Button variant="outline" className="rounded-full w-full sm:w-auto" disabled>
                       <MoreHorizontal className="h-4 w-4" />
@@ -848,21 +898,21 @@ export function SampleOutputContent({
                 <div className="grid gap-4 md:grid-cols-3">
                   <Card className="rounded-2xl">
                     <CardContent className="p-5">
-                      <p className="text-xs text-muted-foreground">Gate</p>
+                      <p className="text-xs text-muted-foreground">{compliance.view?.gate ?? "Gate"}</p>
                       <p className="mt-1 text-lg font-semibold">MUST gaps: 6</p>
                       <p className="mt-1 text-xs text-muted-foreground">MUST TBD: 0 · Partial: 0 · Non-compliant: 0</p>
                     </CardContent>
                   </Card>
                   <Card className="rounded-2xl">
                     <CardContent className="p-5">
-                      <p className="text-xs text-muted-foreground">Gaps</p>
+                      <p className="text-xs text-muted-foreground">{compliance.view?.gaps ?? "Gaps"}</p>
                       <p className="mt-1 text-lg font-semibold">6 / 6</p>
                       <p className="mt-1 text-xs text-muted-foreground">TBD: 6 · Partial: 0 · Non-compliant: 0</p>
                     </CardContent>
                   </Card>
                   <Card className="rounded-2xl">
                     <CardContent className="p-5">
-                      <p className="text-xs text-muted-foreground">Covered</p>
+                      <p className="text-xs text-muted-foreground">{compliance.view?.covered ?? "Covered"}</p>
                       <p className="mt-1 text-lg font-semibold">0 / 6</p>
                       <p className="mt-1 text-xs text-muted-foreground">Compliant: 0 · N/A: 0</p>
                     </CardContent>
@@ -872,23 +922,23 @@ export function SampleOutputContent({
                 <Card className="rounded-2xl">
                   <CardContent className="p-5">
                     <div className="flex flex-wrap items-center gap-2">
-                      <div className="flex-1 rounded-full border border-border bg-background px-4 py-2 text-xs text-muted-foreground">Search requirement, proposal section, notes…</div>
+                      <div className="flex-1 rounded-full border border-border bg-background px-4 py-2 text-xs text-muted-foreground">{compliance.searchPlaceholder ?? "Search requirement, proposal section, notes…"}</div>
                       <div className="rounded-full border border-border bg-background px-4 py-2 text-xs text-muted-foreground inline-flex items-center gap-2">
-                        All levels <ChevronDown className="h-4 w-4" />
+                        {compliance.filters?.allLevels ?? "All levels"} <ChevronDown className="h-4 w-4" />
                       </div>
                       <div className="rounded-full border border-border bg-background px-4 py-2 text-xs text-muted-foreground inline-flex items-center gap-2">
-                        All statuses <ChevronDown className="h-4 w-4" />
+                        {compliance.filters?.allStatuses ?? "All statuses"} <ChevronDown className="h-4 w-4" />
                       </div>
-                      {chip("Rows: 6")}
-                      {chip("Evidence map: 7")}
+                      {chip(compliance.stats?.rows ? compliance.stats.rows.replace("{count}", "6") : "Rows: 6")}
+                      {chip(compliance.stats?.evidenceMap ? compliance.stats.evidenceMap.replace("{count}", "7") : "Evidence map: 7")}
                       <Button variant="outline" className="rounded-full w-full sm:w-auto" disabled>
-                        View
+                        {compliance.filters?.view ?? "View"}
                       </Button>
                       <Button className="rounded-full w-full sm:w-auto" disabled>
-                        Gaps
+                        {compliance.view?.gapsOnly ?? "Gaps"}
                       </Button>
                       <Button variant="outline" className="rounded-full w-full sm:w-auto" disabled>
-                        Full
+                        {compliance.view?.full ?? "Full"}
                       </Button>
                     </div>
                   </CardContent>
@@ -896,8 +946,8 @@ export function SampleOutputContent({
 
                 <Card className="rounded-2xl">
                   <CardContent className="p-5">
-                    <p className="text-xs font-semibold">Gaps queue</p>
-                    <p className="mt-1 text-xs text-muted-foreground">Set stance, map proposal section, justify with evidence.</p>
+                    <p className="text-xs font-semibold">{compliance.view?.gapsQueue ?? "Gaps queue"}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{compliance.helper?.setStance ?? "Set stance, map proposal section, justify with evidence."}</p>
 
                     <div className="mt-4 space-y-4">
                       {sp.data.mustItems.slice(0, 3).map((m, i) => (
@@ -910,38 +960,38 @@ export function SampleOutputContent({
                                 </span>
                                 <span className="text-xs text-muted-foreground">requirement_{(1000 + i).toString(16)}</span>
                                 <span className="inline-flex items-center rounded-full border border-border bg-muted/20 px-3 py-1 text-xs font-semibold">
-                                  Gap
+                                  {compliance.badges?.gap ?? "Gap"}
                                 </span>
                               </div>
                               <p className="mt-2 text-sm text-foreground/90 leading-relaxed">{m.title}</p>
-                              <p className="mt-1 text-xs text-muted-foreground">Evidence: 2 id(s) · PDF page 1</p>
+                              <p className="mt-1 text-xs text-muted-foreground">{compliance.labels?.evidenceCount ? compliance.labels.evidenceCount.replace("{count}", "2") : "Evidence: 2 id(s)"} · {compliance.labels?.pdfPage ? compliance.labels.pdfPage.replace("{page}", "1") : "PDF page 1"}</p>
                             </div>
 
                             <div className="w-full md:w-[340px] space-y-2">
                               <div className="grid grid-cols-2 gap-2">
                                 <div>
-                                  <p className="text-xs text-muted-foreground mb-1">Compliance stance</p>
+                                  <p className="text-xs text-muted-foreground mb-1">{compliance.fields?.stance ?? "Compliance stance"}</p>
                                   <div className="rounded-full border border-border bg-background px-4 py-2 text-xs text-muted-foreground inline-flex items-center justify-between">
-                                    TBD <ChevronDown className="h-4 w-4" />
+                                    {(compliance.status?.tbd ?? "TBD")} <ChevronDown className="h-4 w-4" />
                                   </div>
                                 </div>
                                 <div>
-                                  <p className="text-xs text-muted-foreground mb-1">Proposal section</p>
-                                  <div className="rounded-full border border-border bg-background px-4 py-2 text-xs text-muted-foreground">e.g. 2.1 / Annex A</div>
+                                  <p className="text-xs text-muted-foreground mb-1">{compliance.fields?.proposalSection ?? "Proposal section"}</p>
+                                  <div className="rounded-full border border-border bg-background px-4 py-2 text-xs text-muted-foreground">{compliance.placeholders?.proposalSection ?? "e.g. 2.1 / Annex A"}</div>
                                 </div>
                               </div>
 
                               <div>
-                                <p className="text-xs text-muted-foreground mb-1">Audit note</p>
+                                <p className="text-xs text-muted-foreground mb-1">{compliance.fields?.auditNote ?? "Audit note"}</p>
                                 <div className="rounded-full border border-border bg-background px-4 py-2 text-xs text-muted-foreground">
-                                  Why this stance (short, audit-friendly)
+                                  {compliance.placeholders?.auditNote ?? "Why this stance (short, audit-friendly)"}
                                 </div>
                               </div>
 
                               <div className="flex flex-wrap items-center gap-2">
                                 <Button variant="outline" className="rounded-full" onClick={() => openEvidence(i % 2 === 0 ? "E004" : "E005")}
                                 >
-                                  Evidence
+                                  {compliance.actions?.evidence ?? "Evidence"}
                                 </Button>
                                 <Button variant="outline" className="rounded-full w-full sm:w-auto" disabled>{common.locateInPdf ?? "Locate in PDF"}</Button>
                                 <Button
@@ -967,12 +1017,12 @@ export function SampleOutputContent({
               <div className="space-y-6">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div>
-                    <p className="text-xl font-semibold">Dashboard</p>
-                    <p className="mt-1 text-sm text-muted-foreground">High-signal triage for decisions, deadlines, and execution.</p>
+                    <p className="text-xl font-semibold">{dashboard.title ?? "Dashboard"}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{dashboard.subtitle ?? "High-signal triage for decisions, deadlines, and execution."}</p>
                   </div>
                   <div className="flex items-center gap-2">
                     <Button asChild className="rounded-full">
-                      <Link href={primaryCtaHref}>New bid</Link>
+                      <Link href={primaryCtaHref}>{navApp.newReview ?? "New bid"}</Link>
                     </Button>
                     <Button variant="outline" className="rounded-full w-full sm:w-auto" disabled>
                       <MoreHorizontal className="h-4 w-4" />
@@ -983,25 +1033,25 @@ export function SampleOutputContent({
                 <div className="grid gap-4 md:grid-cols-4">
                   <Card className="rounded-2xl">
                     <CardContent className="p-5">
-                      <p className="text-sm font-semibold">Portfolio</p>
+                      <p className="text-sm font-semibold">{dashboard.kpi?.portfolioTitle ?? "Portfolio"}</p>
                       <div className="mt-4 flex items-center gap-3">
                         <MiniRing value={14} />
                         <div>
-                          <p className="text-xs text-muted-foreground">basics present</p>
+                          <p className="text-xs text-muted-foreground">{dashboard.kpi?.basicsPresent ?? "basics present"}</p>
                           <p className="text-lg font-bold">14%</p>
                         </div>
                       </div>
-                      <p className="mt-3 text-xs text-muted-foreground">Deadline/decision from AI extraction unless overridden.</p>
+                      <p className="mt-3 text-xs text-muted-foreground">{dashboard.kpi?.aiExtractionHint ?? "Deadline/decision from AI extraction unless overridden."}</p>
                     </CardContent>
                   </Card>
 
                   <Card className="rounded-2xl">
                     <CardContent className="p-5">
-                      <p className="text-sm font-semibold">Deadlines</p>
+                      <p className="text-sm font-semibold">{dashboard.kpi?.deadlinesTitle ?? "Deadlines"}</p>
                       <div className="mt-4 flex items-center gap-3">
                         <MiniRing value={14} />
                         <div>
-                          <p className="text-xs text-muted-foreground">% urgent</p>
+                          <p className="text-xs text-muted-foreground">{dashboard.kpi?.percentUrgent ?? "% urgent"}</p>
                           <p className="text-lg font-bold">14%</p>
                         </div>
                       </div>
@@ -1012,30 +1062,30 @@ export function SampleOutputContent({
 
                   <Card className="rounded-2xl">
                     <CardContent className="p-5">
-                      <p className="text-sm font-semibold">Execution</p>
+                      <p className="text-sm font-semibold">{dashboard.kpi?.executionTitle ?? "Execution"}</p>
                       <div className="mt-4 flex items-center gap-3">
                         <MiniRing value={68} />
                         <div>
-                          <p className="text-xs text-muted-foreground">% done</p>
+                          <p className="text-xs text-muted-foreground">{dashboard.kpi?.percentDone ?? "% done"}</p>
                           <p className="text-lg font-bold">68%</p>
                         </div>
                       </div>
-                      <p className="mt-3 text-xs text-muted-foreground">Based on team work items.</p>
+                      <p className="mt-3 text-xs text-muted-foreground">{dashboard.kpi?.basedOnWorkItems ?? "Based on team work items."}</p>
                       <p className="mt-1 text-xs text-muted-foreground">36 done · 17 open · 8 blocked</p>
                     </CardContent>
                   </Card>
 
                   <Card className="rounded-2xl">
                     <CardContent className="p-5">
-                      <p className="text-sm font-semibold">Decisions</p>
+                      <p className="text-sm font-semibold">{dashboard.kpi?.decisionsTitle ?? "Decisions"}</p>
                       <div className="mt-4 flex items-center gap-3">
                         <MiniRing value={100} />
                         <div>
-                          <p className="text-xs text-muted-foreground">% decided</p>
+                          <p className="text-xs text-muted-foreground">{dashboard.kpi?.percentDecided ?? "% decided"}</p>
                           <p className="text-lg font-bold">100%</p>
                         </div>
                       </div>
-                      <p className="mt-3 text-xs text-muted-foreground">AI suggestion unless overridden by team decision.</p>
+                      <p className="mt-3 text-xs text-muted-foreground">{dashboard.kpi?.aiSuggestionHint ?? "AI suggestion unless overridden by team decision."}</p>
                       <p className="mt-1 text-xs text-muted-foreground">Go 2 · Hold 3 · No-Go 2 · Missing 0</p>
                     </CardContent>
                   </Card>
@@ -1045,20 +1095,20 @@ export function SampleOutputContent({
                   <CardContent className="p-5">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div>
-                        <p className="text-sm font-semibold">Operational queues</p>
-                        <p className="mt-1 text-xs text-muted-foreground">Actionable queues for daily delivery. Works even when the tender PDF has no deadline or decision.</p>
+                        <p className="text-sm font-semibold">{dashboard.queues?.title ?? "Operational queues"}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{dashboard.queues?.subtitle ?? "Actionable queues for daily delivery. Works even when the tender PDF has no deadline or decision."}</p>
                       </div>
                       <Button variant="outline" className="rounded-full w-full sm:w-auto" disabled>
-                        Expand
+                        {common.expand ?? "Expand"}
                       </Button>
                     </div>
 
                     <div className="mt-4 flex flex-wrap items-center gap-2">
-                      {chip("Needs triage 0")}
-                      {chip("Deadline unknown 6")}
-                      {chip("Due next 7d 0")}
-                      {chip("Overdue items 5")}
-                      {chip("Blocked 8")}
+                      {chip(`${dashboard.badges?.needsTriage ?? "Needs triage"} 0`)}
+                      {chip(`${dashboard.badges?.deadlineUnknown ?? "Deadline unknown"} 6`)}
+                      {chip(`${dashboard.badges?.dueNext7 ?? "Due next 7d"} 0`)}
+                      {chip(`${dashboard.badges?.overdueItems ?? "Overdue items"} 5`)}
+                      {chip(`${dashboard.badges?.blocked ?? "Blocked"} 8`)}
                     </div>
                   </CardContent>
                 </Card>
@@ -1069,7 +1119,7 @@ export function SampleOutputContent({
 
         <div className="mt-10 text-center">
           <p className="text-sm text-muted-foreground">
-            This is a static preview built to mirror the real app UX. Start a real workspace with your tender in under a minute.
+            {sp.labels.previewNote ?? "Static preview. In the real workspace, every blocker, clarification, and compliance row links back to evidence in the source."}
           </p>
           <div className="mt-4 flex items-center justify-center gap-3">
             <Button asChild size="lg" className="rounded-full px-10 h-12">

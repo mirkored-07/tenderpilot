@@ -331,7 +331,10 @@
     "header": {
       "backToHome": "Zur Startseite",
       "sample": "Beispielausgabe",
-      "cta": "Jetzt starten"
+      "cta": "Jetzt starten",
+      "language": "Sprache",
+      "theme": "Design",
+      "menu": "Menü"
     },
     "hero": {
       "titleA": "Vom PDF zum Decision Cockpit",
@@ -556,7 +559,19 @@
       "structuredDriversOnly": "Nur strukturierte Hinweise. Bitte über Evidenz & Quelle verifizieren.",
       "switchEvidence": "Evidenz wechseln:",
       "matchFor": "Treffer für",
-      "copyReadyList": "Kopierfertige Liste für die Vergabestelle."
+      "copyReadyList": "Kopierfertige Liste für die Vergabestelle.",
+      "topBlockers": "Wichtigste Blocker",
+      "fixableBlockersRemaining": "Noch 6 lösbare Blocker",
+      "decisionDrivers": "Entscheidungstreiber",
+      "blockers": "Blocker",
+      "strategicRisks": "Strategische Risiken",
+      "immediateActions": "Nächste Schritte",
+      "previewNote": "Statische Vorschau. Im echten Workspace ist jeder Blocker, jede Klärung und jede Compliance-Zeile mit Evidenz aus der Quelle verknüpft.",
+      "immediateActionItems": [
+        "Gewünschtes Format der Angebotsantwort bestätigen (Stichpunkte oder Fließtext).",
+        "Klären, ob verbindliche Vorlagen für kommerzielle und rechtliche Abschnitte existieren.",
+        "Bevorzugtes Bereitstellungsmodell bestätigen (Buyer-Cloud oder SaaS)."
+      ]
     }
   },
   "pricingPage": {
@@ -569,7 +584,8 @@
     "ui": {
       "theme": "Theme",
       "tipLabel": "Tipp",
-      "tipText": "Laden Sie eine Ausschreibung hoch und erhalten Sie in wenigen Minuten ein Decision Cockpit."
+      "tipText": "Laden Sie eine Ausschreibung hoch und erhalten Sie in wenigen Minuten ein Decision Cockpit.",
+      "language": "Sprache"
     },
     "tiers": {
       "free": {

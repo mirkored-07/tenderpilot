@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { WaitlistInline } from "@/components/marketing/WaitlistInline";
 import { ModeToggle } from "@/components/mode-toggle";
 import LanguageSwitcherSlot from "@/components/marketing/LanguageSwitcherSlot";
+import { LanguageSwitcher } from "@/components/marketing/LanguageSwitcher";
 import type { Metadata } from "next";
 import { BrandIcon } from "@/components/brand-icon";
 import { getAccessMode, loginWithNextHref } from "@/lib/access-mode";
@@ -31,7 +32,7 @@ export const metadata: Metadata = {
 
 
 type LandingDict = {
-  nav: { cta: string; theme: string };
+  nav: { cta: string; theme: string; language?: string };
   hero: {
     badge: string;
     title_line1: string;

@@ -331,7 +331,10 @@
     "header": {
       "backToHome": "Retour à l’accueil",
       "sample": "Exemple",
-      "cta": "Commencer"
+      "cta": "Commencer",
+      "language": "Langue",
+      "theme": "Thème",
+      "menu": "Menu"
     },
     "hero": {
       "titleA": "Du PDF au cockpit de décision",
@@ -556,7 +559,19 @@
       "structuredDriversOnly": "Indicateurs structurés uniquement. Vérifiez via Preuve & source.",
       "switchEvidence": "Changer de preuve :",
       "matchFor": "Correspondance pour",
-      "copyReadyList": "Liste prête à copier pour l’acheteur public."
+      "copyReadyList": "Liste prête à copier pour l’acheteur public.",
+      "topBlockers": "Blocages principaux",
+      "fixableBlockersRemaining": "6 blocages restent à lever",
+      "decisionDrivers": "Facteurs de décision",
+      "blockers": "Blocages",
+      "strategicRisks": "Risques stratégiques",
+      "immediateActions": "Actions immédiates",
+      "previewNote": "Aperçu statique. Dans l’espace réel, chaque blocage, clarification et ligne de conformité renvoie à une preuve dans la source.",
+      "immediateActionItems": [
+        "Confirmer le format attendu pour la réponse préliminaire (puces ou texte rédigé).",
+        "Verifier s’il existe des modèles obligatoires pour les sections commerciales et juridiques.",
+        "Confirmer le mode de déploiement préféré (cloud acheteur ou SaaS)."
+      ]
     }
   },
   "pricingPage": {
@@ -569,7 +584,8 @@
     "ui": {
       "theme": "Thème",
       "tipLabel": "Conseil",
-      "tipText": "Importez un dossier et obtenez un cockpit de décision en quelques minutes."
+      "tipText": "Importez un dossier et obtenez un cockpit de décision en quelques minutes.",
+      "language": "Langue"
     },
     "tiers": {
       "free": {

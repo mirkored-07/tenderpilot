@@ -587,16 +587,16 @@ export default function JobsPage() {
           <p className="mt-1 text-sm text-muted-foreground">{t("app.tenders.subtitle")}</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           <Button
             variant="outline"
-            className="rounded-full"
+            className="rounded-full w-full sm:w-auto"
             onClick={loadJobs}
           >
             {t("app.common.refresh")}
           </Button>
 
-          <Button asChild className="rounded-full">
+          <Button asChild className="rounded-full w-full sm:w-auto">
             <Link href="/app/upload">{t("app.nav.newReview")}</Link>
           </Button>
         </div>
@@ -622,9 +622,9 @@ export default function JobsPage() {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="flex flex-1 flex-col gap-3 md:flex-row md:items-center">
-              <div className="w-full md:max-w-sm">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex flex-1 flex-col gap-3">
+              <div className="w-full xl:max-w-sm">
                 <Input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
@@ -633,10 +633,10 @@ export default function JobsPage() {
                 />
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="grid gap-2 sm:grid-cols-2 xl:flex xl:flex-wrap xl:items-center">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="rounded-full">
+                    <Button variant="outline" className="rounded-full w-full justify-between">
                       {t("app.tenders.filters.status")}: {statusLabel}
                     </Button>
                   </DropdownMenuTrigger>
@@ -662,7 +662,7 @@ export default function JobsPage() {
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="rounded-full">
+                    <Button variant="outline" className="rounded-full w-full justify-between">
                       {t("app.tenders.filters.decision")}: {decisionLabel}
                     </Button>
                   </DropdownMenuTrigger>
@@ -689,7 +689,7 @@ export default function JobsPage() {
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="rounded-full">
+                    <Button variant="outline" className="rounded-full w-full justify-between">
                       {t("app.tenders.filters.deadline")}: {deadlineLabel}
                     </Button>
                   </DropdownMenuTrigger>

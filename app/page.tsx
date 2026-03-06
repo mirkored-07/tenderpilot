@@ -7,10 +7,11 @@ import { WaitlistInline } from "@/components/marketing/WaitlistInline";
 import { ModeToggle } from "@/components/mode-toggle";
 import { BrandIcon } from "@/components/brand-icon";
 import LanguageSwitcherSlot from "@/components/marketing/LanguageSwitcherSlot";
+import { LanguageSwitcher } from "@/components/marketing/LanguageSwitcher";
 import { getAccessMode, loginWithNextHref } from "@/lib/access-mode";
 
 type LandingDict = {
-  nav: { cta: string; theme: string };
+  nav: { cta: string; theme: string; language?: string };
   hero: {
     badge: string;
     title_line1: string;
@@ -320,11 +321,13 @@ export default async function LandingPage() {
                 {t.nav.cta}
               </Link>
 
-              {/* Mobile theme + language */}
-              <div className="mt-2 flex items-center justify-between border-t border-white/10 px-3 pt-3 pb-1">
-                <span className="text-sm text-muted-foreground">{t.nav.theme}</span>
-                <div className="flex items-center gap-2">
-                  <LanguageSwitcherSlot />
+              <div className="mt-2 space-y-3 border-t border-white/10 px-3 pt-3 pb-1">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-sm text-muted-foreground">{t.nav.language ?? "Language"}</span>
+                  <LanguageSwitcher />
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-sm text-muted-foreground">{t.nav.theme}</span>
                   <ModeToggle />
                 </div>
               </div>

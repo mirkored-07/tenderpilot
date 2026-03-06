@@ -973,11 +973,11 @@ return {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="grid gap-3 md:grid-cols-3">
+        <div className="space-y-1.5">
           <label className="text-xs text-muted-foreground">{t("app.dashboard.filters.owner")}</label>
           <select
-            className="h-9 rounded-full border bg-background px-3 text-sm"
+            className="h-9 w-full rounded-full border bg-background px-3 text-sm"
             value={ownerFilter}
             onChange={(e) => setOwnerFilter(e.target.value)}
           >
@@ -987,10 +987,12 @@ return {
               </option>
             ))}
           </select>
+        </div>
 
-          <label className="ml-2 text-xs text-muted-foreground">{t("app.dashboard.filters.decision")}</label>
+        <div className="space-y-1.5">
+          <label className="text-xs text-muted-foreground">{t("app.dashboard.filters.decision")}</label>
           <select
-            className="h-9 rounded-full border bg-background px-3 text-sm"
+            className="h-9 w-full rounded-full border bg-background px-3 text-sm"
             value={decisionFilter}
             onChange={(e) => setDecisionFilter(e.target.value)}
           >
@@ -1002,10 +1004,10 @@ return {
           </select>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="space-y-1.5">
           <label className="text-xs text-muted-foreground">{t("app.dashboard.filters.window")}</label>
           <select
-            className="h-9 rounded-full border bg-background px-3 text-sm"
+            className="h-9 w-full rounded-full border bg-background px-3 text-sm"
             value={windowDays}
             onChange={(e) => setWindowDays(parseInt(e.target.value, 10))}
           >

@@ -331,7 +331,10 @@
     "header": {
       "backToHome": "Torna alla home",
       "sample": "Output di esempio",
-      "cta": "Inizia ora"
+      "cta": "Inizia ora",
+      "language": "Lingua",
+      "theme": "Tema",
+      "menu": "Menu"
     },
     "hero": {
       "titleA": "Dal PDF al decision cockpit",
@@ -556,7 +559,19 @@
       "structuredDriversOnly": "Indicatori strutturati. Verifica in Evidenza e fonte.",
       "switchEvidence": "Cambia evidenza:",
       "matchFor": "Corrispondenza per",
-      "copyReadyList": "Elenco pronto da copiare per la stazione appaltante."
+      "copyReadyList": "Elenco pronto da copiare per la stazione appaltante.",
+      "topBlockers": "Blocchi principali",
+      "fixableBlockersRemaining": "Restano 6 blocchi risolvibili",
+      "decisionDrivers": "Driver della decisione",
+      "blockers": "Blocchi",
+      "strategicRisks": "Rischi strategici",
+      "immediateActions": "Azioni immediate",
+      "previewNote": "Anteprima statica. Nel workspace reale, ogni blocco, chiarimento e riga della compliance rimanda all’evidenza nella fonte.",
+      "immediateActionItems": [
+        "Confermare il formato atteso della bozza di risposta (punti elenco o testo discorsivo).",
+        "Chiarire se esistono modelli obbligatori per le sezioni commerciali e legali.",
+        "Confermare il modello di deployment preferito (cloud del cliente o SaaS)."
+      ]
     }
   },
   "pricingPage": {
@@ -569,7 +584,8 @@
     "ui": {
       "theme": "Tema",
       "tipLabel": "Consiglio",
-      "tipText": "Carica un bando e ottieni un decision cockpit in pochi minuti."
+      "tipText": "Carica un bando e ottieni un decision cockpit in pochi minuti.",
+      "language": "Lingua"
     },
     "tiers": {
       "free": {

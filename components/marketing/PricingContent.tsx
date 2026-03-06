@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ModeToggle } from "@/components/mode-toggle";
 import LanguageSwitcherSlot from "@/components/marketing/LanguageSwitcherSlot";
+import { LanguageSwitcher } from "@/components/marketing/LanguageSwitcher";
 import { WaitlistInline } from "@/components/marketing/WaitlistInline";
 import { getAccessMode, loginWithNextHref } from "@/lib/access-mode";
 
@@ -22,6 +23,7 @@ export type PricingDict = {
   };
   ui: {
     theme: string;
+    language?: string;
     tipLabel: string;
     tipText: string;
   };
@@ -250,10 +252,13 @@ export function PricingContent({
                 {dict.hero.cta}
               </Link>
 
-              <div className="mt-2 flex items-center justify-between border-t border-white/10 px-3 pt-3 pb-1">
-                <span className="text-sm text-muted-foreground">{dict.ui.theme}</span>
-                <div className="flex items-center gap-2">
-                  <LanguageSwitcherSlot />
+              <div className="mt-2 space-y-3 border-t border-white/10 px-3 pt-3 pb-1">
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-sm text-muted-foreground">{dict.ui.language ?? "Language"}</span>
+                  <LanguageSwitcher />
+                </div>
+                <div className="flex items-center justify-between gap-4">
+                  <span className="text-sm text-muted-foreground">{dict.ui.theme}</span>
                   <ModeToggle />
                 </div>
               </div>

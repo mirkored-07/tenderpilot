@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Languages } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -57,8 +57,6 @@ export function LanguageSwitcher({
 }) {
   const router = useRouter();
   const pathname = usePathname() || "/";
-  const searchParams = useSearchParams();
-  const search = searchParams?.toString() ?? "";
 
   const current = getLocaleFromPath(pathname);
   const currentTag = current.toUpperCase();
@@ -109,6 +107,7 @@ export function LanguageSwitcher({
 
   const onSelect = (locale: Locale) => {
     setLocaleCookie(locale);
+    const search = typeof window !== "undefined" ? window.location.search.replace(/^\?/, "") : "";
     const nextUrl = buildTargetPath(pathname, search, locale);
     router.push(nextUrl);
   };

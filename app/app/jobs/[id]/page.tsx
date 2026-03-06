@@ -4290,8 +4290,8 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
                     <div className="rounded-2xl border border-rose-200/40 bg-rose-500/5 p-4 dark:border-rose-500/20 dark:bg-rose-500/10">
                       <p className="text-xs font-semibold text-rose-900 dark:text-rose-200">{t("app.review.topBlockersTitle")}</p>
                       <ul className="mt-2 space-y-2 text-sm text-rose-950/90 dark:text-rose-100">
-                        {(mustItems ?? []).slice(0, 3).map((t, i) => (
-                          <li key={i} className="leading-relaxed">• {t}</li>
+                        {(mustItems ?? []).slice(0, 3).map((itemText, i) => (
+                          <li key={i} className="leading-relaxed">• {itemText}</li>
                         ))}
                       </ul>
                     </div>
@@ -4329,18 +4329,18 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
                 <p className="text-xs font-semibold">{t("app.review.sections.blockers")}</p>
                 {(mustItems ?? []).length ? (
                   <div className="mt-3 space-y-2">
-                    {(mustItems ?? []).slice(0, 5).map((t, i) => (
+                    {(mustItems ?? []).slice(0, 5).map((itemText, i) => (
                       <div key={i} className="rounded-xl border border-border bg-card p-3">
-                        <p className="text-sm text-foreground/80 leading-relaxed">• {t}</p>
+                        <p className="text-sm text-foreground/80 leading-relaxed">• {itemText}</p>
                         <div className="mt-2 flex justify-end">
                           <Button
                             variant="outline"
                             size="sm"
                             className="rounded-full"
-                            onClick={() => showEvidenceByIds(mustEvidenceIdsByText.get(t) ?? undefined, t)}
-                            disabled={((mustEvidenceIdsByText.get(t)?.length ?? 0) === 0) && !extractedText}
+                            onClick={() => showEvidenceByIds(mustEvidenceIdsByText.get(itemText) ?? undefined, itemText)}
+                            disabled={((mustEvidenceIdsByText.get(itemText)?.length ?? 0) === 0) && !extractedText}
                           >
-                            Open evidence
+                            {t("app.bidroom.actions.openEvidence")}
                           </Button>
                         </div>
                       </div>
