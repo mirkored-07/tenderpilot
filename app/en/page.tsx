@@ -261,6 +261,8 @@ export default async function LandingPage() {
     title: string;
     menu: string;
   };
+  const languageLabel =
+    dict?.app?.common?.language ?? dict?.common?.language ?? "Language";
 
   return (
     <div className="min-h-screen bg-background aurora-bg selection:bg-blue-500/30 overflow-x-hidden">
@@ -350,7 +352,7 @@ export default async function LandingPage() {
                 <ModeToggle />
               </div>
 			  <div className="mt-2 flex items-center justify-between border-t border-white/10 px-3 pt-3 pb-1">
-				  <span className="text-sm text-muted-foreground">{common.language}</span>
+				  <span className="text-sm text-muted-foreground">{languageLabel}</span>
 				  <LanguageSwitcherSlot />
 				</div>
 
