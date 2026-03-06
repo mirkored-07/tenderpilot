@@ -4,6 +4,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { stableRefKey } from "@/lib/bid-workflow/keys";
+import {
+  canonicalizeWorkStatus,
+  isBlockedWorkStatus,
+  isDoneWorkStatus,
+  isWorkStatusRetryableError,
+  workStatusWriteCandidates,
+} from "@/lib/bid-workflow/work-status";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -60,6 +67,8 @@ export function BidRoomPanel(props: {
 
   const [workItems, setWorkItems] = useState<any[]>([]);
   const [workError, setWorkError] = useState<string | null>(null);
+  // NOTE: We intentionally do not disable inputs during autosave.
+  // Disabling while saving makes typing feel broken on slower networks.
   const [workSaving, setWorkSaving] = useState<string | null>(null);
 
   const [query, setQuery] = useState<string>("");
@@ -71,18 +80,14 @@ export function BidRoomPanel(props: {
   const [evidenceFocus, setEvidenceFocus] = useState<EvidenceFocus | null>(null);
   const [notesOpen, setNotesOpen] = useState<Set<string>>(() => new Set());
 
-  // Debounced autosave for text inputs so refresh/navigation doesn't lose edits.
-  const saveTimersRef = useRef<Map<string, number>>(new Map());
-  function scheduleSave(key: string, fn: () => void, delayMs = 300) {
-    const m = saveTimersRef.current;
-    const prev = m.get(key);
-    if (prev) window.clearTimeout(prev);
-    const t = window.setTimeout(() => {
-      m.delete(key);
-      fn();
-    }, delayMs);
-    m.set(key, t as unknown as number);
-  }
+  // Ensure we never run overlapping writes for the same work item.
+  // Overlapping inserts can cause duplicate-key errors (if a unique constraint exists)
+  // and refreshes can momentarily fail on slower networks.
+  const workWriteInFlightRef = useRef<Set<string>>(new Set());
+  const workWritePendingRef = useRef<Map<string, any>>(new Map());
+
+  // Save text inputs on blur instead of while typing.
+  // This keeps editing smooth and avoids firing writes against half-finished drafts.
 
   const evidenceById = useMemo(() => {
     const map = new Map<string, EvidenceCandidateUi>();
@@ -254,14 +259,19 @@ export function BidRoomPanel(props: {
     return m;
   }, [workItems]);
 
+  const workByKeyRef = useRef<Map<string, any>>(new Map());
+  useEffect(() => {
+    workByKeyRef.current = workByKey;
+  }, [workByKey]);
+
   const filteredRows = useMemo(() => {
     const q = String(query ?? "").trim().toLowerCase();
     return (workBaseRows ?? []).filter((r) => {
       if (typeFilter !== "all" && r.type !== typeFilter) return false;
       const key = `${r.type}:${r.ref_key}`;
       const w = workByKey.get(key);
-      const st = String(w?.status ?? "todo");
-      if (hideDone && st === "done") return false;
+      const st = canonicalizeWorkStatus(w?.status ?? "todo");
+      if (hideDone && isDoneWorkStatus(st)) return false;
       if (statusFilter !== "all" && st !== statusFilter) return false;
       if (q) {
         const hay = `${r.type} ${r.meta ?? ""} ${r.ref_key} ${r.title}`.toLowerCase();
@@ -293,7 +303,22 @@ export function BidRoomPanel(props: {
     setWorkItems((data as any[]) ?? []);
   }
 
-  async function upsertWorkItem(input: {
+  async function refreshWorkSafe() {
+    try {
+      await refreshWork();
+    } catch (e) {
+      // Don't fail the entire save if refresh is temporarily blocked.
+      console.warn("BidRoomPanel refreshWork failed", e);
+    }
+  }
+
+  function isDuplicateKeyError(err: any) {
+    const code = String(err?.code ?? "");
+    const msg = String(err?.message ?? "");
+    return code === "23505" || /duplicate key/i.test(msg);
+  }
+
+  async function doUpsertWorkItem(input: {
     type: WorkItemType;
     ref_key: string;
     title: string;
@@ -307,83 +332,197 @@ export function BidRoomPanel(props: {
     setWorkError(null);
     setWorkSaving(`${input.type}:${input.ref_key}`);
 
+    const rowKey = `${input.type}:${input.ref_key}`;
+
+    function upsertLocalRow(row: any) {
+      if (!row) return;
+      setWorkItems((prev) => {
+        const cur = Array.isArray(prev) ? prev : [];
+        const next = [...cur];
+
+        const id = row?.id;
+        if (id) {
+          const byId = next.findIndex((x) => x?.id === id);
+          if (byId >= 0) {
+            next[byId] = { ...next[byId], ...row };
+            return next;
+          }
+        }
+
+        // Replace first row with the same logical key (type+ref_key), otherwise prepend.
+        const byKey = next.findIndex((x) => `${x?.type ?? ""}:${x?.ref_key ?? ""}` === rowKey);
+        if (byKey >= 0) {
+          next[byKey] = { ...next[byKey], ...row };
+          return next;
+        }
+
+        next.unshift(row);
+        return next;
+      });
+    }
+
     try {
       const supabase = supabaseBrowser();
 
-      // Find existing row (do not rely on a specific unique constraint).
-      const { data: existingRows, error: exErr } = await supabase
-        .from("job_work_items")
-        .select("id,status,owner_label,due_at,notes,updated_at")
-        .eq("job_id", jobId)
-        .eq("type", input.type)
-        .eq("ref_key", input.ref_key)
-        .order("updated_at", { ascending: false })
-        .limit(10);
-      if (exErr) throw exErr;
+      // PATCH update: only write fields explicitly provided.
+      const existing = workByKeyRef.current.get(rowKey);
+      const existingId = existing?.id ? String(existing.id) : "";
+      const existingRawStatus = String(existing?.status ?? "").trim();
 
-      const existing = Array.isArray(existingRows) && existingRows.length ? (existingRows[0] as any) : null;
-      const extraIds = Array.isArray(existingRows) ? existingRows.slice(1).map((r: any) => r?.id).filter(Boolean) : [];
-      if (exErr) throw exErr;
+      const basePatch: any = { title: input.title };
+      if (Object.prototype.hasOwnProperty.call(input, "owner_label")) basePatch.owner_label = input.owner_label;
+      if (Object.prototype.hasOwnProperty.call(input, "due_at")) basePatch.due_at = input.due_at;
+      if (Object.prototype.hasOwnProperty.call(input, "notes")) basePatch.notes = input.notes;
 
-      if (existing && (existing as any).id) {
-        // PATCH update: only write fields explicitly provided.
-        const patch: any = { title: input.title };
-        if (Object.prototype.hasOwnProperty.call(input, "status")) patch.status = input.status;
-        if (Object.prototype.hasOwnProperty.call(input, "owner_label")) patch.owner_label = input.owner_label;
-        if (Object.prototype.hasOwnProperty.call(input, "due_at")) patch.due_at = input.due_at;
-        if (Object.prototype.hasOwnProperty.call(input, "notes")) patch.notes = input.notes;
+      const nextCanonicalStatus = Object.prototype.hasOwnProperty.call(input, "status")
+        ? canonicalizeWorkStatus(input.status, "todo")
+        : null;
+      const statusCandidates = nextCanonicalStatus
+        ? workStatusWriteCandidates(nextCanonicalStatus, existingRawStatus)
+        : [null];
 
-        const { error } = await supabase.from("job_work_items").update(patch).eq("id", (existing as any).id);
-        if (error) throw error;
-      } else {
-        // INSERT: apply defaults for omitted fields.
-        const row: any = {
-          job_id: jobId,
-          type: input.type,
-          ref_key: input.ref_key,
-          title: input.title,
-          status: Object.prototype.hasOwnProperty.call(input, "status") ? input.status : "todo",
-          owner_label: Object.prototype.hasOwnProperty.call(input, "owner_label") ? input.owner_label : null,
-          due_at: Object.prototype.hasOwnProperty.call(input, "due_at") ? input.due_at : null,
-          notes: Object.prototype.hasOwnProperty.call(input, "notes") ? input.notes : null,
-        };
+      const buildPatch = (statusCandidate: string | null) => {
+        const patch: any = { ...basePatch };
+        if (statusCandidate) patch.status = statusCandidate;
+        return patch;
+      };
 
-        const { error } = await supabase.from("job_work_items").insert(row);
-        if (error) throw error;
-      }
+      async function updateExistingById(id: string) {
+        let lastError: any = null;
+        for (const candidate of statusCandidates) {
+          const patch = buildPatch(candidate);
+          const { data, error } = await supabase
+            .from("job_work_items")
+            .update(patch)
+            .eq("id", id)
+            .select("*")
+            .single();
 
-      // Best-effort cleanup: if historic duplicates exist for this key, delete older rows.
-      // This is defensive only (no schema changes / no unique constraints assumed).
-      if (Array.isArray(extraIds) && extraIds.length) {
-        try {
-          await supabase.from("job_work_items").delete().in("id", extraIds);
-        } catch (e) {
-          // ignore
+          if (!error) {
+            upsertLocalRow(data);
+            return;
+          }
+
+          lastError = error;
+          if (!(candidate && isWorkStatusRetryableError(error))) break;
         }
+        throw lastError;
       }
 
-      await refreshWork();
+      async function insertNewRow() {
+        let lastError: any = null;
+        for (const candidate of statusCandidates) {
+          const row: any = {
+            job_id: jobId,
+            type: input.type,
+            ref_key: input.ref_key,
+            title: input.title,
+            status: candidate ?? "todo",
+            owner_label: Object.prototype.hasOwnProperty.call(input, "owner_label") ? input.owner_label : null,
+            due_at: Object.prototype.hasOwnProperty.call(input, "due_at") ? input.due_at : null,
+            notes: Object.prototype.hasOwnProperty.call(input, "notes") ? input.notes : null,
+          };
+
+          const { data, error } = await supabase.from("job_work_items").insert(row).select("*").single();
+
+          if (!error) {
+            upsertLocalRow(data);
+            return;
+          }
+
+          if (isDuplicateKeyError(error)) {
+            const { data: found, error: findErr } = await supabase
+              .from("job_work_items")
+              .select("*")
+              .eq("job_id", jobId)
+              .eq("type", input.type)
+              .eq("ref_key", input.ref_key)
+              .order("updated_at", { ascending: false })
+              .limit(1);
+
+            if (findErr) throw findErr;
+            const latest = Array.isArray(found) && found.length ? (found[0] as any) : null;
+            const latestId = latest?.id ? String(latest.id) : "";
+
+            if (!latestId) throw error;
+
+            await updateExistingById(latestId);
+            return;
+          }
+
+          lastError = error;
+          if (!(candidate && isWorkStatusRetryableError(error))) break;
+        }
+        throw lastError;
+      }
+
+      if (existingId) {
+        await updateExistingById(existingId);
+      } else {
+        await insertNewRow();
+      }
     } catch (e: any) {
-      console.error("BidRoomPanel upsertWorkItem failed", {
-        type: typeof e,
-        asString: String(e),
-        message: e?.message,
-        details: e?.details,
-        hint: e?.hint,
-        code: e?.code,
-        status: e?.status,
-      });
+      // Make sure we log something useful even if it's a non-enumerable Error.
+      const safe = (() => {
+        try {
+          const props = e && typeof e === "object" ? Object.getOwnPropertyNames(e) : [];
+          return { ...JSON.parse(JSON.stringify(e, props)), message: e?.message, code: e?.code, status: e?.status };
+        } catch {
+          return { asString: String(e), message: e?.message, code: e?.code, status: e?.status };
+        }
+      })();
+
+      console.error("BidRoomPanel upsertWorkItem failed", safe);
       console.error("BidRoomPanel upsertWorkItem raw", e);
-      setWorkError(t("app.bidroom.panel.saveFailed"));
-      // Roll back optimistic UI to the last known server state.
-      try { await refreshWork(); } catch { /* ignore */ }
+
+      const msg = String((safe as any)?.message ?? "").toLowerCase();
+      const looksLikeRls = msg.includes("row-level security") || msg.includes("violates row-level security") || msg.includes("permission denied");
+      setWorkError(looksLikeRls ? "Bid Room save is blocked by your Supabase policy. Run the job_work_items RLS SQL from the repo, then try again." : t("app.bidroom.panel.saveFailed"));
+      // Roll back optimistic UI to the last known server state (best-effort).
+      try { await refreshWorkSafe(); } catch { /* ignore */ }
     } finally {
       setWorkSaving(null);
     }
   }
 
-  const doneCount = useMemo(() => Array.from(workByKey.values()).filter((w: any) => String(w?.status ?? "") === "done").length, [workByKey]);
-  const blockedCount = useMemo(() => Array.from(workByKey.values()).filter((w: any) => String(w?.status ?? "") === "blocked").length, [workByKey]);
+  async function upsertWorkItem(input: {
+    type: WorkItemType;
+    ref_key: string;
+    title: string;
+    // PATCH semantics (only provided fields overwrite)
+    status?: string;
+    owner_label?: string | null;
+    due_at?: string | null;
+    notes?: string | null;
+  }) {
+    const rowKey = `${input.type}:${input.ref_key}`;
+
+    // Merge pending updates for the same rowKey (PATCH semantics).
+    const prev = workWritePendingRef.current.get(rowKey) || {};
+    const merged: any = { ...prev, type: input.type, ref_key: input.ref_key, title: input.title };
+    if (Object.prototype.hasOwnProperty.call(input, "status")) merged.status = canonicalizeWorkStatus(input.status, "todo");
+    if (Object.prototype.hasOwnProperty.call(input, "owner_label")) merged.owner_label = input.owner_label;
+    if (Object.prototype.hasOwnProperty.call(input, "due_at")) merged.due_at = input.due_at;
+    if (Object.prototype.hasOwnProperty.call(input, "notes")) merged.notes = input.notes;
+    workWritePendingRef.current.set(rowKey, merged);
+
+    // If a write is already running for this rowKey, let it finish and apply the pending merge.
+    if (workWriteInFlightRef.current.has(rowKey)) return;
+
+    workWriteInFlightRef.current.add(rowKey);
+    try {
+      while (workWritePendingRef.current.has(rowKey)) {
+        const next = workWritePendingRef.current.get(rowKey);
+        workWritePendingRef.current.delete(rowKey);
+        await doUpsertWorkItem(next);
+      }
+    } finally {
+      workWriteInFlightRef.current.delete(rowKey);
+    }
+  }
+
+  const doneCount = useMemo(() => Array.from(workByKey.values()).filter((w: any) => isDoneWorkStatus(w?.status)).length, [workByKey]);
+  const blockedCount = useMemo(() => Array.from(workByKey.values()).filter((w: any) => isBlockedWorkStatus(w?.status)).length, [workByKey]);
 
   const header = props.showHeader !== false;
   const showExport = props.showExport !== false;
@@ -557,7 +696,7 @@ export function BidRoomPanel(props: {
                       {rows.map((r) => {
                         const key = `${r.type}:${r.ref_key}`;
                         const w = workByKey.get(key);
-                        const status = String(w?.status ?? "todo");
+                        const status = canonicalizeWorkStatus(w?.status ?? "todo");
                         const owner = String(w?.owner_label ?? "");
                         const due = w?.due_at ? String(w.due_at).slice(0, 10) : "";
                         const notes = String(w?.notes ?? "");
@@ -630,14 +769,6 @@ export function BidRoomPanel(props: {
                                     else next.unshift({ job_id: jobId, type: r.type, ref_key: r.ref_key, title: r.title, status, owner_label: v });
                                     return next;
                                   });
-                                  scheduleSave(`${key}:owner_label`, () => {
-                                    void upsertWorkItem({
-                                      type: r.type,
-                                      ref_key: r.ref_key,
-                                      title: r.title,
-                                      owner_label: v || null,
-                                    });
-                                  });
                                 }}
                                 onBlur={async (e) => {
                                   await upsertWorkItem({
@@ -649,7 +780,7 @@ export function BidRoomPanel(props: {
                                 }}
                                 placeholder={t("app.bidroom.fields.ownerPlaceholder")}
                                 className="h-9 w-full rounded-full sm:w-[160px]"
-                                disabled={workSaving === key}
+                                // keep editable during autosave
                               />
 
                               <select
@@ -673,7 +804,7 @@ export function BidRoomPanel(props: {
                                     status: v,
                                   });
                                 }}
-                                disabled={workSaving === key}
+                                // keep editable during autosave
                               >
                                 <option value="todo">{t("app.bidroom.status.todo")}</option>
                                 <option value="doing">{t("app.bidroom.status.doing")}</option>
@@ -693,14 +824,6 @@ export function BidRoomPanel(props: {
                                     else next.unshift({ job_id: jobId, type: r.type, ref_key: r.ref_key, title: r.title, status, due_at: v || null });
                                     return next;
                                   });
-                                  scheduleSave(`${key}:due_at`, () => {
-                                    void upsertWorkItem({
-                                      type: r.type,
-                                      ref_key: r.ref_key,
-                                      title: r.title,
-                                      due_at: v || null,
-                                    });
-                                  });
                                 }}
                                 onBlur={async (e) => {
                                   await upsertWorkItem({
@@ -711,7 +834,7 @@ export function BidRoomPanel(props: {
                                   });
                                 }}
                                 className="h-9 w-full rounded-full sm:w-[150px]"
-                                disabled={workSaving === key}
+                                // keep editable during autosave
                               />
 
                               {notesIsOpen ? (
@@ -726,14 +849,6 @@ export function BidRoomPanel(props: {
                                       else next.unshift({ job_id: jobId, type: r.type, ref_key: r.ref_key, title: r.title, status, notes: v });
                                       return next;
                                     });
-                                    scheduleSave(`${key}:notes`, () => {
-                                      void upsertWorkItem({
-                                        type: r.type,
-                                        ref_key: r.ref_key,
-                                        title: r.title,
-                                        notes: v || null,
-                                      });
-                                    });
                                   }}
                                   onBlur={async (e) => {
                                     await upsertWorkItem({
@@ -745,7 +860,7 @@ export function BidRoomPanel(props: {
                                   }}
                                   placeholder={t("app.bidroom.fields.notesPlaceholder")}
                                   className="col-span-2 h-9 w-full rounded-full sm:col-span-1 sm:flex-1 sm:min-w-[220px]"
-                                  disabled={workSaving === key}
+                                  // keep editable during autosave
                                 />
                               ) : (
                                 <Button
@@ -824,10 +939,10 @@ export function BidRoomPanel(props: {
                     className="rounded-full"
                     onClick={() => openPdfAt({ page: evidenceFocus?.page ?? null })}
                   >
-                    {t("app.common.locateInPdf")} (best-effort)
+                    {t("app.common.locateInPdf")}
                   </Button>
                   <Button variant="outline" size="sm" className="rounded-full" onClick={() => openPdfAt()}>
-                    Open PDF
+                    {t("app.bidroom.panel.openOriginalPdf")}
                   </Button>
                 </div>
 

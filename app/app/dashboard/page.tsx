@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { MoreHorizontal, RefreshCw } from "lucide-react";
 
 import { supabaseBrowser } from "@/lib/supabase/browser";
+import { isBlockedWorkStatus, isDoneWorkStatus as isCanonicalDoneWorkStatus } from "@/lib/bid-workflow/work-status";
 import { getJobDisplayName } from "@/lib/pilot-job-names";
 import { useAppI18n } from "../_components/app-i18n-provider";
 
@@ -144,8 +145,7 @@ if (isHold) return "hold";
 }
 
 function isDoneStatus(s?: string | null) {
-  const v = String(s ?? "").toLowerCase().trim();
-  return v === "done" || v === "completed" || v === "closed";
+  return isCanonicalDoneWorkStatus(s);
 }
 
 function SegmentedBar({ parts }: { parts: { label: string; value: number }[] }) {
@@ -406,8 +406,8 @@ export default function DashboardPage() {
       const missingDecision = bucket === "unknown";
 
       const items = byJob[job.id] ?? [];
-      const blocked = items.filter((w) => String(w?.status ?? "") === "blocked").length;
-      const done = items.filter((w) => String(w?.status ?? "") === "done").length;
+      const blocked = items.filter((w) => isBlockedWorkStatus(w?.status)).length;
+      const done = items.filter((w) => isDoneStatus(w?.status)).length;
       const total = items.length;
 
       const displayName = job.file_name ? job.file_name : getJobDisplayName(job.id);
@@ -437,7 +437,7 @@ export default function DashboardPage() {
       const owner = String(wi.owner_label ?? "").trim() || FILTER_UNASSIGNED;
       const row = m.get(owner) || { total: 0, blocked: 0, overdue: 0 };
       row.total += 1;
-      if (String(wi.status ?? "") === "blocked") row.blocked += 1;
+      if (isBlockedWorkStatus(wi.status)) row.blocked += 1;
       if (wi.due_at) {
         const due = new Date(wi.due_at);
         if (Number.isFinite(due.getTime()) && due.getTime() < now.getTime() && !isDoneStatus(wi.status)) {
@@ -536,7 +536,7 @@ export default function DashboardPage() {
       .sort((a, b) => new Date(String(a.due_at)).getTime() - new Date(String(b.due_at)).getTime());
 
     const blockedItems = visibleWorkItems
-      .filter((wi) => String(wi.status ?? "").toLowerCase() === "blocked")
+      .filter((wi) => isBlockedWorkStatus(wi.status))
       .sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1));
 
     const unassignedItems = visibleWorkItems
@@ -626,7 +626,7 @@ return {
 
   const topBlockedItems = useMemo(() => {
     return (workItems ?? [])
-      .filter((w) => String(w?.status ?? "").toLowerCase() === "blocked")
+      .filter((w) => isBlockedWorkStatus(w?.status))
       .map((w) => ({
         ...w,
         displayOwner: String(w.owner_label ?? "").trim() || "",
@@ -867,8 +867,8 @@ return {
                   <div className="mt-3">
                     <SegmentedBar parts={deadlineHistogram} />
                     <p className="mt-2 text-xs text-muted-foreground">
-                      Overdue {overdue} • 0-7d {next7} • 8-30d {next30} • 31-90d {next90}
-                      {unknown ? ` • Unknown ${unknown}` : ""}
+                      {t("app.dashboard.kpi.deadlineBreakdownBase", { overdue, next7, next30, next90 })}
+                      {unknown ? ` • ${t("app.common.unknown")} ${unknown}` : ""}
                     </p>
                   </div>
                 </>
@@ -915,7 +915,7 @@ return {
                   <p className="mt-2 text-xs text-muted-foreground">{t("app.dashboard.kpi.basedOnWorkItems")}</p>
 
                   <p className="mt-3 text-xs text-muted-foreground">
-                    {t("app.dashboard.kpi.doneOpen", { done, open })} • {blocked} blocked
+                    {t("app.dashboard.kpi.executionBreakdown", { done, open, blocked })}
                   </p>
                 </>
               );
@@ -1449,7 +1449,7 @@ return {
                                 : `Deadline: ${String(r.deadlineText || "unknown")}`}
                             {" • "}
                             {(() => { const openCount = Math.max(0, r.total - r.done); if (r.total <= 0) return t("app.dashboard.labels.noWorkItems"); return openCount === 1 ? t("app.dashboard.labels.openWorkItemOne", { count: openCount }) : t("app.dashboard.labels.openWorkItemMany", { count: openCount }); })()}
-                            {r.blocked > 0 ? ` • ${r.blocked} blocked` : ""}
+                            {r.blocked > 0 ? ` • ${t("app.dashboard.labels.blockedCount", { count: r.blocked })}` : ""}
                           </p>
                         </div>
 
@@ -1458,7 +1458,7 @@ return {
 
                           {r.dueSoon !== null ? (
                             <Badge variant={r.dueSoon < 0 ? "destructive" : "outline"} className="rounded-full">
-                              {r.dueSoon < 0 ? `${Math.abs(r.dueSoon)}d overdue` : `Due in ${r.dueSoon}d`}
+                              {r.dueSoon < 0 ? t("app.dashboard.labels.daysOverdue", { count: Math.abs(r.dueSoon) }) : t("app.dashboard.labels.dueInDays", { count: r.dueSoon })}
                             </Badge>
                           ) : (
                             <Badge variant="outline" className="rounded-full">
@@ -1570,7 +1570,7 @@ return {
                         <div key={owner} className="flex items-center justify-between">
                           <p className="text-sm">{owner}</p>
                           <p className="text-xs text-muted-foreground">
-                            {stats.total} items • {stats.blocked} blocked • {stats.overdue} overdue
+                            {t("app.dashboard.analytics.ownerRow", { total: stats.total, blocked: stats.blocked, overdue: stats.overdue })}
                           </p>
                         </div>
                       ))
@@ -1580,7 +1580,7 @@ return {
               </Card>
             </div>
           ) : (
-            <p className="mt-3 text-xs text-muted-foreground">Expand to view analytics.</p>
+            <p className="mt-3 text-xs text-muted-foreground">{t("app.dashboard.analytics.expandHint")}</p>
           )}
         </CardContent>
       </Card>
@@ -1592,7 +1592,7 @@ return {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold">{t("app.dashboard.blockers.title")}</p>
-                <p className="mt-1 text-xs text-muted-foreground">Blocked work items across bids.</p>
+                <p className="mt-1 text-xs text-muted-foreground">{t("app.dashboard.blockers.subtitle")}</p>
               </div>
 
               <button
@@ -1600,7 +1600,7 @@ return {
                 className="text-xs text-muted-foreground underline-offset-2 hover:underline"
                 onClick={() => setOpenSections((s) => ({ ...s, blockers: !s.blockers }))}
                 disabled={topBlockedItems.length === 0}
-                title={topBlockedItems.length === 0 ? t("app.dashboard.blockers.noneTitle") : "Expand/collapse"}
+                title={topBlockedItems.length === 0 ? t("app.dashboard.blockers.noneTitle") : t("app.dashboard.analytics.toggleTitle")}
               >
                 {topBlockedItems.length === 0 ? t("app.dashboard.blockers.noneLabel") : openSections.blockers ? t("app.common.collapse") : t("app.common.expand")}
               </button>
@@ -1629,7 +1629,7 @@ return {
                           {String(w.displayOwner || t("app.dashboard.labels.unassigned"))}
                         </Badge>
                         <Badge variant="secondary" className="rounded-full">
-                          Blocked
+                          {t("app.bidroom.status.blocked")}
                         </Badge>
                       </div>
                     </div>
@@ -1650,7 +1650,7 @@ return {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-sm font-semibold">{t("app.dashboard.bids.title")}</p>
-                <p className="mt-1 text-xs text-muted-foreground">Sorted by urgency within the selected window.</p>
+                <p className="mt-1 text-xs text-muted-foreground">{t("app.dashboard.bids.subtitle")}</p>
               </div>
 
               <button
@@ -1667,7 +1667,7 @@ return {
             {openSections.bids ? (
               <div className="space-y-2">
                 {visibleRows.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">No bids match the current filters.</p>
+                  <p className="text-xs text-muted-foreground">{t("app.dashboard.empty.noMatchingBids")}</p>
                 ) : (
                   (() => {
                     const topN = 10;
@@ -1691,7 +1691,7 @@ return {
                                 {r.missingDeadline ? t("app.dashboard.labels.deadlineMissing") : r.deadlineText || t("app.dashboard.labels.deadlineUnknown")}
                                 {" • "}
                                 {r.total > 0 ? t("app.dashboard.labels.itemsDone", { done: r.done, total: r.total }) : t("app.dashboard.labels.noWorkItems")}
-                                {r.blocked > 0 ? ` • ${r.blocked} blocked` : ""}
+                                {r.blocked > 0 ? ` • ${t("app.dashboard.labels.blockedCount", { count: r.blocked })}` : ""}
                               </p>
                             </div>
 
@@ -1699,11 +1699,11 @@ return {
                               <DecisionBadge raw={r.decisionText} />
                               {r.dueSoon !== null ? (
                                 <Badge variant={r.dueSoon < 0 ? "destructive" : "outline"} className="rounded-full">
-                                  {r.dueSoon < 0 ? `${Math.abs(r.dueSoon)}d overdue` : `${r.dueSoon}d`}
+                                  {r.dueSoon < 0 ? t("app.dashboard.labels.daysOverdue", { count: Math.abs(r.dueSoon) }) : t("app.dashboard.labels.daysRemaining", { count: r.dueSoon })}
                                 </Badge>
                               ) : (
                                 <Badge variant="outline" className="rounded-full">
-                                  No deadline
+                                  {t("app.dashboard.labels.noDeadline")}
                                 </Badge>
                               )}
                               <Badge variant="outline" className="rounded-full">

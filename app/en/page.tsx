@@ -350,7 +350,7 @@ export default async function LandingPage() {
                 <ModeToggle />
               </div>
 			  <div className="mt-2 flex items-center justify-between border-t border-white/10 px-3 pt-3 pb-1">
-				  <span className="text-sm text-muted-foreground">Language</span>
+				  <span className="text-sm text-muted-foreground">{common.language}</span>
 				  <LanguageSwitcherSlot />
 				</div>
 

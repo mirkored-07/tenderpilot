@@ -943,7 +943,9 @@
       "actions": {
         "exportCsv": "Export CSV",
         "openPdf": "Open PDF",
-        "openBidRoom": "Open Bid Room"
+        "openBidRoom": "Open Bid Room",
+        "evidence": "Evidence",
+        "backToJob": "Back to job"
       },
       "openProposalCoverage": "Open proposal coverage",
       "proposalCoverage": "Proposal coverage",
@@ -973,7 +975,11 @@
       "view": {
         "gate": "Gate",
         "gaps": "Gaps",
-        "covered": "Covered"
+        "covered": "Covered",
+        "gapsOnly": "Gaps",
+        "full": "Full",
+        "gapsQueue": "Gaps queue",
+        "fullMatrix": "Full matrix"
       },
       "level": {
         "must": "MUST",
@@ -996,14 +1002,29 @@
         "noRequirementSelected": "Select a requirement to see details and evidence.",
         "authoritativeExcerpt": "Authoritative excerpt",
         "evidenceJustification": "Evidence justification",
-        "noEvidenceIds": "No evidence IDs listed. Verify in the original PDF."
+        "noEvidenceIds": "No evidence IDs listed. Verify in the original PDF.",
+        "authoritativeNote": "Excerpt is authoritative. Locate in PDF is best-effort.",
+        "noExcerpt": "(No excerpt stored)"
       },
       "helper": {
         "setStance": "Set status and optionally add a note.",
         "notTaskTracking": "This is coverage tracking. Use Bid Room for owners, due dates, and status."
       },
       "labels": {
-        "evidenceCount": "Evidence IDs: {count}"
+        "evidenceCount": "Evidence IDs: {count}",
+        "pdfPage": "PDF page {page}",
+        "page": "page {page}"
+      },
+      "summary": {
+        "submissionReady": "Submission-ready (MUST covered)",
+        "mustGaps": "MUST gaps: {count}",
+        "mustBreakdown": "MUST TBD: {tbd} • Partial: {partial} • Non-compliant: {non}",
+        "gapsBreakdown": "TBD: {tbd} • Partial: {partial} • Non-compliant: {non}",
+        "coveredBreakdown": "Compliant: {compliant} • N/A: {na}"
+      },
+      "placeholders": {
+        "proposalSection": "e.g. 2.1 / Annex A",
+        "auditNote": "Why this stance (short, audit-friendly)"
       }
     },
     "review": {
@@ -1637,7 +1658,12 @@
         "noWorkItems": "No work items",
         "openWorkItemOne": "{count} open work item",
         "openWorkItemMany": "{count} open work items",
-        "itemsDone": "{done}/{total} items done"
+        "itemsDone": "{done}/{total} items done",
+        "blockedCount": "{count} blocked",
+        "daysOverdue": "{count}d overdue",
+        "dueInDays": "Due in {count}d",
+        "daysRemaining": "{count}d",
+        "noDeadline": "No deadline"
       },
       "analytics": {
         "toggleTitle": "Expand/collapse analytics",
@@ -1645,15 +1671,19 @@
         "hiddenLabel": "Hidden",
         "noWorkItemsYet": "No work items yet.",
         "title": "Analytics",
-        "workloadByOwner": "Workload by owner"
+        "workloadByOwner": "Workload by owner",
+        "ownerRow": "{total} items • {blocked} blocked • {overdue} overdue",
+        "expandHint": "Expand to view analytics."
       },
       "blockers": {
         "noneTitle": "No blockers",
         "noneLabel": "None",
-        "title": "Blockers"
+        "title": "Blockers",
+        "subtitle": "Blocked work items across bids."
       },
       "bids": {
-        "title": "Bids"
+        "title": "Bids",
+        "subtitle": "Sorted by urgency within the selected window."
       },
       "attention": {
         "title": "Needs attention",
@@ -1671,7 +1701,8 @@
         "noOverdueWorkItems": "No overdue work items.",
         "noBlockedItems": "No blocked work items.",
         "noUnassignedItems": "No unassigned work items.",
-        "noOpenClarifications": "No open clarifications."
+        "noOpenClarifications": "No open clarifications.",
+        "noMatchingBids": "No bids match the current filters."
       }
     },
     "errors": {

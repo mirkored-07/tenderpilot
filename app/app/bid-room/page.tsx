@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { supabaseBrowser } from "@/lib/supabase/browser";
+import { canonicalizeWorkStatus, isBlockedWorkStatus, isDoneWorkStatus } from "@/lib/bid-workflow/work-status";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -70,7 +71,6 @@ export default function GlobalBidRoomPage() {
           .from("job_work_items")
           .select("*")
           .in("job_id", jobIds)
-          .neq("status", "done")
           .order("due_at", { ascending: true, nullsFirst: false })
           .order("updated_at", { ascending: false });
         if (cancelled) return;
@@ -95,8 +95,10 @@ export default function GlobalBidRoomPage() {
     const ownerQ = ownerFilter.trim().toLowerCase();
     const statusQ = statusFilter.trim().toLowerCase();
     return items.filter((x) => {
+      const status = canonicalizeWorkStatus(x.status ?? "todo");
+      if (isDoneWorkStatus(status)) return false;
       if (ownerQ && !String(x.owner_label ?? "").toLowerCase().includes(ownerQ)) return false;
-      if (statusQ && String(x.status ?? "").toLowerCase() !== statusQ) return false;
+      if (statusQ && status !== statusQ) return false;
       return true;
     });
   }, [items, ownerFilter, statusFilter]);
@@ -108,9 +110,9 @@ export default function GlobalBidRoomPage() {
   const groups = useMemo(() => {
     const g: Record<string, WorkItem[]> = { blocked: [], overdue: [], dueSoon: [], todo: [] };
     for (const it of filtered) {
-      const st = String(it.status ?? "todo");
+      const st = canonicalizeWorkStatus(it.status ?? "todo");
       const due = it.due_at ? new Date(String(it.due_at)) : null;
-      if (st === "blocked") g.blocked.push(it);
+      if (isBlockedWorkStatus(st)) g.blocked.push(it);
       else if (due && due < today) g.overdue.push(it);
       else if (due && due <= in7) g.dueSoon.push(it);
       else g.todo.push(it);
@@ -136,7 +138,7 @@ export default function GlobalBidRoomPage() {
               {props.items.map((it) => {
                 const job = jobsById.get(String(it.job_id));
                 const typeLabel = t(`app.bidroom.types.${String(it.type ?? "").toLowerCase()}`);
-                const statusLabel = t(`app.bidroom.status.${String(it.status ?? "").toLowerCase()}`);
+                const statusLabel = t(`app.bidroom.status.${canonicalizeWorkStatus(it.status ?? "todo")}`);
 
                 return (
                   <div key={`${it.job_id}:${it.type}:${it.ref_key}`} className="rounded-xl border p-3">
@@ -191,14 +193,20 @@ export default function GlobalBidRoomPage() {
               placeholder={t("app.bidroom.filters.owner")}
               className="h-9 w-full rounded-full sm:max-w-[220px]"
             />
-            <Input
+            <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              placeholder={t("app.bidroom.filters.status")}
-              className="h-9 w-full rounded-full sm:max-w-[260px]"
-            />
+              className="h-9 w-full rounded-full border bg-background px-3 text-sm sm:max-w-[220px]"
+              aria-label={t("app.bidroom.filters.status")}
+            >
+              <option value="">{t("app.common.all")}</option>
+              <option value="todo">{t("app.bidroom.status.todo")}</option>
+              <option value="doing">{t("app.bidroom.status.doing")}</option>
+              <option value="blocked">{t("app.bidroom.status.blocked")}</option>
+              <option value="done">{t("app.bidroom.status.done")}</option>
+            </select>
             <Badge variant="outline" className="rounded-full">
-              {t("app.bidroom.labels.openItems", { count: filtered.length })}
+              {t("app.bidroom.labels.openItems", { open: filtered.length, total: items.length })}
             </Badge>
           </div>
           {error ? <p className="mt-3 text-sm text-red-700 dark:text-red-300">{error}</p> : null}

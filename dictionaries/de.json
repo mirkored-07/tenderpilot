@@ -905,10 +905,10 @@
         "notesPlaceholder": "Notes (short, actionable)"
       },
       "status": {
-        "todo": "To do",
-        "doing": "Doing",
-        "blocked": "Blocked",
-        "done": "Done"
+        "todo": "Offen",
+        "doing": "In Arbeit",
+        "blocked": "Blockiert",
+        "done": "Erledigt"
       },
       "types": {
         "requirement": "Requirement",
@@ -943,7 +943,9 @@
       "actions": {
         "exportCsv": "Export CSV",
         "openPdf": "Open PDF",
-        "openBidRoom": "Open Bid Room"
+        "openBidRoom": "Open Bid Room",
+        "evidence": "Beleg",
+        "backToJob": "Zurück zum Vorgang"
       },
       "openProposalCoverage": "Open proposal coverage",
       "proposalCoverage": "Proposal coverage",
@@ -973,7 +975,11 @@
       "view": {
         "gate": "Gate",
         "gaps": "Gaps",
-        "covered": "Covered"
+        "covered": "Covered",
+        "gapsOnly": "Lücken",
+        "full": "Vollständig",
+        "gapsQueue": "Lückenliste",
+        "fullMatrix": "Vollständige Matrix"
       },
       "level": {
         "must": "MUST",
@@ -996,14 +1002,29 @@
         "noRequirementSelected": "Select a requirement to see details and evidence.",
         "authoritativeExcerpt": "Authoritative excerpt",
         "evidenceJustification": "Evidence justification",
-        "noEvidenceIds": "No evidence IDs listed. Verify in the original PDF."
+        "noEvidenceIds": "No evidence IDs listed. Verify in the original PDF.",
+        "authoritativeNote": "Der Auszug ist maßgeblich. \"Im PDF finden\" ist eine Best-Effort-Funktion.",
+        "noExcerpt": "(Kein Auszug gespeichert)"
       },
       "helper": {
         "setStance": "Set status and optionally add a note.",
         "notTaskTracking": "Hier geht es um Abdeckung. Für Owner, Termine und Status nutze den Bid Room."
       },
       "labels": {
-        "evidenceCount": "Evidenz-IDs: {count}"
+        "evidenceCount": "Evidenz-IDs: {count}",
+        "pdfPage": "PDF-Seite {page}",
+        "page": "Seite {page}"
+      },
+      "summary": {
+        "submissionReady": "Einreichungsbereit (MUST abgedeckt)",
+        "mustGaps": "MUST-Lücken: {count}",
+        "mustBreakdown": "MUST TBD: {tbd} • Teilweise: {partial} • Nicht konform: {non}",
+        "gapsBreakdown": "TBD: {tbd} • Teilweise: {partial} • Nicht konform: {non}",
+        "coveredBreakdown": "Konform: {compliant} • N/A: {na}"
+      },
+      "placeholders": {
+        "proposalSection": "z. B. 2.1 / Anhang A",
+        "auditNote": "Warum dieser Status (kurz, prüffähig)"
       }
     },
     "review": {
@@ -1637,7 +1658,12 @@
         "noWorkItems": "Keine Work-Items",
         "openWorkItemOne": "{count} offenes Work-Item",
         "openWorkItemMany": "{count} offene Work-Items",
-        "itemsDone": "{done}/{total} erledigt"
+        "itemsDone": "{done}/{total} erledigt",
+        "blockedCount": "{count} blockiert",
+        "daysOverdue": "{count} T. überfällig",
+        "dueInDays": "Fällig in {count} T.",
+        "daysRemaining": "{count} T.",
+        "noDeadline": "Keine Frist"
       },
       "analytics": {
         "toggleTitle": "Analytics ein-/ausklappen",
@@ -1645,15 +1671,19 @@
         "hiddenLabel": "Ausgeblendet",
         "noWorkItemsYet": "Noch keine Work-Items.",
         "title": "Analytics",
-        "workloadByOwner": "Workload by owner"
+        "workloadByOwner": "Workload by owner",
+        "ownerRow": "{total} Punkte • {blocked} blockiert • {overdue} überfällig",
+        "expandHint": "Zum Anzeigen der Analysen erweitern."
       },
       "blockers": {
         "noneTitle": "Keine Blocker",
         "noneLabel": "Keine",
-        "title": "Blockers"
+        "title": "Blockers",
+        "subtitle": "Blockierte Arbeitspunkte über alle Ausschreibungen."
       },
       "bids": {
-        "title": "Bids"
+        "title": "Bids",
+        "subtitle": "Nach Dringlichkeit im gewählten Zeitraum sortiert."
       },
       "attention": {
         "title": "Needs attention",
@@ -1671,7 +1701,8 @@
         "noOverdueWorkItems": "No overdue work items.",
         "noBlockedItems": "No blocked work items.",
         "noUnassignedItems": "No unassigned work items.",
-        "noOpenClarifications": "No open clarifications."
+        "noOpenClarifications": "No open clarifications.",
+        "noMatchingBids": "Keine Ausschreibungen entsprechen den aktuellen Filtern."
       }
     },
     "errors": {

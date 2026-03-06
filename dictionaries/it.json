@@ -905,10 +905,10 @@
         "notesPlaceholder": "Notes (short, actionable)"
       },
       "status": {
-        "todo": "To do",
-        "doing": "Doing",
-        "blocked": "Blocked",
-        "done": "Done"
+        "todo": "Da fare",
+        "doing": "In corso",
+        "blocked": "Bloccato",
+        "done": "Fatto"
       },
       "types": {
         "requirement": "Requirement",
@@ -943,7 +943,9 @@
       "actions": {
         "exportCsv": "Export CSV",
         "openPdf": "Open PDF",
-        "openBidRoom": "Open Bid Room"
+        "openBidRoom": "Open Bid Room",
+        "evidence": "Evidenza",
+        "backToJob": "Torna al job"
       },
       "openProposalCoverage": "Open proposal coverage",
       "proposalCoverage": "Proposal coverage",
@@ -973,7 +975,11 @@
       "view": {
         "gate": "Gate",
         "gaps": "Gaps",
-        "covered": "Covered"
+        "covered": "Covered",
+        "gapsOnly": "Gap",
+        "full": "Completa",
+        "gapsQueue": "Coda gap",
+        "fullMatrix": "Matrice completa"
       },
       "level": {
         "must": "MUST",
@@ -996,14 +1002,29 @@
         "noRequirementSelected": "Select a requirement to see details and evidence.",
         "authoritativeExcerpt": "Authoritative excerpt",
         "evidenceJustification": "Evidence justification",
-        "noEvidenceIds": "No evidence IDs listed. Verify in the original PDF."
+        "noEvidenceIds": "No evidence IDs listed. Verify in the original PDF.",
+        "authoritativeNote": "L'estratto è autorevole. 'Individua nel PDF' è best effort.",
+        "noExcerpt": "(Nessun estratto salvato)"
       },
       "helper": {
         "setStance": "Set status and optionally add a note.",
         "notTaskTracking": "Qui tracci la copertura. Per owner, scadenze e stato usa il Bid Room."
       },
       "labels": {
-        "evidenceCount": "ID evidenze: {count}"
+        "evidenceCount": "ID evidenze: {count}",
+        "pdfPage": "Pagina PDF {page}",
+        "page": "pagina {page}"
+      },
+      "summary": {
+        "submissionReady": "Pronto per la consegna (MUST coperti)",
+        "mustGaps": "Gap MUST: {count}",
+        "mustBreakdown": "MUST TBD: {tbd} • Parziale: {partial} • Non conforme: {non}",
+        "gapsBreakdown": "TBD: {tbd} • Parziale: {partial} • Non conforme: {non}",
+        "coveredBreakdown": "Conforme: {compliant} • N/A: {na}"
+      },
+      "placeholders": {
+        "proposalSection": "es. 2.1 / Allegato A",
+        "auditNote": "Perché questa valutazione (breve, verificabile)"
       }
     },
     "review": {
@@ -1637,7 +1658,12 @@
         "noWorkItems": "Nessun work item",
         "openWorkItemOne": "{count} work item aperto",
         "openWorkItemMany": "{count} work item aperti",
-        "itemsDone": "{done}/{total} completati"
+        "itemsDone": "{done}/{total} completati",
+        "blockedCount": "{count} bloccati",
+        "daysOverdue": "{count}g in ritardo",
+        "dueInDays": "Scade tra {count}g",
+        "daysRemaining": "{count}g",
+        "noDeadline": "Nessuna scadenza"
       },
       "analytics": {
         "toggleTitle": "Espandi/comprimi analytics",
@@ -1645,15 +1671,19 @@
         "hiddenLabel": "Nascosto",
         "noWorkItemsYet": "Nessun work item ancora.",
         "title": "Analytics",
-        "workloadByOwner": "Workload by owner"
+        "workloadByOwner": "Workload by owner",
+        "ownerRow": "{total} elementi • {blocked} bloccati • {overdue} in ritardo",
+        "expandHint": "Espandi per vedere le analisi."
       },
       "blockers": {
         "noneTitle": "Nessun blocco",
         "noneLabel": "Nessuno",
-        "title": "Blockers"
+        "title": "Blockers",
+        "subtitle": "Work item bloccati tra le offerte."
       },
       "bids": {
-        "title": "Bids"
+        "title": "Bids",
+        "subtitle": "Ordinato per urgenza nella finestra selezionata."
       },
       "attention": {
         "title": "Needs attention",
@@ -1671,7 +1701,8 @@
         "noOverdueWorkItems": "No overdue work items.",
         "noBlockedItems": "No blocked work items.",
         "noUnassignedItems": "No unassigned work items.",
-        "noOpenClarifications": "No open clarifications."
+        "noOpenClarifications": "No open clarifications.",
+        "noMatchingBids": "Nessuna offerta corrisponde ai filtri correnti."
       }
     },
     "errors": {

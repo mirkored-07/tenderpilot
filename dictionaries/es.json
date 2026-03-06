@@ -905,10 +905,10 @@
         "notesPlaceholder": "Notes (short, actionable)"
       },
       "status": {
-        "todo": "To do",
-        "doing": "Doing",
-        "blocked": "Blocked",
-        "done": "Done"
+        "todo": "Por hacer",
+        "doing": "En curso",
+        "blocked": "Bloqueado",
+        "done": "Hecho"
       },
       "types": {
         "requirement": "Requirement",
@@ -943,7 +943,9 @@
       "actions": {
         "exportCsv": "Export CSV",
         "openPdf": "Open PDF",
-        "openBidRoom": "Open Bid Room"
+        "openBidRoom": "Open Bid Room",
+        "evidence": "Evidencia",
+        "backToJob": "Volver al expediente"
       },
       "openProposalCoverage": "Open proposal coverage",
       "proposalCoverage": "Proposal coverage",
@@ -973,7 +975,11 @@
       "view": {
         "gate": "Gate",
         "gaps": "Gaps",
-        "covered": "Covered"
+        "covered": "Covered",
+        "gapsOnly": "Brechas",
+        "full": "Completa",
+        "gapsQueue": "Cola de brechas",
+        "fullMatrix": "Matriz completa"
       },
       "level": {
         "must": "MUST",
@@ -996,14 +1002,29 @@
         "noRequirementSelected": "Select a requirement to see details and evidence.",
         "authoritativeExcerpt": "Authoritative excerpt",
         "evidenceJustification": "Evidence justification",
-        "noEvidenceIds": "No evidence IDs listed. Verify in the original PDF."
+        "noEvidenceIds": "No evidence IDs listed. Verify in the original PDF.",
+        "authoritativeNote": "El extracto es la referencia principal. \"Localizar en PDF\" es best effort.",
+        "noExcerpt": "(No hay extracto guardado)"
       },
       "helper": {
         "setStance": "Set status and optionally add a note.",
         "notTaskTracking": "Aquí controlas la cobertura. Para responsables, fechas y estado, usa el Bid Room."
       },
       "labels": {
-        "evidenceCount": "IDs de evidencia: {count}"
+        "evidenceCount": "IDs de evidencia: {count}",
+        "pdfPage": "Página PDF {page}",
+        "page": "página {page}"
+      },
+      "summary": {
+        "submissionReady": "Listo para enviar (MUST cubiertos)",
+        "mustGaps": "Brechas MUST: {count}",
+        "mustBreakdown": "MUST TBD: {tbd} • Parcial: {partial} • No conforme: {non}",
+        "gapsBreakdown": "TBD: {tbd} • Parcial: {partial} • No conforme: {non}",
+        "coveredBreakdown": "Conforme: {compliant} • N/A: {na}"
+      },
+      "placeholders": {
+        "proposalSection": "p. ej. 2.1 / Anexo A",
+        "auditNote": "Por qué este estado (breve, útil para auditoría)"
       }
     },
     "review": {
@@ -1637,7 +1658,12 @@
         "noWorkItems": "Sin elementos",
         "openWorkItemOne": "{count} elemento abierto",
         "openWorkItemMany": "{count} elementos abiertos",
-        "itemsDone": "{done}/{total} completados"
+        "itemsDone": "{done}/{total} completados",
+        "blockedCount": "{count} bloqueados",
+        "daysOverdue": "{count} d de retraso",
+        "dueInDays": "Vence en {count} d",
+        "daysRemaining": "{count} d",
+        "noDeadline": "Sin fecha límite"
       },
       "analytics": {
         "toggleTitle": "Expandir/contraer analíticas",
@@ -1645,15 +1671,19 @@
         "hiddenLabel": "Oculto",
         "noWorkItemsYet": "Aún no hay elementos.",
         "title": "Analytics",
-        "workloadByOwner": "Workload by owner"
+        "workloadByOwner": "Workload by owner",
+        "ownerRow": "{total} elementos • {blocked} bloqueados • {overdue} vencidos",
+        "expandHint": "Amplía para ver los análisis."
       },
       "blockers": {
         "noneTitle": "Sin bloqueos",
         "noneLabel": "Ninguno",
-        "title": "Blockers"
+        "title": "Blockers",
+        "subtitle": "Elementos bloqueados en todas las licitaciones."
       },
       "bids": {
-        "title": "Bids"
+        "title": "Bids",
+        "subtitle": "Ordenado por urgencia dentro de la ventana seleccionada."
       },
       "attention": {
         "title": "Needs attention",
@@ -1671,7 +1701,8 @@
         "noOverdueWorkItems": "No overdue work items.",
         "noBlockedItems": "No blocked work items.",
         "noUnassignedItems": "No unassigned work items.",
-        "noOpenClarifications": "No open clarifications."
+        "noOpenClarifications": "No open clarifications.",
+        "noMatchingBids": "Ninguna licitación coincide con los filtros actuales."
       }
     },
     "errors": {
