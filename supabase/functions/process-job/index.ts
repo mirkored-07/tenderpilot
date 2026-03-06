@@ -99,6 +99,141 @@ function langName(code: LangCode): string {
   return "English";
 }
 
+type EvidenceRegexSet = {
+  normative: RegExp;
+  deadline: RegExp;
+  submission: RegExp;
+  security: RegExp;
+  prohibition: RegExp;
+  qualification: RegExp;
+};
+
+const LANGUAGE_DETECTION_TERMS: Record<LangCode, string[]> = {
+  en: [
+    "invitation to tender",
+    "tender document",
+    "bid security",
+    "deadline",
+    "submission",
+    "clarification",
+    "shall",
+    "must",
+  ],
+  de: [
+    "ausschreibung",
+    "vergab",
+    "angebot",
+    "bieter",
+    "frist",
+    "einzureichen",
+    "zuschlag",
+    "vergabeunterlagen",
+    "leistungsverzeichnis",
+  ],
+  es: [
+    "licitación",
+    "pliego",
+    "oferta",
+    "ofertas",
+    "fecha límite",
+    "presentación",
+    "adjudicación",
+    "solvencia",
+  ],
+  fr: [
+    "appel d'offres",
+    "marché public",
+    "offre",
+    "offres",
+    "date limite",
+    "remise des offres",
+    "candidat",
+    "soumission",
+  ],
+  it: [
+    "disciplinare",
+    "stazione appaltante",
+    "operatore economico",
+    "offerta",
+    "offerte",
+    "gara",
+    "chiarimenti",
+    "a pena di esclusione",
+    "avvalimento",
+    "subappalto",
+  ],
+};
+
+const COMMON_MONEY_RE = /\b(eur|euro|usd|gbp|cad|aud|sek|nok|dkk|chf|kshs?|kes)\b|\b\d{1,3}(?:[.,]\d{3})+(?:[.,]\d+)?\b/i;
+const COMMON_DATE_RE = /\b(\d{1,2}[./-]\d{1,2}[./-]\d{2,4}|\d{4}[./-]\d{1,2}[./-]\d{1,2}|\d{1,2}\s+(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?|januar|februar|märz|maerz|april|mai|juni|juli|august|september|oktober|november|dezember|enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre|janvier|février|fevrier|mars|avril|mai|juin|juillet|août|aout|septembre|octobre|novembre|décembre|decembre|gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre)\s+\d{4})\b/i;
+const COMMON_TIME_RE = /\b(\d{1,2}[:.]\d{2}(?:\s*(?:am|pm|uhr|ore|h))?|\d{1,2}\s*(?:am|pm|uhr|ore|h))\b/i;
+
+const LANGUAGE_EVIDENCE_PATTERNS: Record<LangCode, EvidenceRegexSet> = {
+  en: {
+    normative: /\b(shall not|shall|must not|must|required|is required|are required|will be rejected|disqualified|rejection|mandatory)\b/i,
+    deadline: /\b(deadline|closing|submit|submission|delivered|on or before|no later than|clarification deadline)\b/i,
+    submission: /\b(sealed envelope|envelope|copies|original|physically|electronic|online portal|upload|address|p\.o\. box|po box|procurement portal)\b/i,
+    security: /\b(tender security|bid security|guarantee|security bond|performance bond)\b/i,
+    prohibition: /\b(not permitted|not allowed|shall not|must not|prohibited)\b/i,
+    qualification: /\b(eligibility|qualification|experience|turnover|certificate|certification|iso\s*9001|iso\s*27001|references?)\b/i,
+  },
+  de: {
+    normative: /\b(muss|müssen|muessen|ist erforderlich|sind erforderlich|erforderlich|zwingend|verpflichtend|vorzulegen|einzureichen|ausschluss|ausgeschlossen|wird ausgeschlossen|darf nicht|dürfen nicht)\b/i,
+    deadline: /\b(frist|abgabefrist|einreichfrist|spätestens|spaetestens|bis zum|schlussfrist|angebotsfrist|teilnahmefrist)\b/i,
+    submission: /\b(vergabeportal|plattform|einzureichen|abzugeben|angebot ist einzureichen|elektronisch|schriftlich|umschlag|anschrift|adresse)\b/i,
+    security: /\b(sicherheit|bürgschaft|buergschaft|angebotssicherheit|vertragserfüllungsbürgschaft|vertragserfuellungsbuergschaft)\b/i,
+    prohibition: /\b(nicht zulässig|nicht zulaessig|unzulässig|unzulaessig|darf nicht|dürfen nicht|ausgeschlossen)\b/i,
+    qualification: /\b(eignung|nachweis|referenz|umsatz|zertifikat|zertifizierung|iso\s*9001|iso\s*27001|fachkunde|leistungsfähigkeit|leistungsfaehigkeit)\b/i,
+  },
+  es: {
+    normative: /\b(debe|deben|obligatori[oa]s?|requerid[oa]s?|es obligatorio|son obligatorios|quedar[aá] excluido|exclusi[oó]n|inadmisible|no se admite|no se permiten)\b/i,
+    deadline: /\b(plazo|fecha límite|fecha limite|hasta el día|hasta el dia|antes de las|presentaci[oó]n de ofertas|límite de presentaci[oó]n|limite de presentaci[oó]n)\b/i,
+    submission: /\b(plataforma|portal|presentaci[oó]n electr[oó]nica|sobre|sobres|direcci[oó]n|adjuntar|subir|licitaci[oó]n electr[oó]nica)\b/i,
+    security: /\b(garant[ií]a|garant[ií]a provisional|garant[ií]a definitiva|aval|fianza)\b/i,
+    prohibition: /\b(no se admite|no se permiten|prohibido|debe abstenerse|inadmisible|exclusi[oó]n)\b/i,
+    qualification: /\b(solvencia|experiencia|certificado|certificaci[oó]n|facturaci[oó]n|iso\s*9001|iso\s*27001|referencias?)\b/i,
+  },
+  fr: {
+    normative: /\b(doit|doivent|obligatoire|obligatoires|exig[eé]e?s?|requis|requise|requises|non admis|interdit|exclusion|sera rejet[ée])\b/i,
+    deadline: /\b(date limite|avant le|au plus tard|délai|delai|remise des offres|date de remise|heure limite)\b/i,
+    submission: /\b(plateforme|portail|dép[oô]t électronique|depot electronique|enveloppe|adresse|transmission|t[ée]l[ée]verser|soumission [ée]lectronique)\b/i,
+    security: /\b(garantie|caution|retenue de garantie|garantie financi[eè]re)\b/i,
+    prohibition: /\b(interdit|non admis|ne peut pas|ne peuvent pas|exclusion|rejet[ée])\b/i,
+    qualification: /\b(capacit[ée]|qualification|certificat|certification|chiffre d'affaires|r[eé]f[eé]rences?|iso\s*9001|iso\s*27001|exp[eé]rience)\b/i,
+  },
+  it: {
+    normative: /\b(a pena di esclusione|deve|devono|obbligatori[oaie]?|e richiesto|è richiesto|sono richiesti|da presentare|da allegare|esclusione|vietato|non ammesso|non sono ammess[ei])\b/i,
+    deadline: /\b(termine|scadenza|entro e non oltre|entro le ore|presentazione dell'offerta|presentazione delle offerte|chiarimenti entro|pervenire entro)\b/i,
+    submission: /\b(portale|piattaforma|messaggistica on line|offerta tecnica|offerta economica|busta amministrativa|busta tecnica|busta economica|firma digitale|caricare|inviare|pec)\b/i,
+    security: /\b(garanzia|cauzione|cauzione provvisoria|garanzia provvisoria|garanzia definitiva|polizza fideiussoria)\b/i,
+    prohibition: /\b(vietato|non ammesso|non sono ammess[ei]|esclusione|a pena di esclusione)\b/i,
+    qualification: /\b(requisiti|fatturato|certificazione|certificazioni|iso\s*9001|iso\s*27001|avvalimento|subappalto|anac|cig|dgue|referenze?)\b/i,
+  },
+};
+
+function detectSourceLanguage(text: string): LangCode {
+  const sample = String(text ?? "").slice(0, 12000).toLowerCase();
+  const scores: Record<LangCode, number> = { en: 0, de: 0, es: 0, fr: 0, it: 0 };
+
+  for (const lang of Object.keys(LANGUAGE_DETECTION_TERMS) as LangCode[]) {
+    for (const term of LANGUAGE_DETECTION_TERMS[lang]) {
+      if (sample.includes(term)) scores[lang] += 3;
+    }
+    const patterns = LANGUAGE_EVIDENCE_PATTERNS[lang];
+    for (const re of [patterns.normative, patterns.deadline, patterns.submission, patterns.security, patterns.qualification]) {
+      const hits = sample.match(new RegExp(re.source, re.flags.includes("g") ? re.flags : re.flags + "g"));
+      if (hits?.length) scores[lang] += Math.min(hits.length, 4);
+    }
+  }
+
+  const ranked = (Object.entries(scores) as Array<[LangCode, number]>).sort((a, b) => b[1] - a[1]);
+  if (!ranked[0] || ranked[0][1] <= 0) return "en";
+  if (ranked[0][1] === ranked[1]?.[1] && ranked[0][0] !== "en") {
+    return ranked[1][0] === "en" ? ranked[0][0] : "en";
+  }
+  return ranked[0][0];
+}
+
 async function loadUserLanguagesAdmin(supabaseAdmin: any, userId: string): Promise<{ ui: LangCode; output: LangCode }> {
   try {
     const { data, error } = await supabaseAdmin
@@ -645,21 +780,39 @@ function parseOpenAiJsonFromResponse(resp: any): any {
   const direct = resp?.output_parsed ?? resp?.output_json ?? resp?.json ?? null;
   if (direct) return direct;
 
-  const outputText = resp?.output_text;
-  if (typeof outputText === "string" && outputText.trim().startsWith("{")) {
-    return JSON.parse(outputText);
+  if (resp?.status === "incomplete") {
+    const reason = resp?.incomplete_details?.reason ?? "unknown";
+    const preview = typeof resp?.output_text === "string" ? resp.output_text.slice(0, 400) : "";
+    throw new Error(`OpenAI response incomplete: ${reason}${preview ? ` | partial output: ${preview}` : ""}`);
+  }
+
+  const candidates: string[] = [];
+
+  if (typeof resp?.output_text === "string") {
+    candidates.push(resp.output_text.trim());
   }
 
   const out = Array.isArray(resp?.output) ? resp.output : [];
   for (const item of out) {
-    if (item?.type === "message") {
-      const content = Array.isArray(item?.content) ? item.content : [];
-      for (const c of content) {
-        if (c?.type === "output_text" && typeof c?.text === "string") {
-          const t = c.text.trim();
-          if (t.startsWith("{")) return JSON.parse(t);
-        }
+    if (item?.type !== "message") continue;
+    const content = Array.isArray(item?.content) ? item.content : [];
+    for (const c of content) {
+      if (c?.type === "output_text" && typeof c?.text === "string") {
+        candidates.push(c.text.trim());
       }
+    }
+  }
+
+  for (const text of candidates) {
+    if (!text || !text.startsWith("{")) continue;
+    try {
+      return JSON.parse(text);
+    } catch (e) {
+      throw new Error(
+        `OpenAI returned malformed JSON: ${
+          (e as Error)?.message ?? String(e)
+        } | preview: ${text.slice(0, 500)}`,
+      );
     }
   }
 
@@ -670,13 +823,14 @@ async function runOpenAi(args: {
   apiKey: string;
   model: string;
   targetLanguage: string;
+  sourceLanguage: LangCode;
   extractedText: string;
   evidenceCandidates: EvidenceCandidate[];
   maxOutputTokens: number;
   timeoutMs?: number;
   workspacePlaybook?: { playbook: any; version: number | null } | null;
 }): Promise<AiOutput> {
-  const { apiKey, model, targetLanguage, extractedText, evidenceCandidates, maxOutputTokens, timeoutMs, workspacePlaybook } = args;
+  const { apiKey, model, targetLanguage, sourceLanguage, extractedText, evidenceCandidates, maxOutputTokens, timeoutMs, workspacePlaybook } = args;
 
   const schema = {
     type: "object",
@@ -775,11 +929,16 @@ async function runOpenAi(args: {
   };
 
 
+  const sourceLanguageName = langName(sourceLanguage);
+
   const instructions =
     "You are TenderPilot. Drafting support only. Not legal advice. Not procurement advice. " +
     "Use executive, compliance grade language. No AI talk. " +
+    `The tender source language is ${sourceLanguageName}. ` +
     `Write all narrative content in ${targetLanguage}. ` +
-    "Do not translate or rewrite evidence excerpts; you do not output excerpts, only evidence_ids. " +
+    "Keep decisionBadge exactly as Go, Hold, or No-Go. " +
+    "Do not translate, rewrite, paraphrase, or normalize source evidence; you do not output excerpts, only evidence_ids. " +
+    "Interpret procurement wording in the source language accurately, including legal or disqualifying phrasing. " +
     "Avoid false certainty. If not present, write: Not found in extracted text.";
 
   const evidenceList = evidenceCandidates
@@ -822,7 +981,7 @@ Strict rules
    - For each MUST checklist item: include at least one evidence id that directly proves it.
    - For each risk: include at least one evidence id that supports it.
    - Do not invent clause numbers or cross-references (e.g., ITT 24.1). Cite only evidence ids.
-   - If you cannot support a MUST or a risk with evidence, downgrade it to INFO and add a buyer question for manual verification.
+   - If you cannot support a MUST or a risk with evidence, return evidence_ids as [] instead of guessing and keep the wording cautious.
 6. Playbook (STRICT). The playbook is policy, not evidence:
    - Never cite the playbook as evidence.
    - If the playbook influences decision, prioritization, or required actions, add entries to policy_triggers.
@@ -832,6 +991,8 @@ Strict rules
    - Each trigger must be one line, auditable, and map to a playbook key.
 8. Deduplication. Do not repeat checklist items verbatim inside the executive summary.
 9. Missing info. Put ambiguities or missing info into buyer_questions.
+10. Language handling. The source tender text is in ${sourceLanguageName}. Analyse obligations, exclusions, submission instructions, qualifications, and deadlines in that source language. Keep evidence verbatim in the source language and cite only evidence_ids.
+11. Proposal draft. Keep proposal_draft concise: maximum 8 short sections and under 900 words.
 
 Evidence snippets (use ONLY these; cite their ids in evidence_ids):
 ${evidenceList}
@@ -840,12 +1001,12 @@ Tender source text (context only; do not cite directly):
 ${extractedText}`;
 
 
-  const body = {
+  const buildBody = (tokenBudget: number) => ({
     model,
     instructions,
     input: [{ role: "user", content: userPrompt }],
     temperature: 0.2,
-    max_output_tokens: maxOutputTokens,
+    max_output_tokens: tokenBudget,
     text: {
       format: {
         type: "json_schema",
@@ -854,44 +1015,63 @@ ${extractedText}`;
         schema,
       },
     },
-  };
+  });
 
   const reqTimeoutMs = Math.max(3_000, Math.min(timeoutMs ?? 60_000, 90_000));
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), reqTimeoutMs);
 
-  let res: Response;
-  try {
-    res = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(body),
-      signal: ctrl.signal,
-    });
-  } catch (e) {
-    if (String(e).toLowerCase().includes("abort")) {
-      throw new Error(`OpenAI request timed out after ${reqTimeoutMs}ms`);
+  const postResponse = async (tokenBudget: number): Promise<any> => {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), reqTimeoutMs);
+
+    let res: Response;
+    try {
+      res = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(buildBody(tokenBudget)),
+        signal: ctrl.signal,
+      });
+    } catch (e) {
+      if (String(e).toLowerCase().includes("abort")) {
+        throw new Error(`OpenAI request timed out after ${reqTimeoutMs}ms`);
+      }
+      throw e;
+    } finally {
+      clearTimeout(t);
     }
-    throw e;
-  } finally {
-    clearTimeout(t);
-  }
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`OpenAI error ${res.status}: ${text.slice(0, 500)}`);
-  }
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`OpenAI error ${res.status}: ${text.slice(0, 500)}`);
+    }
 
-  const json = await res.json();
-  return parseOpenAiJsonFromResponse(json) as AiOutput;
+    return await res.json();
+  };
+
+  const initialJson = await postResponse(maxOutputTokens);
+  try {
+    return parseOpenAiJsonFromResponse(initialJson) as AiOutput;
+  } catch (e) {
+    const msg = (e as Error)?.message ?? String(e);
+    const shouldRetry =
+      msg.includes("OpenAI response incomplete: max_output_tokens") ||
+      (initialJson?.status === "incomplete" && initialJson?.incomplete_details?.reason === "max_output_tokens");
+
+    if (!shouldRetry) throw e;
+
+    const retryBudget = Math.min(Math.max(maxOutputTokens + 1200, Math.round(maxOutputTokens * 1.5)), 5200);
+    const retryJson = await postResponse(retryBudget);
+    return parseOpenAiJsonFromResponse(retryJson) as AiOutput;
+  }
 }
 
 
 function buildEvidenceCandidates(extractedText: string): EvidenceCandidate[] {
   const raw = String(extractedText ?? "");
+  const sourceLanguage = detectSourceLanguage(raw);
   const lines = raw
     .split(/\r?\n/)
     .map((l) => l.replace(/\s+/g, " ").trim())
@@ -909,19 +1089,12 @@ function buildEvidenceCandidates(extractedText: string): EvidenceCandidate[] {
     return 0;
   })();
 
-  const normativeRe =
-    /\b(shall not|shall|must not|must|required|is required|are required|will be rejected|disqualified|rejection)\b/i;
+  const activeLanguages = Array.from(new Set<LangCode>([sourceLanguage, "en"]));
+  const patternSets = activeLanguages.map((lang) => LANGUAGE_EVIDENCE_PATTERNS[lang]);
+  const matchesAny = (line: string, picker: (patterns: EvidenceRegexSet) => RegExp): boolean =>
+    patternSets.some((patterns) => picker(patterns).test(line));
 
-  const moneyRe = /\b(kshs?|kes|eur|usd|gbp)\b|\b\d{1,3}(?:,\d{3})+(?:\.\d+)?\b/i;
-  const deadlineRe =
-    /\b(deadline|closing|submit|delivered|on or before|no later than)\b/i;
-  const dateRe =
-    /\b(\d{1,2}\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\s+\d{4}|\d{4}-\d{2}-\d{2})\b/i;
-  const timeRe = /\b(\d{1,2}[:.]\d{2}\s*(am|pm)?|\d{1,2}\s*(am|pm))\b/i;
-  const submissionRe = /\b(sealed envelope|envelope|copies|original|physically|electronic|online portal|upload|address|p\.o\. box|po box)\b/i;
-  const securityRe = /\b(tender security|bid security|tender-secure|guarantee|security)\b/i;
-
-  const isTocLike = (s: string): boolean => /\.\.{4,}/.test(s) || s.toLowerCase().includes("table of contents");
+  const isTocLike = (s: string): boolean => /\.{4,}/.test(s) || s.toLowerCase().includes("table of contents");
   const isTitleLike = (s: string): boolean => {
     const t = s.trim();
     if (!t) return false;
@@ -933,7 +1106,7 @@ function buildEvidenceCandidates(extractedText: string): EvidenceCandidate[] {
       low.startsWith("invitation to tender")
     ) return true;
 
-    const hasVerb = normativeRe.test(t);
+    const hasVerb = matchesAny(t, (patterns) => patterns.normative);
     if (!hasVerb && t === t.toUpperCase() && t.length < 140) return true;
 
     return false;
@@ -946,8 +1119,7 @@ function buildEvidenceCandidates(extractedText: string): EvidenceCandidate[] {
     for (let j = i; j >= 0 && j >= i - 8; j--) {
       const l = lines[j];
       if (/^\[page\s+\d+\]/i.test(l)) continue;
-      if (/^(section|annex|appendix|part)\b/i.test(l)) return l;
-      // all-caps headings (but avoid TOC lines)
+      if (/^(section|annex|appendix|part|kapitel|abschnitt|annexe|lotto|lote)\b/i.test(l)) return l;
       if (l === l.toUpperCase() && l.length >= 12 && l.length <= 120 && !isTocLike(l)) return l;
     }
     return null;
@@ -963,18 +1135,18 @@ function buildEvidenceCandidates(extractedText: string): EvidenceCandidate[] {
 
   const scoreLine = (l: string): number => {
     let score = 0;
-    if (normativeRe.test(l)) score += 6;
-    if (deadlineRe.test(l)) score += 3;
-    if (dateRe.test(l) || timeRe.test(l)) score += 3;
-    if (submissionRe.test(l)) score += 2;
-    if (securityRe.test(l)) score += 2;
-    if (moneyRe.test(l)) score += 1;
-    if (/\bnot permitted\b/i.test(l)) score += 2;
+    if (matchesAny(l, (patterns) => patterns.normative)) score += 6;
+    if (matchesAny(l, (patterns) => patterns.deadline)) score += 3;
+    if (COMMON_DATE_RE.test(l) || COMMON_TIME_RE.test(l)) score += 3;
+    if (matchesAny(l, (patterns) => patterns.submission)) score += 2;
+    if (matchesAny(l, (patterns) => patterns.security)) score += 2;
+    if (matchesAny(l, (patterns) => patterns.qualification)) score += 2;
+    if (matchesAny(l, (patterns) => patterns.prohibition)) score += 2;
+    if (COMMON_MONEY_RE.test(l)) score += 1;
     return score;
   };
 
   const makeExcerpt = (i: number): string => {
-    // window of up to 3 lines (current + neighbors) to keep it highlightable
     const parts: string[] = [];
     const anchor = getAnchor(i);
     if (anchor && !isTitleLike(anchor) && !isTocLike(anchor)) parts.push(anchor);
@@ -997,7 +1169,7 @@ function buildEvidenceCandidates(extractedText: string): EvidenceCandidate[] {
     if (isTocLike(l) || isTitleLike(l)) continue;
 
     const score = scoreLine(l);
-    if (score < 5) continue; // keep precision high
+    if (score < 5) continue;
 
     const excerpt = makeExcerpt(i);
     if (!excerpt || excerpt.length < 30) continue;
@@ -1008,7 +1180,7 @@ function buildEvidenceCandidates(extractedText: string): EvidenceCandidate[] {
     seen.add(key);
 
     const kind: EvidenceCandidate["kind"] =
-      /^[•\-]\s+/.test(l) ? "bullet" : /\btable\b/i.test(l) ? "table_row" : "clause";
+      /^[•\-]\s+/.test(l) ? "bullet" : /\btable\b|\btabella\b|\btableau\b|\btabla\b/i.test(l) ? "table_row" : "clause";
 
     candidates.push({
       id: `E${String(idCounter++).padStart(3, "0")}`,
@@ -1019,13 +1191,94 @@ function buildEvidenceCandidates(extractedText: string): EvidenceCandidate[] {
       score,
     });
 
-    if (candidates.length >= 240) break; // cap for prompt size
+    if (candidates.length >= 240) break;
   }
 
-  // Sort by score desc, then shorter excerpts first (better highlightability)
   return candidates
     .sort((a, b) => (b.score - a.score) || (a.excerpt.length - b.excerpt.length))
     .slice(0, 220);
+}
+
+
+function normalizeEvidenceLookupText(input: string): string {
+  return String(input ?? "")
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function tokenizeEvidenceLookup(input: string): string[] {
+  const STOP = new Set([
+    "the", "and", "for", "with", "that", "this", "from", "into", "must", "shall", "will",
+    "der", "die", "das", "und", "mit", "den", "dem", "ein", "eine", "muss",
+    "del", "della", "delle", "degli", "dei", "con", "per", "che", "sono", "deve", "devono",
+    "des", "les", "pour", "avec", "dans", "une", "être", "etre", "doit", "doivent",
+    "los", "las", "con", "para", "una", "debe", "deben",
+  ]);
+
+  return normalizeEvidenceLookupText(input)
+    .split(" ")
+    .map((t) => t.trim())
+    .filter((t) => t.length >= 4 && !STOP.has(t));
+}
+
+function bestEffortEvidenceIdsFromText(args: {
+  text: string;
+  evidenceCandidates: EvidenceCandidate[];
+  limit?: number;
+}): string[] {
+  const query = String(args.text ?? "").trim();
+  if (!query) return [];
+
+  const normQuery = normalizeEvidenceLookupText(query);
+  if (!normQuery || normQuery.length < 12) return [];
+
+  const queryTokens = Array.from(new Set(tokenizeEvidenceLookup(query))).slice(0, 14);
+  if (queryTokens.length === 0) return [];
+
+  const scored = (args.evidenceCandidates ?? [])
+    .map((cand) => {
+      const excerpt = String(cand?.excerpt ?? "").trim();
+      if (!excerpt) return null;
+
+      const normExcerpt = normalizeEvidenceLookupText(excerpt);
+      if (!normExcerpt) return null;
+
+      let score = 0;
+
+      if (normExcerpt.includes(normQuery)) score += 12;
+      if (normQuery.includes(normExcerpt) && normExcerpt.length >= 40) score += 8;
+
+      const excerptTokens = new Set(tokenizeEvidenceLookup(excerpt));
+      let overlap = 0;
+      for (const tok of queryTokens) {
+        if (excerptTokens.has(tok)) overlap += 1;
+      }
+
+      const overlapRatio = overlap / Math.max(queryTokens.length, 1);
+      if (overlap >= 3) score += overlap * 2;
+      if (overlapRatio >= 0.5) score += 5;
+      else if (overlapRatio >= 0.35) score += 3;
+
+      const anchor = normalizeEvidenceLookupText(String(cand?.anchor ?? ""));
+      if (anchor) {
+        for (const tok of queryTokens.slice(0, 6)) {
+          if (anchor.includes(tok)) score += 0.5;
+        }
+      }
+
+      if (score < 8) return null;
+      return { id: String(cand.id), score };
+    })
+    .filter(Boolean) as Array<{ id: string; score: number }>;
+
+  return scored
+    .sort((a, b) => b.score - a.score)
+    .slice(0, Math.max(1, Math.min(args.limit ?? 2, 3)))
+    .map((x) => x.id);
 }
 
 	const corsHeaders = {
@@ -1495,7 +1748,7 @@ let extractedText = "";
     // AI analysis
     const model = String(Deno.env.get("TP_OPENAI_MODEL") ?? "gpt-4.1-mini");
     const maxInputChars = parseNumberEnv("TP_MAX_INPUT_CHARS", 120_000);
-    const maxOutputTokens = parseNumberEnv("TP_MAX_OUTPUT_TOKENS", 1800);
+    const maxOutputTokens = parseNumberEnv("TP_MAX_OUTPUT_TOKENS", 3200);
     const maxUsdPerJob = parseNumberEnv("TP_MAX_USD_PER_JOB", 0.05);
 
     let aiOut: AiOutput;
@@ -1551,6 +1804,7 @@ let extractedText = "";
 
       const { output: outputLang } = await loadUserLanguagesAdmin(supabaseAdmin, job.user_id);
       const targetLanguage = langName(outputLang);
+      const sourceLanguage = detectSourceLanguage(extractedText);
 
       await logEvent(supabaseAdmin, job, "info", "OpenAI started", { model, maxOutputTokens, remaining_ms: remaining });
 
@@ -1566,7 +1820,7 @@ let extractedText = "";
         ),
       );
 
-      aiOut = await runOpenAi({ apiKey, model, targetLanguage, extractedText: clipped, evidenceCandidates, maxOutputTokens, timeoutMs, workspacePlaybook });
+      aiOut = await runOpenAi({ apiKey, model, targetLanguage, sourceLanguage, extractedText: clipped, evidenceCandidates, maxOutputTokens, timeoutMs, workspacePlaybook });
       await logEvent(supabaseAdmin, job, "info", "OpenAI completed", { model, maxOutputTokens });
     }
 
@@ -1580,19 +1834,34 @@ let extractedText = "";
       const evidenceById = new Map<string, EvidenceCandidate>();
       for (const e of evidenceCandidates) evidenceById.set(e.id, e);
 
-      const resolveSource = (ids?: string[]): { ids: string[]; source: string | null } => {
-        const valid = (ids ?? []).filter((id) => evidenceById.has(id));
-        if (valid.length === 0) return { ids: [], source: null };
-        // For highlighting, keep a single contiguous excerpt (best = first id)
-        const first = evidenceById.get(valid[0])!;
-        return { ids: valid, source: first.excerpt };
+      const resolveSource = (args: { ids?: string[]; text?: string; extraText?: string }): { ids: string[]; source: string | null; recovered: boolean } => {
+        const valid = (args.ids ?? []).filter((id) => evidenceById.has(id));
+        if (valid.length > 0) {
+          const first = evidenceById.get(valid[0])!;
+          return { ids: valid, source: first.excerpt, recovered: false };
+        }
+
+        const fallbackText = [String(args.text ?? "").trim(), String(args.extraText ?? "").trim()].filter(Boolean).join(" — ");
+        if (!fallbackText) return { ids: [], source: null, recovered: false };
+
+        const recoveredIds = bestEffortEvidenceIdsFromText({
+          text: fallbackText,
+          evidenceCandidates,
+          limit: 2,
+        }).filter((id) => evidenceById.has(id));
+
+        if (recoveredIds.length === 0) return { ids: [], source: null, recovered: false };
+
+        const first = evidenceById.get(recoveredIds[0])!;
+        return { ids: recoveredIds, source: first.excerpt, recovered: true };
       };
 
       const missingEvidenceReason = "No resolvable evidence_id (candidate not present / trimmed).";
 
       const checklist: AiOutput["checklist"] = (Array.isArray(aiOut.checklist) ? aiOut.checklist : []).map((it) => {
         const t = (it as any).type as "MUST" | "SHOULD" | "INFO";
-        const { ids, source } = resolveSource(it.evidence_ids);
+        const textValue = String((it as any)?.text ?? "").trim();
+        const { ids, source, recovered } = resolveSource({ ids: it.evidence_ids, text: textValue });
 
         const base: any = {
           ...(it as any),
@@ -1601,6 +1870,7 @@ let extractedText = "";
         };
 
         if (source) base.source = source;
+        if (recovered) base.evidence_backfilled = true;
 
         // Decision-grade reliability: MUST must remain MUST; missing evidence becomes a flag.
         if (t === "MUST" && ids.length === 0) {
@@ -1612,9 +1882,12 @@ let extractedText = "";
       });
 
       const risks: AiOutput["risks"] = (Array.isArray(aiOut.risks) ? aiOut.risks : []).map((r) => {
-        const { ids, source } = resolveSource(r.evidence_ids);
+        const titleValue = String((r as any)?.title ?? "").trim();
+        const detailValue = String((r as any)?.detail ?? "").trim();
+        const { ids, source, recovered } = resolveSource({ ids: r.evidence_ids, text: titleValue, extraText: detailValue });
         const out: any = { ...r, evidence_ids: ids };
         if (source) out.source = source;
+        if (recovered) out.evidence_backfilled = true;
         if (ids.length === 0) {
           out.needs_verification = true;
           out.verification_reason = missingEvidenceReason;
