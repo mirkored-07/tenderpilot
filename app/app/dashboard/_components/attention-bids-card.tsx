@@ -7,6 +7,11 @@ import { Card, CardContent } from "@/components/ui/card";
 
 type TranslateFn = (key: string, vars?: Record<string, string | number>) => string;
 
+function tr(t: TranslateFn, key: string, fallback: string, vars?: Record<string, string | number>) {
+  const value = t(key, vars);
+  return !value || value === key ? fallback : value;
+}
+
 export function AttentionBidsCard(props: {
   t: TranslateFn;
   bids: any[];
@@ -24,7 +29,7 @@ export function AttentionBidsCard(props: {
           <div>
             <p className="text-sm font-semibold">{t("app.dashboard.attention.title")}</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Highest priority bids based on missing fields, deadlines, and blockers.
+              {tr(t, "app.dashboard.attention.subtitle", "Highest priority bids based on missing fields, deadlines, and blockers.")}
             </p>
           </div>
 
@@ -55,13 +60,13 @@ export function AttentionBidsCard(props: {
                     <p className="mt-1 text-xs text-muted-foreground">
                       {r.missingDecision
                         ? t("app.dashboard.labels.decisionUnset")
-                        : `${t("app.dashboard.labels.decision")}: ${r.decisionBucket === "unknown" ? t("app.common.unknown") : r.decisionBucket === "no-go" ? "No-Go" : r.decisionBucket === "hold" ? "Hold" : "Go"}`}
+                        : `${t("app.dashboard.labels.decision")}: ${r.decisionBucket === "unknown" ? t("app.common.unknown") : r.decisionBucket === "no-go" ? tr(t, "app.decision.noGo", "No-Go") : r.decisionBucket === "hold" ? tr(t, "app.decision.hold", "Hold") : tr(t, "app.decision.go", "Go")}`}
                       {" • "}
                       {r.missingDeadline
                         ? t("app.dashboard.labels.deadlineUnset")
                         : r.deadline
-                          ? `Deadline: ${new Date(r.deadline).toLocaleDateString()}`
-                          : `Deadline: ${String(r.deadlineText || "unknown")}`}
+                          ? tr(t, "app.dashboard.labels.deadlineDate", `Deadline: ${new Date(r.deadline).toLocaleDateString()}`, { deadline: new Date(r.deadline).toLocaleDateString() })
+                          : tr(t, "app.dashboard.labels.deadlineRaw", `Deadline: ${String(r.deadlineText || "unknown")}`, { deadline: String(r.deadlineText || tr(t, "app.common.unknown", "unknown")) })}
                       {" • "}
                       {(() => {
                         const openCount = Math.max(0, r.total - r.done);

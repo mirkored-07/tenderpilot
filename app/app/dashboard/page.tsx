@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { AttentionBidsCard } from "./_components/attention-bids-card";
+import { DashboardFilters } from "./_components/dashboard-filters";
 import { HoldUnblockCard } from "./_components/hold-unblock-card";
 
 type JobStatus = "queued" | "processing" | "done" | "failed";
@@ -975,50 +976,18 @@ return {
       </div>
 
       {/* Filters */}
-      <div className="grid gap-3 md:grid-cols-3">
-        <div className="space-y-1.5">
-          <label className="text-xs text-muted-foreground">{t("app.dashboard.filters.owner")}</label>
-          <select
-            className="h-9 w-full rounded-full border bg-background px-3 text-sm"
-            value={ownerFilter}
-            onChange={(e) => setOwnerFilter(e.target.value)}
-          >
-            {owners.map((o) => (
-              <option key={o} value={o}>
-                {o === FILTER_ALL ? t("app.common.all") : o === FILTER_UNASSIGNED ? t("app.dashboard.labels.unassigned") : o}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-xs text-muted-foreground">{t("app.dashboard.filters.decision")}</label>
-          <select
-            className="h-9 w-full rounded-full border bg-background px-3 text-sm"
-            value={decisionFilter}
-            onChange={(e) => setDecisionFilter(e.target.value)}
-          >
-            <option value={FILTER_ALL}>{t("app.common.all")}</option>
-            <option value="go">{t("app.decision.go")}</option>
-            <option value="hold">{t("app.decision.hold")}</option>
-            <option value="no-go">{t("app.decision.noGo")}</option>
-            <option value="unknown">{t("app.common.unknown")}</option>
-          </select>
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-xs text-muted-foreground">{t("app.dashboard.filters.window")}</label>
-          <select
-            className="h-9 w-full rounded-full border bg-background px-3 text-sm"
-            value={windowDays}
-            onChange={(e) => setWindowDays(parseInt(e.target.value, 10))}
-          >
-            <option value={14}>{t("app.dashboard.filters.next14Days")}</option>
-            <option value={30}>{t("app.dashboard.filters.next30Days")}</option>
-            <option value={90}>{t("app.dashboard.filters.next90Days")}</option>
-          </select>
-        </div>
-      </div>
+      <DashboardFilters
+        t={t}
+        owners={owners}
+        ownerFilter={ownerFilter}
+        onOwnerFilterChange={setOwnerFilter}
+        decisionFilter={decisionFilter}
+        onDecisionFilterChange={setDecisionFilter}
+        windowDays={windowDays}
+        onWindowDaysChange={setWindowDays}
+        filterAllValue={FILTER_ALL}
+        filterUnassignedValue={FILTER_UNASSIGNED}
+      />
 
       {/* Operational queues */}
       <Card className="rounded-2xl">

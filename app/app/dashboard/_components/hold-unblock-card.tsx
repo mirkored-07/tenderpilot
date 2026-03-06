@@ -5,6 +5,11 @@ import { Card, CardContent } from "@/components/ui/card";
 
 type TranslateFn = (key: string, vars?: Record<string, string | number>) => string;
 
+function tr(t: TranslateFn, key: string, fallback: string, vars?: Record<string, string | number>) {
+  const value = t(key, vars);
+  return !value || value === key ? fallback : value;
+}
+
 export function HoldUnblockCard(props: {
   t: TranslateFn;
   rows: any[];
@@ -50,12 +55,14 @@ export function HoldUnblockCard(props: {
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{r.displayName}</p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {openCount} unblock action{openCount === 1 ? "" : "s"} open
-                        {targetTxt ? ` • target decision: ${targetTxt}` : ""}
+                        {openCount === 1
+                          ? tr(t, "app.dashboard.attention.openUnblockActionOne", "1 unblock action open")
+                          : tr(t, "app.dashboard.attention.openUnblockActionMany", `${openCount} unblock actions open`, { count: openCount })}
+                        {targetTxt ? ` • ${tr(t, "app.dashboard.attention.targetDecision", `target decision: ${targetTxt}`, { date: targetTxt })}` : ""}
                       </p>
                     </div>
                     <Link href={`/app/jobs/${jid}`} className="text-xs text-foreground/80 underline hover:text-foreground">
-                      Open
+                      {tr(t, "app.common.open", "Open")}
                     </Link>
                   </div>
                 </div>

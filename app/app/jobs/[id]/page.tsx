@@ -20,6 +20,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAppI18n } from "../../_components/app-i18n-provider";
 import { JobPageFeedback } from "./_components/job-page-feedback";
 import { JobPageHeader } from "./_components/job-page-header";
+import { JobPageReferencePanels } from "./_components/job-page-reference-panels";
 import { FailedStatePanel } from "./_components/job-status-panels";
 
 type JobStatus = "queued" | "processing" | "done" | "failed";
@@ -4106,210 +4107,93 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
 		       
 
         <TabsContent value="text">
-          {evidenceFocus ? (
-            <Card className="rounded-2xl">
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-semibold">{t("app.review.source.evidenceExcerptTitle")}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {evidenceFocus.id ? (
-                        <>{t("app.review.source.idLabel")} <span className="font-medium text-foreground">{evidenceFocus.id}</span></>
-                      ) : (
-                        <>{t("app.review.source.evidenceLabel")}</>
-                      )}
-                      {typeof evidenceFocus.page === "number" ? (
-                        <> • {t("app.review.source.pageLabel")} {evidenceFocus.page}</>
-                      ) : null}
-                      {evidenceFocus.anchor ? (
-                        <> • <span className="text-foreground/70">{evidenceFocus.anchor}</span></>
-                      ) : null}
-                    </p>
+          <JobPageReferencePanels
+            t={t}
+            evidenceFocus={evidenceFocus}
+            copiedSection={copiedSection}
+            showEvidenceExcerpt={showEvidenceExcerpt}
+            evidenceExcerptRef={evidenceExcerptRef}
+            onSwitchEvidenceId={(eid) => {
+              const cand = evidenceById.get(String(eid));
+              if (!cand) {
+                setEvidenceFocus((prev) =>
+                  prev
+                    ? {
+                        ...prev,
+                        id: String(eid),
+                        excerpt: "",
+                        page: null,
+                        anchor: null,
+                        note: t("app.bidroom.evidence.notes.notFound"),
+                      }
+                    : prev
+                );
+                return;
+              }
 
-                    {Array.isArray(evidenceFocus.allIds) && evidenceFocus.allIds.length > 1 ? (
-                      <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <span className="text-xs text-muted-foreground">{t("app.review.source.switchEvidence")}</span>
-                        {evidenceFocus.allIds.slice(0, 12).map((eid) => {
-                          const active = String(eid) === String(evidenceFocus.id);
-                          return (
-                            <Button
-                              key={eid}
-                              type="button"
-                              size="sm"
-                              variant={active ? "default" : "outline"}
-                              className="rounded-full"
-                              onClick={() => {
-                                const cand = evidenceById.get(String(eid));
-                                if (!cand) {
-                                  setEvidenceFocus((prev) =>
-                                    prev
-                                      ? {
-                                          ...prev,
-                                          id: String(eid),
-                                          excerpt: "",
-                                          page: null,
-                                          anchor: null,
-                                          note:
-                                            t("app.bidroom.evidence.notes.notFound"),
-                                        }
-                                      : prev
-                                  );
-                                  return;
-                                }
+              const ex = String((cand as any)?.excerpt ?? "").trim();
+              setEvidenceFocus((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      id: String((cand as any)?.id ?? eid),
+                      excerpt: ex,
+                      page: (cand as any)?.page ?? null,
+                      anchor: (cand as any)?.anchor ?? null,
+                      note: null,
+                    }
+                  : prev
+              );
 
-                                const ex = String((cand as any)?.excerpt ?? "").trim();
-                                setEvidenceFocus((prev) =>
-                                  prev
-                                    ? {
-                                        ...prev,
-                                        id: String((cand as any)?.id ?? eid),
-                                        excerpt: ex,
-                                        page: (cand as any)?.page ?? null,
-                                        anchor: (cand as any)?.anchor ?? null,
-                                        note: null,
-                                      }
-                                    : prev
-                                );
+              track("evidence_opened", { jobId, evidenceId: String((cand as any)?.id ?? eid) });
+              setShowEvidenceExcerpt(true);
+              openTabAndScroll();
+              if (ex) window.setTimeout(() => onJumpToSource(ex), 0);
+            }}
+            onOpenEvidenceExcerpt={() => {
+              track("evidence_opened", { jobId, evidenceId: evidenceFocus?.id ?? null });
+              setShowEvidenceExcerpt(true);
+              window.setTimeout(() => evidenceExcerptRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
+            }}
+            onLocateEvidence={() => {
+              const ex = String(evidenceFocus?.excerpt ?? "").trim();
+              const hay = String(extractedText ?? "");
+              const hasExact = ex ? hay.toLowerCase().includes(ex.toLowerCase()) : false;
 
-                                track("evidence_opened", { jobId, evidenceId: String((cand as any)?.id ?? eid) });
-                                setShowEvidenceExcerpt(true);
-                                openTabAndScroll();
-                                if (ex) window.setTimeout(() => onJumpToSource(ex), 0);
-                              }}
-                            >
-                              {eid}
-                            </Button>
-                          );
-                        })}
-                      </div>
-                    ) : null}
+              if (hasExact) {
+                onJumpToSource(ex);
+                return;
+              }
 
-                    {evidenceFocus.note ? (
-                      <p className="mt-2 text-xs text-muted-foreground">{evidenceFocus.note}</p>
-                    ) : (
-                      <p className="mt-2 text-xs text-muted-foreground">
-                        {t("app.review.source.excerptAuthoritativeNote")}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Button
-                      className="rounded-full"
-                      onClick={() => {
-                        track("evidence_opened", { jobId, evidenceId: evidenceFocus?.id ?? null });
-                        setShowEvidenceExcerpt(true);
-                        window.setTimeout(() => evidenceExcerptRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
-                      }}
-                    >
-                      {t("app.review.source.openEvidenceExcerpt")}
-                    </Button>
+              const p = evidenceFocus?.page;
+              if (p !== null && p !== undefined) {
+                const pageNum = Number(p);
+                if (!Number.isNaN(pageNum)) {
+                  jumpToPageMarker(pageNum, t("app.review.evidenceNotes.jumpedToMarkerGeneric"));
+                  return;
+                }
+              }
 
-                    {evidenceFocus.excerpt ? (
-                      <Button
-                        variant="outline"
-                        className="rounded-full"
-                        onClick={() => {
-                          const ex = String(evidenceFocus.excerpt ?? "").trim();
-                          const hay = String(extractedText ?? "");
-                          const hasExact = ex ? hay.toLowerCase().includes(ex.toLowerCase()) : false;
-
-                          if (hasExact) {
-                            onJumpToSource(ex);
-                            return;
-                          }
-
-                          const p = evidenceFocus.page;
-                          if (p !== null && p !== undefined) {
-                            const pageNum = Number(p);
-                            if (!Number.isNaN(pageNum)) {
-                              jumpToPageMarker(
-                                pageNum,
-                                t("app.review.evidenceNotes.jumpedToMarkerGeneric")
-                              );
-                              return;
-                            }
-                          }
-
-                          // fallback (keeps safe behavior)
-                          onJumpToSource(ex);
-                        }}
-                        disabled={!extractedText}
-                      >
-                        {t("app.review.source.locateBestEffort")}
-                      </Button>
-                    ) : null}
-
-                    {evidenceFocus.excerpt ? (
-                      <Button
-                        variant="outline"
-                        className="rounded-full"
-                        onClick={async () => {
-                          const ok = await safeCopy(evidenceFocus.excerpt);
-                          if (ok) {
-                            setCopiedSection("evidence");
-                            window.setTimeout(() => setCopiedSection(null), 1200);
-                          }
-                        }}
-                      >
-                        {copiedSection === "evidence" ? t("app.common.copied") : t("app.review.actions.copyExcerpt")}
-                      </Button>
-                    ) : null}
-
-                    <Button variant="outline" className="rounded-full" onClick={() => setEvidenceFocus(null)}>
-                      Close
-                    </Button>
-                  </div>
-                </div>
-
-                {showEvidenceExcerpt && evidenceFocus.excerpt ? (
-                  <div ref={evidenceExcerptRef} className="mt-4 rounded-2xl border bg-muted/20 p-4">
-                    <p className="text-sm text-muted-foreground leading-relaxed">{evidenceFocus.excerpt}</p>
-                  </div>
-                ) : null}
-              </CardContent>
-            </Card>
-          ) : null}
-
-          {sourceFocus ? (
-            <Card className="rounded-2xl">
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-semibold">{t("app.review.source.locateBestEffort")}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Match for: <span className="font-medium text-foreground">{sourceFocus.query}</span>
-                    </p>
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      This view highlights a best-effort match in the extracted Source text. Use it as a pointer only: locate the same clause in the original PDF (search the phrase) and verify the exact wording and formatting.
-                    </p>
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Button
-                      variant="outline"
-                      className="rounded-full"
-                      onClick={async () => {
-                        const ok = await safeCopy(sourceFocus.query);
-                        if (ok) {
-                          setCopiedSection("sourcePhrase");
-                          window.setTimeout(() => setCopiedSection(null), 1200);
-                        }
-                      }}
-                    >
-                      {copiedSection === "sourcePhrase" ? t("app.common.copied") : t("app.review.actions.copyPhrase")}
-                    </Button>
-
-                    <Button variant="outline" className="rounded-full" onClick={() => setSourceFocus(null)}>
-                      {t("app.review.source.closeLocateView")}
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="mt-4 rounded-2xl border bg-muted/20 p-4">
-                  <p className="text-sm text-muted-foreground leading-relaxed">{sourceFocus.snippet}</p>
-                </div>
-              </CardContent>
-            </Card>
-          ) : null}
+              onJumpToSource(ex);
+            }}
+            onCopyEvidenceExcerpt={async () => {
+              const ok = await safeCopy(String(evidenceFocus?.excerpt ?? ""));
+              if (ok) {
+                setCopiedSection("evidence");
+                window.setTimeout(() => setCopiedSection(null), 1200);
+              }
+            }}
+            onCloseEvidence={() => setEvidenceFocus(null)}
+            sourceFocus={sourceFocus}
+            onCopySourcePhrase={async () => {
+              const ok = await safeCopy(String(sourceFocus?.query ?? ""));
+              if (ok) {
+                setCopiedSection("sourcePhrase");
+                window.setTimeout(() => setCopiedSection(null), 1200);
+              }
+            }}
+            onCloseSourceFocus={() => setSourceFocus(null)}
+          />
           {!showReferenceText ? (
             <Card className="mt-4 rounded-2xl border-dashed">
               <CardContent className="p-5">
