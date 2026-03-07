@@ -1482,7 +1482,9 @@
         "couldNotOpenPortal": "Das Abrechnungsportal konnte nicht geöffnet werden. Synchronisiere die Abrechnung oder upgrade zuerst und versuche es dann erneut.",
         "allTenderDataDeleted": "Alle Ausschreibungsdaten gelöscht.",
         "couldNotDeleteTenderData": "Ausschreibungsdaten konnten nicht gelöscht werden. Erneut versuchen.",
-        "couldNotDeleteAccount": "Konto konnte nicht gelöscht werden. Erneut versuchen."
+        "couldNotDeleteAccount": "Konto konnte nicht gelöscht werden. Erneut versuchen.",
+        "noBillingRecordYet": "Für dieses Konto wurde noch kein Stripe-Abrechnungsdatensatz gefunden. Sie sind weiterhin im Free-Plan.",
+        "noBillingPortalYet": "Für dieses Konto ist noch kein Abrechnungsportal verfügbar. Führen Sie zuerst ein Upgrade durch oder synchronisieren Sie die Abrechnung, falls Sie bereits bezahlt haben."
       }
     },
     "exports": {

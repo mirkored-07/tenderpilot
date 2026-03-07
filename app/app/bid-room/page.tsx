@@ -124,9 +124,9 @@ export default function GlobalBidRoomPage() {
     return (
       <Card className="rounded-2xl">
         <CardContent className="p-5 space-y-3">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-sm font-semibold">{props.title}</p>
-            <Badge variant="outline" className="rounded-full">
+            <Badge variant="outline" className="w-fit rounded-full">
               {props.items.length}
             </Badge>
           </div>

@@ -108,7 +108,7 @@ export function JobPageHeader(props: {
         <p className="mt-2 text-sm text-muted-foreground">{t("app.common.draftingSupport")}</p>
       </div>
 
-      <div className="flex flex-wrap items-center justify-end gap-2">
+      <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:justify-end">
         <Button asChild variant="ghost" className="h-9 rounded-full px-3">
           <Link href="/app/jobs" className="inline-flex items-center gap-2">
             <ArrowLeft className="h-4 w-4" />

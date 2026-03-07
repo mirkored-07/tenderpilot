@@ -688,7 +688,7 @@ return {
   if (loading) {
     return (
       <div className="mx-auto max-w-6xl space-y-6 py-8">
-        <div className="flex items-center justify-between">
+        <div className="flex items-start justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">{t("app.dashboard.title")}</h1>
             <p className="mt-1 text-sm text-muted-foreground">{t("app.common.loading")}…</p>
@@ -1022,7 +1022,7 @@ return {
             <div className="mt-4 grid gap-3 lg:grid-cols-2">
             {/* Needs triage */}
             <div className="rounded-xl border p-3">
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between gap-3">
                 <p className="text-sm font-medium">{t("app.dashboard.sections.needsTriage")}</p>
                 <span className="text-xs text-muted-foreground">{standupQueues.needsTriage.length}</span>
               </div>
@@ -1036,7 +1036,7 @@ return {
                     return (
                       <>
                         {rows.map((r) => (
-                          <div key={r.job.id} className="flex items-center justify-between gap-2">
+                          <div key={r.job.id} className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
                             <Link className="text-sm underline-offset-2 hover:underline" href={`/app/jobs/${r.job.id}`}>
                               {r.displayName}
                             </Link>
@@ -1061,7 +1061,7 @@ return {
 
             {/* Deadline unknown */}
             <div className="rounded-xl border p-3">
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between gap-3">
                 <p className="text-sm font-medium">{t("app.dashboard.sections.deadlineUnknown")}</p>
                 <span className="text-xs text-muted-foreground">{standupQueues.deadlineUnknown.length}</span>
               </div>
@@ -1075,7 +1075,7 @@ return {
                     return (
                       <>
                         {rows.map((r) => (
-                          <div key={r.job.id} className="flex items-center justify-between gap-2">
+                          <div key={r.job.id} className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
                             <Link className="text-sm underline-offset-2 hover:underline" href={`/app/jobs/${r.job.id}`}>
                               {r.displayName}
                             </Link>
@@ -1100,7 +1100,7 @@ return {
 
             {/* {t("app.dashboard.sections.dueNext7Title")} */}
             <div className="rounded-xl border p-3">
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between gap-3">
                 <p className="text-sm font-medium">{t("app.dashboard.sections.dueNext7Title")}</p>
                 <span className="text-xs text-muted-foreground">{standupQueues.dueNext7.length}</span>
               </div>
@@ -1114,7 +1114,7 @@ return {
                     return (
                       <>
                         {rows.map((r) => (
-                          <div key={r.job.id} className="flex items-center justify-between gap-2">
+                          <div key={r.job.id} className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
                             <Link className="text-sm underline-offset-2 hover:underline" href={`/app/jobs/${r.job.id}`}>
                               {r.displayName}
                             </Link>
@@ -1141,7 +1141,7 @@ return {
 
             {/* Overdue work items */}
             <div className="rounded-xl border p-3">
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between gap-3">
                 <p className="text-sm font-medium">{t("app.dashboard.sections.overdueWorkItems")}</p>
                 <span className="text-xs text-muted-foreground">{standupQueues.overdueWorkItems.length}</span>
               </div>
@@ -1157,7 +1157,7 @@ return {
                     return (
                       <>
                         {rows.map((wi) => (
-                          <div key={`${wi.job_id}:${wi.type}:${wi.ref_key}`} className="flex items-center justify-between gap-2">
+                          <div key={`${wi.job_id}:${wi.type}:${wi.ref_key}`} className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
                             <Link className="text-sm underline-offset-2 hover:underline" href={`/app/jobs/${wi.job_id}`}>
                               {String(wi.title || wi.ref_key || t("app.dashboard.labels.workItem"))}
                             </Link>
@@ -1184,7 +1184,7 @@ return {
 
             {/* Blocked items */}
             <div className="rounded-xl border p-3">
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between gap-3">
                 <p className="text-sm font-medium">{t("app.dashboard.sections.blockedItems")}</p>
                 <span className="text-xs text-muted-foreground">{standupQueues.blockedItems.length}</span>
               </div>
@@ -1198,7 +1198,7 @@ return {
                     return (
                       <>
                         {rows.map((wi) => (
-                          <div key={`${wi.job_id}:${wi.type}:${wi.ref_key}`} className="flex items-center justify-between gap-2">
+                          <div key={`${wi.job_id}:${wi.type}:${wi.ref_key}`} className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
                             <Link className="text-sm underline-offset-2 hover:underline" href={`/app/jobs/${wi.job_id}`}>
                               {String(wi.title || wi.ref_key || t("app.dashboard.labels.workItem"))}
                             </Link>
@@ -1223,7 +1223,7 @@ return {
 
             {/* Unassigned items */}
             <div className="rounded-xl border p-3">
-              <div className="flex items-center justify-between">
+              <div className="flex items-start justify-between gap-3">
                 <p className="text-sm font-medium">{t("app.dashboard.sections.unassignedItems")}</p>
                 <span className="text-xs text-muted-foreground">{standupQueues.unassignedItems.length}</span>
               </div>
@@ -1237,7 +1237,7 @@ return {
                     return (
                       <>
                         {rows.map((wi) => (
-                          <div key={`${wi.job_id}:${wi.type}:${wi.ref_key}`} className="flex items-center justify-between gap-2">
+                          <div key={`${wi.job_id}:${wi.type}:${wi.ref_key}`} className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
                             <Link className="text-sm underline-offset-2 hover:underline" href={`/app/jobs/${wi.job_id}`}>
                               {String(wi.title || wi.ref_key || t("app.dashboard.labels.workItem"))}
                             </Link>
@@ -1278,7 +1278,7 @@ return {
                     return (
                       <>
                         {rows.map((wi) => (
-                          <div key={`${wi.job_id}:${wi.type}:${wi.ref_key}`} className="flex items-center justify-between gap-2">
+                          <div key={`${wi.job_id}:${wi.type}:${wi.ref_key}`} className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
                             <Link className="text-sm underline-offset-2 hover:underline" href={`/app/jobs/${wi.job_id}`}>
                               {String(wi.title || wi.ref_key || t("app.dashboard.labels.clarification"))}
                             </Link>

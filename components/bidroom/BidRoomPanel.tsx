@@ -650,7 +650,7 @@ export function BidRoomPanel(props: {
         </div>
 
         <div className="rounded-2xl border bg-card/30">
-          <div className="flex items-center justify-between gap-3 border-b p-3">
+          <div className="flex flex-col gap-1 border-b p-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs font-semibold text-muted-foreground">{t("app.bidroom.panel.table.title")}</p>
             <p className="text-xs text-muted-foreground">{t("app.bidroom.panel.table.note")}</p>
           </div>
@@ -661,7 +661,7 @@ export function BidRoomPanel(props: {
                 <div className="rounded-2xl border bg-background p-6 text-center">
                   <p className="text-sm font-medium">{t("app.bidroom.panel.empty.title")}</p>
                   <p className="mt-1 text-sm text-muted-foreground">{t("app.bidroom.panel.empty.body")}</p>
-                  <div className="mt-4 flex items-center justify-center gap-2">
+                  <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-center">
                     <Button variant="outline" size="sm" className="rounded-full" onClick={() => setQuery("")}>{t("app.bidroom.panel.empty.clearSearch")}</Button>
                     <Button
                       variant="outline"

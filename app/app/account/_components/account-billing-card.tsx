@@ -97,7 +97,7 @@ export function AccountBillingCard({
               <Button
                 type="button"
                 variant="outline"
-                className="rounded-full"
+                className="w-full rounded-full sm:w-auto"
                 onClick={onSyncBilling}
                 disabled={billingBusy}
               >
@@ -107,14 +107,14 @@ export function AccountBillingCard({
           </div>
         ) : null}
 
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm text-muted-foreground">{t("app.account.billing.current")}</p>
             <p className="mt-1 text-lg font-semibold">
               {isPro ? t("app.account.billing.planLabelPro") : t("app.account.billing.planLabelFree")}
             </p>
           </div>
-          <Badge variant="secondary" className="rounded-full capitalize">
+          <Badge variant="secondary" className="w-fit rounded-full capitalize">
             {isPro ? formatPlanStatus(billing?.planStatus, t) : t("app.account.billing.statusFree")}
           </Badge>
         </div>
@@ -170,14 +170,14 @@ export function AccountBillingCard({
 
         {isPro ? (
           <div className="flex flex-col gap-2 sm:flex-row">
-            <Button type="button" className="rounded-full" onClick={onOpenBillingPortal} disabled={billingBusy}>
+            <Button type="button" className="w-full rounded-full sm:w-auto" onClick={onOpenBillingPortal} disabled={billingBusy}>
               {t("app.account.billing.manageBilling")}
             </Button>
 
             <Button
               type="button"
               variant="outline"
-              className="rounded-full"
+              className="w-full rounded-full sm:w-auto"
               onClick={onSyncBilling}
               disabled={billingBusy}
             >
@@ -188,7 +188,7 @@ export function AccountBillingCard({
           <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <Button
               type="button"
-              className="rounded-full"
+              className="w-full rounded-full sm:w-auto"
               onClick={() => onStartCheckout("monthly")}
               disabled={billingBusy}
             >
@@ -198,7 +198,7 @@ export function AccountBillingCard({
             <Button
               type="button"
               variant="outline"
-              className="rounded-full"
+              className="w-full rounded-full sm:w-auto"
               onClick={() => onStartCheckout("yearly")}
               disabled={billingBusy}
             >
@@ -209,7 +209,7 @@ export function AccountBillingCard({
               <Button
                 type="button"
                 variant="outline"
-                className="rounded-full"
+                className="w-full rounded-full sm:w-auto"
                 onClick={onOpenBillingPortal}
                 disabled={billingBusy}
               >
@@ -221,7 +221,7 @@ export function AccountBillingCard({
               <Button
                 type="button"
                 variant="outline"
-                className="rounded-full"
+                className="w-full rounded-full sm:w-auto"
                 onClick={onSyncBilling}
                 disabled={billingBusy}
               >

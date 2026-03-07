@@ -1482,7 +1482,9 @@
         "couldNotOpenPortal": "Impossible d’ouvrir le portail de facturation. Synchronisez la facturation ou passez à une offre supérieure, puis réessayez.",
         "allTenderDataDeleted": "Toutes les données ont été supprimées.",
         "couldNotDeleteTenderData": "Impossible de supprimer les données. Réessayez.",
-        "couldNotDeleteAccount": "Impossible de supprimer le compte. Réessayez."
+        "couldNotDeleteAccount": "Impossible de supprimer le compte. Réessayez.",
+        "noBillingRecordYet": "Aucun enregistrement de facturation Stripe n’a encore été trouvé pour ce compte. Vous êtes toujours sur le plan Free.",
+        "noBillingPortalYet": "Aucun portail de facturation n’est encore disponible pour ce compte. Passez d’abord à un forfait supérieur ou synchronisez la facturation si vous avez déjà payé."
       }
     },
     "exports": {

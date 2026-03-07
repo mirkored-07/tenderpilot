@@ -1482,7 +1482,9 @@
         "couldNotOpenPortal": "Impossibile aprire il portale di fatturazione. Sincronizza la fatturazione o passa a un piano superiore, poi riprova.",
         "allTenderDataDeleted": "Tutti i dati gara eliminati.",
         "couldNotDeleteTenderData": "Impossibile eliminare i dati gara. Riprova.",
-        "couldNotDeleteAccount": "Impossibile eliminare l’account. Riprova."
+        "couldNotDeleteAccount": "Impossibile eliminare l’account. Riprova.",
+        "noBillingRecordYet": "Per questo account non è stato ancora trovato alcun record di fatturazione Stripe. Sei ancora nel piano Free.",
+        "noBillingPortalYet": "Per questo account non è ancora disponibile un portale di fatturazione. Effettua prima l’upgrade oppure sincronizza la fatturazione se hai già pagato."
       }
     },
     "exports": {

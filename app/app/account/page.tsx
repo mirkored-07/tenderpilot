@@ -302,7 +302,7 @@ function PlaybookModal({
       />
 
       <div className="absolute left-1/2 top-1/2 w-[min(92vw,860px)] max-h-[86vh] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-2xl border bg-background shadow-2xl">
-        <div className="flex items-start justify-between gap-3 border-b px-6 py-4">
+        <div className="flex flex-col gap-3 border-b px-6 py-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <p className="text-sm text-muted-foreground">{t("app.account.playbook.title")}</p>
             <h2 className="text-lg font-semibold tracking-tight">
@@ -313,7 +313,7 @@ function PlaybookModal({
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
             {playbookStatus ? (
               <Badge
                 variant={
@@ -328,7 +328,7 @@ function PlaybookModal({
             <Button
               type="button"
               variant="outline"
-              className="rounded-full h-9 px-3"
+              className="h-9 w-full rounded-full px-3 sm:w-auto"
               onClick={onClose}
               aria-label={t("app.common.close")}
             >
@@ -543,11 +543,11 @@ function PlaybookModal({
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-3 border-t px-6 py-4">
+        <div className="flex flex-col gap-2 border-t px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
           <Button
             type="button"
             variant="outline"
-            className="rounded-full"
+            className="w-full rounded-full sm:w-auto"
             onClick={onClose}
           >
             {t("app.common.cancel")}
@@ -555,7 +555,7 @@ function PlaybookModal({
 
           <Button
             type="button"
-            className="rounded-full"
+            className="w-full rounded-full sm:w-auto"
             onClick={onSave}
             disabled={!playbookEnabled || playbookSaving || !playbookIsDirty}
           >
@@ -1035,15 +1035,17 @@ export default function AccountPage() {
       const r = await fetch("/api/stripe/portal", { method: "POST" });
       const j = await r.json().catch(() => ({}));
       if (!r.ok || !j?.url) {
-        throw new Error(String(j?.error ?? "portal_failed"));
+        const err = String(j?.error ?? "portal_failed");
+        throw new Error(err);
       }
 
       window.location.href = String(j.url);
     } catch (e) {
       console.error(e);
+      const err = String((e as Error)?.message ?? "portal_failed");
       setBillingNotice({
         kind: "err",
-        text: t("app.account.notice.couldNotOpenPortal"),
+        text: err === "no_stripe_customer" ? t("app.account.notice.noBillingPortalYet") : t("app.account.notice.couldNotOpenPortal"),
       });
     } finally {
       setBillingBusy(false);
@@ -1074,9 +1076,15 @@ export default function AccountPage() {
 
       if (!silent) {
         const plan = String((j as any)?.plan_tier ?? "").toLowerCase();
+        const reason = String((j as any)?.reason ?? "").toLowerCase();
         setBillingNotice({
-          kind: "ok",
-          text: plan === "pro" ? t("app.account.notice.billingSynced") : t("app.account.notice.billingSyncedFree"),
+          kind: reason === "no_customer" ? "err" : "ok",
+          text:
+            reason === "no_customer"
+              ? t("app.account.notice.noBillingRecordYet")
+              : plan === "pro"
+              ? t("app.account.notice.billingSynced")
+              : t("app.account.notice.billingSyncedFree"),
         });
       }
 
@@ -1269,7 +1277,7 @@ export default function AccountPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{t("app.account.settings")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -1277,7 +1285,7 @@ export default function AccountPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           {status ? (
             <Badge
               variant={status.kind === "ok" ? "secondary" : "destructive"}
@@ -1290,7 +1298,7 @@ export default function AccountPage() {
           <Button
             onClick={save}
             disabled={saving || !isDirty}
-            className="rounded-full"
+            className="w-full rounded-full sm:w-auto"
           >
             {saving ? t("app.common.saving") : t("app.common.saveChanges")}
           </Button>
@@ -1333,11 +1341,11 @@ export default function AccountPage() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <Button
                   type="button"
                   variant="outline"
-                  className="rounded-full"
+                  className="w-full rounded-full sm:w-auto"
                   onClick={() => setShowAdvanced((v) => !v)}
                 >
                   {showAdvanced ? t("app.common.hideDetails") : t("app.common.more")}
@@ -1346,7 +1354,7 @@ export default function AccountPage() {
                 <Button
                   variant="secondary"
                   onClick={signOut}
-                  className="rounded-full"
+                  className="w-full rounded-full sm:w-auto"
                 >
                   {t("app.account.profile.signOut")}
                 </Button>
@@ -1356,12 +1364,12 @@ export default function AccountPage() {
                 <div className="rounded-2xl border bg-muted/20 p-4">
                   <div className="space-y-2">
                     <p className="text-xs text-muted-foreground">{t("app.account.profile.userIdLabel")}</p>
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-mono">{shortUserId}</p>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="break-all text-sm font-mono">{shortUserId}</p>
                       <Button
                         type="button"
                         variant="secondary"
-                        className="rounded-full h-8 px-3"
+                        className="h-8 w-full rounded-full px-3 sm:w-auto"
                         onClick={copyUserId}
                       >
                         {t("app.common.copy")}
@@ -1438,14 +1446,14 @@ export default function AccountPage() {
 
               <Separator />
 
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-sm font-medium">{t("app.account.bidRoom.title")}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {t("app.account.bidRoom.subtitle")}
                   </p>
                 </div>
-                <Button asChild variant="outline" className="rounded-full">
+                <Button asChild variant="outline" className="w-full rounded-full sm:w-auto">
                   <Link href="/app/bid-room">{t("app.common.open")}</Link>
                 </Button>
               </div>
@@ -1455,7 +1463,7 @@ export default function AccountPage() {
           {/* Premium: playbook is a summary card + modal */}
           <Card className="rounded-2xl">
             <CardHeader className="pb-3">
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <CardTitle>{t("app.account.playbook.title")}</CardTitle>
                   <p className="mt-1 text-xs text-muted-foreground">
@@ -1463,7 +1471,7 @@ export default function AccountPage() {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                   {!playbookEnabled ? (
                     <Badge variant="destructive" className="rounded-full">
                       {t("app.account.playbook.setupRequired")}
@@ -1477,7 +1485,7 @@ export default function AccountPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    className="rounded-full"
+                    className="w-full rounded-full sm:w-auto"
                     onClick={() => setPlaybookOpen(true)}
                   >
                     <Pencil className="h-4 w-4 mr-2" />

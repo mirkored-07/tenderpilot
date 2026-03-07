@@ -1557,7 +1557,9 @@
         "couldNotOpenPortal": "Couldn’t open billing portal. Sync billing or upgrade, then try again.",
         "allTenderDataDeleted": "All tender data deleted.",
         "couldNotDeleteTenderData": "Couldn’t delete your tender data. Try again.",
-        "couldNotDeleteAccount": "Couldn’t delete your account. Try again."
+        "couldNotDeleteAccount": "Couldn’t delete your account. Try again.",
+        "noBillingRecordYet": "No Stripe billing record found yet. You are still on Free.",
+        "noBillingPortalYet": "No billing portal is available for this account yet. Upgrade first, or sync billing if you already paid."
       }
     },
     "exports": {

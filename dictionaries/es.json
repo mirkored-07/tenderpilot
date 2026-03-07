@@ -1482,7 +1482,9 @@
         "couldNotOpenPortal": "No se pudo abrir el portal de facturación. Sincroniza la facturación o actualiza el plan y vuelve a intentarlo.",
         "allTenderDataDeleted": "Todos los datos eliminados.",
         "couldNotDeleteTenderData": "No se pudieron borrar los datos. Reintenta.",
-        "couldNotDeleteAccount": "No se pudo eliminar la cuenta. Reintenta."
+        "couldNotDeleteAccount": "No se pudo eliminar la cuenta. Reintenta.",
+        "noBillingRecordYet": "Todavía no se ha encontrado ningún registro de facturación de Stripe para esta cuenta. Sigues en el plan Free.",
+        "noBillingPortalYet": "Todavía no hay un portal de facturación disponible para esta cuenta. Primero actualiza el plan o sincroniza la facturación si ya has pagado."
       }
     },
     "exports": {
