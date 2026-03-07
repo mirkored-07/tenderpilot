@@ -3808,7 +3808,7 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
                         </div>
 
                         <div className="mt-4 flex flex-wrap items-center gap-2">
-                          <span className="text-xs font-medium text-muted-foreground">{t("app.review.teamDecision")}</span>
+                          <span className="text-xs font-medium text-muted-foreground">{t("app.review.teamDecision.label")}</span>
 
                           <div className="inline-flex items-center gap-1 rounded-full border border-border bg-muted/20 p-1">
                             <button

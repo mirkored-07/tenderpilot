@@ -1051,7 +1051,8 @@
     "review": {
       "decision": "Decision",
       "teamDecision": {
-        "saveFailed": "Could not save team decision. Please try again."
+        "saveFailed": "Could not save team decision. Please try again.",
+        "label": "Team decision"
       },
       "drivers": {
         "loading": "Preparing decision drivers.",
@@ -1557,9 +1558,7 @@
         "couldNotOpenPortal": "Couldn’t open billing portal. Sync billing or upgrade, then try again.",
         "allTenderDataDeleted": "All tender data deleted.",
         "couldNotDeleteTenderData": "Couldn’t delete your tender data. Try again.",
-        "couldNotDeleteAccount": "Couldn’t delete your account. Try again.",
-        "noBillingRecordYet": "No Stripe billing record found yet. You are still on Free.",
-        "noBillingPortalYet": "No billing portal is available for this account yet. Upgrade first, or sync billing if you already paid."
+        "couldNotDeleteAccount": "Couldn’t delete your account. Try again."
       }
     },
     "exports": {
@@ -1699,7 +1698,8 @@
         },
         "title": "Tender brief",
         "tipPdf": "Tip: Export as PDF for sharing.",
-        "whereToVerifyList": "Where to verify"
+        "whereToVerifyList": "Where to verify",
+        "manualChecksExamples": "Examples: confirm deadline, submission method, mandatory forms, signatures, and portal-only fields."
       }
     },
     "dashboard": {

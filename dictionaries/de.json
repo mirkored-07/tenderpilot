@@ -1051,7 +1051,8 @@
     "review": {
       "decision": "Entscheidung",
       "teamDecision": {
-        "saveFailed": "Could not save team decision. Please try again."
+        "saveFailed": "Die Team-Entscheidung konnte nicht gespeichert werden. Bitte versuche es erneut.",
+        "label": "Team-Entscheidung"
       },
       "drivers": {
         "loading": "Decision Drivers werden vorbereitet.",
@@ -1137,17 +1138,33 @@
         "inMinutes": "In {minutes} min"
       },
       "metrics": {
-        "risks": "{count} risks",
-        "questions": "{count} questions",
-        "outlineAvailable": "Outline available",
-        "outlineNotDetected": "Outline not detected",
-        "deadlineDetected": "Deadline detected",
-        "source": "Source"
+        "risks": "{count} Risiken",
+        "questions": "{count} Fragen",
+        "outlineAvailable": "Gliederung verfügbar",
+        "outlineNotDetected": "Keine Gliederung erkannt",
+        "deadlineDetected": "Frist erkannt",
+        "source": "Quelle"
       },
       "nextActions": {
         "dueToday": "Due: Today",
         "dueBeforePricing": "Due: Before pricing sign-off",
-        "dueBeforeSubmission": "Due: Before submission"
+        "dueBeforeSubmission": "Due: Before submission",
+        "fallback": {
+          "requirementsText": "Mögliche Ausschlusskriterien prüfen (MUST-Anforderungen)",
+          "requirementsWhy": "Eignung und Pflichtanforderungen bestätigen, bevor Aufwand in die Antwort fließt.",
+          "risksText": "Die wichtigsten Risiken und Maßnahmen validieren",
+          "risksWhy": "Exposition und Verhandlungspunkte früh sichtbar machen.",
+          "sourceRequirementsText": "Verbindliche Einreichungsanforderungen bestätigen",
+          "sourceRequirementsWhy": "Einreichungsregeln direkt im Ausschreibungstext prüfen.",
+          "sourceDeadlineText": "Frist und Einreichungsweg bestätigen",
+          "sourceDeadlineWhy": "Späte Überraschungen bei Portal, Format und Fristen vermeiden.",
+          "clarificationsText": "Rückfragen an den Auftraggeber formulieren",
+          "clarificationsWhy": "Offene Punkte früh klären, um Nacharbeit und Angebotsrisiko zu senken.",
+          "outlineText": "Ausschreibungsstruktur prüfen und Aufwand schätzen",
+          "outlineWhy": "Die Gliederung nutzen, um Aufwand schnell zu schätzen und Owner zuzuweisen.",
+          "sourceFormattingText": "Ausschreibung auf Pflichtformulare und Formatvorgaben prüfen",
+          "sourceFormattingWhy": "Versteckte Einreichungsregeln erkennen, die die Antwort ungültig machen können."
+        }
       },
       "labels": {
         "tenderOutline": "Ausschreibungsstruktur",
@@ -1158,12 +1175,12 @@
         "compliance": "Compliance"
       },
       "doneWhen": {
-        "checklist": "Done when: requirement wording is verified in portal/PDF and any mandatory form/template is identified.",
-        "questions": "Done when: buyer question is drafted and either answered in the tender or queued to send.",
-        "risks": "Done when: risk impact/mitigation is agreed (accept, mitigate, or escalate) and evidence is noted.",
-        "draft": "Done when: outline is reviewed and owners are assigned to each major section.",
-        "submission": "Done when: submission method, deadline, and required upload format are confirmed in portal/PDF.",
-        "source": "Done when: the clause is located in portal/PDF and confirmed against the authoritative wording."
+        "checklist": "Erledigt, wenn der Wortlaut der Anforderung im Portal/PDF geprüft und jede Pflichtvorlage bzw. jedes Pflichtformular identifiziert ist.",
+        "questions": "Erledigt, wenn die Frage an den Auftraggeber formuliert und entweder aus den Unterlagen beantwortet oder zum Versand vorgemerkt ist.",
+        "risks": "Erledigt, wenn Auswirkung und Maßnahme zum Risiko abgestimmt sind (akzeptieren, mindern oder eskalieren) und die Evidenz dokumentiert ist.",
+        "draft": "Erledigt, wenn die Gliederung geprüft und für jeden Hauptabschnitt ein Owner festgelegt ist.",
+        "submission": "Erledigt, wenn Einreichungsweg, Frist und erforderliches Upload-Format im Portal/PDF bestätigt sind.",
+        "source": "Erledigt, wenn die Klausel im Portal/PDF gefunden und mit dem maßgeblichen Wortlaut abgeglichen ist."
       },
       "eta": {
         "min2to5": "2–5 min",
@@ -1173,10 +1190,10 @@
       },
       "roles": {
         "bidManager": "Bid Manager",
-        "salesOps": "Sales Ops",
-        "proposalLead": "Proposal Lead",
-        "legal": "Legal",
-        "engineering": "Engineering"
+        "salesOps": "Vertriebsinnendienst",
+        "proposalLead": "Angebotsleitung",
+        "legal": "Recht",
+        "engineering": "Technik"
       },
       "extraction": {
         "textExtractedLabel": "Text extracted",
@@ -1294,7 +1311,7 @@
       },
       "title": "Tender review",
       "exportsNotReady": "Exports are not ready yet. Finish the review first.",
-      "teamDecisionApplied": "Team decision saved.",
+      "teamDecisionApplied": "Team-Entscheidung gespeichert.",
       "topBlockersTitle": "Top blockers",
       "trust": {
         "subtitle": "Evidence-first. Every claim should link to a verbatim excerpt.",
@@ -1482,9 +1499,7 @@
         "couldNotOpenPortal": "Das Abrechnungsportal konnte nicht geöffnet werden. Synchronisiere die Abrechnung oder upgrade zuerst und versuche es dann erneut.",
         "allTenderDataDeleted": "Alle Ausschreibungsdaten gelöscht.",
         "couldNotDeleteTenderData": "Ausschreibungsdaten konnten nicht gelöscht werden. Erneut versuchen.",
-        "couldNotDeleteAccount": "Konto konnte nicht gelöscht werden. Erneut versuchen.",
-        "noBillingRecordYet": "Für dieses Konto wurde noch kein Stripe-Abrechnungsdatensatz gefunden. Sie sind weiterhin im Free-Plan.",
-        "noBillingPortalYet": "Für dieses Konto ist noch kein Abrechnungsportal verfügbar. Führen Sie zuerst ein Upgrade durch oder synchronisieren Sie die Abrechnung, falls Sie bereits bezahlt haben."
+        "couldNotDeleteAccount": "Konto konnte nicht gelöscht werden. Erneut versuchen."
       }
     },
     "exports": {
@@ -1624,7 +1639,8 @@
         },
         "title": "Tender brief",
         "tipPdf": "Tip: Export as PDF for sharing.",
-        "whereToVerifyList": "Where to verify"
+        "whereToVerifyList": "Where to verify",
+        "manualChecksExamples": "Beispiele: Frist, Einreichungsweg, Pflichtformulare, Unterschriften und nur im Portal sichtbare Felder prüfen."
       }
     },
     "dashboard": {
@@ -1752,15 +1768,15 @@
         "subtitle": "Nach Dringlichkeit im gewählten Zeitraum sortiert."
       },
       "attention": {
-        "title": "Benötigt Aufmerksamkeit",
-        "empty": "Im Moment ist nichts dringend.",
-        "holdTitle": "Hold-Ausschreibungen",
-        "holdEmpty": "Derzeit befinden sich keine Ausschreibungen im Status Hold.",
-        "subtitle": "Ausschreibungen mit der höchsten Priorität basierend auf fehlenden Feldern, Fristen und Blockern.",
-        "holdOpenActionsOne": "{count} Entblockungsaktion offen",
-        "holdOpenActionsMany": "{count} Entblockungsaktionen offen",
-        "targetDecision": "Zielentscheidung",
-        "quickTip": "Tipp: Fehlende Fristen und Entscheidungen sind häufig, wenn sie nicht im Ausschreibungs-PDF stehen. Verwenden Sie Bid-Metadaten-Overrides, damit Ihr Workflow nutzbar bleibt."
+        "title": "Needs attention",
+        "empty": "Nothing urgent right now.",
+        "holdTitle": "Hold tenders",
+        "holdEmpty": "No tenders are currently in Hold.",
+        "quickTip": "Tipp: Fehlende Fristen und Entscheidungen sind häufig, wenn sie im Ausschreibungs-PDF nicht enthalten sind. Verwende Job-Metadaten-Overrides, damit dein Workflow nutzbar bleibt.",
+        "subtitle": "Reviews with Hold as the extracted decision and open execution work.",
+        "holdOpenActionsOne": "1 Hold review with open actions",
+        "holdOpenActionsMany": "{count} Hold reviews with open actions",
+        "targetDecision": "Target decision: {decision}"
       },
       "actions": {
         "addOverride": "Add override"
@@ -1782,7 +1798,7 @@
       "details": "Error details",
       "whatYouCanDo": "What you can do",
       "cta": {
-        "retry": "Erneut versuchen",
+        "retry": "Try again",
         "newReview": "Start a new review",
         "openHistory": "Open your tenders"
       },

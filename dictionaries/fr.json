@@ -1051,7 +1051,8 @@
     "review": {
       "decision": "Décision",
       "teamDecision": {
-        "saveFailed": "Could not save team decision. Please try again."
+        "saveFailed": "Impossible d’enregistrer la décision de l’équipe. Veuillez réessayer.",
+        "label": "Décision de l’équipe"
       },
       "drivers": {
         "loading": "Préparation des facteurs de décision.",
@@ -1137,17 +1138,33 @@
         "inMinutes": "In {minutes} min"
       },
       "metrics": {
-        "risks": "{count} risks",
+        "risks": "{count} risques",
         "questions": "{count} questions",
-        "outlineAvailable": "Outline available",
-        "outlineNotDetected": "Outline not detected",
-        "deadlineDetected": "Deadline detected",
+        "outlineAvailable": "Plan détecté",
+        "outlineNotDetected": "Aucun plan détecté",
+        "deadlineDetected": "Échéance détectée",
         "source": "Source"
       },
       "nextActions": {
         "dueToday": "Due: Today",
         "dueBeforePricing": "Due: Before pricing sign-off",
-        "dueBeforeSubmission": "Due: Before submission"
+        "dueBeforeSubmission": "Due: Before submission",
+        "fallback": {
+          "requirementsText": "Vérifier les points bloquants potentiels (exigences MUST)",
+          "requirementsWhy": "Confirmer l’éligibilité et les exigences obligatoires avant d’investir dans la réponse.",
+          "risksText": "Valider les principaux risques et les mesures de mitigation",
+          "risksWhy": "Faire apparaître tôt l’exposition et les points de négociation.",
+          "sourceRequirementsText": "Confirmer les exigences obligatoires de soumission",
+          "sourceRequirementsWhy": "Vérifier les règles de soumission directement dans le texte de l’appel d’offres.",
+          "sourceDeadlineText": "Confirmer l’échéance et la méthode de soumission",
+          "sourceDeadlineWhy": "Éviter les surprises de dernière minute sur le portail, le format et les délais.",
+          "clarificationsText": "Préparer les demandes de clarification pour l’acheteur",
+          "clarificationsWhy": "Lever tôt les inconnues pour réduire le retravail et le risque de réponse.",
+          "outlineText": "Revoir le plan de l’appel d’offres et estimer l’effort",
+          "outlineWhy": "Utiliser le plan pour estimer rapidement l’effort et attribuer les responsables.",
+          "sourceFormattingText": "Vérifier les formulaires obligatoires et contraintes de format",
+          "sourceFormattingWhy": "Détecter des règles de soumission cachées qui peuvent invalider la réponse."
+        }
       },
       "labels": {
         "tenderOutline": "Structure de l’appel d’offres",
@@ -1158,12 +1175,12 @@
         "compliance": "Conformité"
       },
       "doneWhen": {
-        "checklist": "Done when: requirement wording is verified in portal/PDF and any mandatory form/template is identified.",
-        "questions": "Done when: buyer question is drafted and either answered in the tender or queued to send.",
-        "risks": "Done when: risk impact/mitigation is agreed (accept, mitigate, or escalate) and evidence is noted.",
-        "draft": "Done when: outline is reviewed and owners are assigned to each major section.",
-        "submission": "Done when: submission method, deadline, and required upload format are confirmed in portal/PDF.",
-        "source": "Done when: the clause is located in portal/PDF and confirmed against the authoritative wording."
+        "checklist": "Terminé lorsque le libellé de l’exigence est vérifié dans le portail/PDF et que tout formulaire ou modèle obligatoire est identifié.",
+        "questions": "Terminé lorsque la question à l’acheteur est rédigée et qu’elle est soit déjà résolue dans le dossier, soit prête à être envoyée.",
+        "risks": "Terminé lorsque l’impact et la mitigation du risque sont convenus (accepter, atténuer ou escalader) et que la preuve est notée.",
+        "draft": "Terminé lorsque le plan est revu et qu’un responsable est attribué à chaque section majeure.",
+        "submission": "Terminé lorsque la méthode de dépôt, l’échéance et le format de dépôt requis sont confirmés dans le portail/PDF.",
+        "source": "Terminé lorsque la clause est localisée dans le portail/PDF et vérifiée par rapport au libellé faisant autorité."
       },
       "eta": {
         "min2to5": "2–5 min",
@@ -1172,11 +1189,11 @@
         "min15to30": "15–30 min"
       },
       "roles": {
-        "bidManager": "Bid Manager",
-        "salesOps": "Sales Ops",
-        "proposalLead": "Proposal Lead",
-        "legal": "Legal",
-        "engineering": "Engineering"
+        "bidManager": "Responsable bid",
+        "salesOps": "Opérations commerciales",
+        "proposalLead": "Responsable proposition",
+        "legal": "Juridique",
+        "engineering": "Ingénierie"
       },
       "extraction": {
         "textExtractedLabel": "Text extracted",
@@ -1294,7 +1311,7 @@
       },
       "title": "Tender review",
       "exportsNotReady": "Exports are not ready yet. Finish the review first.",
-      "teamDecisionApplied": "Team decision saved.",
+      "teamDecisionApplied": "Décision de l’équipe enregistrée.",
       "topBlockersTitle": "Top blockers",
       "trust": {
         "subtitle": "Evidence-first. Every claim should link to a verbatim excerpt.",
@@ -1482,9 +1499,7 @@
         "couldNotOpenPortal": "Impossible d’ouvrir le portail de facturation. Synchronisez la facturation ou passez à une offre supérieure, puis réessayez.",
         "allTenderDataDeleted": "Toutes les données ont été supprimées.",
         "couldNotDeleteTenderData": "Impossible de supprimer les données. Réessayez.",
-        "couldNotDeleteAccount": "Impossible de supprimer le compte. Réessayez.",
-        "noBillingRecordYet": "Aucun enregistrement de facturation Stripe n’a encore été trouvé pour ce compte. Vous êtes toujours sur le plan Free.",
-        "noBillingPortalYet": "Aucun portail de facturation n’est encore disponible pour ce compte. Passez d’abord à un forfait supérieur ou synchronisez la facturation si vous avez déjà payé."
+        "couldNotDeleteAccount": "Impossible de supprimer le compte. Réessayez."
       }
     },
     "exports": {
@@ -1624,7 +1639,8 @@
         },
         "title": "Tender brief",
         "tipPdf": "Tip: Export as PDF for sharing.",
-        "whereToVerifyList": "Where to verify"
+        "whereToVerifyList": "Where to verify",
+        "manualChecksExamples": "Exemples : confirmer l’échéance, la méthode de soumission, les formulaires obligatoires, les signatures et les champs visibles uniquement dans le portail."
       }
     },
     "dashboard": {
@@ -1752,15 +1768,15 @@
         "subtitle": "Trié par urgence dans la période sélectionnée."
       },
       "attention": {
-        "title": "Nécessite une attention",
-        "empty": "Rien d’urgent pour le moment.",
-        "holdTitle": "Appels d’offres en Hold",
-        "holdEmpty": "Aucun appel d’offres n’est actuellement en statut Hold.",
-        "subtitle": "Les offres les plus prioritaires selon les champs manquants, les échéances et les blocages.",
-        "holdOpenActionsOne": "{count} action de déblocage ouverte",
-        "holdOpenActionsMany": "{count} actions de déblocage ouvertes",
-        "targetDecision": "Décision cible",
-        "quickTip": "Conseil : les échéances et décisions manquantes sont fréquentes lorsque le PDF de l’appel d’offres ne les contient pas. Utilisez les overrides de métadonnées pour garder un workflow exploitable."
+        "title": "Needs attention",
+        "empty": "Nothing urgent right now.",
+        "holdTitle": "Hold tenders",
+        "holdEmpty": "No tenders are currently in Hold.",
+        "quickTip": "Conseil : l’absence d’échéance ou de décision est fréquente quand elles ne figurent pas dans le PDF de l’appel d’offres. Utilisez les overrides de métadonnées du dossier pour garder un flux de travail exploitable.",
+        "subtitle": "Revues avec Hold comme décision extraite et travail d’exécution encore ouvert.",
+        "holdOpenActionsOne": "1 revue Hold avec actions ouvertes",
+        "holdOpenActionsMany": "{count} revues Hold avec actions ouvertes",
+        "targetDecision": "Décision cible : {decision}"
       },
       "actions": {
         "addOverride": "Add override"
@@ -1782,7 +1798,7 @@
       "details": "Error details",
       "whatYouCanDo": "What you can do",
       "cta": {
-        "retry": "Réessayer",
+        "retry": "Try again",
         "newReview": "Start a new review",
         "openHistory": "Open your tenders"
       },

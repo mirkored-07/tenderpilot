@@ -1051,7 +1051,8 @@
     "review": {
       "decision": "Decisione",
       "teamDecision": {
-        "saveFailed": "Could not save team decision. Please try again."
+        "saveFailed": "Impossibile salvare la decisione del team. Riprova.",
+        "label": "Decisione del team"
       },
       "drivers": {
         "loading": "Preparazione dei driver decisionali.",
@@ -1137,17 +1138,33 @@
         "inMinutes": "In {minutes} min"
       },
       "metrics": {
-        "risks": "{count} risks",
-        "questions": "{count} questions",
-        "outlineAvailable": "Outline available",
-        "outlineNotDetected": "Outline not detected",
-        "deadlineDetected": "Deadline detected",
-        "source": "Source"
+        "risks": "{count} rischi",
+        "questions": "{count} domande",
+        "outlineAvailable": "Struttura disponibile",
+        "outlineNotDetected": "Struttura non rilevata",
+        "deadlineDetected": "Scadenza rilevata",
+        "source": "Fonte"
       },
       "nextActions": {
         "dueToday": "Due: Today",
         "dueBeforePricing": "Due: Before pricing sign-off",
-        "dueBeforeSubmission": "Due: Before submission"
+        "dueBeforeSubmission": "Due: Before submission",
+        "fallback": {
+          "requirementsText": "Verificare i possibili blocker (requisiti MUST)",
+          "requirementsWhy": "Confermare idoneità e requisiti obbligatori prima di investire nella risposta.",
+          "risksText": "Validare i principali rischi e le mitigazioni",
+          "risksWhy": "Rendere visibili in anticipo esposizioni e punti negoziali.",
+          "sourceRequirementsText": "Confermare i requisiti obbligatori di presentazione",
+          "sourceRequirementsWhy": "Verificare le regole di presentazione direttamente nel testo della gara.",
+          "sourceDeadlineText": "Confermare scadenza e modalità di invio",
+          "sourceDeadlineWhy": "Evitare sorprese dell’ultimo minuto su portale, formato e scadenze.",
+          "clarificationsText": "Preparare chiarimenti per il committente",
+          "clarificationsWhy": "Chiarire presto gli aspetti incerti per ridurre rilavorazioni e rischio di gara.",
+          "outlineText": "Rivedere la struttura della gara e stimare lo sforzo",
+          "outlineWhy": "Usare la struttura per stimare rapidamente lo sforzo e assegnare i responsabili.",
+          "sourceFormattingText": "Controllare nel bando moduli obbligatori e vincoli di formato",
+          "sourceFormattingWhy": "Individuare regole di presentazione nascoste che possono invalidare la risposta."
+        }
       },
       "labels": {
         "tenderOutline": "Struttura della gara",
@@ -1158,12 +1175,12 @@
         "compliance": "Compliance"
       },
       "doneWhen": {
-        "checklist": "Done when: requirement wording is verified in portal/PDF and any mandatory form/template is identified.",
-        "questions": "Done when: buyer question is drafted and either answered in the tender or queued to send.",
-        "risks": "Done when: risk impact/mitigation is agreed (accept, mitigate, or escalate) and evidence is noted.",
-        "draft": "Done when: outline is reviewed and owners are assigned to each major section.",
-        "submission": "Done when: submission method, deadline, and required upload format are confirmed in portal/PDF.",
-        "source": "Done when: the clause is located in portal/PDF and confirmed against the authoritative wording."
+        "checklist": "Completato quando il testo del requisito è verificato nel portale/PDF e ogni modulo o template obbligatorio è stato identificato.",
+        "questions": "Completato quando la domanda al committente è stata redatta ed è già chiarita nei documenti oppure pronta per l’invio.",
+        "risks": "Completato quando impatto e mitigazione del rischio sono concordati (accettare, mitigare o escalare) e l’evidenza è annotata.",
+        "draft": "Completato quando la struttura è stata rivista e a ogni sezione principale è assegnato un owner.",
+        "submission": "Completato quando modalità di invio, scadenza e formato richiesto per il caricamento sono confermati nel portale/PDF.",
+        "source": "Completato quando la clausola è stata trovata nel portale/PDF e verificata rispetto al testo autorevole."
       },
       "eta": {
         "min2to5": "2–5 min",
@@ -1173,10 +1190,10 @@
       },
       "roles": {
         "bidManager": "Bid Manager",
-        "salesOps": "Sales Ops",
-        "proposalLead": "Proposal Lead",
-        "legal": "Legal",
-        "engineering": "Engineering"
+        "salesOps": "Operations commerciali",
+        "proposalLead": "Responsabile proposta",
+        "legal": "Legale",
+        "engineering": "Ingegneria"
       },
       "extraction": {
         "textExtractedLabel": "Text extracted",
@@ -1294,7 +1311,7 @@
       },
       "title": "Tender review",
       "exportsNotReady": "Exports are not ready yet. Finish the review first.",
-      "teamDecisionApplied": "Team decision saved.",
+      "teamDecisionApplied": "Decisione del team salvata.",
       "topBlockersTitle": "Top blockers",
       "trust": {
         "subtitle": "Evidence-first. Every claim should link to a verbatim excerpt.",
@@ -1482,9 +1499,7 @@
         "couldNotOpenPortal": "Impossibile aprire il portale di fatturazione. Sincronizza la fatturazione o passa a un piano superiore, poi riprova.",
         "allTenderDataDeleted": "Tutti i dati gara eliminati.",
         "couldNotDeleteTenderData": "Impossibile eliminare i dati gara. Riprova.",
-        "couldNotDeleteAccount": "Impossibile eliminare l’account. Riprova.",
-        "noBillingRecordYet": "Per questo account non è stato ancora trovato alcun record di fatturazione Stripe. Sei ancora nel piano Free.",
-        "noBillingPortalYet": "Per questo account non è ancora disponibile un portale di fatturazione. Effettua prima l’upgrade oppure sincronizza la fatturazione se hai già pagato."
+        "couldNotDeleteAccount": "Impossibile eliminare l’account. Riprova."
       }
     },
     "exports": {
@@ -1624,7 +1639,8 @@
         },
         "title": "Tender brief",
         "tipPdf": "Tip: Export as PDF for sharing.",
-        "whereToVerifyList": "Where to verify"
+        "whereToVerifyList": "Where to verify",
+        "manualChecksExamples": "Esempi: confermare scadenza, modalità di invio, moduli obbligatori, firme e campi disponibili solo nel portale."
       }
     },
     "dashboard": {
@@ -1752,15 +1768,15 @@
         "subtitle": "Ordinato per urgenza nella finestra selezionata."
       },
       "attention": {
-        "title": "Richiede attenzione",
-        "empty": "Al momento non c’è nulla di urgente.",
-        "holdTitle": "Gare in Hold",
-        "holdEmpty": "Al momento non ci sono gare nello stato Hold.",
-        "subtitle": "Le gare con priorità più alta in base a campi mancanti, scadenze e blocchi.",
-        "holdOpenActionsOne": "{count} azione di sblocco aperta",
-        "holdOpenActionsMany": "{count} azioni di sblocco aperte",
-        "targetDecision": "Decisione target",
-        "quickTip": "Suggerimento: scadenze e decisioni mancanti sono comuni quando il PDF della gara non le contiene. Usa gli override dei metadati della gara per mantenere il workflow utilizzabile."
+        "title": "Needs attention",
+        "empty": "Nothing urgent right now.",
+        "holdTitle": "Hold tenders",
+        "holdEmpty": "No tenders are currently in Hold.",
+        "quickTip": "Suggerimento: scadenze e decisioni mancanti sono frequenti quando non compaiono nel PDF della gara. Usa gli override dei metadati del job per mantenere il flusso di lavoro utilizzabile.",
+        "subtitle": "Review con Hold come decisione estratta e attività operative ancora aperte.",
+        "holdOpenActionsOne": "1 review Hold con azioni aperte",
+        "holdOpenActionsMany": "{count} review Hold con azioni aperte",
+        "targetDecision": "Decisione target: {decision}"
       },
       "actions": {
         "addOverride": "Add override"
@@ -1782,7 +1798,7 @@
       "details": "Error details",
       "whatYouCanDo": "What you can do",
       "cta": {
-        "retry": "Riprova",
+        "retry": "Try again",
         "newReview": "Start a new review",
         "openHistory": "Open your tenders"
       },
