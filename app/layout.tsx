@@ -66,7 +66,7 @@ export const metadata: Metadata = {
     creator: "@tenderpilot",
     images: [
       {
-        url: "/twitter-image.jpg",
+        url: "/twitter-image.png",
         alt: "TenderPilot",
       },
     ],

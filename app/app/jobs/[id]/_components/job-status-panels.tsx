@@ -136,7 +136,7 @@ export function FailedStatePanel({
           <div className="min-w-0">
             <div className="flex items-center gap-3">
               <Badge variant="destructive" className="rounded-full">
-                Failed
+                {t("app.common.failed")}
               </Badge>
               <p className="text-sm font-semibold">{t("app.review.failed.title")}</p>
             </div>

@@ -1750,10 +1750,15 @@
         "subtitle": "Trié par urgence dans la période sélectionnée."
       },
       "attention": {
-        "title": "Needs attention",
-        "empty": "Nothing urgent right now.",
-        "holdTitle": "Hold tenders",
-        "holdEmpty": "No tenders are currently in Hold."
+        "title": "Nécessite une attention",
+        "empty": "Rien d’urgent pour le moment.",
+        "holdTitle": "Appels d’offres en Hold",
+        "holdEmpty": "Aucun appel d’offres n’est actuellement en statut Hold.",
+        "subtitle": "Les offres les plus prioritaires selon les champs manquants, les échéances et les blocages.",
+        "holdOpenActionsOne": "{count} action de déblocage ouverte",
+        "holdOpenActionsMany": "{count} actions de déblocage ouvertes",
+        "targetDecision": "Décision cible",
+        "quickTip": "Conseil : les échéances et décisions manquantes sont fréquentes lorsque le PDF de l’appel d’offres ne les contient pas. Utilisez les overrides de métadonnées pour garder un workflow exploitable."
       },
       "actions": {
         "addOverride": "Add override"
@@ -1775,7 +1780,7 @@
       "details": "Error details",
       "whatYouCanDo": "What you can do",
       "cta": {
-        "retry": "Try again",
+        "retry": "Réessayer",
         "newReview": "Start a new review",
         "openHistory": "Open your tenders"
       },

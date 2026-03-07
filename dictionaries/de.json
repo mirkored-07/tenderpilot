@@ -1750,10 +1750,15 @@
         "subtitle": "Nach Dringlichkeit im gewählten Zeitraum sortiert."
       },
       "attention": {
-        "title": "Needs attention",
-        "empty": "Nothing urgent right now.",
-        "holdTitle": "Hold tenders",
-        "holdEmpty": "No tenders are currently in Hold."
+        "title": "Benötigt Aufmerksamkeit",
+        "empty": "Im Moment ist nichts dringend.",
+        "holdTitle": "Hold-Ausschreibungen",
+        "holdEmpty": "Derzeit befinden sich keine Ausschreibungen im Status Hold.",
+        "subtitle": "Ausschreibungen mit der höchsten Priorität basierend auf fehlenden Feldern, Fristen und Blockern.",
+        "holdOpenActionsOne": "{count} Entblockungsaktion offen",
+        "holdOpenActionsMany": "{count} Entblockungsaktionen offen",
+        "targetDecision": "Zielentscheidung",
+        "quickTip": "Tipp: Fehlende Fristen und Entscheidungen sind häufig, wenn sie nicht im Ausschreibungs-PDF stehen. Verwenden Sie Bid-Metadaten-Overrides, damit Ihr Workflow nutzbar bleibt."
       },
       "actions": {
         "addOverride": "Add override"
@@ -1775,7 +1780,7 @@
       "details": "Error details",
       "whatYouCanDo": "What you can do",
       "cta": {
-        "retry": "Try again",
+        "retry": "Erneut versuchen",
         "newReview": "Start a new review",
         "openHistory": "Open your tenders"
       },

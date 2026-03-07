@@ -1750,10 +1750,15 @@
         "subtitle": "Ordenado por urgencia dentro de la ventana seleccionada."
       },
       "attention": {
-        "title": "Needs attention",
-        "empty": "Nothing urgent right now.",
-        "holdTitle": "Hold tenders",
-        "holdEmpty": "No tenders are currently in Hold."
+        "title": "Necesita atención",
+        "empty": "Ahora mismo no hay nada urgente.",
+        "holdTitle": "Licitaciones en Hold",
+        "holdEmpty": "Actualmente no hay licitaciones en estado Hold.",
+        "subtitle": "Las licitaciones de mayor prioridad según campos faltantes, plazos y bloqueos.",
+        "holdOpenActionsOne": "{count} acción de desbloqueo abierta",
+        "holdOpenActionsMany": "{count} acciones de desbloqueo abiertas",
+        "targetDecision": "Decisión objetivo",
+        "quickTip": "Consejo: faltan plazos y decisiones con frecuencia cuando el PDF de la licitación no los contiene. Usa los overrides de metadatos para mantener el flujo de trabajo utilizable."
       },
       "actions": {
         "addOverride": "Add override"
@@ -1775,7 +1780,7 @@
       "details": "Error details",
       "whatYouCanDo": "What you can do",
       "cta": {
-        "retry": "Try again",
+        "retry": "Inténtalo de nuevo",
         "newReview": "Start a new review",
         "openHistory": "Open your tenders"
       },

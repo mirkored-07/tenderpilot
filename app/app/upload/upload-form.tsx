@@ -456,7 +456,7 @@ export default function UploadForm() {
               onClick={() => setError(null)}
               disabled={loading}
             >
-              Dismiss
+              {t("app.common.dismiss")}
             </Button>
             <Button
               type="button"
@@ -464,7 +464,7 @@ export default function UploadForm() {
               onClick={handleUpload}
               disabled={!file || loading || needsSignIn}
             >
-              Try again
+              {t("app.errors.cta.retry")}
             </Button>
           </div>
         </div>

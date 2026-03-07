@@ -1750,10 +1750,15 @@
         "subtitle": "Ordinato per urgenza nella finestra selezionata."
       },
       "attention": {
-        "title": "Needs attention",
-        "empty": "Nothing urgent right now.",
-        "holdTitle": "Hold tenders",
-        "holdEmpty": "No tenders are currently in Hold."
+        "title": "Richiede attenzione",
+        "empty": "Al momento non c’è nulla di urgente.",
+        "holdTitle": "Gare in Hold",
+        "holdEmpty": "Al momento non ci sono gare nello stato Hold.",
+        "subtitle": "Le gare con priorità più alta in base a campi mancanti, scadenze e blocchi.",
+        "holdOpenActionsOne": "{count} azione di sblocco aperta",
+        "holdOpenActionsMany": "{count} azioni di sblocco aperte",
+        "targetDecision": "Decisione target",
+        "quickTip": "Suggerimento: scadenze e decisioni mancanti sono comuni quando il PDF della gara non le contiene. Usa gli override dei metadati della gara per mantenere il workflow utilizzabile."
       },
       "actions": {
         "addOverride": "Add override"
@@ -1775,7 +1780,7 @@
       "details": "Error details",
       "whatYouCanDo": "What you can do",
       "cta": {
-        "retry": "Try again",
+        "retry": "Riprova",
         "newReview": "Start a new review",
         "openHistory": "Open your tenders"
       },
