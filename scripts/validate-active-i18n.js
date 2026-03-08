@@ -30,7 +30,17 @@ const requiredKeys = [
   "app.metadata.labels.addPortal",
   "app.metadata.labels.portalSet",
   "app.metadata.labels.unsaved",
-  "app.metadata.labels.lastSaved"
+  "app.metadata.labels.lastSaved",
+  "app.common.moreActions",
+  "app.bidroom.panel.empty.title",
+  "app.bidroom.panel.empty.body",
+  "app.bidroom.panel.empty.clearSearch",
+  "app.bidroom.errors.policyBlockedSave",
+  "app.compliance.helper.subtitle",
+  "app.compliance.drawer.authoritativeNote",
+  "app.compliance.send.existsDesc",
+  "app.compliance.noRows",
+  "app.compliance.noReqs"
 ];
 
 function get(obj, key) {

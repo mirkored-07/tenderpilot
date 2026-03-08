@@ -543,11 +543,11 @@ export function BidRoomPanel(props: {
               </p>
             </div>
             {showExport ? (
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="rounded-full"
+                  className="w-full rounded-full sm:w-auto"
                   onClick={() => openPdfAt()}
                 >
                   {t("app.bidroom.panel.openOriginalPdf")}
@@ -555,7 +555,7 @@ export function BidRoomPanel(props: {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="rounded-full"
+                  className="w-full rounded-full sm:w-auto"
                   onClick={async () => {
                     try {
                       const res = await fetch(`/api/jobs/${jobId}/export/bid-pack`, { method: "GET" });
@@ -718,7 +718,7 @@ export function BidRoomPanel(props: {
                           <div key={key} className="rounded-2xl border bg-background p-4 shadow-sm">
                             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
                               <div className="min-w-0">
-                                <div className="flex flex-wrap items-center gap-2">
+                                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                                   <Badge variant="outline" className="rounded-full">{typeBadge}{r.meta ? ` • ${r.meta}` : ""}</Badge>
                                   <span className="text-[11px] text-muted-foreground">{r.ref_key}</span>
                                 </div>
@@ -732,12 +732,12 @@ export function BidRoomPanel(props: {
                                 </button>
                               </div>
 
-                              <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
                                 <Button
                                   type="button"
                                   variant="outline"
                                   size="sm"
-                                  className="rounded-full"
+                                  className="w-full rounded-full sm:w-auto"
                                   onClick={() => showEvidenceByIds(r.evidenceIds)}
                                   disabled={!hasEvidence && evidenceById.size === 0}
                                 >
@@ -747,7 +747,7 @@ export function BidRoomPanel(props: {
                                   type="button"
                                   variant="outline"
                                   size="sm"
-                                  className="rounded-full"
+                                  className="w-full rounded-full sm:w-auto"
                                   onClick={() => {
                                     const ids = Array.isArray(r.evidenceIds) ? r.evidenceIds : [];
                                     const first = ids.find((id) => evidenceById.has(id));
@@ -936,16 +936,16 @@ export function BidRoomPanel(props: {
                   )}
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="rounded-full"
+                    className="w-full rounded-full sm:w-auto"
                     onClick={() => openPdfAt({ page: evidenceFocus?.page ?? null })}
                   >
                     {t("app.common.locateInPdf")}
                   </Button>
-                  <Button variant="outline" size="sm" className="rounded-full" onClick={() => openPdfAt()}>
+                  <Button variant="outline" size="sm" className="w-full rounded-full sm:w-auto" onClick={() => openPdfAt()}>
                     {t("app.bidroom.panel.openOriginalPdf")}
                   </Button>
                 </div>

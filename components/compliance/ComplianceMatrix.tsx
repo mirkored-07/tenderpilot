@@ -592,9 +592,9 @@ export function ComplianceMatrix(props: {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           {workHref ? (
-            <Button asChild className="rounded-full">
+            <Button asChild className="w-full rounded-full sm:w-auto">
 				  <Link href={workHref}>{t("app.dashboard.menu.openBidRoom")}</Link>
             </Button>
           ) : null}
@@ -725,7 +725,7 @@ export function ComplianceMatrix(props: {
                   <Button
                     type="button"
                     variant={viewMode === "GAPS" ? "default" : "ghost"}
-                    className="h-8 rounded-full px-3 text-xs"
+                    className="h-8 w-full rounded-full px-3 text-xs sm:w-auto"
                     onClick={() => setViewMode("GAPS")}
                   >
                     {t("app.compliance.view.gapsOnly")}
@@ -733,7 +733,7 @@ export function ComplianceMatrix(props: {
                   <Button
                     type="button"
                     variant={viewMode === "ALL" ? "default" : "ghost"}
-                    className="h-8 rounded-full px-3 text-xs"
+                    className="h-8 w-full rounded-full px-3 text-xs sm:w-auto"
                     onClick={() => setViewMode("ALL")}
                   >
                     {t("app.compliance.view.full")}
@@ -887,12 +887,12 @@ export function ComplianceMatrix(props: {
                           </div>
                         </div>
 
-                        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                          <div className="flex flex-wrap items-center gap-2">
+                        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
                             <Button
                               type="button"
                               variant="outline"
-                              className="h-8 rounded-full px-3 text-xs"
+                              className="h-8 w-full rounded-full px-3 text-xs sm:w-auto"
                               onClick={() => openEvidenceDrawer(r, firstEv)}
                               disabled={!r.evidenceIds?.length}
                             >
@@ -901,7 +901,7 @@ export function ComplianceMatrix(props: {
                             <Button
                               type="button"
                               variant="outline"
-                              className="h-8 rounded-full px-3 text-xs"
+                              className="h-8 w-full rounded-full px-3 text-xs sm:w-auto"
                               onClick={() => openPdfAtEvidence(firstEv)}
                             >
                               {t("app.common.locateInPdf")}
@@ -911,7 +911,7 @@ export function ComplianceMatrix(props: {
                           {isGapStatus(complianceStatus) ? (
                             <Button
                               type="button"
-                              className="h-8 rounded-full px-3 text-xs"
+                              className="h-8 w-full rounded-full px-3 text-xs sm:w-auto"
                               onClick={() => sendGapToBidRoom(r, complianceStatus, proposalSection, note)}
                               disabled={send === "sending"}
                             >
@@ -924,7 +924,7 @@ export function ComplianceMatrix(props: {
                                     : t("app.compliance.send.cta")}
                             </Button>
                           ) : (
-                            <div className="text-[11px] text-muted-foreground">{t("app.compliance.coveredNoTask")}</div>
+                            <div className="w-full text-[11px] text-muted-foreground sm:w-auto sm:text-right">{t("app.compliance.coveredNoTask")}</div>
                           )}
                         </div>
                       </div>
@@ -934,8 +934,38 @@ export function ComplianceMatrix(props: {
               })}
             </div>
           ) : (
-            <div className="px-4 py-10 text-sm text-muted-foreground">
-              {rowModel.length ? t("app.compliance.noRows") : t("app.compliance.noReqs")}
+            <div className="px-4 py-10">
+              <div className="mx-auto max-w-xl rounded-2xl border bg-background p-6 text-center">
+                <p className="text-sm font-medium text-foreground">
+                  {rowModel.length ? t("app.compliance.noRows") : t("app.compliance.noReqs")}
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {rowModel.length ? t("app.bidroom.panel.empty.body") : t("app.compliance.helper.notTaskTracking")}
+                </p>
+                <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-center">
+                  {rowModel.length ? (
+                    <>
+                      <Button type="button" variant="outline" className="w-full rounded-full sm:w-auto" onClick={() => setQ("")}>{t("app.bidroom.panel.empty.clearSearch")}</Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full rounded-full sm:w-auto"
+                        onClick={() => {
+                          setLevelFilter("ALL");
+                          setStatusFilter("ALL");
+                          setViewMode("ALL");
+                        }}
+                      >
+                        {t("app.common.resetFilters")}
+                      </Button>
+                    </>
+                  ) : backHref ? (
+                    <Button type="button" variant="outline" className="w-full rounded-full sm:w-auto" onClick={() => { window.location.href = backHref; }}>
+                      {t("app.compliance.actions.backToJob")}
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
             </div>
           )}
         </CardContent>
@@ -953,7 +983,7 @@ export function ComplianceMatrix(props: {
                   {tx("app.compliance.drawer.authoritativeNote", "Excerpt is authoritative. Locate in PDF is best-effort.")}
                 </p>
               </div>
-              <Button variant="outline" className="h-8 rounded-full px-3 text-xs" onClick={() => setDrawerOpen(false)}>
+              <Button variant="outline" className="h-8 w-full rounded-full px-3 text-xs sm:h-8 sm:w-auto" onClick={() => setDrawerOpen(false)}>
                 {t("app.common.close")}
               </Button>
             </div>
@@ -994,12 +1024,12 @@ export function ComplianceMatrix(props: {
                     <>
                       <Separator />
                       <div className="space-y-2">
-                        <div className="flex items-center justify-between gap-2">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                           <p className="text-xs font-semibold text-muted-foreground">{t("app.compliance.drawer.authoritativeExcerpt")}</p>
                           <Button
                             type="button"
                             variant="outline"
-                            className="h-8 rounded-full px-3 text-xs"
+                            className="h-8 w-full rounded-full px-3 text-xs sm:w-auto"
                             onClick={() => openPdfAtEvidence(drawerEvidenceId)}
                           >
                             {t("app.common.locateInPdf")}
@@ -1064,10 +1094,10 @@ export function ComplianceMatrix(props: {
             </div>
 
             {toast.action === "OPEN_BID_ROOM" && workHref ? (
-              <div className="mt-3 flex justify-end">
+              <div className="mt-3 flex justify-stretch sm:justify-end">
                 <Button
                   type="button"
-                  className="h-8 rounded-full px-3 text-xs"
+                  className="h-8 w-full rounded-full px-3 text-xs sm:w-auto"
                   onClick={() => {
                     setToast(null);
                     window.location.href = workHref;
