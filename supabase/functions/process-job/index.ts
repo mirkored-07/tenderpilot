@@ -13,6 +13,8 @@ type JobRow = {
 };
 
 type Severity = "high" | "medium" | "low";
+type DecisionBadge = "Go" | "Hold" | "No-Go";
+type CoverageState = "covered" | "partial" | "not_found";
 
 type EvidenceCandidate = {
   id: string; // e.g. E001
@@ -25,8 +27,27 @@ type EvidenceCandidate = {
 
 type AiOutput = {
   executive_summary: {
-    decisionBadge: string;
+    decisionBadge: DecisionBadge;
     decisionLine: string;
+    decision_reasons: Array<{
+      category: "blocker" | "eligibility" | "submission" | "commercial" | "technical" | "playbook" | "uncertainty" | "fit";
+      reason: string;
+      evidence_ids?: string[];
+    }>;
+    hard_blockers: Array<{
+      title: string;
+      detail: string;
+      evidence_ids?: string[];
+    }>;
+    evidence_coverage: {
+      submission: CoverageState;
+      eligibility: CoverageState;
+      scope: CoverageState;
+      commercial: CoverageState;
+      evaluation: CoverageState;
+      contract_terms: CoverageState;
+      note: string;
+    };
     keyFindings: string[];
     nextActions: string[];
     topRisks: Array<{ title: string; severity: Severity; detail: string }>;
@@ -106,6 +127,9 @@ type EvidenceRegexSet = {
   security: RegExp;
   prohibition: RegExp;
   qualification: RegExp;
+  commercial: RegExp;
+  evaluation: RegExp;
+  contract_terms: RegExp;
 };
 
 const LANGUAGE_DETECTION_TERMS: Record<LangCode, string[]> = {
@@ -176,6 +200,9 @@ const LANGUAGE_EVIDENCE_PATTERNS: Record<LangCode, EvidenceRegexSet> = {
     security: /\b(tender security|bid security|guarantee|security bond|performance bond)\b/i,
     prohibition: /\b(not permitted|not allowed|shall not|must not|prohibited)\b/i,
     qualification: /\b(eligibility|qualification|experience|turnover|certificate|certification|iso\s*9001|iso\s*27001|references?)\b/i,
+    commercial: /\b(price|pricing|commercial|payment terms|fixed price|rates|fee|fees|budget|currency|vat)\b/i,
+    evaluation: /\b(evaluation|award criteria|scoring|weighted|points|technical score|financial score|most economically advantageous)\b/i,
+    contract_terms: /\b(contract term|term of the contract|renewal|extension|liability|indemnity|termination|penalt(?:y|ies)|service credits|governing law|warranty)\b/i,
   },
   de: {
     normative: /\b(muss|müssen|muessen|ist erforderlich|sind erforderlich|erforderlich|zwingend|verpflichtend|vorzulegen|einzureichen|ausschluss|ausgeschlossen|wird ausgeschlossen|darf nicht|dürfen nicht)\b/i,
@@ -184,6 +211,9 @@ const LANGUAGE_EVIDENCE_PATTERNS: Record<LangCode, EvidenceRegexSet> = {
     security: /\b(sicherheit|bürgschaft|buergschaft|angebotssicherheit|vertragserfüllungsbürgschaft|vertragserfuellungsbuergschaft)\b/i,
     prohibition: /\b(nicht zulässig|nicht zulaessig|unzulässig|unzulaessig|darf nicht|dürfen nicht|ausgeschlossen)\b/i,
     qualification: /\b(eignung|nachweis|referenz|umsatz|zertifikat|zertifizierung|iso\s*9001|iso\s*27001|fachkunde|leistungsfähigkeit|leistungsfaehigkeit)\b/i,
+    commercial: /\b(preis|preise|preisblatt|vergütung|verguetung|zahlung|zahlungsbedingungen|festpreis|stunden(?:satz|saetze)|budget|waehrung|währung)\b/i,
+    evaluation: /\b(wertung|bewertung|zuschlagskriterien|punkte|gewichtung|wirtschaftlichstes angebot|wertungskriterien)\b/i,
+    contract_terms: /\b(vertragslaufzeit|laufzeit|verlängerung|verlaengerung|kündigung|kuendigung|haftung|vertragsstrafe|strafen|gewährleistung|gewaehrleistung)\b/i,
   },
   es: {
     normative: /\b(debe|deben|obligatori[oa]s?|requerid[oa]s?|es obligatorio|son obligatorios|quedar[aá] excluido|exclusi[oó]n|inadmisible|no se admite|no se permiten)\b/i,
@@ -192,6 +222,9 @@ const LANGUAGE_EVIDENCE_PATTERNS: Record<LangCode, EvidenceRegexSet> = {
     security: /\b(garant[ií]a|garant[ií]a provisional|garant[ií]a definitiva|aval|fianza)\b/i,
     prohibition: /\b(no se admite|no se permiten|prohibido|debe abstenerse|inadmisible|exclusi[oó]n)\b/i,
     qualification: /\b(solvencia|experiencia|certificado|certificaci[oó]n|facturaci[oó]n|iso\s*9001|iso\s*27001|referencias?)\b/i,
+    commercial: /\b(precio|precios|oferta econ[oó]mica|pago|pagos|tarifa|tarifas|presupuesto|moneda|iva)\b/i,
+    evaluation: /\b(criterios? de adjudicaci[oó]n|evaluaci[oó]n|valoraci[oó]n|puntuaci[oó]n|ponderaci[oó]n|oferta econ[oó]micamente m[aá]s ventajosa)\b/i,
+    contract_terms: /\b(plazo contractual|duraci[oó]n del contrato|pr[oó]rroga|renovaci[oó]n|resoluci[oó]n|penalidades?|responsabilidad|garant[ií]a)\b/i,
   },
   fr: {
     normative: /\b(doit|doivent|obligatoire|obligatoires|exig[eé]e?s?|requis|requise|requises|non admis|interdit|exclusion|sera rejet[ée])\b/i,
@@ -200,6 +233,9 @@ const LANGUAGE_EVIDENCE_PATTERNS: Record<LangCode, EvidenceRegexSet> = {
     security: /\b(garantie|caution|retenue de garantie|garantie financi[eè]re)\b/i,
     prohibition: /\b(interdit|non admis|ne peut pas|ne peuvent pas|exclusion|rejet[ée])\b/i,
     qualification: /\b(capacit[ée]|qualification|certificat|certification|chiffre d'affaires|r[eé]f[eé]rences?|iso\s*9001|iso\s*27001|exp[eé]rience)\b/i,
+    commercial: /\b(prix|tarif|tarifs|offre financi[eè]re|paiement|conditions de paiement|budget|devise|tva)\b/i,
+    evaluation: /\b(crit[eè]res? d['’]attribution|[ée]valuation|notation|pond[eé]ration|points|offre [ée]conomiquement la plus avantageuse)\b/i,
+    contract_terms: /\b(dur[ée]e du contrat|reconduction|renouvellement|r[eé]siliation|responsabilit[eé]|p[eé]nalit[eé]s?|garantie)\b/i,
   },
   it: {
     normative: /\b(a pena di esclusione|deve|devono|obbligatori[oaie]?|e richiesto|è richiesto|sono richiesti|da presentare|da allegare|esclusione|vietato|non ammesso|non sono ammess[ei])\b/i,
@@ -208,6 +244,9 @@ const LANGUAGE_EVIDENCE_PATTERNS: Record<LangCode, EvidenceRegexSet> = {
     security: /\b(garanzia|cauzione|cauzione provvisoria|garanzia provvisoria|garanzia definitiva|polizza fideiussoria)\b/i,
     prohibition: /\b(vietato|non ammesso|non sono ammess[ei]|esclusione|a pena di esclusione)\b/i,
     qualification: /\b(requisiti|fatturato|certificazione|certificazioni|iso\s*9001|iso\s*27001|avvalimento|subappalto|anac|cig|dgue|referenze?)\b/i,
+    commercial: /\b(prezzo|prezzi|offerta economica|corrispettivo|pagamento|pagamenti|canone|tariffa|tariffe|budget|valuta|iva)\b/i,
+    evaluation: /\b(criteri? di aggiudicazione|valutazione|punteggio|ponderazione|offerta economicamente pi[uù] vantaggiosa)\b/i,
+    contract_terms: /\b(durata del contratto|durata contrattuale|rinnovo|proroga|recesso|penali|responsabilit[aà]|garanzia)\b/i,
   },
 };
 
@@ -724,9 +763,31 @@ function mockAiFixture(extractedText: string): AiOutput {
   const preview = String(extractedText ?? "").replaceAll(/\s+/g, " ").trim().slice(0, 240);
   return {
     executive_summary: {
-      decisionBadge: "Proceed with caution",
+      decisionBadge: "Hold",
       decisionLine:
-        "Drafting support only. Verify mandatory requirements and deadlines against the source tender.",
+        "Hold until mandatory requirements and submission details are verified against the source tender.",
+      decision_reasons: [
+        {
+          category: "uncertainty",
+          reason: "This mock path does not verify whether all mandatory requirements are fully evidenced.",
+          evidence_ids: [],
+        },
+        {
+          category: "submission",
+          reason: "Submission instructions appear present but should still be confirmed before bid commitment.",
+          evidence_ids: [],
+        },
+      ],
+      hard_blockers: [],
+      evidence_coverage: {
+        submission: "covered",
+        eligibility: "partial",
+        scope: "covered",
+        commercial: "partial",
+        evaluation: "not_found",
+        contract_terms: "not_found",
+        note: "Mock fixture only. Real coverage must be derived from extracted tender evidence.",
+      },
       keyFindings: [
         "Submission deadline appears present and should be confirmed",
         "Several mandatory requirements exist that may affect eligibility",
@@ -825,30 +886,106 @@ function parseOpenAiJsonFromResponse(resp: any): any {
 
 type WorkspacePlaybookInput = { playbook: any; version: number | null } | null | undefined;
 
-function normalizeWorkspacePlaybook(workspacePlaybook: WorkspacePlaybookInput): { playbook: any | null; versionLabel: string; json: string } {
+function normalizeWorkspacePlaybook(workspacePlaybook: WorkspacePlaybookInput): { playbook: Record<string, any> | null; versionLabel: string } {
   const playbook = workspacePlaybook?.playbook && typeof workspacePlaybook.playbook === "object"
-    ? workspacePlaybook.playbook
+    ? workspacePlaybook.playbook as Record<string, any>
     : null;
 
   const versionLabel = workspacePlaybook?.version == null ? "none" : String(workspacePlaybook.version);
+  return { playbook, versionLabel };
+}
 
-  const json = (() => {
-    if (!playbook) return "{}";
-    try {
-      return JSON.stringify(playbook, null, 2);
-    } catch {
-      return '{"error":"playbook_not_serializable"}';
-    }
-  })();
+function normalizePlaybookList(input: unknown, limit = 8): string[] {
+  if (!Array.isArray(input)) return [];
+  return input
+    .map((x) => String(x ?? "").replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .slice(0, limit);
+}
 
-  return { playbook, versionLabel, json };
+function normalizePlaybookScalar(input: unknown, maxLen = 180): string {
+  return String(input ?? "").replace(/\s+/g, " ").trim().slice(0, maxLen);
+}
+
+function compactJson(value: unknown, maxLen = 700): string {
+  try {
+    const raw = JSON.stringify(value);
+    return String(raw ?? "").slice(0, maxLen);
+  } catch {
+    return '{"error":"playbook_not_serializable"}';
+  }
 }
 
 function buildPlaybookPromptSection(workspacePlaybook: WorkspacePlaybookInput): string {
   const normalized = normalizeWorkspacePlaybook(workspacePlaybook);
-  return normalized.playbook
-    ? `Workspace Bid Playbook (policy constraints, NOT evidence)\nVersion: ${normalized.versionLabel}\n${normalized.json}`
-    : "Workspace Bid Playbook (policy constraints, NOT evidence)\nNone provided for this workspace.";
+  if (!normalized.playbook) {
+    return "Workspace Bid Playbook (policy constraints, NOT evidence)\nVersion: none\nStatus: not configured for this workspace.";
+  }
+
+  const pb = normalized.playbook;
+  const knownKeys = new Set([
+    "industry_tags",
+    "offerings_summary",
+    "delivery_geographies",
+    "languages_supported",
+    "delivery_modes",
+    "capacity_band",
+    "typical_lead_time_weeks",
+    "certifications",
+    "non_negotiables",
+  ]);
+
+  const lines: string[] = [
+    "Workspace Bid Playbook (policy constraints, NOT evidence)",
+    `Version: ${normalized.versionLabel}`,
+    "Apply this as internal company-fit policy. Never cite it as tender evidence.",
+  ];
+
+  const offeringsSummary = normalizePlaybookScalar(pb.offerings_summary, 240);
+  if (offeringsSummary) lines.push(`Offerings summary: ${offeringsSummary}`);
+
+  const industryTags = normalizePlaybookList(pb.industry_tags);
+  if (industryTags.length) lines.push(`Industry fit: ${industryTags.join('; ')}`);
+
+  const geographies = normalizePlaybookList(pb.delivery_geographies);
+  if (geographies.length) lines.push(`Delivery geographies: ${geographies.join('; ')}`);
+
+  const languages = normalizePlaybookList(pb.languages_supported);
+  if (languages.length) lines.push(`Languages supported: ${languages.join('; ')}`);
+
+  const deliveryModes = normalizePlaybookList(pb.delivery_modes);
+  if (deliveryModes.length) lines.push(`Delivery modes: ${deliveryModes.join('; ')}`);
+
+  const capacityBand = normalizePlaybookScalar(pb.capacity_band, 40);
+  if (capacityBand) lines.push(`Capacity band: ${capacityBand}`);
+
+  const leadTime = pb.typical_lead_time_weeks;
+  if (typeof leadTime === "number" && Number.isFinite(leadTime) && leadTime > 0) {
+    lines.push(`Typical lead time weeks: ${Math.round(leadTime)}`);
+  }
+
+  const certifications = normalizePlaybookList(pb.certifications);
+  if (certifications.length) lines.push(`Preferred certifications: ${certifications.join('; ')}`);
+
+  const nonNegotiables = normalizePlaybookList(pb.non_negotiables, 12);
+  if (nonNegotiables.length) {
+    lines.push("Non-negotiables:");
+    for (const item of nonNegotiables) lines.push(`- ${item}`);
+  }
+
+  const extraEntries = Object.entries(pb).filter(([key, value]) => {
+    if (knownKeys.has(key)) return false;
+    if (value == null) return false;
+    if (Array.isArray(value) && value.length === 0) return false;
+    if (!Array.isArray(value) && typeof value === "string" && !value.trim()) return false;
+    return true;
+  });
+
+  if (extraEntries.length) {
+    lines.push(`Additional raw playbook fields: ${compactJson(Object.fromEntries(extraEntries))}`);
+  }
+
+  return lines.join("\n");
 }
 
 function buildEvidenceList(evidenceCandidates: EvidenceCandidate[]): string {
@@ -873,19 +1010,28 @@ Review the tender evidence pack and produce a decision-first bid kit.
 ${args.playbookSection}
 
 Strict rules
-1. Grounding. Use only the evidence snippets provided below. Treat them as the full citable record for this run. Do not rely on hidden assumptions or uncited source text.
-2. Decision. Choose decisionBadge exactly as one of: Go, Hold, No-Go. Provide decisionLine as one clear sentence.
+1. Grounding. Use only the evidence snippets provided below as the citable basis for this run. They are curated evidence candidates and may be incomplete. Do not rely on hidden assumptions or uncited source text.
+2. Decision policy (STRICT).
+   - Choose decisionBadge exactly as one of: Go, Hold, No-Go.
+   - Choose No-Go when the evidence shows an explicit blocker, disqualifier, impossible requirement, hard playbook conflict, or non-recoverable eligibility gap.
+   - Choose Hold when decision-critical information is missing, clarification is required, evidence coverage is too thin for a reliable bid decision, or material uncertainty remains.
+   - Choose Go only when no blocker is evidenced, no hard playbook conflict is present, and remaining risks appear manageable.
+   - Provide decisionLine as one clear sentence.
 3. Submission deadline. If an explicit deadline date or time is present in the evidence, copy it verbatim. Otherwise set submissionDeadline to: Not found in extracted text.
 4. Checklist. MUST means mandatory or disqualifying if missed. SHOULD means preferred, scored, or commercially important. INFO is context.
 5. Evidence (STRICT). You MUST cite evidence_ids:
    - For every MUST checklist item: include at least one evidence id that directly supports it.
    - For every risk: include at least one evidence id that directly supports it.
+   - For every hard_blocker and every decision_reason where evidence exists: include supporting evidence_ids.
    - Do not invent clause numbers, section numbers, or cross-references. Cite only evidence ids.
-   - If you cannot support a MUST or risk with evidence, either omit it or keep the wording explicitly cautious and return evidence_ids as [].
+   - If you cannot support a MUST, risk, blocker, or reason with evidence, either omit it or keep the wording explicitly cautious and return evidence_ids as [].
 6. Executive summary (STRICT).
    - keyFindings must reflect evidence-backed facts or clearly framed absences from evidence.
    - nextActions should be operational and tied to what is missing, risky, or urgent in the evidence.
    - topRisks must stay aligned with the risks array. Do not introduce unsupported new risks here.
+   - decision_reasons must explain why the decision was chosen, not restate the badge.
+   - hard_blockers must contain only concrete blockers, not generic concerns.
+   - evidence_coverage must assess whether the current evidence pack visibly covers submission, eligibility, scope, commercial, evaluation, and contract_terms.
 7. Playbook (STRICT). The playbook is policy, not evidence:
    - Never cite the playbook as evidence.
    - If the playbook influences decision, prioritization, or required actions, add entries to policy_triggers.
@@ -894,9 +1040,9 @@ Strict rules
    - policy_triggers must be an array. If no playbook constraints apply, return [].
    - Each trigger must be short, auditable, and map to exactly one playbook key.
 9. Missing info. Put unresolved ambiguities, unanswered buyer-side questions, or evidence gaps into buyer_questions.
-10. Language handling. The source tender text is in ${args.sourceLanguageName}. Analyse obligations, exclusions, submission instructions, qualifications, and deadlines in that source language. Keep evidence verbatim in the source language and cite only evidence_ids.
-11. Proposal draft. Keep proposal_draft concise: maximum 8 short sections and under 900 words.
-12. Priority. Prefer precision over coverage. If the evidence pack does not prove something, do not state it as fact.
+10. Language handling. The source tender text is in ${args.sourceLanguageName}. Analyse obligations, exclusions, submission instructions, qualifications, deadlines, commercial terms, evaluation criteria, and contract clauses in that source language. Keep evidence verbatim in the source language and cite only evidence_ids.
+11. Proposal draft. Keep proposal_draft skeletal and lightweight: maximum 8 short sections, under 900 words, outline quality only. Do not spend output budget on polished prose.
+12. Priority. Prefer precision over coverage. If the evidence pack does not prove something, do not state it as fact. If a reliable decision cannot be made from the curated evidence, prefer Hold over false confidence.
 
 Evidence snippets (the ONLY citable basis for this run; cite their ids in evidence_ids):
 ${args.evidenceList}`;
@@ -937,10 +1083,52 @@ async function runOpenAi(args: {
         type: "object",
         additionalProperties: false,
         properties: {
-          decisionBadge: { type: "string" },
-          decisionLine: { type: "string" },
-          keyFindings: { type: "array", items: { type: "string" }, maxItems: 7 },
-          nextActions: { type: "array", items: { type: "string" }, maxItems: 3 },
+          decisionBadge: { type: "string", enum: ["Go", "Hold", "No-Go"] },
+          decisionLine: { type: "string", maxLength: 220 },
+          decision_reasons: {
+            type: "array",
+            maxItems: 5,
+            items: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                category: { type: "string", enum: ["blocker", "eligibility", "submission", "commercial", "technical", "playbook", "uncertainty", "fit"] },
+                reason: { type: "string", maxLength: 260 },
+                evidence_ids: { type: "array", items: { type: "string" }, maxItems: 3 },
+              },
+              required: ["category", "reason", "evidence_ids"],
+            },
+          },
+          hard_blockers: {
+            type: "array",
+            maxItems: 4,
+            items: {
+              type: "object",
+              additionalProperties: false,
+              properties: {
+                title: { type: "string", maxLength: 140 },
+                detail: { type: "string", maxLength: 260 },
+                evidence_ids: { type: "array", items: { type: "string" }, maxItems: 3 },
+              },
+              required: ["title", "detail", "evidence_ids"],
+            },
+          },
+          evidence_coverage: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              submission: { type: "string", enum: ["covered", "partial", "not_found"] },
+              eligibility: { type: "string", enum: ["covered", "partial", "not_found"] },
+              scope: { type: "string", enum: ["covered", "partial", "not_found"] },
+              commercial: { type: "string", enum: ["covered", "partial", "not_found"] },
+              evaluation: { type: "string", enum: ["covered", "partial", "not_found"] },
+              contract_terms: { type: "string", enum: ["covered", "partial", "not_found"] },
+              note: { type: "string", maxLength: 220 },
+            },
+            required: ["submission", "eligibility", "scope", "commercial", "evaluation", "contract_terms", "note"],
+          },
+          keyFindings: { type: "array", items: { type: "string" }, maxItems: 6 },
+          nextActions: { type: "array", items: { type: "string" }, maxItems: 4 },
           topRisks: {
             type: "array",
             maxItems: 3,
@@ -948,46 +1136,48 @@ async function runOpenAi(args: {
               type: "object",
               additionalProperties: false,
               properties: {
-                title: { type: "string" },
+                title: { type: "string", maxLength: 140 },
                 severity: { type: "string", enum: ["high", "medium", "low"] },
-                detail: { type: "string" },
+                detail: { type: "string", maxLength: 260 },
               },
               required: ["title", "severity", "detail"],
             },
           },
-          submissionDeadline: { type: "string" },
+          submissionDeadline: { type: "string", maxLength: 120 },
         },
-        required: ["decisionBadge", "decisionLine", "keyFindings", "nextActions", "topRisks", "submissionDeadline"],
+        required: ["decisionBadge", "decisionLine", "decision_reasons", "hard_blockers", "evidence_coverage", "keyFindings", "nextActions", "topRisks", "submissionDeadline"],
       },
       checklist: {
         type: "array",
+        maxItems: 18,
         items: {
           type: "object",
           additionalProperties: false,
           properties: {
             type: { type: "string", enum: ["MUST", "SHOULD", "INFO"] },
-            text: { type: "string" },
-            evidence_ids: { type: "array", items: { type: "string" } },
+            text: { type: "string", maxLength: 260 },
+            evidence_ids: { type: "array", items: { type: "string" }, maxItems: 3 },
           },
           required: ["type", "text", "evidence_ids"],
         },
       },
       risks: {
         type: "array",
+        maxItems: 8,
         items: {
           type: "object",
           additionalProperties: false,
           properties: {
-            title: { type: "string" },
+            title: { type: "string", maxLength: 140 },
             severity: { type: "string", enum: ["high", "medium", "low"] },
-            detail: { type: "string" },
-            evidence_ids: { type: "array", items: { type: "string" } },
+            detail: { type: "string", maxLength: 260 },
+            evidence_ids: { type: "array", items: { type: "string" }, maxItems: 3 },
           },
           required: ["title", "severity", "detail", "evidence_ids"],
         },
       },
-      buyer_questions: { type: "array", items: { type: "string" } },
-      proposal_draft: { type: "string" },
+      buyer_questions: { type: "array", items: { type: "string", maxLength: 220 }, maxItems: 8 },
+      proposal_draft: { type: "string", maxLength: 3200 },
       policy_triggers: {
         type: "array",
         maxItems: 10,
@@ -1013,7 +1203,7 @@ async function runOpenAi(args: {
               type: "string",
               enum: ["blocks", "increases_risk", "decreases_fit", "requires_clarification"],
             },
-            note: { type: "string" },
+            note: { type: "string", maxLength: 220 },
             rule: { type: ["string", "null"] },
           },
           required: ["key", "impact", "note", "rule"],
@@ -1184,6 +1374,9 @@ function buildEvidenceCandidates(extractedText: string): EvidenceCandidate[] {
     if (matchesAny(l, (patterns) => patterns.security)) score += 2;
     if (matchesAny(l, (patterns) => patterns.qualification)) score += 2;
     if (matchesAny(l, (patterns) => patterns.prohibition)) score += 2;
+    if (matchesAny(l, (patterns) => patterns.commercial)) score += 3;
+    if (matchesAny(l, (patterns) => patterns.evaluation)) score += 4;
+    if (matchesAny(l, (patterns) => patterns.contract_terms)) score += 4;
     if (COMMON_MONEY_RE.test(l)) score += 1;
     return score;
   };
@@ -1211,7 +1404,7 @@ function buildEvidenceCandidates(extractedText: string): EvidenceCandidate[] {
     if (isTocLike(l) || isTitleLike(l)) continue;
 
     const score = scoreLine(l);
-    if (score < 5) continue;
+    if (score < 4) continue;
 
     const excerpt = makeExcerpt(i);
     if (!excerpt || excerpt.length < 30) continue;
