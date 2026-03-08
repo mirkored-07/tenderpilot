@@ -853,7 +853,6 @@ export function SampleOutputContent({
                                 >
                                   {bidroom.actions?.openEvidence ?? compliance.actions?.evidence ?? "Open evidence"}
                                 </Button>
-                                <Button variant="outline" className="rounded-full w-full sm:w-auto" disabled>{common.locateInPdf ?? "Locate in PDF"}</Button>
                               </div>
                             </div>
 
@@ -993,7 +992,6 @@ export function SampleOutputContent({
                                 >
                                   {compliance.actions?.evidence ?? "Evidence"}
                                 </Button>
-                                <Button variant="outline" className="rounded-full w-full sm:w-auto" disabled>{common.locateInPdf ?? "Locate in PDF"}</Button>
                                 <Button
                                   className="rounded-full ml-auto"
                                   onClick={() => {

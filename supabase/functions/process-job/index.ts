@@ -933,6 +933,34 @@ async function runOpenAi(args: {
   };
 
 
+  const playbook = workspacePlaybook?.playbook && typeof workspacePlaybook.playbook === "object"
+    ? workspacePlaybook.playbook
+    : null;
+
+  const playbookVersionLabel = workspacePlaybook?.version == null ? "none" : String(workspacePlaybook.version);
+
+  const playbookJson = (() => {
+    if (!playbook) return "{}";
+    try {
+      return JSON.stringify(playbook, null, 2);
+    } catch {
+      return '{"error":"playbook_not_serializable"}';
+    }
+  })();
+
+  const playbookSection = playbook
+    ? `Workspace Bid Playbook (policy constraints, NOT evidence)\nVersion: ${playbookVersionLabel}\n${playbookJson}`
+    : "Workspace Bid Playbook (policy constraints, NOT evidence)\nNone provided for this workspace.";
+
+  const evidenceList = (evidenceCandidates ?? [])
+    .map((item) => {
+      const pageLabel = item.page == null ? "page unknown" : `page ${item.page}`;
+      const anchorLabel = item.anchor ? ` | anchor: ${String(item.anchor).replace(/\s+/g, " ").trim()}` : "";
+      const excerpt = String(item.excerpt ?? "").replace(/\s+/g, " ").trim();
+      return `[${item.id}] ${pageLabel} | kind: ${item.kind}${anchorLabel}\n${excerpt}`;
+    })
+    .join("\n\n") || "(No evidence snippets were extracted for this run.)";
+
   const sourceLanguageName = langName(sourceLanguage);
 
   const instructions =
@@ -948,9 +976,7 @@ async function runOpenAi(args: {
   const userPrompt = `Task
 Review the tender evidence pack and produce a decision-first bid kit.
 
-Workspace Bid Playbook (policy constraints, NOT evidence)
-Version: ${playbookVersionLabel}
-${playbookJson}
+${playbookSection}
 
 Strict rules
 1. Grounding. Use only the evidence snippets provided below. Treat them as the full citable record for this run. Do not rely on hidden assumptions or uncited source text.
