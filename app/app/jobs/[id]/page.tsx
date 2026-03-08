@@ -2219,6 +2219,29 @@ const executive = useMemo(() => {
 	  return toExecutiveModel({ raw });
 	}, [result]);
 
+  type BlockerCard = { text: string; detail: string; evidenceIds: string[] };
+
+  const blockerCards = useMemo<BlockerCard[]>(() => {
+    const hard = Array.isArray((executive as any)?.hardBlockers) ? (executive as any).hardBlockers : [];
+    if (hard.length) {
+      return hard
+        .map((item: any): BlockerCard => ({
+          text: String(item?.title ?? item?.detail ?? "").trim(),
+          detail: String(item?.detail ?? "").trim(),
+          evidenceIds: Array.isArray(item?.evidence_ids)
+            ? item.evidence_ids.map((x: any) => String(x ?? "").trim()).filter(Boolean)
+            : [],
+        }))
+        .filter((item: BlockerCard) => Boolean(item.text));
+    }
+
+    return mustItems.map((text): BlockerCard => ({
+      text,
+      detail: "",
+      evidenceIds: mustEvidenceIdsByText.get(text) ?? [],
+    }));
+  }, [executive, mustItems, mustEvidenceIdsByText]);
+
 
 	const draftForUi = useMemo(() => {
 	  return (result as any)?.proposal_draft ?? null;
@@ -3913,12 +3936,12 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
                     ) : null}
                   </div>
 
-                  {verdictState === "hold" && (mustItems ?? []).length ? (
+                  {verdictState === "hold" && blockerCards.length ? (
                     <div className="rounded-2xl border border-rose-200/40 bg-rose-500/5 p-4 dark:border-rose-500/20 dark:bg-rose-500/10">
                       <p className="text-xs font-semibold text-rose-900 dark:text-rose-200">{t("app.review.topBlockersTitle")}</p>
                       <ul className="mt-2 space-y-2 text-sm text-rose-950/90 dark:text-rose-100">
-                        {(mustItems ?? []).slice(0, 3).map((itemText, i) => (
-                          <li key={i} className="leading-relaxed">• {itemText}</li>
+                        {blockerCards.slice(0, 3).map((item: BlockerCard, i: number) => (
+                          <li key={i} className="leading-relaxed">• {item.text}</li>
                         ))}
                       </ul>
                     </div>
@@ -3954,18 +3977,18 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
             <div className="mt-6 grid gap-5 md:grid-cols-3">
               <div className="rounded-2xl border border-border bg-muted/30 p-4">
                 <p className="text-xs font-semibold">{t("app.review.sections.blockers")}</p>
-                {(mustItems ?? []).length ? (
+                {blockerCards.length ? (
                   <div className="mt-3 space-y-2">
-                    {(mustItems ?? []).slice(0, 5).map((itemText, i) => (
+                    {blockerCards.slice(0, 5).map((item: BlockerCard, i: number) => (
                       <div key={i} className="rounded-xl border border-border bg-card p-3">
-                        <p className="text-sm text-foreground/80 leading-relaxed">• {itemText}</p>
+                        <p className="text-sm text-foreground/80 leading-relaxed">• {item.text}</p>
                         <div className="mt-2 flex justify-end">
                           <Button
                             variant="outline"
                             size="sm"
                             className="rounded-full"
-                            onClick={() => showEvidenceByIds(mustEvidenceIdsByText.get(itemText) ?? undefined, itemText)}
-                            disabled={((mustEvidenceIdsByText.get(itemText)?.length ?? 0) === 0) && !extractedText}
+                            onClick={() => showEvidenceByIds(item.evidenceIds ?? undefined, item.text)}
+                            disabled={((item.evidenceIds?.length ?? 0) === 0) && !extractedText}
                           >
                             {t("app.bidroom.actions.openEvidence")}
                           </Button>
