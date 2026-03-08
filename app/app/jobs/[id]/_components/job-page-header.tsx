@@ -108,9 +108,9 @@ export function JobPageHeader(props: {
         <p className="mt-2 text-sm text-muted-foreground">{t("app.common.draftingSupport")}</p>
       </div>
 
-      <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:justify-end">
-        <Button asChild variant="ghost" className="h-9 rounded-full px-3">
-          <Link href="/app/jobs" className="inline-flex items-center gap-2">
+      <div className="grid w-full grid-cols-[minmax(0,1fr)_auto] gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:justify-end">
+        <Button asChild variant="ghost" className="order-1 h-9 w-full justify-start rounded-full px-3 sm:w-auto sm:justify-center">
+          <Link href="/app/jobs" className="inline-flex w-full items-center gap-2 sm:w-auto">
             <ArrowLeft className="h-4 w-4" />
             <span>{t("app.common.back")}</span>
           </Link>
@@ -118,12 +118,12 @@ export function JobPageHeader(props: {
 
         {canDownload ? (
           exportLocked ? (
-            <Button asChild variant="outline" className="h-9 rounded-full px-4">
+            <Button asChild variant="outline" className="order-3 col-span-2 h-9 w-full rounded-full px-4 sm:order-2 sm:col-span-1 sm:w-auto">
               <a href={unlockExportsHref}>{t("app.review.actions.unlockExports")}</a>
             </Button>
           ) : (
             <Button
-              className="h-9 rounded-full px-4"
+              className="order-3 col-span-2 h-9 w-full rounded-full px-4 sm:order-2 sm:col-span-1 sm:w-auto"
               disabled={!canExport || exporting !== null || creditsLoading}
               onClick={() => onExportBidPack("header")}
             >
@@ -137,7 +137,7 @@ export function JobPageHeader(props: {
             <Button
               variant="ghost"
               size="icon"
-              className="h-9 w-9 rounded-full"
+              className="order-2 h-9 w-9 justify-self-end rounded-full sm:order-3"
               disabled={exporting !== null}
               aria-label={t("app.review.actions.menuAria")}
             >

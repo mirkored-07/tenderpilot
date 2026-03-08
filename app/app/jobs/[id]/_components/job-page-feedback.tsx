@@ -19,11 +19,11 @@ export function JobPageFeedback(props: {
         <Card className="rounded-2xl border bg-muted/30">
           <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between">
             <p className="text-sm text-foreground/80">{notice}</p>
-            <div className="flex shrink-0 gap-2">
-              <Button asChild variant="outline" size="sm" className="rounded-full">
+            <div className="flex w-full shrink-0 flex-col gap-2 sm:w-auto sm:flex-row">
+              <Button asChild variant="outline" size="sm" className="w-full rounded-full sm:w-auto">
                 <a href={unlockExportsHref}>{t("app.review.actions.unlockExports")}</a>
               </Button>
-              <Button variant="ghost" size="sm" className="rounded-full" onClick={onDismissNotice}>
+              <Button variant="ghost" size="sm" className="w-full rounded-full sm:w-auto" onClick={onDismissNotice}>
                 {t("app.common.dismiss")}
               </Button>
             </div>
