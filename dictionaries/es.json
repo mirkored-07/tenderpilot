@@ -1211,7 +1211,10 @@
         "signedOut": "You are signed out. Please log in again and retry.",
         "noLongerFailed": "This job is no longer marked as failed. Refresh the page.",
         "failed": "Retry could not be started. Please try again or contact support.",
-        "started": "Retry started. This page will update automatically."
+        "started": "Retry started. This page will update automatically.",
+        "stillProcessing": "El análisis sigue en curso. Vuelve a intentarlo si se queda bloqueado o falla.",
+        "triggerRequested": "Se solicitó la comprobación del procesamiento. Esta página se actualizará automáticamente.",
+        "limitReached": "Se alcanzó el límite de reintentos para esta licitación. Contacta con soporte si sigue bloqueada."
       },
       "evidenceNotes": {
         "idNotFound": "Evidence ID not found in the pipeline evidence map. This can happen if the pipeline evidence was generated with a different version or was trimmed. Verify in the original PDF.",

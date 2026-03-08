@@ -1277,20 +1277,6 @@ export default function JobDetailPage() {
   const rawId = String((params as any)?.id ?? "").trim();
   const jobId = rawId;
 
-
-  async function triggerProcessingOnce() {
-    try {
-      await fetch("/api/tick", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ job_id: jobId }),
-      });
-    } catch (e) {
-      console.warn("Manual trigger failed", e);
-    }
-  }
-
-
   const [invalidLink, setInvalidLink] = useState(false);
 const [metaOpen, setMetaOpen] = useState(false);
 
@@ -1352,6 +1338,7 @@ const [savingMeta, setSavingMeta] = useState(false);
   const [retrying, setRetrying] = useState(false);
   const [retryFeedback, setRetryFeedback] = useState<string | null>(null);
   const [processingTimeoutReached, setProcessingTimeoutReached] = useState(false);
+  const [pollCycle, setPollCycle] = useState(0);
 
   const mountedRef = useRef(true);
   const sourceAnchorRef = useRef<HTMLSpanElement | null>(null);
@@ -1719,7 +1706,7 @@ setWorkItems((wiRows as any[]) ?? []);
       if (interval) clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [jobId, invalidLink]);
+  }, [jobId, invalidLink, pollCycle]);
 
   // BidRoomPanel handles loading/saving work items.
 
@@ -1742,39 +1729,77 @@ setWorkItems((wiRows as any[]) ?? []);
   const showReady = useMemo(() => job?.status === "done", [job]);
   const showFailed = useMemo(() => job?.status === "failed", [job]);
 
-  async function retryProcessing() {
-    if (!jobId) return;
-    if (retrying) return;
-    setRetryFeedback(null);
+  async function requestJobRestart(source: "header" | "failed_panel") {
+    if (!jobId || retrying) return;
+
+    if (source === "failed_panel") {
+      setRetryFeedback(null);
+    } else {
+      setNotice(null);
+    }
+
     setRetrying(true);
-    track("job_retry_requested", { jobId });
+    track("job_retry_requested", { jobId, source });
+
     try {
       const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}/retry`, { method: "POST" });
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({} as any));
-        const code = String((j as any)?.error ?? "");
-        if (res.status === 401) {
-          track("job_retry_failed", { jobId, reason: "signed_out", status: res.status });
-          setRetryFeedback(t("app.review.retry.signedOut"));
-        } else if (res.status === 409 && code === "job_not_failed") {
-          track("job_retry_failed", { jobId, reason: code, status: res.status });
-          setRetryFeedback(t("app.review.retry.noLongerFailed"));
+      const payload = await res.json().catch(() => ({} as any));
+      const code = String((payload as any)?.error ?? "");
+      const state = String((payload as any)?.state ?? "");
+
+      const setFeedback = (message: string) => {
+        if (source === "failed_panel") {
+          setRetryFeedback(message);
         } else {
-          track("job_retry_failed", { jobId, reason: code || "retry_failed", status: res.status });
-          setRetryFeedback(t("app.review.retry.failed"));
+          setNotice(message);
+        }
+      };
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          track("job_retry_failed", { jobId, source, reason: "signed_out", status: res.status });
+          setFeedback(t("app.review.retry.signedOut"));
+        } else if (res.status === 409 && code === "job_still_processing") {
+          track("job_retry_deferred", { jobId, source, reason: code, status: res.status });
+          setFeedback(t("app.review.retry.stillProcessing"));
+        } else if (res.status === 409 && (code === "job_not_failed" || code === "job_already_complete")) {
+          track("job_retry_failed", { jobId, source, reason: code, status: res.status });
+          setFeedback(t("app.review.retry.noLongerFailed"));
+        } else if (res.status === 429 && code === "retry_limit_reached") {
+          track("job_retry_failed", { jobId, source, reason: code, status: res.status });
+          setFeedback(t("app.review.retry.limitReached"));
+        } else {
+          track("job_retry_failed", { jobId, source, reason: code || "retry_failed", status: res.status });
+          setFeedback(t("app.review.retry.failed"));
         }
         return;
       }
 
-      setJob((prev) => (prev ? ({ ...prev, status: "queued" } as any) : prev));
-      setProcessingTimeoutReached(false);
-      setError(null);
-      track("job_retry_started", { jobId });
-      setRetryFeedback(t("app.review.retry.started"));
-      triggerProcessingOnce();
+      if (state === "failed_requeued" || state === "stale_processing_requeued" || state === "queued_triggered") {
+        setJob((prev) => (prev ? ({ ...prev, status: "queued" } as any) : prev));
+        setProcessingTimeoutReached(false);
+        setError(null);
+        setPolling(true);
+        setPollCycle((value) => value + 1);
+      }
+
+      track("job_retry_started", { jobId, source, state: state || "started" });
+      setFeedback(
+        state === "queued_triggered"
+          ? t("app.review.retry.triggerRequested")
+          : t("app.review.retry.started")
+      );
     } catch (e) {
-      track("job_retry_failed", { jobId, reason: String((e as Error)?.message ?? "retry_failed") });
-      setRetryFeedback(t("app.review.retry.failed"));
+      track("job_retry_failed", {
+        jobId,
+        source,
+        reason: String((e as Error)?.message ?? "retry_failed"),
+      });
+      if (source === "failed_panel") {
+        setRetryFeedback(t("app.review.retry.failed"));
+      } else {
+        setNotice(t("app.review.retry.failed"));
+      }
     } finally {
       setRetrying(false);
     }
@@ -3643,8 +3668,8 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
         statusBadge={statusBadge(job?.status ?? "queued", t)}
         extractionBadge={showReady || showFailed ? extractionBadge : null}
         t={t}
-        onRetryAnalysis={triggerProcessingOnce}
-        canRetryAnalysis={Boolean(job)}
+        onRetryAnalysis={() => requestJobRestart("header")}
+        canRetryAnalysis={Boolean(job) && !retrying}
         canDownload={canDownload}
         exportLocked={exportLocked}
         unlockExportsHref={unlockExportsHref}
@@ -3701,7 +3726,7 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
           events={events}
           retrying={retrying}
           retryFeedback={retryFeedback}
-          onRetry={retryProcessing}
+          onRetry={() => requestJobRestart("failed_panel")}
         />
       ) : null}
 

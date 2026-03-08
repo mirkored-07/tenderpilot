@@ -823,6 +823,97 @@ function parseOpenAiJsonFromResponse(resp: any): any {
   throw new Error("OpenAI response did not include parsable JSON output");
 }
 
+type WorkspacePlaybookInput = { playbook: any; version: number | null } | null | undefined;
+
+function normalizeWorkspacePlaybook(workspacePlaybook: WorkspacePlaybookInput): { playbook: any | null; versionLabel: string; json: string } {
+  const playbook = workspacePlaybook?.playbook && typeof workspacePlaybook.playbook === "object"
+    ? workspacePlaybook.playbook
+    : null;
+
+  const versionLabel = workspacePlaybook?.version == null ? "none" : String(workspacePlaybook.version);
+
+  const json = (() => {
+    if (!playbook) return "{}";
+    try {
+      return JSON.stringify(playbook, null, 2);
+    } catch {
+      return '{"error":"playbook_not_serializable"}';
+    }
+  })();
+
+  return { playbook, versionLabel, json };
+}
+
+function buildPlaybookPromptSection(workspacePlaybook: WorkspacePlaybookInput): string {
+  const normalized = normalizeWorkspacePlaybook(workspacePlaybook);
+  return normalized.playbook
+    ? `Workspace Bid Playbook (policy constraints, NOT evidence)\nVersion: ${normalized.versionLabel}\n${normalized.json}`
+    : "Workspace Bid Playbook (policy constraints, NOT evidence)\nNone provided for this workspace.";
+}
+
+function buildEvidenceList(evidenceCandidates: EvidenceCandidate[]): string {
+  return (evidenceCandidates ?? [])
+    .map((item) => {
+      const pageLabel = item.page == null ? "page unknown" : `page ${item.page}`;
+      const anchorLabel = item.anchor ? ` | anchor: ${String(item.anchor).replace(/\s+/g, " ").trim()}` : "";
+      const excerpt = String(item.excerpt ?? "").replace(/\s+/g, " ").trim();
+      return `[${item.id}] ${pageLabel} | kind: ${item.kind}${anchorLabel}\n${excerpt}`;
+    })
+    .join("\n\n") || "(No evidence snippets were extracted for this run.)";
+}
+
+function buildTenderReviewPrompt(args: {
+  sourceLanguageName: string;
+  playbookSection: string;
+  evidenceList: string;
+}): string {
+  return `Task
+Review the tender evidence pack and produce a decision-first bid kit.
+
+${args.playbookSection}
+
+Strict rules
+1. Grounding. Use only the evidence snippets provided below. Treat them as the full citable record for this run. Do not rely on hidden assumptions or uncited source text.
+2. Decision. Choose decisionBadge exactly as one of: Go, Hold, No-Go. Provide decisionLine as one clear sentence.
+3. Submission deadline. If an explicit deadline date or time is present in the evidence, copy it verbatim. Otherwise set submissionDeadline to: Not found in extracted text.
+4. Checklist. MUST means mandatory or disqualifying if missed. SHOULD means preferred, scored, or commercially important. INFO is context.
+5. Evidence (STRICT). You MUST cite evidence_ids:
+   - For every MUST checklist item: include at least one evidence id that directly supports it.
+   - For every risk: include at least one evidence id that directly supports it.
+   - Do not invent clause numbers, section numbers, or cross-references. Cite only evidence ids.
+   - If you cannot support a MUST or risk with evidence, either omit it or keep the wording explicitly cautious and return evidence_ids as [].
+6. Executive summary (STRICT).
+   - keyFindings must reflect evidence-backed facts or clearly framed absences from evidence.
+   - nextActions should be operational and tied to what is missing, risky, or urgent in the evidence.
+   - topRisks must stay aligned with the risks array. Do not introduce unsupported new risks here.
+7. Playbook (STRICT). The playbook is policy, not evidence:
+   - Never cite the playbook as evidence.
+   - If the playbook influences decision, prioritization, or required actions, add entries to policy_triggers.
+   - When you claim a conflict with the playbook, rely on evidence ids that support the tender-side requirement driving the conflict.
+8. Policy triggers output (REQUIRED).
+   - policy_triggers must be an array. If no playbook constraints apply, return [].
+   - Each trigger must be short, auditable, and map to exactly one playbook key.
+9. Missing info. Put unresolved ambiguities, unanswered buyer-side questions, or evidence gaps into buyer_questions.
+10. Language handling. The source tender text is in ${args.sourceLanguageName}. Analyse obligations, exclusions, submission instructions, qualifications, and deadlines in that source language. Keep evidence verbatim in the source language and cite only evidence_ids.
+11. Proposal draft. Keep proposal_draft concise: maximum 8 short sections and under 900 words.
+12. Priority. Prefer precision over coverage. If the evidence pack does not prove something, do not state it as fact.
+
+Evidence snippets (the ONLY citable basis for this run; cite their ids in evidence_ids):
+${args.evidenceList}`;
+}
+
+function validateRunOpenAiArgs(args: {
+  model: string;
+  targetLanguage: string;
+  extractedText: string;
+  evidenceCandidates: EvidenceCandidate[];
+}) {
+  if (!String(args.model ?? "").trim()) throw new Error("runOpenAi missing model");
+  if (!String(args.targetLanguage ?? "").trim()) throw new Error("runOpenAi missing targetLanguage");
+  if (!String(args.extractedText ?? "").trim()) throw new Error("runOpenAi missing extractedText");
+  if (!Array.isArray(args.evidenceCandidates)) throw new Error("runOpenAi evidenceCandidates must be an array");
+}
+
 async function runOpenAi(args: {
   apiKey: string;
   model: string;
@@ -835,6 +926,8 @@ async function runOpenAi(args: {
   workspacePlaybook?: { playbook: any; version: number | null } | null;
 }): Promise<AiOutput> {
   const { apiKey, model, targetLanguage, sourceLanguage, extractedText, evidenceCandidates, maxOutputTokens, timeoutMs, workspacePlaybook } = args;
+
+  validateRunOpenAiArgs({ model, targetLanguage, extractedText, evidenceCandidates });
 
   const schema = {
     type: "object",
@@ -921,8 +1014,6 @@ async function runOpenAi(args: {
               enum: ["blocks", "increases_risk", "decreases_fit", "requires_clarification"],
             },
             note: { type: "string" },
-            // OpenAI strict JSON schema requires every property to be listed in `required`.
-            // Keep `rule` nullable so the model can return null when it cannot provide a stable rule id.
             rule: { type: ["string", "null"] },
           },
           required: ["key", "impact", "note", "rule"],
@@ -932,36 +1023,9 @@ async function runOpenAi(args: {
     required: ["executive_summary", "checklist", "risks", "buyer_questions", "proposal_draft", "policy_triggers"],
   };
 
-
-  const playbook = workspacePlaybook?.playbook && typeof workspacePlaybook.playbook === "object"
-    ? workspacePlaybook.playbook
-    : null;
-
-  const playbookVersionLabel = workspacePlaybook?.version == null ? "none" : String(workspacePlaybook.version);
-
-  const playbookJson = (() => {
-    if (!playbook) return "{}";
-    try {
-      return JSON.stringify(playbook, null, 2);
-    } catch {
-      return '{"error":"playbook_not_serializable"}';
-    }
-  })();
-
-  const playbookSection = playbook
-    ? `Workspace Bid Playbook (policy constraints, NOT evidence)\nVersion: ${playbookVersionLabel}\n${playbookJson}`
-    : "Workspace Bid Playbook (policy constraints, NOT evidence)\nNone provided for this workspace.";
-
-  const evidenceList = (evidenceCandidates ?? [])
-    .map((item) => {
-      const pageLabel = item.page == null ? "page unknown" : `page ${item.page}`;
-      const anchorLabel = item.anchor ? ` | anchor: ${String(item.anchor).replace(/\s+/g, " ").trim()}` : "";
-      const excerpt = String(item.excerpt ?? "").replace(/\s+/g, " ").trim();
-      return `[${item.id}] ${pageLabel} | kind: ${item.kind}${anchorLabel}\n${excerpt}`;
-    })
-    .join("\n\n") || "(No evidence snippets were extracted for this run.)";
-
   const sourceLanguageName = langName(sourceLanguage);
+  const playbookSection = buildPlaybookPromptSection(workspacePlaybook);
+  const evidenceList = buildEvidenceList(evidenceCandidates);
 
   const instructions =
     "You are TenderPilot. Drafting support only. Not legal advice. Not procurement advice. " +
@@ -973,39 +1037,11 @@ async function runOpenAi(args: {
     "Interpret procurement wording in the source language accurately, including legal or disqualifying phrasing. " +
     "If evidence is incomplete, say so clearly and push uncertainty into buyer_questions.";
 
-  const userPrompt = `Task
-Review the tender evidence pack and produce a decision-first bid kit.
-
-${playbookSection}
-
-Strict rules
-1. Grounding. Use only the evidence snippets provided below. Treat them as the full citable record for this run. Do not rely on hidden assumptions or uncited source text.
-2. Decision. Choose decisionBadge exactly as one of: Go, Hold, No-Go. Provide decisionLine as one clear sentence.
-3. Submission deadline. If an explicit deadline date or time is present in the evidence, copy it verbatim. Otherwise set submissionDeadline to: Not found in extracted text.
-4. Checklist. MUST means mandatory or disqualifying if missed. SHOULD means preferred, scored, or commercially important. INFO is context.
-5. Evidence (STRICT). You MUST cite evidence_ids:
-   - For every MUST checklist item: include at least one evidence id that directly supports it.
-   - For every risk: include at least one evidence id that directly supports it.
-   - Do not invent clause numbers, section numbers, or cross-references. Cite only evidence ids.
-   - If you cannot support a MUST or risk with evidence, either omit it or keep the wording explicitly cautious and return evidence_ids as [].
-6. Executive summary (STRICT).
-   - keyFindings must reflect evidence-backed facts or clearly framed absences from evidence.
-   - nextActions should be operational and tied to what is missing, risky, or urgent in the evidence.
-   - topRisks must stay aligned with the risks array. Do not introduce unsupported new risks here.
-7. Playbook (STRICT). The playbook is policy, not evidence:
-   - Never cite the playbook as evidence.
-   - If the playbook influences decision, prioritization, or required actions, add entries to policy_triggers.
-   - When you claim a conflict with the playbook, rely on evidence ids that support the tender-side requirement driving the conflict.
-8. Policy triggers output (REQUIRED).
-   - policy_triggers must be an array. If no playbook constraints apply, return [].
-   - Each trigger must be short, auditable, and map to exactly one playbook key.
-9. Missing info. Put unresolved ambiguities, unanswered buyer-side questions, or evidence gaps into buyer_questions.
-10. Language handling. The source tender text is in ${sourceLanguageName}. Analyse obligations, exclusions, submission instructions, qualifications, and deadlines in that source language. Keep evidence verbatim in the source language and cite only evidence_ids.
-11. Proposal draft. Keep proposal_draft concise: maximum 8 short sections and under 900 words.
-12. Priority. Prefer precision over coverage. If the evidence pack does not prove something, do not state it as fact.
-
-Evidence snippets (the ONLY citable basis for this run; cite their ids in evidence_ids):
-${evidenceList}`;
+  const userPrompt = buildTenderReviewPrompt({
+    sourceLanguageName,
+    playbookSection,
+    evidenceList,
+  });
 
   const buildBody = (tokenBudget: number) => ({
     model,
@@ -1812,6 +1848,16 @@ let extractedText = "";
       const targetLanguage = langName(outputLang);
       const sourceLanguage = detectSourceLanguage(extractedText);
 
+      await logEvent(supabaseAdmin, job, "info", "OpenAI prompt prepared", {
+        model,
+        target_language: targetLanguage,
+        source_language: sourceLanguage,
+        extracted_chars: clipped.length,
+        evidence_candidates: evidenceCandidates.length,
+        playbook_present: Boolean(workspacePlaybook.playbook),
+        playbook_version: workspacePlaybook.version,
+      });
+
       await logEvent(supabaseAdmin, job, "info", "OpenAI started", { model, maxOutputTokens, remaining_ms: remaining });
 
       // Configurable OpenAI timeout cap (default 35s)
@@ -1972,11 +2018,13 @@ let extractedText = "";
     });
 
   } catch (e) {
-	  console.error("process-job fatal error:", e);
+    console.error("process-job fatal error:", e);
     const msg = e instanceof Error ? e.message : String(e);
+    const normalizedError = normalizeThrownError(e);
+    const isOpenAiTimeout =
+      typeof msg === "string" &&
+      msg.toLowerCase().includes("openai request timed out");
 
-    // Never brick a job: make it reclaimable on next tick (best-effort).
-    // Prefer the job claimed in this invocation; fall back to request payload if provided.
     try {
       let jobIdForCleanup: string | null = activeJobId;
 
@@ -1993,22 +2041,43 @@ let extractedText = "";
           auth: { persistSession: false },
         });
 
-        await makeJobReclaimableNow(supabaseAdmin, jobIdForCleanup);
+        const { data: jobForLog } = await supabaseAdmin
+          .from("jobs")
+          .select("id,user_id")
+          .eq("id", jobIdForCleanup)
+          .maybeSingle();
+
+        if (jobForLog?.id && jobForLog?.user_id) {
+          await supabaseAdmin.from("job_events").insert({
+            job_id: jobForLog.id,
+            user_id: jobForLog.user_id,
+            level: isOpenAiTimeout ? "warn" : "error",
+            message: isOpenAiTimeout ? "OpenAI request timed out" : "Processing crashed",
+            meta: {
+              error: normalizedError,
+              active_job_id: activeJobId,
+            },
+          });
+        }
+
+        if (isOpenAiTimeout) {
+          await makeJobReclaimableNow(supabaseAdmin, jobIdForCleanup);
+        } else {
+          await supabaseAdmin
+            .from("jobs")
+            .update({ status: "failed", updated_at: new Date().toISOString() })
+            .eq("id", jobIdForCleanup);
+        }
       }
     } catch {
       // ignore
     }
 
-    const isOpenAiTimeout =
-      typeof msg === "string" &&
-      msg.toLowerCase().includes("openai request timed out");
-
     if (isOpenAiTimeout) {
-      // Job was made reclaimable above; treat timeout as transient to avoid repeated 500s in pg_net.
       return corsJson({ ok: true, status: "transient_openai_timeout_retryable" }, { status: 200 });
     }
 
-    return corsJson({ ok: false, error: normalizeThrownError(e) }, { status: 500 });
+    return corsJson({ ok: false, error: normalizedError }, { status: 500 });
   } finally {
     try {
       stopHeartbeat?.();

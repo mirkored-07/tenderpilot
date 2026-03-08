@@ -40,7 +40,10 @@ const requiredKeys = [
   "app.compliance.drawer.authoritativeNote",
   "app.compliance.send.existsDesc",
   "app.compliance.noRows",
-  "app.compliance.noReqs"
+  "app.compliance.noReqs",
+  "app.review.retry.stillProcessing",
+  "app.review.retry.triggerRequested",
+  "app.review.retry.limitReached"
 ];
 
 function get(obj, key) {
