@@ -15,6 +15,7 @@ type JobRow = {
 type Severity = "high" | "medium" | "low";
 type DecisionBadge = "Go" | "Hold" | "No-Go";
 type CoverageState = "covered" | "partial" | "not_found";
+type EvidenceBucket = "submission" | "eligibility" | "commercial" | "evaluation" | "contract_terms" | "general";
 
 type EvidenceCandidate = {
   id: string; // e.g. E001
@@ -23,7 +24,14 @@ type EvidenceCandidate = {
   anchor: string | null; // SECTION/ANNEX heading if available
   kind: "clause" | "bullet" | "table_row" | "other";
   score: number;
+  bucket?: EvidenceBucket;
 };
+
+const PROCESS_JOB_PROMPT_VERSION = "2026-03-08-c1";
+const PROCESS_JOB_SCHEMA_VERSION = "2026-03-08-c1";
+const EVIDENCE_SELECTION_VERSION = "2026-03-08-c1";
+const OPENAI_TEMPERATURE = 0;
+const EVIDENCE_BUCKET_ORDER: EvidenceBucket[] = ["submission", "eligibility", "commercial", "evaluation", "contract_terms", "general"];
 
 type AiOutput = {
   executive_summary: {
@@ -727,6 +735,141 @@ function buildAnchoredTextFromUnstructuredElements(elements: any[]): string {
   return parts.join("\n\n").replace(/\n{3,}/g, "\n\n").trim();
 }
 
+function isAlphaNumericChar(ch: string): boolean {
+  return /[\p{L}\p{N}]/u.test(ch);
+}
+
+function normalizeAiTextPunctuation(input: unknown): string {
+  const raw = String(input ?? "");
+  if (!raw) return "";
+
+  return raw
+    .replace(/[—–―]+/g, ": ")
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/[	 ]+/g, " ")
+    .replace(/\s+:/g, ":")
+    .replace(/:\s*:+/g, ": ")
+    .replace(/\s+,/g, ",")
+    .replace(/,\s*,+/g, ", ")
+    .replace(/\s+([,.;:!?])/g, "$1")
+    .replace(/([,.;:!?])(?!\s|$)/g, "$1 ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function normalizeAiTextValue(input: unknown, maxLen = 260): string {
+  return normalizeAiTextPunctuation(String(input ?? "")).slice(0, maxLen).trim();
+}
+
+function normalizeAiTextList(input: unknown, maxItems: number, maxLen = 220): string[] {
+  if (!Array.isArray(input)) return [];
+  return input
+    .map((item) => normalizeAiTextValue(item, maxLen))
+    .filter(Boolean)
+    .slice(0, maxItems);
+}
+
+function normalizeAiMultilineText(input: unknown, maxLen = 3200): string {
+  const raw = String(input ?? "");
+  if (!raw.trim()) return "";
+  const lines = raw
+    .split(/\r?\n/)
+    .map((line) => normalizeAiTextPunctuation(line))
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+  return lines.slice(0, maxLen).trim();
+}
+
+function normalizeAiOutputForUi(input: AiOutput): AiOutput {
+  const executive = input?.executive_summary ?? ({} as AiOutput["executive_summary"]);
+  const evidenceCoverage = executive?.evidence_coverage ?? {
+    submission: "not_found",
+    eligibility: "not_found",
+    scope: "not_found",
+    commercial: "not_found",
+    evaluation: "not_found",
+    contract_terms: "not_found",
+    note: "",
+  };
+
+  return {
+    ...input,
+    executive_summary: {
+      ...executive,
+      decisionBadge: executive?.decisionBadge === "Go" || executive?.decisionBadge === "Hold" || executive?.decisionBadge === "No-Go"
+        ? executive.decisionBadge
+        : "Hold",
+      decisionLine: normalizeAiTextValue(executive?.decisionLine, 220),
+      decision_reasons: (Array.isArray(executive?.decision_reasons) ? executive.decision_reasons : [])
+        .map((item: any) => ({
+          ...item,
+          reason: normalizeAiTextValue(item?.reason, 260),
+          evidence_ids: Array.isArray(item?.evidence_ids) ? item.evidence_ids.map((id: any) => String(id)).filter(Boolean).slice(0, 4) : [],
+        }))
+        .filter((item: any) => item.reason)
+        .slice(0, 6),
+      hard_blockers: (Array.isArray(executive?.hard_blockers) ? executive.hard_blockers : [])
+        .map((item: any) => ({
+          ...item,
+          title: normalizeAiTextValue(item?.title, 140),
+          detail: normalizeAiTextValue(item?.detail, 260),
+          evidence_ids: Array.isArray(item?.evidence_ids) ? item.evidence_ids.map((id: any) => String(id)).filter(Boolean).slice(0, 4) : [],
+        }))
+        .filter((item: any) => item.title || item.detail)
+        .slice(0, 5),
+      evidence_coverage: {
+        submission: evidenceCoverage?.submission === "covered" || evidenceCoverage?.submission === "partial" || evidenceCoverage?.submission === "not_found" ? evidenceCoverage.submission : "not_found",
+        eligibility: evidenceCoverage?.eligibility === "covered" || evidenceCoverage?.eligibility === "partial" || evidenceCoverage?.eligibility === "not_found" ? evidenceCoverage.eligibility : "not_found",
+        scope: evidenceCoverage?.scope === "covered" || evidenceCoverage?.scope === "partial" || evidenceCoverage?.scope === "not_found" ? evidenceCoverage.scope : "not_found",
+        commercial: evidenceCoverage?.commercial === "covered" || evidenceCoverage?.commercial === "partial" || evidenceCoverage?.commercial === "not_found" ? evidenceCoverage.commercial : "not_found",
+        evaluation: evidenceCoverage?.evaluation === "covered" || evidenceCoverage?.evaluation === "partial" || evidenceCoverage?.evaluation === "not_found" ? evidenceCoverage.evaluation : "not_found",
+        contract_terms: evidenceCoverage?.contract_terms === "covered" || evidenceCoverage?.contract_terms === "partial" || evidenceCoverage?.contract_terms === "not_found" ? evidenceCoverage.contract_terms : "not_found",
+        note: normalizeAiTextValue(evidenceCoverage?.note, 220),
+      },
+      keyFindings: normalizeAiTextList(executive?.keyFindings, 6, 220),
+      nextActions: normalizeAiTextList(executive?.nextActions, 4, 220),
+      topRisks: (Array.isArray(executive?.topRisks) ? executive.topRisks : [])
+        .map((item: any) => ({
+          ...item,
+          title: normalizeAiTextValue(item?.title, 140),
+          detail: normalizeAiTextValue(item?.detail, 260),
+        }))
+        .filter((item: any) => item.title || item.detail)
+        .slice(0, 5),
+      submissionDeadline: normalizeAiTextValue(executive?.submissionDeadline, 120) || "Not found in extracted text",
+    },
+    checklist: (Array.isArray(input?.checklist) ? input.checklist : [])
+      .map((item: any) => ({
+        ...item,
+        text: normalizeAiTextValue(item?.text, 260),
+      }))
+      .filter((item: any) => item.text)
+      .slice(0, 20),
+    risks: (Array.isArray(input?.risks) ? input.risks : [])
+      .map((item: any) => ({
+        ...item,
+        title: normalizeAiTextValue(item?.title, 140),
+        detail: normalizeAiTextValue(item?.detail, 260),
+      }))
+      .filter((item: any) => item.title || item.detail)
+      .slice(0, 12),
+    buyer_questions: normalizeAiTextList(input?.buyer_questions, 8, 220),
+    proposal_draft: normalizeAiMultilineText(input?.proposal_draft, 3200),
+    policy_triggers: (Array.isArray(input?.policy_triggers) ? input.policy_triggers : [])
+      .map((item: any) => ({
+        ...item,
+        key: normalizeAiTextValue(item?.key, 80),
+        note: normalizeAiTextValue(item?.note, 180),
+        rule: item?.rule == null ? null : normalizeAiTextValue(item?.rule, 180),
+      }))
+      .filter((item: any) => item.key && item.note)
+      .slice(0, 8),
+  };
+}
+
+
 function mockExtractFixture(args: { sourceType: "pdf" | "docx"; fileName: string }) {
   const { sourceType, fileName } = args;
   return `TENDER DOCUMENT (MOCK)
@@ -916,6 +1059,31 @@ function compactJson(value: unknown, maxLen = 700): string {
   }
 }
 
+function buildAnalysisFingerprint(args: {
+  model: string;
+  targetLanguage: string;
+  sourceLanguage: string;
+  evidenceCandidates: EvidenceCandidate[];
+  playbookVersion: number | null;
+}) {
+  const bucketCounts = Object.fromEntries(
+    EVIDENCE_BUCKET_ORDER.map((bucket) => [bucket, args.evidenceCandidates.filter((item) => item.bucket === bucket).length]),
+  );
+
+  return {
+    prompt_version: PROCESS_JOB_PROMPT_VERSION,
+    schema_version: PROCESS_JOB_SCHEMA_VERSION,
+    evidence_selection_version: EVIDENCE_SELECTION_VERSION,
+    model: args.model,
+    target_language: args.targetLanguage,
+    source_language: args.sourceLanguage,
+    playbook_version: args.playbookVersion,
+    evidence_count: args.evidenceCandidates.length,
+    evidence_ids: args.evidenceCandidates.slice(0, 80).map((item) => item.id),
+    evidence_bucket_counts: bucketCounts,
+  };
+}
+
 function buildPlaybookPromptSection(workspacePlaybook: WorkspacePlaybookInput): string {
   const normalized = normalizeWorkspacePlaybook(workspacePlaybook);
   if (!normalized.playbook) {
@@ -989,14 +1157,41 @@ function buildPlaybookPromptSection(workspacePlaybook: WorkspacePlaybookInput): 
 }
 
 function buildEvidenceList(evidenceCandidates: EvidenceCandidate[]): string {
-  return (evidenceCandidates ?? [])
-    .map((item) => {
-      const pageLabel = item.page == null ? "page unknown" : `page ${item.page}`;
-      const anchorLabel = item.anchor ? ` | anchor: ${String(item.anchor).replace(/\s+/g, " ").trim()}` : "";
-      const excerpt = String(item.excerpt ?? "").replace(/\s+/g, " ").trim();
-      return `[${item.id}] ${pageLabel} | kind: ${item.kind}${anchorLabel}\n${excerpt}`;
-    })
-    .join("\n\n") || "(No evidence snippets were extracted for this run.)";
+  const labelByBucket: Record<EvidenceBucket, string> = {
+    submission: "Submission and deadlines",
+    eligibility: "Eligibility and mandatory requirements",
+    commercial: "Commercial terms",
+    evaluation: "Evaluation criteria",
+    contract_terms: "Contract terms",
+    general: "General supporting evidence",
+  };
+
+  const groups = new Map<EvidenceBucket, EvidenceCandidate[]>();
+  for (const bucket of EVIDENCE_BUCKET_ORDER) groups.set(bucket, []);
+  for (const item of evidenceCandidates ?? []) {
+    const bucket = item.bucket ?? "general";
+    groups.get(bucket)?.push(item);
+  }
+
+  const sections: string[] = [];
+  for (const bucket of EVIDENCE_BUCKET_ORDER) {
+    const items = groups.get(bucket) ?? [];
+    if (!items.length) continue;
+
+    sections.push(`## ${labelByBucket[bucket]}`);
+    sections.push(
+      items
+        .map((item) => {
+          const pageLabel = item.page == null ? "page unknown" : `page ${item.page}`;
+          const anchorLabel = item.anchor ? ` | anchor: ${String(item.anchor).replace(/\s+/g, " ").trim()}` : "";
+          const excerpt = String(item.excerpt ?? "").replace(/\s+/g, " ").trim();
+          return `[${item.id}] ${pageLabel} | kind: ${item.kind}${anchorLabel}\n${excerpt}`;
+        })
+        .join("\n\n"),
+    );
+  }
+
+  return sections.join("\n\n") || "(No evidence snippets were extracted for this run.)";
 }
 
 function buildTenderReviewPrompt(args: {
@@ -1005,7 +1200,7 @@ function buildTenderReviewPrompt(args: {
   evidenceList: string;
 }): string {
   return `Task
-Review the tender evidence pack and produce a decision-first bid kit.
+Review the tender evidence pack and produce a decision-first bid kit with stable, evidence-led judgment.
 
 ${args.playbookSection}
 
@@ -1018,7 +1213,7 @@ Strict rules
    - Choose Go only when no blocker is evidenced, no hard playbook conflict is present, and remaining risks appear manageable.
    - Provide decisionLine as one clear sentence.
 3. Submission deadline. If an explicit deadline date or time is present in the evidence, copy it verbatim. Otherwise set submissionDeadline to: Not found in extracted text.
-4. Checklist. MUST means mandatory or disqualifying if missed. SHOULD means preferred, scored, or commercially important. INFO is context.
+4. Checklist. MUST means mandatory or disqualifying if missed. SHOULD means preferred, scored, or commercially important. INFO is context. Keep items atomic. Prefer one obligation per item whenever possible.
 5. Evidence (STRICT). You MUST cite evidence_ids:
    - For every MUST checklist item: include at least one evidence id that directly supports it.
    - For every risk: include at least one evidence id that directly supports it.
@@ -1040,9 +1235,10 @@ Strict rules
    - policy_triggers must be an array. If no playbook constraints apply, return [].
    - Each trigger must be short, auditable, and map to exactly one playbook key.
 9. Missing info. Put unresolved ambiguities, unanswered buyer-side questions, or evidence gaps into buyer_questions.
-10. Language handling. The source tender text is in ${args.sourceLanguageName}. Analyse obligations, exclusions, submission instructions, qualifications, deadlines, commercial terms, evaluation criteria, and contract clauses in that source language. Keep evidence verbatim in the source language and cite only evidence_ids.
-11. Proposal draft. Keep proposal_draft skeletal and lightweight: maximum 8 short sections, under 900 words, outline quality only. Do not spend output budget on polished prose.
-12. Priority. Prefer precision over coverage. If the evidence pack does not prove something, do not state it as fact. If a reliable decision cannot be made from the curated evidence, prefer Hold over false confidence.
+10. Writing style. Use plain business language. Avoid em dashes, en dashes, hype, filler, and legal-sounding padding. Keep sentences direct and natural. Prefer concrete tender obligations over abstract summaries.
+11. Language handling. The source tender text is in ${args.sourceLanguageName}. Analyse obligations, exclusions, submission instructions, qualifications, deadlines, commercial terms, evaluation criteria, and contract clauses in that source language. Keep evidence verbatim in the source language and cite only evidence_ids.
+12. Proposal draft. Keep proposal_draft skeletal and lightweight: maximum 8 short sections, under 900 words, outline quality only. Do not spend output budget on polished prose.
+13. Priority. Prefer precision over coverage. If the evidence pack does not prove something, do not state it as fact. If a reliable decision cannot be made from the curated evidence, prefer Hold over false confidence. Keep blockers and MUST items close to the tender wording, not generalized reformulations.
 
 Evidence snippets (the ONLY citable basis for this run; cite their ids in evidence_ids):
 ${args.evidenceList}`;
@@ -1219,7 +1415,7 @@ async function runOpenAi(args: {
 
   const instructions =
     "You are TenderPilot. Drafting support only. Not legal advice. Not procurement advice. " +
-    "Use executive, compliance-grade language with a cautious tone. No AI meta commentary. " +
+    "Use executive, compliance-grade language with a cautious tone. No AI meta commentary. Avoid em dashes and avoid padded AI-style phrasing. " +
     `The tender source language is ${sourceLanguageName}. ` +
     `Write all narrative content in ${targetLanguage}. ` +
     "Keep decisionBadge exactly as Go, Hold, or No-Go. " +
@@ -1237,7 +1433,7 @@ async function runOpenAi(args: {
     model,
     instructions,
     input: [{ role: "user", content: userPrompt }],
-    temperature: 0.2,
+    temperature: OPENAI_TEMPERATURE,
     max_output_tokens: tokenBudget,
     text: {
       format: {
@@ -1309,6 +1505,11 @@ function buildEvidenceCandidates(extractedText: string): EvidenceCandidate[] {
     .map((l) => l.replace(/\s+/g, " ").trim())
     .filter((l) => l.length > 0);
 
+  type CandidateWithMeta = EvidenceCandidate & {
+    bucket: EvidenceBucket;
+    lineIndex: number;
+  };
+
   // Heuristic: skip an initial title block until we hit TABLE OF CONTENTS or a clear section header.
   const titleSkipUntil = (() => {
     const maxScan = Math.min(lines.length, 80);
@@ -1344,7 +1545,30 @@ function buildEvidenceCandidates(extractedText: string): EvidenceCandidate[] {
     return false;
   };
 
-  const candidates: EvidenceCandidate[] = [];
+  const getSignals = (l: string) => {
+    const submission = matchesAny(l, (patterns) => patterns.deadline) || matchesAny(l, (patterns) => patterns.submission);
+    const eligibility =
+      matchesAny(l, (patterns) => patterns.qualification) ||
+      matchesAny(l, (patterns) => patterns.security) ||
+      matchesAny(l, (patterns) => patterns.prohibition) ||
+      matchesAny(l, (patterns) => patterns.normative);
+    const commercial = matchesAny(l, (patterns) => patterns.commercial);
+    const evaluation = matchesAny(l, (patterns) => patterns.evaluation);
+    const contractTerms = matchesAny(l, (patterns) => patterns.contract_terms);
+    return { submission, eligibility, commercial, evaluation, contractTerms };
+  };
+
+  const pickBucket = (l: string): EvidenceBucket => {
+    const signals = getSignals(l);
+    if (signals.evaluation) return "evaluation";
+    if (signals.contractTerms) return "contract_terms";
+    if (signals.commercial) return "commercial";
+    if (signals.submission) return "submission";
+    if (signals.eligibility) return "eligibility";
+    return "general";
+  };
+
+  const candidates: CandidateWithMeta[] = [];
   const seen = new Set<string>();
 
   const getAnchor = (i: number): string | null => {
@@ -1381,12 +1605,12 @@ function buildEvidenceCandidates(extractedText: string): EvidenceCandidate[] {
     return score;
   };
 
-  const makeExcerpt = (i: number): string => {
+  const makeExcerpt = (i: number, radius = 1): string => {
     const parts: string[] = [];
     const anchor = getAnchor(i);
     if (anchor && !isTitleLike(anchor) && !isTocLike(anchor)) parts.push(anchor);
 
-    for (const k of [i - 1, i, i + 1]) {
+    for (let k = i - radius; k <= i + radius; k++) {
       if (k >= 0 && k < lines.length) {
         const v = lines[k];
         if (!isTocLike(v) && !isTitleLike(v)) parts.push(v);
@@ -1394,7 +1618,7 @@ function buildEvidenceCandidates(extractedText: string): EvidenceCandidate[] {
     }
 
     let excerpt = parts.join(" ").replace(/\s+/g, " ").trim();
-    if (excerpt.length > 480) excerpt = excerpt.slice(0, 480).trim();
+    if (excerpt.length > 560) excerpt = excerpt.slice(0, 560).trim();
     return excerpt;
   };
 
@@ -1403,10 +1627,13 @@ function buildEvidenceCandidates(extractedText: string): EvidenceCandidate[] {
     const l = lines[i];
     if (isTocLike(l) || isTitleLike(l)) continue;
 
+    const signals = getSignals(l);
     const score = scoreLine(l);
-    if (score < 4) continue;
+    const threshold = signals.evaluation || signals.contractTerms || signals.commercial || signals.submission ? 3 : 4;
+    if (score < threshold) continue;
 
-    const excerpt = makeExcerpt(i);
+    const radius = signals.evaluation || signals.contractTerms || signals.commercial ? 2 : 1;
+    const excerpt = makeExcerpt(i, radius);
     if (!excerpt || excerpt.length < 30) continue;
     if (isTocLike(excerpt) || isTitleLike(excerpt)) continue;
 
@@ -1424,14 +1651,59 @@ function buildEvidenceCandidates(extractedText: string): EvidenceCandidate[] {
       anchor: getAnchor(i),
       kind,
       score,
+      bucket: pickBucket(l),
+      lineIndex: i,
     });
 
-    if (candidates.length >= 240) break;
+    if (candidates.length >= 280) break;
   }
 
-  return candidates
-    .sort((a, b) => (b.score - a.score) || (a.excerpt.length - b.excerpt.length))
-    .slice(0, 220);
+  const sorted = candidates
+    .sort((a, b) => (b.score - a.score) || (a.lineIndex - b.lineIndex) || (a.excerpt.length - b.excerpt.length));
+
+  const selected: CandidateWithMeta[] = [];
+  const selectedIds = new Set<string>();
+  const bucketCaps: Record<EvidenceBucket, number> = {
+    submission: 14,
+    eligibility: 14,
+    commercial: 10,
+    evaluation: 10,
+    contract_terms: 10,
+    general: 22,
+  };
+
+  for (const bucket of EVIDENCE_BUCKET_ORDER) {
+    let taken = 0;
+    for (const cand of sorted) {
+      if (cand.bucket !== bucket || selectedIds.has(cand.id)) continue;
+      selected.push(cand);
+      selectedIds.add(cand.id);
+      taken += 1;
+      if (taken >= bucketCaps[bucket]) break;
+    }
+  }
+
+  for (const cand of sorted) {
+    if (selectedIds.has(cand.id)) continue;
+    selected.push(cand);
+    selectedIds.add(cand.id);
+    if (selected.length >= 140) break;
+  }
+
+  const ordered = selected
+    .slice(0, 140)
+    .sort((a, b) => {
+      const bucketDiff = EVIDENCE_BUCKET_ORDER.indexOf(a.bucket) - EVIDENCE_BUCKET_ORDER.indexOf(b.bucket);
+      if (bucketDiff !== 0) return bucketDiff;
+      const pageA = a.page ?? Number.MAX_SAFE_INTEGER;
+      const pageB = b.page ?? Number.MAX_SAFE_INTEGER;
+      if (pageA !== pageB) return pageA - pageB;
+      if (a.lineIndex !== b.lineIndex) return a.lineIndex - b.lineIndex;
+      if (b.score !== a.score) return b.score - a.score;
+      return a.id.localeCompare(b.id);
+    });
+
+  return ordered.map(({ lineIndex: _lineIndex, ...cand }) => cand);
 }
 
 
@@ -2051,7 +2323,16 @@ let extractedText = "";
         playbook_version: workspacePlaybook.version,
       });
 
-      await logEvent(supabaseAdmin, job, "info", "OpenAI started", { model, maxOutputTokens, remaining_ms: remaining });
+      const analysisFingerprint = buildAnalysisFingerprint({
+        model,
+        targetLanguage,
+        sourceLanguage,
+        evidenceCandidates,
+        playbookVersion: workspacePlaybook.version,
+      });
+      await logEvent(supabaseAdmin, job, "info", "Analysis fingerprint", analysisFingerprint);
+
+      await logEvent(supabaseAdmin, job, "info", "OpenAI started", { model, maxOutputTokens, remaining_ms: remaining, temperature: OPENAI_TEMPERATURE });
 
       // Configurable OpenAI timeout cap (default 35s)
       const openAiTimeoutCap = parseNumberEnv("OPENAI_TIMEOUT_MS", 35_000);
@@ -2069,15 +2350,20 @@ let extractedText = "";
       await logEvent(supabaseAdmin, job, "info", "OpenAI completed", { model, maxOutputTokens });
     }
 
+    aiOut = normalizeAiOutputForUi(aiOut);
 
     // Evidence-first normalization (product-grade):
     // - AI should cite evidence_ids for MUST checklist items and for risks.
     // - Backend backfills `source` (UI compatibility) from the referenced evidence excerpt(s).
-    // - If evidence_ids are missing/unresolvable, we DO NOT reshape semantics (no downgrades / no moving risks).
-    //   Instead we flag `needs_verification` so the UI can surface "Decision-grade" reliability.
+    // - If evidence_ids are missing or unresolvable, we flag `needs_verification` instead of silently inventing support.
     {
       const evidenceById = new Map<string, EvidenceCandidate>();
-      for (const e of evidenceCandidates) evidenceById.set(e.id, e);
+      const evidenceOrder = new Map<string, number>();
+      for (let i = 0; i < evidenceCandidates.length; i++) {
+        const e = evidenceCandidates[i];
+        evidenceById.set(e.id, e);
+        evidenceOrder.set(e.id, i);
+      }
 
       const resolveSource = (args: { ids?: string[]; text?: string; extraText?: string }): { ids: string[]; source: string | null; recovered: boolean } => {
         const valid = (args.ids ?? []).filter((id) => evidenceById.has(id));
@@ -2086,7 +2372,7 @@ let extractedText = "";
           return { ids: valid, source: first.excerpt, recovered: false };
         }
 
-        const fallbackText = [String(args.text ?? "").trim(), String(args.extraText ?? "").trim()].filter(Boolean).join(" — ");
+        const fallbackText = [String(args.text ?? "").trim(), String(args.extraText ?? "").trim()].filter(Boolean).join(": ");
         if (!fallbackText) return { ids: [], source: null, recovered: false };
 
         const recoveredIds = bestEffortEvidenceIdsFromText({
@@ -2101,7 +2387,13 @@ let extractedText = "";
         return { ids: recoveredIds, source: first.excerpt, recovered: true };
       };
 
-      const missingEvidenceReason = "No resolvable evidence_id (candidate not present / trimmed).";
+      const missingEvidenceReason = "No resolvable evidence_id (candidate not present or not selected in this run).";
+      const severityRank: Record<Severity, number> = { high: 0, medium: 1, low: 2 };
+      const checklistTypeRank: Record<"MUST" | "SHOULD" | "INFO", number> = { MUST: 0, SHOULD: 1, INFO: 2 };
+      const firstEvidencePosition = (ids?: string[]) => {
+        const positions = (ids ?? []).map((id) => evidenceOrder.get(id)).filter((v): v is number => Number.isFinite(v));
+        return positions.length ? Math.min(...positions) : Number.MAX_SAFE_INTEGER;
+      };
 
       const checklist: AiOutput["checklist"] = (Array.isArray(aiOut.checklist) ? aiOut.checklist : []).map((it) => {
         const t = (it as any).type as "MUST" | "SHOULD" | "INFO";
@@ -2117,13 +2409,18 @@ let extractedText = "";
         if (source) base.source = source;
         if (recovered) base.evidence_backfilled = true;
 
-        // Decision-grade reliability: MUST must remain MUST; missing evidence becomes a flag.
         if (t === "MUST" && ids.length === 0) {
           base.needs_verification = true;
           base.verification_reason = missingEvidenceReason;
         }
 
         return base;
+      }).sort((a, b) => {
+        const typeDiff = checklistTypeRank[a.type] - checklistTypeRank[b.type];
+        if (typeDiff !== 0) return typeDiff;
+        const evidenceDiff = firstEvidencePosition(a.evidence_ids) - firstEvidencePosition(b.evidence_ids);
+        if (evidenceDiff !== 0) return evidenceDiff;
+        return String(a.text ?? "").localeCompare(String(b.text ?? ""));
       });
 
       const risks: AiOutput["risks"] = (Array.isArray(aiOut.risks) ? aiOut.risks : []).map((r) => {
@@ -2138,9 +2435,53 @@ let extractedText = "";
           out.verification_reason = missingEvidenceReason;
         }
         return out;
+      }).sort((a, b) => {
+        const severityDiff = severityRank[a.severity] - severityRank[b.severity];
+        if (severityDiff !== 0) return severityDiff;
+        const evidenceDiff = firstEvidencePosition(a.evidence_ids) - firstEvidencePosition(b.evidence_ids);
+        if (evidenceDiff !== 0) return evidenceDiff;
+        return String(a.title ?? "").localeCompare(String(b.title ?? ""));
       });
 
-      aiOut = { ...aiOut, checklist, risks };
+      const executive = aiOut.executive_summary ?? ({} as AiOutput["executive_summary"]);
+      const hardBlockers = (Array.isArray(executive.hard_blockers) ? executive.hard_blockers : []).map((item: any) => {
+        const titleValue = String(item?.title ?? "").trim();
+        const detailValue = String(item?.detail ?? "").trim();
+        const { ids, recovered } = resolveSource({ ids: item?.evidence_ids, text: titleValue, extraText: detailValue });
+        return {
+          ...item,
+          evidence_ids: ids,
+          ...(recovered ? { evidence_backfilled: true } : {}),
+        };
+      }).filter((item: any) => item.title || item.detail);
+
+      const decisionReasons = (Array.isArray(executive.decision_reasons) ? executive.decision_reasons : []).map((item: any) => {
+        const reasonValue = String(item?.reason ?? "").trim();
+        const { ids, recovered } = resolveSource({ ids: item?.evidence_ids, text: reasonValue });
+        return {
+          ...item,
+          evidence_ids: ids,
+          ...(recovered ? { evidence_backfilled: true } : {}),
+        };
+      }).filter((item: any) => item.reason);
+
+      const topRisks = risks.slice(0, 3).map((item) => ({
+        title: item.title,
+        severity: item.severity,
+        detail: item.detail,
+      }));
+
+      aiOut = {
+        ...aiOut,
+        executive_summary: {
+          ...executive,
+          hard_blockers: hardBlockers,
+          decision_reasons: decisionReasons,
+          topRisks: topRisks.length ? topRisks : executive.topRisks,
+        },
+        checklist,
+        risks,
+      };
     }
     const resultPayload: any = {
       job_id: job.id,

@@ -1075,7 +1075,7 @@ function toPlainTextSummary(args: {
       const title = strip((r as any)?.title ?? "");
       const why = strip((r as any)?.why_it_matters ?? (r as any)?.why ?? "");
       const sev = sevLabel((r as any)?.severity);
-      lines.push(`• ${sev}: ${title}${why ? ` — ${why}` : ""}`);
+      lines.push(`• ${sev}: ${title}${why ? `: ${why}` : ""}`);
       const evIds = (r as any)?.evidence_ids as string[] | undefined;
       renderEvidenceLines(evIds, 2).forEach((l) => lines.push(`  ${l}`));
     }
@@ -2294,7 +2294,7 @@ const executive = useMemo(() => {
   const firstMust = mustItems[0] ?? "";
   const firstQuestion = questions[0] ?? "";
   const firstRisk = executive?.topRisks?.[0]?.title
-    ? `${executive.topRisks[0].title}${executive.topRisks[0].detail ? ` — ${executive.topRisks[0].detail}` : ""}`
+    ? `${executive.topRisks[0].title}${executive.topRisks[0].detail ? `: ${executive.topRisks[0].detail}` : ""}`
     : "";
   const firstDraftLine = draftLinesForUi[0] ?? "";
 
@@ -3983,7 +3983,7 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
                 {(executive?.topRisks ?? []).length ? (
                   <ul className="mt-3 space-y-2 text-sm text-foreground/80">
                     {(executive?.topRisks ?? []).slice(0, 5).map((r: any, i: number) => (
-                      <li key={i} className="leading-relaxed">• {String(r?.title ?? "").trim()}{r?.detail ? ` — ${String(r.detail).trim()}` : ""}</li>
+                      <li key={i} className="leading-relaxed">• {String(r?.title ?? "").trim()}{r?.detail ? `: ${String(r.detail).trim()}` : ""}</li>
                     ))}
                   </ul>
                 ) : (
