@@ -1558,7 +1558,9 @@
         "couldNotOpenPortal": "Couldn’t open billing portal. Sync billing or upgrade, then try again.",
         "allTenderDataDeleted": "All tender data deleted.",
         "couldNotDeleteTenderData": "Couldn’t delete your tender data. Try again.",
-        "couldNotDeleteAccount": "Couldn’t delete your account. Try again."
+        "couldNotDeleteAccount": "Couldn’t delete your account. Try again.",
+        "noBillingPortalYet": "No billing portal is available yet for this account.",
+        "noBillingRecordYet": "We could not find a billing record for this account yet."
       }
     },
     "exports": {

@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "validate:i18n:active": "node scripts/validate-active-i18n.js"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.11",

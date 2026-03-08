@@ -9,6 +9,7 @@ import { stableRefKey } from "@/lib/bid-workflow/keys";
 import { getJobDisplayName, setJobDisplayName, clearJobDisplayName } from "@/lib/pilot-job-names";
 
 import { track } from "@/lib/telemetry";
+import { canExportForProfile } from "@/lib/billing-entitlements";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -1313,7 +1314,9 @@ const [savingMeta, setSavingMeta] = useState(false);
   // Monetization (free tier): used to gate exports
   const [notice, setNotice] = useState<string | null>(null);
   const [creditsBalance, setCreditsBalance] = useState<number | null>(null);
+  const [planTier, setPlanTier] = useState<string | null>(null);
   const [creditsLoading, setCreditsLoading] = useState(false);
+  const [billingResolved, setBillingResolved] = useState(false);
 
 	const [tab, setTab] = useState<AnalysisTab>("text");
 
@@ -1348,6 +1351,7 @@ const [savingMeta, setSavingMeta] = useState(false);
 
   const [retrying, setRetrying] = useState(false);
   const [retryFeedback, setRetryFeedback] = useState<string | null>(null);
+  const [processingTimeoutReached, setProcessingTimeoutReached] = useState(false);
 
   const mountedRef = useRef(true);
   const sourceAnchorRef = useRef<HTMLSpanElement | null>(null);
@@ -1445,6 +1449,7 @@ const [savingMeta, setSavingMeta] = useState(false);
     async function load() {
       setLoading(true);
       setError(null);
+      setProcessingTimeoutReached(false);
 
       try {
         const { data: jobRow, error: jobErr } = await supabase.from("jobs").select("*").eq("id", jobId).single();
@@ -1468,18 +1473,31 @@ const [savingMeta, setSavingMeta] = useState(false);
           if (uid) {
             const { data: profileRow, error: profErr } = await supabase
               .from("profiles")
-              .select("credits_balance")
+              .select("credits_balance, plan_tier")
               .eq("id", uid)
               .maybeSingle();
             if (profErr) console.warn(profErr);
             const bal = typeof (profileRow as any)?.credits_balance === "number" ? (profileRow as any).credits_balance : 0;
-            if (mountedRef.current) setCreditsBalance(bal);
+            const tier = typeof (profileRow as any)?.plan_tier === "string" ? String((profileRow as any).plan_tier) : "free";
+            if (mountedRef.current) {
+              setCreditsBalance(bal);
+              setPlanTier(tier);
+              setBillingResolved(true);
+            }
           } else {
-            if (mountedRef.current) setCreditsBalance(0);
+            if (mountedRef.current) {
+              setCreditsBalance(0);
+              setPlanTier("free");
+              setBillingResolved(true);
+            }
           }
         } catch (e) {
-          console.warn("credits_balance load failed", e);
-          if (mountedRef.current) setCreditsBalance(0);
+          console.warn("billing profile load failed", e);
+          if (mountedRef.current) {
+            setCreditsBalance(null);
+            setPlanTier(null);
+            setBillingResolved(false);
+          }
         } finally {
           if (mountedRef.current) setCreditsLoading(false);
         }
@@ -1625,16 +1643,15 @@ setWorkItems((wiRows as any[]) ?? []);
 		// Hard stop only applies while still processing AND results are still missing.
 		// Prevents false “taking longer” errors when the tender is already done.
 		if (!isTerminal && !resultRow && Date.now() - startedAt > MAX_POLL_MS) {
+		  setProcessingTimeoutReached(true);
 		  setError(t("app.review.errors.takingLonger"));
 		  stopPolling();
 		  return;
 		}
 
-		// If results are present, clear only the “taking longer” message (if it was shown earlier).
-		if (resultRow) {
-		  setError((prev) =>
-			prev?.includes("taking longer than expected") ? null : prev
-		  );
+		if (resultRow && processingTimeoutReached) {
+		  setProcessingTimeoutReached(false);
+		  setError(null);
 		}
 
 		
@@ -1746,6 +1763,7 @@ setWorkItems((wiRows as any[]) ?? []);
       }
 
       setJob((prev) => (prev ? ({ ...prev, status: "queued" } as any) : prev));
+      setProcessingTimeoutReached(false);
       setError(null);
       setRetryFeedback(t("app.review.retry.started"));
       triggerProcessingOnce();
@@ -1802,9 +1820,12 @@ setWorkItems((wiRows as any[]) ?? []);
   }, [jobId, job?.status]);
 
   const canDownload = useMemo(() => Boolean(job && job.status === "done"), [job]);
-  const creditsKnown = typeof creditsBalance === "number";
-  const exportLocked = useMemo(() => canDownload && creditsKnown && (creditsBalance as number) < 1, [canDownload, creditsKnown, creditsBalance]);
-  const canExport = useMemo(() => canDownload && (!creditsKnown || (creditsBalance as number) > 0), [canDownload, creditsKnown, creditsBalance]);
+  const hasExportEntitlement = useMemo(() => {
+    if (!canDownload || !billingResolved) return false;
+    return canExportForProfile({ plan_tier: planTier, credits_balance: creditsBalance });
+  }, [canDownload, billingResolved, planTier, creditsBalance]);
+  const exportLocked = useMemo(() => canDownload && billingResolved && !hasExportEntitlement, [canDownload, billingResolved, hasExportEntitlement]);
+  const canExport = useMemo(() => canDownload && (!billingResolved || hasExportEntitlement), [canDownload, billingResolved, hasExportEntitlement]);
   const unlockExportsHref = "mailto:support@tenderpilot.com?subject=Unlock%20TenderPilot%20Exports";
   const canDelete = Boolean(job) && !showProgress;
 

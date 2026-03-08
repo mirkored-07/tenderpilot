@@ -1499,7 +1499,9 @@
         "couldNotOpenPortal": "Impossibile aprire il portale di fatturazione. Sincronizza la fatturazione o passa a un piano superiore, poi riprova.",
         "allTenderDataDeleted": "Tutti i dati gara eliminati.",
         "couldNotDeleteTenderData": "Impossibile eliminare i dati gara. Riprova.",
-        "couldNotDeleteAccount": "Impossibile eliminare l’account. Riprova."
+        "couldNotDeleteAccount": "Impossibile eliminare l’account. Riprova.",
+        "noBillingPortalYet": "Per questo account non è ancora disponibile alcun portale di fatturazione.",
+        "noBillingRecordYet": "Non è ancora stato trovato alcun record di fatturazione per questo account."
       }
     },
     "exports": {
@@ -1793,39 +1795,39 @@
       }
     },
     "errors": {
-      "title": "Something went wrong",
-      "body": "We couldn’t load this part of TenderPilot.",
-      "details": "Error details",
-      "whatYouCanDo": "What you can do",
+      "title": "Qualcosa è andato storto",
+      "body": "Non siamo riusciti a caricare questa parte di TenderPilot.",
+      "details": "Dettagli dell’errore",
+      "whatYouCanDo": "Cosa puoi fare",
       "cta": {
-        "retry": "Try again",
-        "newReview": "Start a new review",
-        "openHistory": "Open your tenders"
+        "retry": "Riprova",
+        "newReview": "Avvia una nuova revisione",
+        "openHistory": "Apri le tue gare"
       },
       "actions": {
-        "retryPage": "Retry this page",
-        "refreshAfterSignIn": "Refresh after signing in",
-        "openHistory": "Go to tenders"
+        "retryPage": "Riprova questa pagina",
+        "refreshAfterSignIn": "Aggiorna dopo aver effettuato l’accesso",
+        "openHistory": "Vai alle gare"
       }
     },
     "loading": {
-      "title": "Loading…",
-      "subtitle": "Preparing your workspace",
-      "sessionHint": "If this takes longer than a few seconds, refresh the page."
+      "title": "Caricamento…",
+      "subtitle": "Preparazione del tuo spazio di lavoro",
+      "sessionHint": "Se richiede più di qualche secondo, aggiorna la pagina."
     },
     "metadata": {
       "title": "Bid metadata",
       "labels": {
-        "contextHint": "Optional context that helps your team and improves exports. This does not change evidence excerpts.",
-        "deadline": "Deadline",
-        "addDeadline": "Add deadline",
-        "owner": "Owner",
-        "addOwner": "Add owner",
-        "portal": "Portal",
-        "addPortal": "Add portal link",
-        "portalSet": "Portal set",
-        "unsaved": "Unsaved",
-        "lastSaved": "Last saved"
+        "contextHint": "Contesto facoltativo che aiuta il tuo team e migliora le esportazioni. Questo non modifica gli estratti delle prove.",
+        "deadline": "Scadenza",
+        "addDeadline": "Aggiungi scadenza",
+        "owner": "Responsabile",
+        "addOwner": "Aggiungi responsabile",
+        "portal": "Portale",
+        "addPortal": "Aggiungi link al portale",
+        "portalSet": "Portale impostato",
+        "unsaved": "Non salvato",
+        "lastSaved": "Ultimo salvataggio"
       },
       "fields": {
         "deadlineOverride": "Deadline override",
@@ -1835,8 +1837,8 @@
         "targetDecision": "Target decision date"
       },
       "actions": {
-        "save": "Save",
-        "saving": "Saving…"
+        "save": "Salva",
+        "saving": "Salvataggio…"
       },
       "placeholders": {
         "portalUrl": "https://…",
