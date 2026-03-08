@@ -1747,16 +1747,20 @@ setWorkItems((wiRows as any[]) ?? []);
     if (retrying) return;
     setRetryFeedback(null);
     setRetrying(true);
+    track("job_retry_requested", { jobId });
     try {
       const res = await fetch(`/api/jobs/${encodeURIComponent(jobId)}/retry`, { method: "POST" });
       if (!res.ok) {
         const j = await res.json().catch(() => ({} as any));
         const code = String((j as any)?.error ?? "");
         if (res.status === 401) {
+          track("job_retry_failed", { jobId, reason: "signed_out", status: res.status });
           setRetryFeedback(t("app.review.retry.signedOut"));
         } else if (res.status === 409 && code === "job_not_failed") {
+          track("job_retry_failed", { jobId, reason: code, status: res.status });
           setRetryFeedback(t("app.review.retry.noLongerFailed"));
         } else {
+          track("job_retry_failed", { jobId, reason: code || "retry_failed", status: res.status });
           setRetryFeedback(t("app.review.retry.failed"));
         }
         return;
@@ -1765,9 +1769,11 @@ setWorkItems((wiRows as any[]) ?? []);
       setJob((prev) => (prev ? ({ ...prev, status: "queued" } as any) : prev));
       setProcessingTimeoutReached(false);
       setError(null);
+      track("job_retry_started", { jobId });
       setRetryFeedback(t("app.review.retry.started"));
       triggerProcessingOnce();
-    } catch {
+    } catch (e) {
+      track("job_retry_failed", { jobId, reason: String((e as Error)?.message ?? "retry_failed") });
       setRetryFeedback(t("app.review.retry.failed"));
     } finally {
       setRetrying(false);
@@ -2888,6 +2894,7 @@ const executive = useMemo(() => {
     if (!job) return;
 
     if (!canExport) {
+      track("export_bid_pack_denied", { jobId, reason: "client_lock" });
       setNotice(t("app.review.exportsLocked"));
       return;
     }
@@ -2937,6 +2944,7 @@ const executive = useMemo(() => {
     if (!job) return;
 
     if (!canExport) {
+      track("export_tender_brief_denied", { jobId, reason: "client_lock" });
       setNotice(t("app.review.exportsLocked"));
       return;
     }
@@ -3363,6 +3371,7 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
     if (!job) return;
 
     if (!canExport) {
+      track("export_bid_pack_denied", { jobId, reason: "client_lock" });
       setNotice(t("app.review.exportsLocked"));
       return;
     }
@@ -3376,6 +3385,7 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
     });
 
     if (res.status === 402) {
+      track("export_bid_pack_denied", { jobId, reason: "server_402" });
       setNotice(t("app.review.exportsLocked"));
       return;
     }
@@ -3383,10 +3393,12 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
     if (!res.ok) {
       const txt = await res.text().catch(() => "");
       console.error("Bid Pack export failed", res.status, txt);
+      track("export_bid_pack_failed", { jobId, status: res.status });
       setError(t("app.review.errors.bidPackExportFailed"));
       return;
     }
 
+    track("export_bid_pack_succeeded", { jobId });
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -3401,6 +3413,7 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
     if (!job) return;
 
     if (!canExport) {
+      track("export_csv_denied", { jobId, type, reason: "client_lock" });
       setNotice(t("app.review.exportsLocked"));
       return;
     }
@@ -3414,6 +3427,7 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
     });
 
     if (res.status === 402) {
+      track("export_csv_denied", { jobId, type, reason: "server_402" });
       setNotice(t("app.review.exportsLocked"));
       return;
     }
@@ -3421,10 +3435,12 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
     if (!res.ok) {
       const txt = await res.text().catch(() => "");
       console.error("CSV export failed", type, res.status, txt);
+      track("export_csv_failed", { jobId, type, status: res.status });
       setError(t("app.review.errors.exportCsvFailed", { type }));
       return;
     }
 
+    track("export_csv_succeeded", { jobId, type });
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");

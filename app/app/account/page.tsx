@@ -17,6 +17,7 @@ import { X, Pencil } from "lucide-react";
 import { useAppI18n } from "../_components/app-i18n-provider";
 import { AccountBillingCard } from "./_components/account-billing-card";
 import { AccountResourcesPanel } from "./_components/account-resources-panel";
+import { track } from "@/lib/telemetry";
 
 type ProfileRow = {
   id: string;
@@ -641,6 +642,7 @@ export default function AccountPage() {
           const snap = billingSnapshotRef.current;
           if (snap?.planTier === "pro" && typeof snap.credits === "number" && snap.credits >= 1) {
             setBillingNotice({ kind: "ok", text: t("app.account.notice.planConfirmed") });
+            track("billing_checkout_return_confirmed", { outcome: "confirmed", plan_tier: "pro" });
             return;
           }
 
@@ -652,6 +654,7 @@ export default function AccountPage() {
           kind: "ok",
           text: t("app.account.notice.paymentReceivedSyncHint"),
         });
+        track("billing_checkout_return_pending_sync", { outcome: "pending_sync" });
       })();
 
       return () => {
@@ -659,6 +662,7 @@ export default function AccountPage() {
       };
     } else if (billing === "cancel") {
       setBillingNotice({ kind: "err", text: t("app.account.notice.checkoutCanceled") });
+      track("billing_checkout_return_canceled", { outcome: "cancel" });
     }
   }, []);
 
@@ -986,6 +990,7 @@ export default function AccountPage() {
       }
     } catch (e) {
       console.error(t("app.account.notice.accountLoadFailed"), e);
+      track("account_load_failed", { area: "account_page" });
       setStatusAutoClear({
         kind: "err",
         text: t("app.account.notice.couldNotLoadSettings"),
@@ -1004,6 +1009,7 @@ export default function AccountPage() {
   async function startCheckout(interval: "monthly" | "yearly") {
     setBillingNotice(null);
     setBillingBusy(true);
+    track("billing_checkout_started", { interval });
     try {
       const r = await fetch("/api/stripe/checkout", {
         method: "POST",
@@ -1016,9 +1022,11 @@ export default function AccountPage() {
         throw new Error(String(j?.error ?? "checkout_failed"));
       }
 
+      track("billing_checkout_redirected", { interval });
       window.location.href = String(j.url);
     } catch (e) {
       console.error(e);
+      track("billing_checkout_failed", { interval, reason: String((e as Error)?.message ?? "checkout_failed") });
       setBillingNotice({
         kind: "err",
         text: t("app.account.notice.couldNotStartCheckout"),
@@ -1031,6 +1039,7 @@ export default function AccountPage() {
   async function openBillingPortal() {
     setBillingNotice(null);
     setBillingBusy(true);
+    track("billing_portal_requested");
     try {
       const r = await fetch("/api/stripe/portal", { method: "POST" });
       const j = await r.json().catch(() => ({}));
@@ -1039,10 +1048,12 @@ export default function AccountPage() {
         throw new Error(err);
       }
 
+      track("billing_portal_redirected");
       window.location.href = String(j.url);
     } catch (e) {
       console.error(e);
       const err = String((e as Error)?.message ?? "portal_failed");
+      track("billing_portal_failed", { reason: err });
       setBillingNotice({
         kind: "err",
         text: err === "no_stripe_customer" ? t("app.account.notice.noBillingPortalYet") : t("app.account.notice.couldNotOpenPortal"),
@@ -1056,12 +1067,14 @@ export default function AccountPage() {
     const silent = Boolean(opts?.silent);
     if (!silent) setBillingNotice(null);
     setBillingBusy(true);
+    track("billing_sync_requested", { silent });
     try {
       const r = await fetch("/api/stripe/sync", { method: "POST" });
       const j = await r.json().catch(() => ({}));
 
       if (!r.ok) {
         const err = String((j as any)?.error ?? "stripe_sync_failed");
+        track("billing_sync_failed", { silent, reason: err });
         if (!silent) {
           setBillingNotice({
             kind: "err",
@@ -1074,9 +1087,10 @@ export default function AccountPage() {
         return;
       }
 
+      const plan = String((j as any)?.plan_tier ?? "").toLowerCase();
+      const reason = String((j as any)?.reason ?? "").toLowerCase();
+      track("billing_sync_completed", { silent, plan_tier: plan || "unknown", reason: reason || "synced" });
       if (!silent) {
-        const plan = String((j as any)?.plan_tier ?? "").toLowerCase();
-        const reason = String((j as any)?.reason ?? "").toLowerCase();
         setBillingNotice({
           kind: reason === "no_customer" ? "err" : "ok",
           text:
@@ -1092,6 +1106,7 @@ export default function AccountPage() {
       router.refresh();
     } catch (e) {
       console.error(e);
+      track("billing_sync_failed", { silent, reason: String((e as Error)?.message ?? "stripe_sync_failed") });
       if (!silent) {
         setBillingNotice({ kind: "err", text: t("app.account.notice.couldNotSyncBilling") });
       }

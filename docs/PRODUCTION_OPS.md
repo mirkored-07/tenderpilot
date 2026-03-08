@@ -117,3 +117,39 @@ Stripe (if billing is enabled):
 
 4) Confirm the job transitions:
 - queued → processing → done
+
+
+## 6) Client telemetry signals to watch
+
+If `NEXT_PUBLIC_POSTHOG_KEY` is configured, the app now emits lightweight client telemetry that helps diagnose launch issues without relying only on screenshots.
+
+High-value events:
+- `billing_checkout_started` / `billing_checkout_redirected` / `billing_checkout_failed`
+- `billing_checkout_return_confirmed` / `billing_checkout_return_pending_sync` / `billing_checkout_return_canceled`
+- `billing_portal_requested` / `billing_portal_redirected` / `billing_portal_failed`
+- `billing_sync_requested` / `billing_sync_completed` / `billing_sync_failed`
+- `export_bid_pack_succeeded` / `export_bid_pack_failed` / `export_bid_pack_denied`
+- `export_csv_succeeded` / `export_csv_failed` / `export_csv_denied`
+- `job_retry_requested` / `job_retry_started` / `job_retry_failed`
+- `client_error` / `client_unhandled_rejection`
+
+Recommended quick checks after launch:
+1. Confirm checkout attempts produce `billing_checkout_started` followed by either `billing_checkout_redirected` or `billing_checkout_failed`.
+2. Confirm successful return from Stripe produces either `billing_checkout_return_confirmed` or `billing_checkout_return_pending_sync`.
+3. Confirm portal problems surface as `billing_portal_failed` with a useful `reason`.
+4. Confirm blocked exports surface as `export_*_denied` rather than silent failures.
+5. Confirm retry attempts on failed jobs surface as `job_retry_requested` and then either `job_retry_started` or `job_retry_failed`.
+
+## 7) Support triage shortcuts
+
+When a user reports a billing or export problem, try to collect these first:
+- user email
+- approximate timestamp
+- job ID if relevant
+- whether the issue happened on checkout, portal, sync, or export
+
+Then correlate with:
+- Stripe webhook delivery logs
+- Vercel function logs for the matching route
+- Supabase job events for the job ID
+- PostHog client telemetry events near the reported timestamp
