@@ -782,6 +782,15 @@
       "badges": {
         "formats": "PDF ou DOCX",
         "maxSize": "Jusqu’à {max}"
+      },
+      "model": {
+        "title": "Modèle de benchmark",
+        "hint": "Réservé au benchmark interne. La production reste sur le modèle par défaut sauf si vous changez explicitement ce run.",
+        "label": "Exécuter cet import avec",
+        "options": {
+          "default": "Modèle de production par défaut (OpenAI gpt-4.1-mini)",
+          "geminiFlash": "Benchmark Gemini 2.5 Flash"
+        }
       }
     },
     "tenders": {

@@ -20,6 +20,12 @@ Key features:
 - Storage: Supabase Storage
 - Auth: Supabase Auth
 
+## Model routing
+- Default production model: `openai:gpt-4.1-mini`
+- Optional benchmark path: `google:gemini-2.5-flash`
+- Per-job override is stored in `jobs.pipeline.ai.requested_model`
+- All supported models use the same curated TenderPilot evidence pack, output schema, and downstream UI contract
+
 ## Mock / Demo mode
 For development, testing, and demos, the system supports a deterministic mock mode.
 

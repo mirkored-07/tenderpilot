@@ -33,7 +33,10 @@ Set these for `process-job` in Supabase (Edge Function secrets):
   Used as a shared secret to prevent public invocation.
 
 Extraction / AI (depending on what you use):
-- `OPENAI_API_KEY`
+- `TP_LLM_DEFAULT_MODEL` (recommended: `openai:gpt-4.1-mini`)
+- `TP_LLM_ALLOWED_MODELS` (recommended: `openai:gpt-4.1-mini,google:gemini-2.5-flash`)
+- `TP_OPENAI_API_KEY` (or `OPENAI_API_KEY`)
+- `TP_GEMINI_API_KEY` (or `GEMINI_API_KEY`) when Gemini benchmark runs are enabled
 - `TP_UNSTRUCTURED_API_KEY` (if Unstructured extraction is enabled)
 - `MISTRAL_API_KEY` (if OCR is enabled)
 
@@ -98,6 +101,7 @@ Your Next.js app must have:
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `TP_CRON_SECRET` (must match the Edge Function secret)
+- `NEXT_PUBLIC_ENABLE_MODEL_SWITCH=1` only if you want the internal upload benchmark switch visible
 
 Stripe (if billing is enabled):
 - `STRIPE_SECRET_KEY`
@@ -153,3 +157,9 @@ Then correlate with:
 - Vercel function logs for the matching route
 - Supabase job events for the job ID
 - PostHog client telemetry events near the reported timestamp
+
+## 6) Benchmark model routing notes
+
+- OpenAI remains the production default unless a per-job override is stored in `jobs.pipeline.ai.requested_model`.
+- Gemini benchmark runs use the same curated evidence pipeline as OpenAI. They do not get direct full-PDF access in the app path.
+- Use normalized model keys in config and overrides, for example `openai:gpt-4.1-mini` and `google:gemini-2.5-flash`.

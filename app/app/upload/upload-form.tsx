@@ -20,6 +20,8 @@ import { useAppI18n } from "../_components/app-i18n-provider";
 type SourceType = "pdf" | "docx";
 
 const MAX_FILE_BYTES = 25 * 1024 * 1024; // 25 MB
+const DEFAULT_MODEL_OPTION = "__default__";
+const GEMINI_FLASH_MODEL_KEY = "google:gemini-2.5-flash";
 
 function formatBytes(bytes: number) {
   if (!Number.isFinite(bytes)) return "";
@@ -56,6 +58,9 @@ export default function UploadForm() {
 
   const [phase, setPhase] = useState<UploadPhase>("idle");
   const loading = phase !== "idle";
+
+  const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_MODEL_OPTION);
+  const enableModelSwitch = process.env.NEXT_PUBLIC_ENABLE_MODEL_SWITCH === "1";
 
   const [error, setError] = useState<string | null>(null);
   const [needsSignIn, setNeedsSignIn] = useState(false);
@@ -214,10 +219,17 @@ export default function UploadForm() {
       track("upload_completed", { sourceType, size: file.size });
 
       setPhase("creating_job");
+      const requestedModel =
+        enableModelSwitch && selectedModel !== DEFAULT_MODEL_OPTION
+          ? selectedModel
+          : null;
+
       const { jobId } = await createJobAction({
         fileName: file.name,
         filePath,
         sourceType,
+        requestedModel,
+        selectionSource: requestedModel ? "upload_switch" : null,
       });
       jobCreated = true;
 
@@ -305,6 +317,36 @@ export default function UploadForm() {
         className="hidden"
         onChange={(e) => validateAndSet(e.target.files?.[0] ?? null)}
       />
+
+      {enableModelSwitch ? (
+        <div className="rounded-2xl border bg-muted/30 p-4">
+          <div className="space-y-2">
+            <div>
+              <p className="text-sm font-semibold">{t("app.upload.model.title")}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t("app.upload.model.hint")}
+              </p>
+            </div>
+
+            <label className="flex flex-col gap-2 text-sm">
+              <span className="font-medium">{t("app.upload.model.label")}</span>
+              <select
+                className="h-10 rounded-xl border bg-background px-3 text-sm"
+                value={selectedModel}
+                onChange={(e) => setSelectedModel(e.target.value)}
+                disabled={loading}
+              >
+                <option value={DEFAULT_MODEL_OPTION}>
+                  {t("app.upload.model.options.default")}
+                </option>
+                <option value={GEMINI_FLASH_MODEL_KEY}>
+                  {t("app.upload.model.options.geminiFlash")}
+                </option>
+              </select>
+            </label>
+          </div>
+        </div>
+      ) : null}
 
       <Card
         className={[

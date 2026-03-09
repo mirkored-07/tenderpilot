@@ -38,6 +38,39 @@ type WorkBaseRow = {
   evidenceIds?: string[];
 };
 
+function mergeUniqueEvidenceIds(...groups: Array<string[] | undefined>): string[] | undefined {
+  const merged = groups
+    .flatMap((group) => (Array.isArray(group) ? group : []))
+    .map((id) => String(id ?? "").trim())
+    .filter(Boolean);
+
+  if (!merged.length) return undefined;
+  return Array.from(new Set(merged));
+}
+
+function dedupeWorkBaseRows(rows: WorkBaseRow[]): WorkBaseRow[] {
+  const byKey = new Map<string, WorkBaseRow>();
+
+  for (const row of rows) {
+    const key = `${row.type}:${row.ref_key}`;
+    const prev = byKey.get(key);
+
+    if (!prev) {
+      byKey.set(key, row);
+      continue;
+    }
+
+    byKey.set(key, {
+      ...prev,
+      title: prev.title || row.title,
+      meta: prev.meta || row.meta,
+      evidenceIds: mergeUniqueEvidenceIds(prev.evidenceIds, row.evidenceIds),
+    });
+  }
+
+  return Array.from(byKey.values());
+}
+
 type EvidenceFocus = {
   id: string;
   excerpt: string;
@@ -248,7 +281,7 @@ export function BidRoomPanel(props: {
       rows.push({ type: "outline", ref_key: ref, title });
     }
 
-    return rows;
+    return dedupeWorkBaseRows(rows);
   }, [jobId, checklist, risks, questions, outlineSections]);
 
   const workByKey = useMemo(() => {

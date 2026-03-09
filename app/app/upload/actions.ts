@@ -7,6 +7,30 @@ import { createClient } from "@supabase/supabase-js";
 
 type SourceType = "pdf" | "docx";
 
+const DEFAULT_ALLOWED_MODEL_KEYS = ["openai:gpt-4.1-mini", "google:gemini-2.5-flash"] as const;
+
+function normalizeModelKey(raw: unknown): string {
+  const value = String(raw ?? "").trim().toLowerCase();
+  if (!value) return "";
+  if (value.includes(":")) return value;
+  return `openai:${value}`;
+}
+
+function parseAllowedModelKeysFromEnv(): Set<string> {
+  const raw = String(process.env.TP_LLM_ALLOWED_MODELS ?? "").trim();
+  const values = raw
+    ? raw.split(",").map((item) => normalizeModelKey(item)).filter(Boolean)
+    : [...DEFAULT_ALLOWED_MODEL_KEYS];
+
+  return new Set(values);
+}
+
+function sanitizeSelectionSource(raw: unknown): string {
+  const value = String(raw ?? "").trim().toLowerCase();
+  if (value === "upload_switch") return value;
+  return "upload_switch";
+}
+
 async function supabaseServer() {
   // In your Next version, cookies() is async
   const cookieStore = await cookies();
@@ -43,6 +67,8 @@ export async function createJobAction(input: {
   fileName: string;
   filePath: string;
   sourceType: SourceType;
+  requestedModel?: string | null;
+  selectionSource?: string | null;
 }): Promise<{ jobId: string }> {
   const supabase = await supabaseServer();
 
@@ -53,6 +79,14 @@ export async function createJobAction(input: {
 
   if (userError || !user) {
     redirect("/login");
+  }
+
+  const requestedModel = normalizeModelKey(input.requestedModel);
+  if (requestedModel) {
+    const allowedModelKeys = parseAllowedModelKeysFromEnv();
+    if (!allowedModelKeys.has(requestedModel)) {
+      throw new Error("Invalid model selection");
+    }
   }
 
   // Enforce credits + create job transactionally.
@@ -115,6 +149,63 @@ export async function createJobAction(input: {
 
   const jobId = String(data ?? "").trim();
   if (!jobId) throw new Error("Failed to create job");
+
+  if (requestedModel) {
+    try {
+      const { data: jobRow, error: jobLookupError } = await admin
+        .from("jobs")
+        .select("id,user_id,pipeline")
+        .eq("id", jobId)
+        .maybeSingle();
+
+      if (jobLookupError || !jobRow || jobRow.user_id !== user.id) {
+        throw jobLookupError ?? new Error("Job not found after creation");
+      }
+
+      const existingPipeline =
+        jobRow.pipeline && typeof jobRow.pipeline === "object" ? jobRow.pipeline : {};
+      const existingAi =
+        existingPipeline.ai && typeof existingPipeline.ai === "object"
+          ? existingPipeline.ai
+          : {};
+
+      const nextPipeline = {
+        ...existingPipeline,
+        ai: {
+          ...existingAi,
+          requested_model: requestedModel,
+          selection_source: sanitizeSelectionSource(input.selectionSource),
+        },
+      };
+
+      const { error: pipelineError } = await admin
+        .from("jobs")
+        .update({ pipeline: nextPipeline })
+        .eq("id", jobId)
+        .eq("user_id", user.id);
+
+      if (pipelineError) {
+        throw pipelineError;
+      }
+    } catch (error) {
+      console.error("Failed to persist requested model override", error);
+      try {
+        await admin.from("job_events").insert({
+          job_id: jobId,
+          user_id: user.id,
+          level: "warn",
+          message: "AI model override save failed",
+          meta: {
+            requested_model: requestedModel,
+            selection_source: sanitizeSelectionSource(input.selectionSource),
+            error: String((error as Error)?.message ?? error),
+          },
+        });
+      } catch {
+        // ignore secondary logging failures
+      }
+    }
+  }
 
   return { jobId };
 }

@@ -31,6 +31,101 @@ const PROCESS_JOB_PROMPT_VERSION = "2026-03-08-c1";
 const PROCESS_JOB_SCHEMA_VERSION = "2026-03-08-c1";
 const EVIDENCE_SELECTION_VERSION = "2026-03-08-c1";
 const OPENAI_TEMPERATURE = 0;
+const GEMINI_TEMPERATURE = 0;
+const DEFAULT_LLM_MODEL_KEY = "openai:gpt-4.1-mini";
+const DEFAULT_ALLOWED_BENCHMARK_MODEL_KEY = "google:gemini-2.5-flash";
+
+type LlmProvider = "openai" | "google";
+
+type LlmRegistryEntry = {
+  key: string;
+  provider: LlmProvider;
+  providerModel: string;
+  apiKeyEnvNames: string[];
+  defaultTimeoutMs: number;
+  timeoutEnvName: string;
+};
+
+type ModelResolutionReason =
+  | "requested_allowed"
+  | "requested_unknown"
+  | "requested_not_allowed"
+  | "default_env"
+  | "default_env_unknown"
+  | "fallback_baseline";
+
+type ResolvedModelSelection = {
+  requestedModel: string | null;
+  selectionSource: string | null;
+  defaultModel: string;
+  resolvedModel: string;
+  resolutionReason: ModelResolutionReason;
+  entry: LlmRegistryEntry;
+  allowedModels: string[];
+};
+
+const LLM_MODEL_REGISTRY: Record<string, LlmRegistryEntry> = {
+  "openai:gpt-4.1-mini": {
+    key: "openai:gpt-4.1-mini",
+    provider: "openai",
+    providerModel: "gpt-4.1-mini",
+    apiKeyEnvNames: ["TP_OPENAI_API_KEY", "OPENAI_API_KEY"],
+    defaultTimeoutMs: 35_000,
+    timeoutEnvName: "OPENAI_TIMEOUT_MS",
+  },
+  "openai:gpt-5-mini": {
+    key: "openai:gpt-5-mini",
+    provider: "openai",
+    providerModel: "gpt-5-mini",
+    apiKeyEnvNames: ["TP_OPENAI_API_KEY", "OPENAI_API_KEY"],
+    defaultTimeoutMs: 50_000,
+    timeoutEnvName: "OPENAI_TIMEOUT_MS",
+  },
+  "openai:gpt-4o-mini": {
+    key: "openai:gpt-4o-mini",
+    provider: "openai",
+    providerModel: "gpt-4o-mini",
+    apiKeyEnvNames: ["TP_OPENAI_API_KEY", "OPENAI_API_KEY"],
+    defaultTimeoutMs: 35_000,
+    timeoutEnvName: "OPENAI_TIMEOUT_MS",
+  },
+  "openai:gpt-4.1-nano": {
+    key: "openai:gpt-4.1-nano",
+    provider: "openai",
+    providerModel: "gpt-4.1-nano",
+    apiKeyEnvNames: ["TP_OPENAI_API_KEY", "OPENAI_API_KEY"],
+    defaultTimeoutMs: 35_000,
+    timeoutEnvName: "OPENAI_TIMEOUT_MS",
+  },
+  "google:gemini-2.5-flash": {
+    key: "google:gemini-2.5-flash",
+    provider: "google",
+    providerModel: "gemini-2.5-flash",
+    apiKeyEnvNames: ["TP_GEMINI_API_KEY", "GEMINI_API_KEY"],
+    defaultTimeoutMs: 50_000,
+    timeoutEnvName: "GEMINI_TIMEOUT_MS",
+  },
+  "google:gemini-2.5-pro": {
+    key: "google:gemini-2.5-pro",
+    provider: "google",
+    providerModel: "gemini-2.5-pro",
+    apiKeyEnvNames: ["TP_GEMINI_API_KEY", "GEMINI_API_KEY"],
+    defaultTimeoutMs: 50_000,
+    timeoutEnvName: "GEMINI_TIMEOUT_MS",
+  },
+};
+
+function normalizeModelKey(raw: unknown): string {
+  const value = String(raw ?? "").trim().toLowerCase();
+  if (!value) return "";
+  if (value.includes(":")) return value;
+  return `openai:${value}`;
+}
+
+function getRegistryEntry(modelKey: unknown): LlmRegistryEntry | null {
+  const normalized = normalizeModelKey(modelKey);
+  return normalized ? (LLM_MODEL_REGISTRY[normalized] ?? null) : null;
+}
 
 function modelSupportsTemperature(model: string): boolean {
   const m = String(model ?? "").trim().toLowerCase();
@@ -39,6 +134,103 @@ function modelSupportsTemperature(model: string): boolean {
   if (m.startsWith("o1") || m.startsWith("o3") || m.startsWith("o4")) return false;
   return true;
 }
+
+function parseAllowedModelKeys(defaultModel: string): string[] {
+  const raw = String(Deno.env.get("TP_LLM_ALLOWED_MODELS") ?? "").trim();
+  const values = raw
+    ? raw.split(",").map((item) => normalizeModelKey(item)).filter(Boolean)
+    : [defaultModel, DEFAULT_ALLOWED_BENCHMARK_MODEL_KEY];
+
+  const deduped = new Set<string>();
+  for (const value of values) {
+    if (LLM_MODEL_REGISTRY[value]) deduped.add(value);
+  }
+  deduped.add(defaultModel);
+  return [...deduped];
+}
+
+function readPipelineAiSelection(pipeline: unknown): { requestedModel: string | null; selectionSource: string | null } {
+  if (!pipeline || typeof pipeline !== "object") {
+    return { requestedModel: null, selectionSource: null };
+  }
+
+  const ai = (pipeline as Record<string, unknown>)?.ai;
+  if (!ai || typeof ai !== "object") {
+    return { requestedModel: null, selectionSource: null };
+  }
+
+  const aiState = ai as Record<string, unknown>;
+  const requestedModel = normalizeModelKey(aiState.requested_model);
+  const selectionSource = String(aiState.selection_source ?? "").trim() || null;
+  return { requestedModel: requestedModel || null, selectionSource };
+}
+
+function resolveLlmSelection(job: JobRow): ResolvedModelSelection {
+  const { requestedModel, selectionSource } = readPipelineAiSelection(job.pipeline);
+
+  const envDefaultRaw =
+    normalizeModelKey(Deno.env.get("TP_LLM_DEFAULT_MODEL")) ||
+    normalizeModelKey(Deno.env.get("TP_OPENAI_MODEL")) ||
+    DEFAULT_LLM_MODEL_KEY;
+
+  const envDefaultEntry = getRegistryEntry(envDefaultRaw);
+  const defaultEntry = envDefaultEntry ?? LLM_MODEL_REGISTRY[DEFAULT_LLM_MODEL_KEY];
+  const defaultModel = defaultEntry.key;
+  const allowedModels = parseAllowedModelKeys(defaultModel);
+
+  if (requestedModel) {
+    const requestedEntry = getRegistryEntry(requestedModel);
+    if (!requestedEntry) {
+      return {
+        requestedModel,
+        selectionSource,
+        defaultModel,
+        resolvedModel: defaultModel,
+        resolutionReason: "requested_unknown",
+        entry: defaultEntry,
+        allowedModels,
+      };
+    }
+
+    if (!allowedModels.includes(requestedEntry.key)) {
+      return {
+        requestedModel,
+        selectionSource,
+        defaultModel,
+        resolvedModel: defaultModel,
+        resolutionReason: "requested_not_allowed",
+        entry: defaultEntry,
+        allowedModels,
+      };
+    }
+
+    return {
+      requestedModel,
+      selectionSource,
+      defaultModel,
+      resolvedModel: requestedEntry.key,
+      resolutionReason: "requested_allowed",
+      entry: requestedEntry,
+      allowedModels,
+    };
+  }
+
+  return {
+    requestedModel: null,
+    selectionSource,
+    defaultModel,
+    resolvedModel: defaultModel,
+    resolutionReason: envDefaultEntry ? "default_env" : "default_env_unknown",
+    entry: defaultEntry,
+    allowedModels,
+  };
+}
+
+function firstApiKeyForModel(entry: LlmRegistryEntry): string {
+  const label = entry.provider === "google" ? "TP_GEMINI_API_KEY" : "TP_OPENAI_API_KEY";
+  return firstEnv(entry.apiKeyEnvNames, label);
+}
+
 const EVIDENCE_BUCKET_ORDER: EvidenceBucket[] = ["submission", "eligibility", "commercial", "evaluation", "contract_terms", "general"];
 
 type AiOutput = {
@@ -416,13 +608,12 @@ function estimateTokensFromChars(chars: number): number {
   return Math.ceil(chars / 4);
 }
 
-function estimateUsd(args: { model: string; inputTokens: number; outputTokens: number }): number {
-  // Prices per 1M tokens (USD)
-  // gpt-5-mini:   $0.25 input, $2.00 output
-  // gpt-4.1-mini: $0.40 input, $1.60 output
-  // gpt-4o-mini:  $0.15 input, $0.60 output
-  // gpt-4.1-nano: $0.10 input, $0.40 output
-  const m = args.model;
+function estimateUsd(args: { modelKey: string; inputTokens: number; outputTokens: number }): number | null {
+  // Prices per 1M tokens (USD) for currently supported OpenAI models.
+  const entry = getRegistryEntry(args.modelKey);
+  if (!entry || entry.provider !== "openai") return null;
+
+  const m = entry.providerModel;
 
   let inPerM = 0.25;
   let outPerM = 2.00;
@@ -460,6 +651,41 @@ async function logEvent(
     message,
     meta,
   });
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function mergePlainObjects(base: Record<string, unknown>, patch: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...base };
+
+  for (const [key, value] of Object.entries(patch)) {
+    if (isPlainObject(value) && isPlainObject(out[key])) {
+      out[key] = mergePlainObjects(out[key] as Record<string, unknown>, value);
+      continue;
+    }
+    out[key] = value;
+  }
+
+  return out;
+}
+
+async function mergeJobPipeline(
+  supabaseAdmin: any,
+  job: JobRow,
+  patch: Record<string, unknown>,
+): Promise<{ ok: true } | { ok: false; error: any }> {
+  const existingPipeline = isPlainObject(job.pipeline) ? job.pipeline as Record<string, unknown> : {};
+  const nextPipeline = mergePlainObjects(existingPipeline, patch);
+  const { error } = await supabaseAdmin.from("jobs").update({ pipeline: nextPipeline }).eq("id", job.id);
+
+  if (error) {
+    return { ok: false, error };
+  }
+
+  job.pipeline = nextPipeline;
+  return { ok: true };
 }
 
 async function loadWorkspacePlaybookAdmin(
@@ -1252,34 +1478,20 @@ Evidence snippets (the ONLY citable basis for this run; cite their ids in eviden
 ${args.evidenceList}`;
 }
 
-function validateRunOpenAiArgs(args: {
+function validateRunLlmArgs(args: {
   model: string;
   targetLanguage: string;
   extractedText: string;
   evidenceCandidates: EvidenceCandidate[];
 }) {
-  if (!String(args.model ?? "").trim()) throw new Error("runOpenAi missing model");
-  if (!String(args.targetLanguage ?? "").trim()) throw new Error("runOpenAi missing targetLanguage");
-  if (!String(args.extractedText ?? "").trim()) throw new Error("runOpenAi missing extractedText");
-  if (!Array.isArray(args.evidenceCandidates)) throw new Error("runOpenAi evidenceCandidates must be an array");
+  if (!String(args.model ?? "").trim()) throw new Error("runLlm missing model");
+  if (!String(args.targetLanguage ?? "").trim()) throw new Error("runLlm missing targetLanguage");
+  if (!String(args.extractedText ?? "").trim()) throw new Error("runLlm missing extractedText");
+  if (!Array.isArray(args.evidenceCandidates)) throw new Error("runLlm evidenceCandidates must be an array");
 }
 
-async function runOpenAi(args: {
-  apiKey: string;
-  model: string;
-  targetLanguage: string;
-  sourceLanguage: LangCode;
-  extractedText: string;
-  evidenceCandidates: EvidenceCandidate[];
-  maxOutputTokens: number;
-  timeoutMs?: number;
-  workspacePlaybook?: { playbook: any; version: number | null } | null;
-}): Promise<AiOutput> {
-  const { apiKey, model, targetLanguage, sourceLanguage, extractedText, evidenceCandidates, maxOutputTokens, timeoutMs, workspacePlaybook } = args;
-
-  validateRunOpenAiArgs({ model, targetLanguage, extractedText, evidenceCandidates });
-
-  const schema = {
+function buildTenderReviewJsonSchema() {
+  return {
     type: "object",
     additionalProperties: false,
     properties: {
@@ -1416,16 +1628,23 @@ async function runOpenAi(args: {
     },
     required: ["executive_summary", "checklist", "risks", "buyer_questions", "proposal_draft", "policy_triggers"],
   };
+}
 
-  const sourceLanguageName = langName(sourceLanguage);
-  const playbookSection = buildPlaybookPromptSection(workspacePlaybook);
-  const evidenceList = buildEvidenceList(evidenceCandidates);
+function buildTenderReviewRequestParts(args: {
+  targetLanguage: string;
+  sourceLanguage: LangCode;
+  evidenceCandidates: EvidenceCandidate[];
+  workspacePlaybook?: { playbook: any; version: number | null } | null;
+}) {
+  const sourceLanguageName = langName(args.sourceLanguage);
+  const playbookSection = buildPlaybookPromptSection(args.workspacePlaybook);
+  const evidenceList = buildEvidenceList(args.evidenceCandidates);
 
   const instructions =
     "You are TenderPilot. Drafting support only. Not legal advice. Not procurement advice. " +
     "Use executive, compliance-grade language with a cautious tone. No AI meta commentary. Avoid em dashes and avoid padded AI-style phrasing. " +
     `The tender source language is ${sourceLanguageName}. ` +
-    `Write all narrative content in ${targetLanguage}. ` +
+    `Write all narrative content in ${args.targetLanguage}. ` +
     "Keep decisionBadge exactly as Go, Hold, or No-Go. " +
     "Do not translate, rewrite, paraphrase, or normalize source evidence; you do not output excerpts, only evidence_ids. " +
     "Interpret procurement wording in the source language accurately, including legal or disqualifying phrasing. " +
@@ -1435,6 +1654,85 @@ async function runOpenAi(args: {
     sourceLanguageName,
     playbookSection,
     evidenceList,
+  });
+
+  return { instructions, userPrompt };
+}
+
+function cleanStructuredJsonText(raw: string): string {
+  let text = String(raw ?? "").trim();
+
+  if (text.startsWith("```")) {
+    text = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+  }
+
+  return text;
+}
+
+function buildGeminiJsonOutputInstructions(): string {
+  return [
+    "Return exactly one valid JSON object and nothing else.",
+    "Do not use markdown fences.",
+    "Use double quotes for all keys and string values.",
+    "Do not leave strings unterminated.",
+    "Do not use trailing commas.",
+    'The top-level JSON object must contain exactly these keys: "executive_summary", "checklist", "risks", "buyer_questions", "proposal_draft", and "policy_triggers".',
+    'If a field is unknown, still include it with a conservative empty value such as "", [], or null as appropriate.',
+  ].join(" ");
+}
+
+function getGeminiTextFromResponse(responseJson: any): string {
+  const candidates = Array.isArray(responseJson?.candidates) ? responseJson.candidates : [];
+  const firstCandidate = candidates[0] ?? null;
+  const parts = Array.isArray(firstCandidate?.content?.parts) ? firstCandidate.content.parts : [];
+  return parts
+    .map((part: any) => (typeof part?.text === "string" ? part.text : ""))
+    .join("")
+    .trim();
+}
+
+function parseGeminiJsonFromResponse(responseJson: any): AiOutput {
+  const candidates = Array.isArray(responseJson?.candidates) ? responseJson.candidates : [];
+  const firstCandidate = candidates[0] ?? null;
+  const finishReason = String(firstCandidate?.finishReason ?? "").trim();
+  const text = getGeminiTextFromResponse(responseJson);
+
+  if (!text) {
+    throw new Error(`Gemini response did not include parsable JSON output${finishReason ? ` (finish_reason=${finishReason})` : ""}`);
+  }
+
+  try {
+    return JSON.parse(cleanStructuredJsonText(text)) as AiOutput;
+  } catch (error) {
+    const cleaned = cleanStructuredJsonText(text);
+    const preview = cleaned.slice(0, 400).replace(/\s+/g, " ");
+    throw new Error(
+      `Gemini returned malformed JSON: ${String((error as Error)?.message ?? error)}${finishReason ? ` (finish_reason=${finishReason})` : ""}; preview=${preview}`
+    );
+  }
+}
+
+async function runOpenAi(args: {
+  apiKey: string;
+  model: string;
+  targetLanguage: string;
+  sourceLanguage: LangCode;
+  extractedText: string;
+  evidenceCandidates: EvidenceCandidate[];
+  maxOutputTokens: number;
+  timeoutMs?: number;
+  workspacePlaybook?: { playbook: any; version: number | null } | null;
+}): Promise<AiOutput> {
+  const { apiKey, model, targetLanguage, sourceLanguage, extractedText, evidenceCandidates, maxOutputTokens, timeoutMs, workspacePlaybook } = args;
+
+  validateRunLlmArgs({ model, targetLanguage, extractedText, evidenceCandidates });
+
+  const schema = buildTenderReviewJsonSchema();
+  const { instructions, userPrompt } = buildTenderReviewRequestParts({
+    targetLanguage,
+    sourceLanguage,
+    evidenceCandidates,
+    workspacePlaybook,
   });
 
   const buildBody = (tokenBudget: number) => {
@@ -1462,7 +1760,7 @@ async function runOpenAi(args: {
 
   const reqTimeoutMs = Math.max(3_000, Math.min(timeoutMs ?? 60_000, 90_000));
 
-  const postResponse = async (tokenBudget: number): Promise<any> => {
+  const postResponse = async (tokenBudget: number, repairMode = false, invalidJsonText?: string): Promise<any> => {
     const ctrl = new AbortController();
     const t = setTimeout(() => ctrl.abort(), reqTimeoutMs);
 
@@ -1474,7 +1772,7 @@ async function runOpenAi(args: {
           "content-type": "application/json",
           authorization: `Bearer ${apiKey}`,
         },
-        body: JSON.stringify(buildBody(tokenBudget)),
+        body: JSON.stringify(buildBody(tokenBudget, repairMode, invalidJsonText)),
         signal: ctrl.signal,
       });
     } catch (e) {
@@ -1509,6 +1807,169 @@ async function runOpenAi(args: {
     const retryJson = await postResponse(retryBudget);
     return parseOpenAiJsonFromResponse(retryJson) as AiOutput;
   }
+}
+
+async function runGemini(args: {
+  apiKey: string;
+  model: string;
+  targetLanguage: string;
+  sourceLanguage: LangCode;
+  extractedText: string;
+  evidenceCandidates: EvidenceCandidate[];
+  maxOutputTokens: number;
+  timeoutMs?: number;
+  workspacePlaybook?: { playbook: any; version: number | null } | null;
+}): Promise<AiOutput> {
+  const { apiKey, model, targetLanguage, sourceLanguage, extractedText, evidenceCandidates, maxOutputTokens, timeoutMs, workspacePlaybook } = args;
+
+  validateRunLlmArgs({ model, targetLanguage, extractedText, evidenceCandidates });
+
+  const { instructions, userPrompt } = buildTenderReviewRequestParts({
+    targetLanguage,
+    sourceLanguage,
+    evidenceCandidates,
+    workspacePlaybook,
+  });
+  const geminiJsonInstructions = buildGeminiJsonOutputInstructions();
+  const geminiThinkingBudget = parseNumberEnv("TP_GEMINI_THINKING_BUDGET", 0);
+  const geminiThinkingConfig = model.startsWith("gemini-2.5")
+    ? { thinkingBudget: geminiThinkingBudget }
+    : undefined;
+
+  const buildBody = (tokenBudget: number, repairMode = false, invalidJsonText?: string) => ({
+    systemInstruction: {
+      parts: [{
+        text: repairMode
+          ? [
+              "Repair invalid TenderPilot JSON.",
+              "Return exactly one valid JSON object and nothing else.",
+              "Do not use markdown fences.",
+              'The top-level JSON object must contain exactly these keys: "executive_summary", "checklist", "risks", "buyer_questions", "proposal_draft", and "policy_triggers".',
+            ].join(" ")
+          : `${instructions} ${geminiJsonInstructions}`,
+      }],
+    },
+    contents: [
+      {
+        role: "user",
+        parts: [{
+          text: repairMode
+            ? invalidJsonText
+              ? `Repair this invalid JSON and return one valid JSON object only. Preserve the same meaning as much as possible. Do not use markdown fences. Do not add commentary.
+
+INVALID JSON TO REPAIR:
+${invalidJsonText}`
+              : `Return the answer again as one valid JSON object only. Do not use markdown fences. Do not add any commentary before or after the JSON.`
+            : userPrompt,
+        }],
+      },
+    ],
+    generationConfig: {
+      candidateCount: 1,
+      temperature: GEMINI_TEMPERATURE,
+      maxOutputTokens: tokenBudget,
+      responseMimeType: "application/json",
+      ...(geminiThinkingConfig ? { thinkingConfig: geminiThinkingConfig } : {}),
+    },
+  });
+
+  const reqTimeoutMs = Math.max(3_000, Math.min(timeoutMs ?? 60_000, 90_000));
+
+  const postResponse = async (tokenBudget: number, repairMode = false, invalidJsonText?: string): Promise<any> => {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), reqTimeoutMs);
+
+    let res: Response;
+    try {
+      res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-goog-api-key": apiKey,
+        },
+        body: JSON.stringify(buildBody(tokenBudget, repairMode, invalidJsonText)),
+        signal: ctrl.signal,
+      });
+    } catch (e) {
+      if (String(e).toLowerCase().includes("abort")) {
+        throw new Error(`Gemini request timed out after ${reqTimeoutMs}ms`);
+      }
+      throw e;
+    } finally {
+      clearTimeout(t);
+    }
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`Gemini error ${res.status}: ${text.slice(0, 500)}`);
+    }
+
+    return await res.json();
+  };
+
+  const geminiRetryMaxOutputTokens = parseNumberEnv(
+    "TP_GEMINI_MAX_OUTPUT_TOKENS",
+    Math.max(maxOutputTokens, 8192)
+  );
+
+  const initialJson = await postResponse(maxOutputTokens);
+  try {
+    return parseGeminiJsonFromResponse(initialJson);
+  } catch (e) {
+    const finishReason = String(initialJson?.candidates?.[0]?.finishReason ?? "").toUpperCase();
+    const retryBudget = Math.min(
+      Math.max(maxOutputTokens + 1600, Math.round(maxOutputTokens * 1.75)),
+      geminiRetryMaxOutputTokens
+    );
+
+    if (finishReason === "MAX_TOKENS" && retryBudget > maxOutputTokens) {
+      const retryJson = await postResponse(retryBudget);
+      try {
+        return parseGeminiJsonFromResponse(retryJson);
+      } catch (retryError) {
+        const retryFinishReason = String(retryJson?.candidates?.[0]?.finishReason ?? "").toUpperCase();
+        if (retryFinishReason === "MAX_TOKENS" && geminiRetryMaxOutputTokens > retryBudget) {
+          const finalBudget = geminiRetryMaxOutputTokens;
+          const finalJson = await postResponse(finalBudget);
+          return parseGeminiJsonFromResponse(finalJson);
+        }
+        throw retryError;
+      }
+    }
+
+    const invalidJsonText = cleanStructuredJsonText(getGeminiTextFromResponse(initialJson));
+    const repairJson = await postResponse(retryBudget, true, invalidJsonText);
+    try {
+      return parseGeminiJsonFromResponse(repairJson);
+    } catch (repairError) {
+      const repairFinishReason = String(repairJson?.candidates?.[0]?.finishReason ?? "").toUpperCase();
+      if (repairFinishReason === "MAX_TOKENS" && geminiRetryMaxOutputTokens > retryBudget) {
+        const finalBudget = geminiRetryMaxOutputTokens;
+        const finalJson = await postResponse(finalBudget, true, invalidJsonText);
+        return parseGeminiJsonFromResponse(finalJson);
+      }
+      throw repairError;
+    }
+  }
+}
+
+async function runLlm(args: {
+  provider: LlmProvider;
+  apiKey: string;
+  model: string;
+  targetLanguage: string;
+  sourceLanguage: LangCode;
+  extractedText: string;
+  evidenceCandidates: EvidenceCandidate[];
+  maxOutputTokens: number;
+  timeoutMs?: number;
+  workspacePlaybook?: { playbook: any; version: number | null } | null;
+}): Promise<AiOutput> {
+  if (args.provider === "google") {
+    return await runGemini(args);
+  }
+
+  return await runOpenAi(args);
 }
 
 
@@ -2228,10 +2689,6 @@ let extractedText = "";
     // We store a bounded evidence map in jobs.pipeline.evidence so the UI can render deterministic
     // excerpts by evidence_id without searching/parsing extracted_text.
     try {
-      const existingPipeline = (job as any)?.pipeline && typeof (job as any).pipeline === "object"
-        ? (job as any).pipeline
-        : {};
-
       const bounded = (evidenceCandidates ?? [])
         .slice(0, parseNumberEnv("TP_PIPELINE_EVIDENCE_MAX", 160))
         .map((e) => ({
@@ -2243,22 +2700,16 @@ let extractedText = "";
           score: e.score,
         }));
 
-      const nextPipeline = {
-        ...existingPipeline,
+      const pipelineResult = await mergeJobPipeline(supabaseAdmin, job, {
         evidence: {
           version: 1,
           generated_at: new Date().toISOString(),
           candidates: bounded,
         },
-      };
+      });
 
-      const { error: pipeErr } = await supabaseAdmin
-        .from("jobs")
-        .update({ pipeline: nextPipeline })
-        .eq("id", job.id);
-
-      if (pipeErr) {
-        await logEvent(supabaseAdmin, job, "warn", "Pipeline evidence save failed", { error: pipeErr.message });
+      if (!pipelineResult.ok) {
+        await logEvent(supabaseAdmin, job, "warn", "Pipeline evidence save failed", { error: pipelineResult.error?.message ?? String(pipelineResult.error) });
       } else {
         await logEvent(supabaseAdmin, job, "info", "Pipeline evidence saved", { candidates: bounded.length });
       }
@@ -2266,21 +2717,39 @@ let extractedText = "";
       await logEvent(supabaseAdmin, job, "warn", "Pipeline evidence save threw", { error: (e as Error)?.message ?? String(e) });
     }
 
-
     // AI analysis
-    const model = String(Deno.env.get("TP_OPENAI_MODEL") ?? "gpt-5-mini");
     const maxInputChars = parseNumberEnv("TP_MAX_INPUT_CHARS", 120_000);
     const maxOutputTokens = parseNumberEnv("TP_MAX_OUTPUT_TOKENS", 3200);
     const maxUsdPerJob = parseNumberEnv("TP_MAX_USD_PER_JOB", 0.05);
+    const modelSelection = resolveLlmSelection(job);
 
     let aiOut: AiOutput;
     let playbookVersion: number | null = null;
 
     if (useMockAi) {
       aiOut = mockAiFixture(extractedText);
-      await logEvent(supabaseAdmin, job, "info", "Mock AI enabled");
+      await logEvent(supabaseAdmin, job, "info", "Mock AI enabled", {
+        provider: modelSelection.entry.provider,
+        resolved_model: modelSelection.resolvedModel,
+      });
     } else {
-      const apiKey = firstEnv(["TP_OPENAI_API_KEY", "OPENAI_API_KEY"], "TP_OPENAI_API_KEY");
+      const provider = modelSelection.entry.provider;
+      const providerModel = modelSelection.entry.providerModel;
+      const resolvedModel = modelSelection.resolvedModel;
+      const requestedModel = modelSelection.requestedModel;
+      const selectionSource = modelSelection.selectionSource;
+      const apiKey = firstApiKeyForModel(modelSelection.entry);
+
+      if (requestedModel && modelSelection.resolutionReason !== "requested_allowed") {
+        await logEvent(supabaseAdmin, job, "warn", "Requested model override not applied", {
+          requested_model: requestedModel,
+          resolved_model: resolvedModel,
+          default_model: modelSelection.defaultModel,
+          selection_source: selectionSource,
+          resolution_reason: modelSelection.resolutionReason,
+          allowed_models: modelSelection.allowedModels,
+        });
+      }
 
       const { text: clipped, truncated } = clampText(extractedText, maxInputChars);
       if (truncated) {
@@ -2288,11 +2757,13 @@ let extractedText = "";
       }
 
       const inputTokensEst = estimateTokensFromChars(clipped.length);
-      const usdEst = estimateUsd({ model, inputTokens: inputTokensEst, outputTokens: maxOutputTokens });
+      const usdEst = estimateUsd({ modelKey: resolvedModel, inputTokens: inputTokensEst, outputTokens: maxOutputTokens });
 
-      if (usdEst > maxUsdPerJob) {
+      if (usdEst !== null && usdEst > maxUsdPerJob) {
         await logEvent(supabaseAdmin, job, "warn", "Job exceeds cost cap, reduce input or limits", {
-          model,
+          model: resolvedModel,
+          provider,
+          provider_model: providerModel,
           maxUsdPerJob,
           usdEst,
           inputChars: clipped.length,
@@ -2304,9 +2775,16 @@ let extractedText = "";
         return new Response("Job exceeds cost cap", { status: 413 });
       }
 
+      if (usdEst === null) {
+        await logEvent(supabaseAdmin, job, "info", "LLM cost estimate unavailable for resolved model", {
+          model: resolvedModel,
+          provider,
+          provider_model: providerModel,
+        });
+      }
+
       const remaining = remainingRuntimeMs(startMs);
 
-      // If we are too close to runtime limit, yield and make the job reclaimable immediately.
       if (remaining <= 7_000) {
         await logEvent(supabaseAdmin, job, "warn", "Yielding due to runtime budget", { remaining_ms: remaining });
         await makeJobReclaimableNow(supabaseAdmin, job.id);
@@ -2328,8 +2806,39 @@ let extractedText = "";
       const targetLanguage = langName(outputLang);
       const sourceLanguage = detectSourceLanguage(extractedText);
 
-      await logEvent(supabaseAdmin, job, "info", "OpenAI prompt prepared", {
-        model,
+      const aiPipelineResult = await mergeJobPipeline(supabaseAdmin, job, {
+        ai: {
+          requested_model: requestedModel,
+          selection_source: selectionSource,
+          default_model: modelSelection.defaultModel,
+          resolved_model: resolvedModel,
+          provider,
+          provider_model: providerModel,
+          resolution_reason: modelSelection.resolutionReason,
+          allowed_models: modelSelection.allowedModels,
+          prompt_version: PROCESS_JOB_PROMPT_VERSION,
+          schema_version: PROCESS_JOB_SCHEMA_VERSION,
+          evidence_selection_version: EVIDENCE_SELECTION_VERSION,
+          playbook_version: workspacePlaybook.version,
+          target_language: targetLanguage,
+          source_language: sourceLanguage,
+          status: "starting",
+        },
+      });
+
+      if (!aiPipelineResult.ok) {
+        await logEvent(supabaseAdmin, job, "warn", "Pipeline AI metadata save failed", {
+          error: aiPipelineResult.error?.message ?? String(aiPipelineResult.error),
+        });
+      }
+
+      await logEvent(supabaseAdmin, job, "info", "LLM prompt prepared", {
+        requested_model: requestedModel,
+        resolved_model: resolvedModel,
+        provider,
+        provider_model: providerModel,
+        selection_source: selectionSource,
+        resolution_reason: modelSelection.resolutionReason,
         target_language: targetLanguage,
         source_language: sourceLanguage,
         extracted_chars: clipped.length,
@@ -2339,37 +2848,79 @@ let extractedText = "";
       });
 
       const analysisFingerprint = buildAnalysisFingerprint({
-        model,
+        model: resolvedModel,
         targetLanguage,
         sourceLanguage,
         evidenceCandidates,
         playbookVersion: workspacePlaybook.version,
       });
-      await logEvent(supabaseAdmin, job, "info", "Analysis fingerprint", analysisFingerprint);
-
-      const defaultOpenAiTimeoutCap = model.toLowerCase().startsWith("gpt-5") ? 50_000 : 35_000;
-      const openAiTimeoutCap = parseNumberEnv("OPENAI_TIMEOUT_MS", defaultOpenAiTimeoutCap);
-
-      await logEvent(supabaseAdmin, job, "info", "OpenAI started", {
-        model,
-        maxOutputTokens,
-        remaining_ms: remaining,
-        openai_timeout_cap_ms: openAiTimeoutCap,
-        temperature: modelSupportsTemperature(model) ? OPENAI_TEMPERATURE : null,
-        temperature_omitted: !modelSupportsTemperature(model),
+      await logEvent(supabaseAdmin, job, "info", "Analysis fingerprint", {
+        ...analysisFingerprint,
+        provider,
+        provider_model: providerModel,
+        requested_model: requestedModel,
+        resolution_reason: modelSelection.resolutionReason,
       });
 
-      // Give OpenAI only the remaining budget minus a safety buffer, capped by OPENAI_TIMEOUT_MS.
+      const timeoutCap = parseNumberEnv(modelSelection.entry.timeoutEnvName, modelSelection.entry.defaultTimeoutMs);
+
+      await logEvent(supabaseAdmin, job, "info", "LLM started", {
+        requested_model: requestedModel,
+        resolved_model: resolvedModel,
+        provider,
+        provider_model: providerModel,
+        maxOutputTokens,
+        remaining_ms: remaining,
+        timeout_cap_ms: timeoutCap,
+        temperature: provider === "openai"
+          ? (modelSupportsTemperature(providerModel) ? OPENAI_TEMPERATURE : null)
+          : GEMINI_TEMPERATURE,
+        temperature_omitted: provider === "openai" ? !modelSupportsTemperature(providerModel) : false,
+      });
+
       const timeoutMs = Math.max(
         3_000,
         Math.min(
           remaining - RUNTIME_SAFETY_MS,
-          Math.max(5_000, openAiTimeoutCap),
+          Math.max(5_000, timeoutCap),
         ),
       );
 
-      aiOut = await runOpenAi({ apiKey, model, targetLanguage, sourceLanguage, extractedText: clipped, evidenceCandidates, maxOutputTokens, timeoutMs, workspacePlaybook });
-      await logEvent(supabaseAdmin, job, "info", "OpenAI completed", { model, maxOutputTokens });
+      aiOut = await runLlm({
+        provider,
+        apiKey,
+        model: providerModel,
+        targetLanguage,
+        sourceLanguage,
+        extractedText: clipped,
+        evidenceCandidates,
+        maxOutputTokens,
+        timeoutMs,
+        workspacePlaybook,
+      });
+      await logEvent(supabaseAdmin, job, "info", "LLM completed", {
+        requested_model: requestedModel,
+        resolved_model: resolvedModel,
+        provider,
+        provider_model: providerModel,
+        maxOutputTokens,
+      });
+
+      const completedPipelineResult = await mergeJobPipeline(supabaseAdmin, job, {
+        ai: {
+          executed_model: resolvedModel,
+          executed_provider: provider,
+          executed_provider_model: providerModel,
+          completed_at: new Date().toISOString(),
+          status: "completed",
+        },
+      });
+
+      if (!completedPipelineResult.ok) {
+        await logEvent(supabaseAdmin, job, "warn", "Pipeline AI completion metadata save failed", {
+          error: completedPipelineResult.error?.message ?? String(completedPipelineResult.error),
+        });
+      }
     }
 
     aiOut = normalizeAiOutputForUi(aiOut);
