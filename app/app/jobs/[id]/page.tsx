@@ -3726,7 +3726,52 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
     if (diffHours >= 2) return t("app.review.deadline.inHours", { hours: diffHours });
     if (diffHours === 1) return t("app.review.deadline.inOneHour");
     return t("app.review.deadline.inMinutes", { minutes: diffMin });
-  }, [deadlineDate]);
+  }, [deadlineDate, t]);
+
+  const deadlineStatus = useMemo(() => {
+    const tenderStatus = String((executive as any)?.tenderStatus ?? "").trim().toLowerCase();
+    if (tenderStatus === "expired") return "expired" as const;
+    if (deadlineDate && deadlineDate.getTime() <= Date.now()) return "expired" as const;
+    if (deadlineDate || deadlineText) return "open" as const;
+    return "unknown" as const;
+  }, [deadlineDate, deadlineText, executive]);
+
+  const deadlineCardTone =
+    deadlineStatus === "expired"
+      ? "border-rose-200/70 bg-rose-500/5 dark:border-rose-500/25 dark:bg-rose-500/10"
+      : deadlineStatus === "open"
+        ? "border-emerald-200/70 bg-emerald-500/5 dark:border-emerald-500/25 dark:bg-emerald-500/10"
+        : "border-border bg-muted/30";
+
+  const deadlineBadgeTone =
+    deadlineStatus === "expired"
+      ? "border-rose-200 bg-background text-rose-700 dark:border-rose-500/30 dark:bg-background/70 dark:text-rose-200"
+      : deadlineStatus === "open"
+        ? "border-emerald-200 bg-background text-emerald-700 dark:border-emerald-500/30 dark:bg-background/70 dark:text-emerald-200"
+        : "border-border bg-background text-muted-foreground";
+
+  const deadlineStatusLabel =
+    deadlineStatus === "expired"
+      ? t("app.review.deadline.passed")
+      : deadlineStatus === "open"
+        ? t("app.common.open")
+        : t("app.common.unknown");
+
+  const deadlineDisplayValue = useMemo(() => {
+    const isoCandidate = String((executive as any)?.submissionDeadlineIso ?? "").trim();
+    if (isoCandidate) {
+      const formattedIso = formatDate(isoCandidate);
+      if (formattedIso) return formattedIso;
+    }
+    if (deadlineDate) return formatDate(deadlineDate.toISOString());
+    return deadlineText;
+  }, [deadlineDate, deadlineText, executive]);
+
+  const deadlineSourceQuery = useMemo(() => {
+    const raw = String(deadlineText || "").trim();
+    if (raw) return raw;
+    return "Tender Submission Deadline";
+  }, [deadlineText]);
 
   const todayFocus = useMemo(() => {
     if (!showReady) return "";
@@ -3918,6 +3963,8 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
                       >
                         {globalDecision.bucket === "no-go" && String((executive as any)?.decisionSource ?? "").trim() === "hard_rule"
                           ? "Hard stop"
+                          : globalDecision.bucket === "no-go" && String((executive as any)?.decisionSource ?? "").trim() === "policy_rule"
+                          ? "Policy block"
                           : blockersReadiness.total === 0
                           ? t("app.review.readiness.noBlockers")
                           : blockersReadiness.fixableRemaining === 0
@@ -3931,9 +3978,9 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
                         <span className="text-xs text-muted-foreground">{t("app.review.teamDecisionApplied")}</span>
                       ) : null}
 
-                      {String((executive as any)?.decisionSource ?? "").trim() === "hard_rule" && Array.isArray((executive as any)?.hardStopReasons) && (executive as any).hardStopReasons.length ? (
+                      {(String((executive as any)?.decisionSource ?? "").trim() === "hard_rule" || String((executive as any)?.decisionSource ?? "").trim() === "policy_rule") && Array.isArray((executive as any)?.hardStopReasons) && (executive as any).hardStopReasons.length ? (
                         <span className="text-xs text-muted-foreground">
-                          {`Hard stop: ${String((executive as any).hardStopReasons[0] ?? "").trim()}`}
+                          {`${String((executive as any)?.decisionSource ?? "").trim() === "policy_rule" ? "Policy block" : "Hard stop"}: ${String((executive as any).hardStopReasons[0] ?? "").trim()}`}
                         </span>
                       ) : null}
                     </div>
@@ -4017,10 +4064,48 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
               )}
             </div>
 
-            <div className="flex shrink-0 items-center gap-2">
-              <Button asChild className="rounded-full">
-                <Link href={`/app/jobs/${jobId}/bid-room`}>{t("app.dashboard.menu.openBidRoom")}</Link>
-              </Button>
+            <div className="flex w-full shrink-0 flex-col gap-3 lg:w-[320px] lg:items-stretch">
+              <div className="flex justify-end">
+                <Button asChild className="rounded-full">
+                  <Link href={`/app/jobs/${jobId}/bid-room`}>{t("app.dashboard.menu.openBidRoom")}</Link>
+                </Button>
+              </div>
+
+              <div className={`rounded-2xl border p-4 ${deadlineCardTone}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground">{t("app.exports.tenderBrief.meta.submissionDeadline")}</p>
+                    <p className="mt-2 text-sm font-semibold leading-snug text-foreground">
+                      {deadlineDisplayValue || t("app.common.unknown")}
+                    </p>
+                  </div>
+                  <Badge variant="outline" className={`rounded-full ${deadlineBadgeTone}`}>
+                    {deadlineStatusLabel}
+                  </Badge>
+                </div>
+
+                <div className="mt-3 space-y-2">
+                  {deadlineText && deadlineDisplayValue !== deadlineText ? (
+                    <p className="text-xs leading-relaxed text-muted-foreground">{deadlineText}</p>
+                  ) : null}
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    {timeToDeadline || t("app.exports.tenderBrief.meta.deadlinePresentVerify")}
+                  </p>
+                </div>
+
+                <div className="mt-4 flex justify-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full"
+                    onClick={() => onJumpToSource(deadlineSourceQuery)}
+                    disabled={!extractedText}
+                  >
+                    {t("app.review.source.locate")}
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </CardContent>

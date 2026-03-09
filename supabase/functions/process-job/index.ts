@@ -1421,6 +1421,214 @@ function deriveTenderStatus(args: { submissionDeadlineIso?: string | null; nowIs
   return deadlineMs < nowMs ? "expired" : "open";
 }
 
+type RuleScanSnippet = { text: string; evidence_ids: string[] };
+type ExplicitClosureSignal = {
+  title: string;
+  detail: string;
+  reason: string;
+  evidence_ids: string[];
+  matchedText: string;
+};
+
+function collectRuleScanSnippets(args: { evidenceCandidates: EvidenceCandidate[]; extractedText?: string | null }): RuleScanSnippet[] {
+  const out: RuleScanSnippet[] = [];
+  const seen = new Set<string>();
+  const push = (value: unknown, evidenceIds?: string[]) => {
+    const text = String(value ?? "").replace(/\s+/g, " ").trim();
+    if (!text) return;
+    const key = `${text.toLowerCase()}__${(evidenceIds ?? []).join(",")}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push({ text, evidence_ids: (evidenceIds ?? []).filter(Boolean).slice(0, 2) });
+  };
+
+  for (const candidate of args.evidenceCandidates ?? []) {
+    const id = String(candidate?.id ?? "").trim();
+    const ids = id ? [id] : [];
+    push(candidate?.excerpt, ids);
+    push(candidate?.anchor, ids);
+  }
+
+  const extractedText = String(args.extractedText ?? "");
+  if (extractedText) {
+    const lines = extractedText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    const closureHint = /\b(cancelled|canceled|withdrawn|discontinued|terminated|abandoned|closed|suspended|aufgehoben|eingestellt|widerrufen|zur(?:ü|ue)ckgezogen|annullat\w*|revocat\w*|ritirat\w*|chius\w*|abbandon\w*|annul\w*|abandonn\w*|cl[ôo]tur\w*|retir\w*|cancelad\w*|anulad\w*|cerrad\w*|suspendid\w*)\b/i;
+    for (let i = 0; i < lines.length; i++) {
+      if (!closureHint.test(lines[i])) continue;
+      const block = [lines[i - 1], lines[i], lines[i + 1]].filter(Boolean).join(" ");
+      const ids = bestEffortEvidenceIdsFromText({ text: block || lines[i], evidenceCandidates: args.evidenceCandidates, limit: 2 });
+      push(block || lines[i], ids);
+    }
+  }
+
+  return out.slice(0, 24);
+}
+
+function detectExplicitClosureSignal(args: { evidenceCandidates: EvidenceCandidate[]; extractedText?: string | null }): ExplicitClosureSignal | null {
+  const context = String.raw`(?:tender|procurement|competition|framework|opportunity|bid process|bid|itt|invitation to tender|lot|gara|ausschreibung|vergabe|vergabeverfahren|appel d['’]offres|march[ée] public|licitaci[oó]n|licitacion|procedimiento|gara|procedura|lotto)`;
+  const closure = String.raw`(?:cancelled|canceled|withdrawn|discontinued|terminated|abandoned|closed|suspended|aufgehoben|eingestellt|widerrufen|zur(?:ü|ue)ckgezogen|annullat\w*|revocat\w*|ritirat\w*|chius\w*|abbandon\w*|annul\w*|abandonn\w*|cl[ôo]tur\w*|retir\w*|cancelad\w*|anulad\w*|cerrad\w*|suspendid\w*)`;
+  const patterns = [
+    new RegExp(`\\b${context}\\b[^.!?\\n]{0,100}\\b${closure}\\b`, "i"),
+    new RegExp(`\\b${closure}\\b[^.!?\\n]{0,100}\\b${context}\\b`, "i"),
+    /\bno further submissions will be accepted\b/i,
+    /\bsubmissions? (?:are|is) no longer being accepted\b/i,
+  ];
+
+  const snippets = collectRuleScanSnippets(args);
+  for (const snippet of snippets) {
+    for (const pattern of patterns) {
+      const match = snippet.text.match(pattern);
+      if (!match) continue;
+      const matchedText = String(match[0] ?? snippet.text).replace(/\s+/g, " ").trim();
+      const evidenceIds = snippet.evidence_ids.length
+        ? snippet.evidence_ids
+        : bestEffortEvidenceIdsFromText({ text: matchedText || snippet.text, evidenceCandidates: args.evidenceCandidates, limit: 2 });
+      return {
+        title: "Tender explicitly cancelled or closed",
+        detail: normalizeAiTextValue(`The provided documents indicate that the tender or procurement process is cancelled, withdrawn, closed, suspended, or otherwise ended: ${matchedText}.`, 260),
+        reason: "Tender explicitly cancelled, withdrawn, closed, suspended, or otherwise ended",
+        evidence_ids: evidenceIds,
+        matchedText,
+      };
+    }
+  }
+
+  return null;
+}
+
+function applyDecisionConsistencyChecks(args: { aiOut: AiOutput }): AiOutput {
+  const executive = args.aiOut?.executive_summary ?? ({} as AiOutput["executive_summary"]);
+  const startingDecision = executive?.finalDecisionBadge ?? executive?.decisionBadge;
+  let finalDecisionBadge: DecisionBadge = startingDecision === "Go" || startingDecision === "Hold" || startingDecision === "No-Go"
+    ? startingDecision
+    : "Hold";
+  let decisionSource: DecisionSource = normalizeDecisionSourceValue(executive?.decisionSource);
+  let decisionLine = normalizeAiTextValue(executive?.decisionLine, 220);
+  let keyFindings = normalizeAiTextList(executive?.keyFindings, 6, 220);
+  let nextActions = normalizeAiTextList(executive?.nextActions, 4, 220);
+  let hardStopReasons = Array.isArray(executive?.hardStopReasons)
+    ? executive.hardStopReasons.map((item: any) => normalizeAiTextValue(item, 180)).filter(Boolean).slice(0, 4)
+    : [];
+  let hardBlockers = Array.isArray(executive?.hard_blockers) ? [...executive.hard_blockers] : [];
+  let decisionReasons = Array.isArray(executive?.decision_reasons) ? [...executive.decision_reasons] : [];
+
+  const blockingPolicyTriggers = (Array.isArray(args.aiOut?.policy_triggers) ? args.aiOut.policy_triggers : [])
+    .filter((item: any) => String(item?.impact ?? "").trim() === "blocks");
+
+  const unresolvedMustItems = (Array.isArray(args.aiOut?.checklist) ? args.aiOut.checklist : [])
+    .filter((item: any) => String(item?.type ?? "").trim() === "MUST")
+    .filter((item: any) => item?.needs_verification === true || !Array.isArray(item?.evidence_ids) || item.evidence_ids.length === 0);
+
+  const deadlineSource = String(executive?.submissionDeadlineSource ?? "").trim();
+
+  if (blockingPolicyTriggers.length) {
+    const first = blockingPolicyTriggers[0];
+    const note = normalizeAiTextValue(first?.note || first?.rule || first?.key, 180) || "Workspace playbook blocks this opportunity.";
+    finalDecisionBadge = "No-Go";
+    decisionSource = "policy_rule";
+
+    if (!hardStopReasons.some((item) => item.toLowerCase() === note.toLowerCase())) {
+      hardStopReasons.unshift(note);
+    }
+
+    if (!hardBlockers.some((item: any) => String(item?.title ?? "").toLowerCase().includes("workspace playbook block"))) {
+      hardBlockers = [{
+        title: "Workspace playbook block",
+        detail: note,
+        evidence_ids: [],
+      }, ...hardBlockers].slice(0, 5);
+    }
+
+    if (!decisionReasons.some((item: any) => String(item?.reason ?? "").toLowerCase() === note.toLowerCase())) {
+      decisionReasons = [{
+        category: "playbook",
+        reason: note,
+        evidence_ids: [],
+      }, ...decisionReasons].slice(0, 6);
+    }
+
+    if (!keyFindings.some((item) => item.toLowerCase().includes(note.toLowerCase()))) {
+      keyFindings = [`Workspace playbook block: ${note}`, ...keyFindings].slice(0, 6);
+    }
+
+    const nextAction = "Do not pursue this tender unless the workspace playbook is updated or an internal exception is approved.";
+    if (!nextActions.some((item) => item.toLowerCase().includes("workspace playbook"))) {
+      nextActions = [nextAction, ...nextActions].slice(0, 4);
+    }
+
+    decisionLine = normalizeAiTextValue(`No Go because an internal workspace playbook rule blocks pursuit: ${note}.`, 220);
+  } else if (finalDecisionBadge === "Go" && hardBlockers.length > 0) {
+    finalDecisionBadge = "Hold";
+    if (decisionSource !== "hard_rule" && decisionSource !== "policy_rule") decisionSource = "llm";
+    const reasonText = "Open hard blockers remain unresolved in the current evidence pack";
+    if (!hardStopReasons.some((item) => item.toLowerCase() === reasonText.toLowerCase())) {
+      hardStopReasons.unshift(reasonText);
+    }
+    if (!decisionReasons.some((item: any) => String(item?.reason ?? "").toLowerCase() === reasonText.toLowerCase())) {
+      decisionReasons = [{ category: "blocker", reason: reasonText, evidence_ids: [] }, ...decisionReasons].slice(0, 6);
+    }
+    if (!keyFindings.some((item) => item.toLowerCase().includes("hard blocker"))) {
+      keyFindings = ["Open hard blockers still require resolution before a bid decision can move to Go", ...keyFindings].slice(0, 6);
+    }
+    const nextAction = "Resolve the current hard blockers and re-run the review before treating this opportunity as Go.";
+    if (!nextActions.some((item) => item.toLowerCase().includes("hard blockers"))) {
+      nextActions = [nextAction, ...nextActions].slice(0, 4);
+    }
+    decisionLine = normalizeAiTextValue("Hold because one or more hard blockers remain unresolved in the current evidence pack.", 220);
+  } else if (finalDecisionBadge === "Go" && unresolvedMustItems.length > 0) {
+    finalDecisionBadge = "Hold";
+    if (decisionSource !== "hard_rule" && decisionSource !== "policy_rule") decisionSource = "llm";
+    const firstMust = normalizeAiTextValue(unresolvedMustItems[0]?.text, 180) || "One or more MUST requirements";
+    const reasonText = `Critical MUST requirements are not yet fully evidenced: ${firstMust}`;
+    if (!decisionReasons.some((item: any) => String(item?.reason ?? "").toLowerCase() === reasonText.toLowerCase())) {
+      decisionReasons = [{
+        category: "uncertainty",
+        reason: reasonText,
+        evidence_ids: Array.isArray(unresolvedMustItems[0]?.evidence_ids) ? unresolvedMustItems[0].evidence_ids : [],
+      }, ...decisionReasons].slice(0, 6);
+    }
+    if (!keyFindings.some((item) => item.toLowerCase().includes("must requirement"))) {
+      keyFindings = ["One or more critical MUST requirements are not yet fully evidenced in the current run", ...keyFindings].slice(0, 6);
+    }
+    const nextAction = "Validate the unresolved MUST requirements with source evidence before upgrading this opportunity to Go.";
+    if (!nextActions.some((item) => item.toLowerCase().includes("must requirements"))) {
+      nextActions = [nextAction, ...nextActions].slice(0, 4);
+    }
+    decisionLine = normalizeAiTextValue("Hold because critical MUST requirements are not yet fully evidenced in the current run.", 220);
+  } else if (finalDecisionBadge === "Go" && (deadlineSource === "not_found" || deadlineSource === "unparseable")) {
+    finalDecisionBadge = "Hold";
+    if (decisionSource !== "hard_rule" && decisionSource !== "policy_rule") decisionSource = "llm";
+    const reasonText = "Submission deadline could not be reliably normalized from the current evidence pack";
+    if (!decisionReasons.some((item: any) => String(item?.reason ?? "").toLowerCase() === reasonText.toLowerCase())) {
+      decisionReasons = [{ category: "submission", reason: reasonText, evidence_ids: [] }, ...decisionReasons].slice(0, 6);
+    }
+    if (!keyFindings.some((item) => item.toLowerCase().includes("submission deadline could not"))) {
+      keyFindings = ["Submission deadline could not be reliably normalized from the current evidence pack", ...keyFindings].slice(0, 6);
+    }
+    const nextAction = "Confirm the exact submission deadline and time zone before treating this tender as Go.";
+    if (!nextActions.some((item) => item.toLowerCase().includes("exact submission deadline"))) {
+      nextActions = [nextAction, ...nextActions].slice(0, 4);
+    }
+    decisionLine = normalizeAiTextValue("Hold because the submission deadline could not be reliably normalized from the current evidence pack.", 220);
+  }
+
+  return {
+    ...args.aiOut,
+    executive_summary: {
+      ...executive,
+      decisionBadge: finalDecisionBadge,
+      finalDecisionBadge,
+      decisionSource,
+      hardStopReasons,
+      hard_blockers: hardBlockers,
+      decision_reasons: decisionReasons,
+      decisionLine,
+      keyFindings,
+      nextActions,
+    },
+  };
+}
+
 function applyDecisionRules(args: {
   aiOut: AiOutput;
   evidenceCandidates: EvidenceCandidate[];
@@ -1439,6 +1647,10 @@ function applyDecisionRules(args: {
     extractedText: args.extractedText,
   });
   const tenderStatus = deriveTenderStatus({ submissionDeadlineIso: deadline.iso, nowIso });
+  const closureSignal = detectExplicitClosureSignal({
+    evidenceCandidates: args.evidenceCandidates,
+    extractedText: args.extractedText,
+  });
   const hardStopReasons = Array.isArray(executive?.hardStopReasons)
     ? executive.hardStopReasons.map((item: any) => normalizeAiTextValue(item, 180)).filter(Boolean).slice(0, 4)
     : [];
@@ -1450,6 +1662,42 @@ function applyDecisionRules(args: {
   let nextActions = normalizeAiTextList(executive?.nextActions, 4, 220);
   let hardBlockers = Array.isArray(executive?.hard_blockers) ? [...executive.hard_blockers] : [];
   let decisionReasons = Array.isArray(executive?.decision_reasons) ? [...executive.decision_reasons] : [];
+
+  if (closureSignal) {
+    finalDecisionBadge = "No-Go";
+    decisionSource = "hard_rule";
+
+    if (!hardStopReasons.some((item) => item.toLowerCase() === closureSignal.reason.toLowerCase())) {
+      hardStopReasons.unshift(closureSignal.reason);
+    }
+
+    if (!hardBlockers.some((item: any) => String(item?.title ?? "").toLowerCase().includes("cancelled or closed"))) {
+      hardBlockers = [{
+        title: closureSignal.title,
+        detail: closureSignal.detail,
+        evidence_ids: closureSignal.evidence_ids,
+      }, ...hardBlockers].slice(0, 5);
+    }
+
+    if (!decisionReasons.some((item: any) => String(item?.reason ?? "").toLowerCase() === closureSignal.reason.toLowerCase())) {
+      decisionReasons = [{
+        category: "submission",
+        reason: closureSignal.reason,
+        evidence_ids: closureSignal.evidence_ids,
+      }, ...decisionReasons].slice(0, 6);
+    }
+
+    if (!keyFindings.some((item) => item.toLowerCase().includes("cancelled") || item.toLowerCase().includes("closed"))) {
+      keyFindings = [closureSignal.title, ...keyFindings].slice(0, 6);
+    }
+
+    const nextAction = "Treat this tender as closed and do not allocate further bid effort unless the buyer formally reopens it.";
+    if (!nextActions.some((item) => item.toLowerCase().includes("formally reopens"))) {
+      nextActions = [nextAction, ...nextActions].slice(0, 4);
+    }
+
+    decisionLine = normalizeAiTextValue("No Go because the provided documents indicate that the tender is cancelled, withdrawn, closed, suspended, or otherwise ended.", 220);
+  }
 
   if (tenderStatus === "expired") {
     finalDecisionBadge = "No-Go";
@@ -1899,6 +2147,8 @@ Strict rules
 13. Priority. Prefer precision over coverage. If the evidence pack does not prove something, do not state it as fact. If a reliable decision cannot be made from the curated evidence, prefer Hold over false confidence. Keep blockers and MUST items close to the tender wording, not generalized reformulations.
 14. Hard-stop ordering. When an expired deadline, explicit closure, cancellation, or another hard stop is evidenced, surface that first in decisionLine, keyFindings, hard_blockers, and nextActions. Do not bury hard stops behind fixable checklist items.
 15. Bidder vs tender separation. Keep tender-side facts, missing attachments, and bidder-side unknowns clearly separate. Missing bidder information is not proof of tender non-compliance.
+16. Explicit closure and cancellation. If the evidence states the tender, procurement, competition, or opportunity has been cancelled, withdrawn, closed, suspended, discontinued, or otherwise ended, recommend No-Go and surface that as a hard blocker first.
+17. Decision consistency. Do not return Go if hard_blockers remain unresolved, if critical MUST requirements are not fully evidenced in the current run, if the submission deadline is missing or unparseable, or if a workspace playbook trigger blocks pursuit. Use Hold for fixable evidence gaps and No-Go for hard stops.
 
 Evidence snippets (the ONLY citable basis for this run; cite their ids in evidence_ids):
 ${args.evidenceList}`;
@@ -3491,6 +3741,9 @@ let extractedText = "";
         risks,
       };
     }
+
+    aiOut = applyDecisionConsistencyChecks({ aiOut });
+
     const decisionMeta = (aiOut as any)?.executive_summary ?? {};
     const decisionPipelineResult = await mergeJobPipeline(supabaseAdmin, job, {
       ai: {
