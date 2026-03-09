@@ -260,7 +260,9 @@ function buildRationaleDrivers(args: {
   out.push(`${confidenceLabel}: ${String(args.confidence).toUpperCase()}`);
 
   // One truthful “driver” line (re-uses existing copy keys where available)
-  if (args.mustItems?.length) out.push(pickText("app.review.drivers.hold", "Decision drivers: mandatory requirements and submission rules that can disqualify you."));
+  if (args.verdict === "no-go") {
+    out.push("Decision drivers: hard stop identified in the tender evidence. Do not proceed unless the buyer has formally reopened or extended the opportunity.");
+  } else if (args.mustItems?.length) out.push(pickText("app.review.drivers.hold", "Decision drivers: mandatory requirements and submission rules that can disqualify you."));
   else if (args.risksCount >= 3) out.push(pickText("app.review.drivers.caution", "Decision drivers: risks requiring validation before committing."));
   else out.push(pickText("app.review.drivers.go", "No mandatory blockers detected in eligibility and submission requirements."));
 
@@ -272,7 +274,7 @@ function buildRationaleDrivers(args: {
 }
 
 
-type VerdictState = "proceed" | "caution" | "hold";
+type VerdictState = "proceed" | "caution" | "hold" | "no-go";
 type AnalysisTab = "text";
 
 
@@ -894,14 +896,21 @@ function policyTriggerTitle(t: PolicyTriggerUi) {
 function toExecutiveModel(args: { raw: any }) {
   const { raw } = args;
 
-  const decisionBadge = String(raw?.decisionBadge ?? raw?.decision ?? "").trim();
+  const decisionBadge = String(raw?.finalDecisionBadge ?? raw?.decisionBadge ?? raw?.decision ?? "").trim();
+  const llmDecisionBadge = String(raw?.llmDecisionBadge ?? "").trim();
+  const finalDecisionBadge = String(raw?.finalDecisionBadge ?? raw?.decisionBadge ?? "").trim();
+  const decisionSource = String(raw?.decisionSource ?? "").trim();
   const decisionLine = String(raw?.decisionLine ?? "").trim();
 
   const keyFindings = Array.isArray(raw?.keyFindings) ? raw.keyFindings : [];
   const nextActions = Array.isArray(raw?.nextActions) ? raw.nextActions : [];
   const topRisks = Array.isArray(raw?.topRisks) ? raw.topRisks : [];
+  const hardBlockers = Array.isArray(raw?.hard_blockers) ? raw.hard_blockers : [];
+  const hardStopReasons = Array.isArray(raw?.hardStopReasons) ? raw.hardStopReasons : [];
 
   const submissionDeadline = raw?.submissionDeadline ? String(raw.submissionDeadline).trim() : "";
+  const submissionDeadlineIso = raw?.submissionDeadlineIso ? String(raw.submissionDeadlineIso).trim() : "";
+  const tenderStatus = raw?.tenderStatus ? String(raw.tenderStatus).trim() : "";
 
   const normalizedTopRisks = topRisks
     .slice(0, 3)
@@ -918,13 +927,31 @@ function toExecutiveModel(args: { raw: any }) {
     })
     .filter((r: any) => r.title);
 
+  const normalizedHardBlockers = hardBlockers
+    .slice(0, 5)
+    .map((item: any) => ({
+      title: String(item?.title ?? item?.detail ?? "").trim(),
+      detail: String(item?.detail ?? "").trim(),
+      evidenceIds: Array.isArray(item?.evidence_ids)
+        ? item.evidence_ids.map((x: any) => String(x ?? "").trim()).filter(Boolean)
+        : [],
+    }))
+    .filter((item: any) => item.title);
+
   return {
     decisionBadge: decisionBadge || "Hold",
+    llmDecisionBadge: llmDecisionBadge || undefined,
+    finalDecisionBadge: finalDecisionBadge || undefined,
+    decisionSource: decisionSource || undefined,
     decisionLine,
     keyFindings: keyFindings.slice(0, 7).map((x: any) => String(x ?? "").trim()).filter(Boolean),
     nextActions: nextActions.slice(0, 3).map((x: any) => String(x ?? "").trim()).filter(Boolean),
     topRisks: normalizedTopRisks,
+    hardBlockers: normalizedHardBlockers,
+    hardStopReasons: hardStopReasons.slice(0, 4).map((x: any) => String(x ?? "").trim()).filter(Boolean),
     submissionDeadline,
+    submissionDeadlineIso: submissionDeadlineIso || undefined,
+    tenderStatus: tenderStatus || undefined,
   };
 }
 
@@ -2603,14 +2630,23 @@ const executive = useMemo(() => {
     }
   }, [showTrustOnboarding, showReady, showFailed, finalizingResults]);
 
-  // Verdict (UI-only heuristic; no backend changes)
+  // Verdict: prefer backend final decision, then fall back to the older UI heuristic.
   const verdictState: VerdictState = useMemo(() => {
     if (!showReady) return "caution";
+
+    const backendDecisionBucket = decisionBucket(
+      String((executive as any)?.finalDecisionBadge ?? (executive as any)?.decisionBadge ?? "").trim()
+    );
+    if (backendDecisionBucket === "no-go") return "no-go";
+    if (backendDecisionBucket === "hold") return "hold";
+    if (backendDecisionBucket === "go") return "proceed";
+
+    if (String((executive as any)?.tenderStatus ?? "").trim().toLowerCase() === "expired") return "no-go";
     if (mustItems.length >= 1) return "hold";
     const top = (executive.topRisks ?? []).slice(0, 3);
     if (top.some((r: any) => String(r?.severity ?? "").toLowerCase() === "high")) return "caution";
     return "proceed";
-  }, [showReady, mustItems.length, executive.topRisks]);
+  }, [showReady, mustItems.length, executive]);
 
   const topRisksForPanel = useMemo(() => (executive.topRisks ?? []).slice(0, 3), [executive.topRisks]);
 
@@ -2644,7 +2680,7 @@ const executive = useMemo(() => {
 	  const q = questions.length;
 	  const outlineOk = hasDraftForUi;
 
-	  const isHold = verdictState === "hold";
+	  const isHold = verdictState === "hold" || verdictState === "no-go";
 	  const isCaution = verdictState === "caution";
 
 	  const neutral =
@@ -2692,7 +2728,7 @@ const executive = useMemo(() => {
 	  const q = questions.length;
 	  const outlineOk = hasDraftForUi;
 
-	  const isHold = verdictState === "hold";
+	  const isHold = verdictState === "hold" || verdictState === "no-go";
 	  const isCaution = verdictState === "caution";
 
 	  const neutral = "border-muted/60 text-foreground";
@@ -2727,12 +2763,14 @@ const executive = useMemo(() => {
 		
   const verdictDriverLine = useMemo(() => {
     if (!showReady) return t("app.review.drivers.loading");
+    if (verdictState === "no-go") return "Hard stop detected in the tender evidence. Do not proceed unless the buyer has formally reopened or extended the opportunity.";
     if (verdictState === "hold") return t("app.review.drivers.hold");
     if (verdictState === "caution") return t("app.review.drivers.caution");
     return t("app.review.drivers.go");
   }, [showReady, verdictState, t]);
 
   const aiSuggestionLabel = useMemo(() => {
+    if (verdictState === "no-go") return t("app.decision.noGo");
     if (verdictState === "hold") return t("app.decision.hold");
     // Option A: decision badge labels remain Go / Hold / No-Go; caution nuance is microcopy.
     return t("app.decision.go");
@@ -2762,8 +2800,20 @@ const executive = useMemo(() => {
       return { source: "team" as const, bucket: teamDecision.bucket, label: teamDecision.label };
     }
 
-    const bucket = verdictState === "hold" ? "hold" : verdictState === "proceed" ? "go" : "caution";
-    const label = verdictState === "hold" ? t("app.decision.hold") : t("app.decision.go");
+    const bucket =
+      verdictState === "no-go"
+        ? "no-go"
+        : verdictState === "hold"
+          ? "hold"
+          : verdictState === "proceed"
+            ? "go"
+            : "caution";
+    const label =
+      verdictState === "no-go"
+        ? t("app.decision.noGo")
+        : verdictState === "hold"
+          ? t("app.decision.hold")
+          : t("app.decision.go");
     return { source: "ai" as const, bucket, label };
   }, [teamDecision, verdictState, t]);
 
@@ -2952,17 +3002,21 @@ const executive = useMemo(() => {
     const text = toPlainTextSummary({
       fileName: displayName || job.file_name,
       createdAt: job.created_at,
-      verdictLabel: verdictState === "hold" ? t("app.decision.hold") : t("app.decision.go"),
+      verdictLabel: verdictState === "no-go" ? t("app.decision.noGo") : verdictState === "hold" ? t("app.decision.hold") : t("app.decision.go"),
       decisionLine:
         String(executive?.decisionLine ?? "").trim() ||
-        (verdictState === "hold"
+        (verdictState === "no-go"
+          ? "No Go because a hard stop was identified in the tender evidence."
+          : verdictState === "hold"
           ? t("app.review.verdictMicrocopy.hold")
           : verdictState === "caution"
             ? t("app.review.verdictMicrocopy.caution")
             : t("app.review.verdictMicrocopy.go")),
       rationaleSnapshot: (mustItems ?? []).slice(0, 3).map((t) => String(t).trim()).filter(Boolean),
       recommendedAction:
-        verdictState === "hold"
+        verdictState === "no-go"
+          ? "Do not proceed unless the buyer has formally reopened or extended the opportunity."
+          : verdictState === "hold"
           ? t("app.exports.tenderBrief.recommendedAction.hold")
           : verdictState === "caution"
             ? t("app.exports.tenderBrief.recommendedAction.caution")
@@ -3165,7 +3219,9 @@ const rationaleLines = rationaleDrivers.length
   : `<p class="empty">${escapeHtml(E.empty.noDrivers)}</p>`;
 
     const recommendedAction =
-      verdictState === "hold"
+      verdictState === "no-go"
+        ? "Do not proceed unless the buyer has formally reopened or extended the opportunity."
+        : verdictState === "hold"
         ? E.recommendedAction.hold
         : verdictState === "caution"
           ? E.recommendedAction.caution
@@ -3176,7 +3232,9 @@ const rationaleLines = rationaleDrivers.length
     const decisionLineRaw = String(executive.decisionLine ?? "").trim();
     const decisionLine =
       decisionLineRaw ||
-      (verdictState === "hold"
+      (verdictState === "no-go"
+        ? "No Go because a hard stop was identified in the tender evidence."
+        : verdictState === "hold"
         ? t("app.review.verdictMicrocopy.hold")
         : verdictState === "caution"
           ? t("app.review.verdictMicrocopy.caution")
@@ -3219,7 +3277,7 @@ const deadlineRaw = executive.submissionDeadline ? String(executive.submissionDe
       return t("app.exports.tenderBrief.meta.submissionDeadline", { deadline: raw });
     })();
 
-    const verdictLabel = verdictState === "hold" ? t("app.decision.hold") : t("app.decision.go");
+    const verdictLabel = verdictState === "no-go" ? t("app.decision.noGo") : verdictState === "hold" ? t("app.decision.hold") : t("app.decision.go");
 
     const html = `<!doctype html>
 <html>
@@ -3672,6 +3730,7 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
 
   const todayFocus = useMemo(() => {
     if (!showReady) return "";
+    if (verdictState === "no-go") return "Opportunity closed. Verify only whether the buyer has formally extended or reopened the tender.";
     if (verdictState === "hold") return t("app.review.todayFocus.hold");
     if (verdictState === "caution") return t("app.review.todayFocus.caution");
     return t("app.review.todayFocus.go");
@@ -3857,7 +3916,9 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
                             : "bg-slate-50 text-slate-800 ring-1 ring-slate-200 dark:bg-slate-500/10 dark:text-slate-200 dark:ring-slate-500/20"),
                         ].join(" ")}
                       >
-                        {blockersReadiness.total === 0
+                        {globalDecision.bucket === "no-go" && String((executive as any)?.decisionSource ?? "").trim() === "hard_rule"
+                          ? "Hard stop"
+                          : blockersReadiness.total === 0
                           ? t("app.review.readiness.noBlockers")
                           : blockersReadiness.fixableRemaining === 0
                           ? blockersReadiness.blocked > 0
@@ -3868,6 +3929,12 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
 
                       {globalDecision.source === "team" ? (
                         <span className="text-xs text-muted-foreground">{t("app.review.teamDecisionApplied")}</span>
+                      ) : null}
+
+                      {String((executive as any)?.decisionSource ?? "").trim() === "hard_rule" && Array.isArray((executive as any)?.hardStopReasons) && (executive as any).hardStopReasons.length ? (
+                        <span className="text-xs text-muted-foreground">
+                          {`Hard stop: ${String((executive as any).hardStopReasons[0] ?? "").trim()}`}
+                        </span>
                       ) : null}
                     </div>
 
@@ -3936,7 +4003,7 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
                     ) : null}
                   </div>
 
-                  {verdictState === "hold" && blockerCards.length ? (
+                  {(verdictState === "hold" || verdictState === "no-go") && blockerCards.length ? (
                     <div className="rounded-2xl border border-rose-200/40 bg-rose-500/5 p-4 dark:border-rose-500/20 dark:bg-rose-500/10">
                       <p className="text-xs font-semibold text-rose-900 dark:text-rose-200">{t("app.review.topBlockersTitle")}</p>
                       <ul className="mt-2 space-y-2 text-sm text-rose-950/90 dark:text-rose-100">

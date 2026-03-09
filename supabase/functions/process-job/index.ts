@@ -233,10 +233,21 @@ function firstApiKeyForModel(entry: LlmRegistryEntry): string {
 
 const EVIDENCE_BUCKET_ORDER: EvidenceBucket[] = ["submission", "eligibility", "commercial", "evaluation", "contract_terms", "general"];
 
+type DecisionSource = "llm" | "hard_rule" | "policy_rule";
+type TenderStatus = "open" | "expired" | "unclear";
+
 type AiOutput = {
   executive_summary: {
     decisionBadge: DecisionBadge;
     decisionLine: string;
+    llmDecisionBadge?: DecisionBadge;
+    finalDecisionBadge?: DecisionBadge;
+    decisionSource?: DecisionSource;
+    hardStopReasons?: string[];
+    submissionDeadlineIso?: string | null;
+    submissionTimezone?: string | null;
+    submissionDeadlineSource?: "llm" | "evidence_fallback" | "not_found" | "unparseable";
+    tenderStatus?: TenderStatus;
     decision_reasons: Array<{
       category: "blocker" | "eligibility" | "submission" | "commercial" | "technical" | "playbook" | "uncertainty" | "fit";
       reason: string;
@@ -1072,7 +1083,28 @@ function normalizeAiOutputForUi(input: AiOutput): AiOutput {
         }))
         .filter((item: any) => item.title || item.detail)
         .slice(0, 5),
-      submissionDeadline: normalizeAiTextValue(executive?.submissionDeadline, 120) || "Not found in extracted text",
+      submissionDeadline: normalizeAiTextValue(executive?.submissionDeadline, 120) || DEADLINE_NOT_FOUND_TEXT,
+      llmDecisionBadge: executive?.llmDecisionBadge === "Go" || executive?.llmDecisionBadge === "Hold" || executive?.llmDecisionBadge === "No-Go"
+        ? executive.llmDecisionBadge
+        : undefined,
+      finalDecisionBadge: executive?.finalDecisionBadge === "Go" || executive?.finalDecisionBadge === "Hold" || executive?.finalDecisionBadge === "No-Go"
+        ? executive.finalDecisionBadge
+        : undefined,
+      decisionSource: normalizeDecisionSourceValue(executive?.decisionSource),
+      hardStopReasons: normalizeAiTextList(executive?.hardStopReasons, 4, 180),
+      submissionDeadlineIso: (() => {
+        const v = String(executive?.submissionDeadlineIso ?? "").trim();
+        return v || null;
+      })(),
+      submissionTimezone: (() => {
+        const v = String(executive?.submissionTimezone ?? "").trim();
+        return v || null;
+      })(),
+      submissionDeadlineSource: (() => {
+        const v = String(executive?.submissionDeadlineSource ?? "").trim();
+        return v === "llm" || v === "evidence_fallback" || v === "not_found" || v === "unparseable" ? v : undefined;
+      })(),
+      tenderStatus: normalizeTenderStatusValue(executive?.tenderStatus),
     },
     checklist: (Array.isArray(input?.checklist) ? input.checklist : [])
       .map((item: any) => ({
@@ -1100,6 +1132,397 @@ function normalizeAiOutputForUi(input: AiOutput): AiOutput {
       }))
       .filter((item: any) => item.key && item.note)
       .slice(0, 8),
+  };
+}
+
+
+function normalizeDecisionSourceValue(input: unknown): DecisionSource {
+  const value = String(input ?? "").trim();
+  if (value === "hard_rule" || value === "policy_rule") return value;
+  return "llm";
+}
+
+function normalizeTenderStatusValue(input: unknown): TenderStatus {
+  const value = String(input ?? "").trim();
+  if (value === "open" || value === "expired") return value;
+  return "unclear";
+}
+
+const DEADLINE_NOT_FOUND_TEXT = "Not found in extracted text";
+
+const TIMEZONE_OFFSETS_MINUTES: Record<string, number> = {
+  UTC: 0,
+  GMT: 0,
+  BST: 60,
+  WET: 0,
+  WEST: 60,
+  CET: 60,
+  CEST: 120,
+  EET: 120,
+  EEST: 180,
+  PST: -480,
+  PDT: -420,
+  MST: -420,
+  MDT: -360,
+  CST: -360,
+  CDT: -300,
+  EST: -300,
+  EDT: -240,
+};
+
+function extractTimezoneLabel(raw: string): string | null {
+  const match = String(raw ?? "").toUpperCase().match(/\b(UTC|GMT|BST|WET|WEST|CET|CEST|EET|EEST|PST|PDT|MST|MDT|CST|CDT|EST|EDT)\b/);
+  return match ? match[1] : null;
+}
+
+function buildUtcIso(args: { year: number; month: number; day: number; hour?: number; minute?: number; timezone?: string | null; assumeEndOfDay?: boolean }): string | null {
+  const year = args.year;
+  const month = args.month;
+  const day = args.day;
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+
+  const hour = Number.isFinite(args.hour as number) ? Number(args.hour) : args.assumeEndOfDay ? 23 : 0;
+  const minute = Number.isFinite(args.minute as number) ? Number(args.minute) : args.assumeEndOfDay ? 59 : 0;
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return null;
+
+  const tz = args.timezone ? String(args.timezone).toUpperCase() : null;
+  const offsetMinutes = tz && tz in TIMEZONE_OFFSETS_MINUTES ? TIMEZONE_OFFSETS_MINUTES[tz] : 0;
+  const utcMs = Date.UTC(year, month - 1, day, hour, minute, args.assumeEndOfDay ? 59 : 0, 0) - (offsetMinutes * 60 * 1000);
+  const d = new Date(utcMs);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+const MONTH_NAME_TO_NUMBER: Record<string, number> = {
+  jan: 1,
+  january: 1,
+  feb: 2,
+  february: 2,
+  mar: 3,
+  march: 3,
+  apr: 4,
+  april: 4,
+  may: 5,
+  jun: 6,
+  june: 6,
+  jul: 7,
+  july: 7,
+  aug: 8,
+  august: 8,
+  sep: 9,
+  sept: 9,
+  september: 9,
+  oct: 10,
+  october: 10,
+  nov: 11,
+  november: 11,
+  dec: 12,
+  december: 12,
+};
+
+function normalizeSubmissionDeadline(rawInput: unknown): {
+  rawText: string;
+  iso: string | null;
+  timezone: string | null;
+  parseStatus: "not_found" | "parsed" | "unparseable";
+} {
+  const rawText = normalizeAiTextValue(rawInput, 220);
+  if (!rawText || rawText.toLowerCase() === DEADLINE_NOT_FOUND_TEXT.toLowerCase()) {
+    return { rawText: DEADLINE_NOT_FOUND_TEXT, iso: null, timezone: null, parseStatus: "not_found" };
+  }
+
+  const text = rawText.replace(/\s+/g, " ").trim();
+  const timezone = extractTimezoneLabel(text);
+
+  const patterns = [
+    /\b(\d{1,2})[:.](\d{2})\s*(AM|PM)?\s*(UTC|GMT|BST|WET|WEST|CET|CEST|EET|EEST|PST|PDT|MST|MDT|CST|CDT|EST|EDT)?\s*(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})\b/i,
+    /\b(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})(?:\s+at|\s*,)?\s*(\d{1,2})[:.](\d{2})\s*(AM|PM)?\s*(UTC|GMT|BST|WET|WEST|CET|CEST|EET|EEST|PST|PDT|MST|MDT|CST|CDT|EST|EDT)?\b/i,
+    /\b(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s](\d{1,2})[:.](\d{2}))?\s*(UTC|GMT|BST|WET|WEST|CET|CEST|EET|EEST|PST|PDT|MST|MDT|CST|CDT|EST|EDT)?\b/i,
+    /\b(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]{3,9})\s+(\d{2,4})(?:\s+at|\s*,)?\s*(\d{1,2})[:.](\d{2})\s*(AM|PM)?\s*(UTC|GMT|BST|WET|WEST|CET|CEST|EET|EEST|PST|PDT|MST|MDT|CST|CDT|EST|EDT)?\b/i,
+    /\b(\d{1,2})[:.](\d{2})\s*(AM|PM)?\s*(UTC|GMT|BST|WET|WEST|CET|CEST|EET|EEST|PST|PDT|MST|MDT|CST|CDT|EST|EDT)?\s*(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]{3,9})\s+(\d{2,4})\b/i,
+  ];
+
+  const first = text.match(patterns[0]);
+  if (first) {
+    let hour = Number(first[1]);
+    const minute = Number(first[2]);
+    const ampm = String(first[3] ?? "").toUpperCase();
+    if (ampm === "PM" && hour < 12) hour += 12;
+    if (ampm === "AM" && hour === 12) hour = 0;
+    const tz = String(first[4] ?? timezone ?? "").toUpperCase() || null;
+    const day = Number(first[5]);
+    const month = Number(first[6]);
+    let year = Number(first[7]);
+    if (year < 100) year += year >= 70 ? 1900 : 2000;
+    const iso = buildUtcIso({ year, month, day, hour, minute, timezone: tz, assumeEndOfDay: false });
+    return { rawText, iso, timezone: tz, parseStatus: iso ? "parsed" : "unparseable" };
+  }
+
+  const second = text.match(patterns[1]);
+  if (second) {
+    const day = Number(second[1]);
+    const month = Number(second[2]);
+    let year = Number(second[3]);
+    if (year < 100) year += year >= 70 ? 1900 : 2000;
+    let hour = Number(second[4]);
+    const minute = Number(second[5]);
+    const ampm = String(second[6] ?? "").toUpperCase();
+    if (ampm === "PM" && hour < 12) hour += 12;
+    if (ampm === "AM" && hour === 12) hour = 0;
+    const tz = String(second[7] ?? timezone ?? "").toUpperCase() || null;
+    const iso = buildUtcIso({ year, month, day, hour, minute, timezone: tz, assumeEndOfDay: false });
+    return { rawText, iso, timezone: tz, parseStatus: iso ? "parsed" : "unparseable" };
+  }
+
+  const third = text.match(patterns[2]);
+  if (third) {
+    const year = Number(third[1]);
+    const month = Number(third[2]);
+    const day = Number(third[3]);
+    const hour = third[4] == null ? undefined : Number(third[4]);
+    const minute = third[5] == null ? undefined : Number(third[5]);
+    const tz = String(third[6] ?? timezone ?? "").toUpperCase() || null;
+    const iso = buildUtcIso({ year, month, day, hour, minute, timezone: tz, assumeEndOfDay: hour == null && minute == null });
+    return { rawText, iso, timezone: tz, parseStatus: iso ? "parsed" : "unparseable" };
+  }
+
+  const fourth = text.match(patterns[3]);
+  if (fourth) {
+    const day = Number(fourth[1]);
+    const month = MONTH_NAME_TO_NUMBER[String(fourth[2] ?? "").toLowerCase()];
+    let year = Number(fourth[3]);
+    if (year < 100) year += year >= 70 ? 1900 : 2000;
+    let hour = Number(fourth[4]);
+    const minute = Number(fourth[5]);
+    const ampm = String(fourth[6] ?? "").toUpperCase();
+    if (ampm === "PM" && hour < 12) hour += 12;
+    if (ampm === "AM" && hour === 12) hour = 0;
+    const tz = String(fourth[7] ?? timezone ?? "").toUpperCase() || null;
+    const iso = month ? buildUtcIso({ year, month, day, hour, minute, timezone: tz, assumeEndOfDay: false }) : null;
+    return { rawText, iso, timezone: tz, parseStatus: iso ? "parsed" : "unparseable" };
+  }
+
+  const fifth = text.match(patterns[4]);
+  if (fifth) {
+    let hour = Number(fifth[1]);
+    const minute = Number(fifth[2]);
+    const ampm = String(fifth[3] ?? "").toUpperCase();
+    if (ampm === "PM" && hour < 12) hour += 12;
+    if (ampm === "AM" && hour === 12) hour = 0;
+    const tz = String(fifth[4] ?? timezone ?? "").toUpperCase() || null;
+    const day = Number(fifth[5]);
+    const month = MONTH_NAME_TO_NUMBER[String(fifth[6] ?? "").toLowerCase()];
+    let year = Number(fifth[7]);
+    if (year < 100) year += year >= 70 ? 1900 : 2000;
+    const iso = month ? buildUtcIso({ year, month, day, hour, minute, timezone: tz, assumeEndOfDay: false }) : null;
+    return { rawText, iso, timezone: tz, parseStatus: iso ? "parsed" : "unparseable" };
+  }
+
+  const dateOnly = text.match(/\b(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})\b/);
+  if (dateOnly) {
+    const day = Number(dateOnly[1]);
+    const month = Number(dateOnly[2]);
+    let year = Number(dateOnly[3]);
+    if (year < 100) year += year >= 70 ? 1900 : 2000;
+    const iso = buildUtcIso({ year, month, day, timezone, assumeEndOfDay: true });
+    return { rawText, iso, timezone, parseStatus: iso ? "parsed" : "unparseable" };
+  }
+
+  const dateOnlyMonthName = text.match(/\b(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]{3,9})\s+(\d{2,4})\b/i);
+  if (dateOnlyMonthName) {
+    const day = Number(dateOnlyMonthName[1]);
+    const month = MONTH_NAME_TO_NUMBER[String(dateOnlyMonthName[2] ?? "").toLowerCase()];
+    let year = Number(dateOnlyMonthName[3]);
+    if (year < 100) year += year >= 70 ? 1900 : 2000;
+    const iso = month ? buildUtcIso({ year, month, day, timezone, assumeEndOfDay: true }) : null;
+    return { rawText, iso, timezone, parseStatus: iso ? "parsed" : "unparseable" };
+  }
+
+  const fallback = new Date(text);
+  if (!Number.isNaN(fallback.getTime())) {
+    return { rawText, iso: fallback.toISOString(), timezone, parseStatus: "parsed" };
+  }
+
+  return { rawText, iso: null, timezone, parseStatus: "unparseable" };
+}
+
+function extractSubmissionDeadlineHints(args: { evidenceCandidates: EvidenceCandidate[]; extractedText?: string | null }): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const push = (value: unknown) => {
+    const text = String(value ?? "").replace(/\s+/g, " ").trim();
+    if (!text) return;
+    const key = text.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(text);
+  };
+
+  const deadlineRowPatterns = [
+    /(\d{1,2}[:.]\d{2}\s*(?:AM|PM)?\s*(?:UTC|GMT|BST|WET|WEST|CET|CEST|EET|EEST|PST|PDT|MST|MDT|CST|CDT|EST|EDT)?\s*\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}\s+Tender Submission Deadline)/ig,
+    /(\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}(?:\s+at|\s*,)?\s*\d{1,2}[:.]\d{2}\s*(?:AM|PM)?\s*(?:UTC|GMT|BST|WET|WEST|CET|CEST|EET|EEST|PST|PDT|MST|MDT|CST|CDT|EST|EDT)?\s+Tender Submission Deadline)/ig,
+    /(Tender Submission Deadline[^\n]{0,120})/ig,
+  ];
+
+  const considerBlock = (value: string) => {
+    if (!value) return;
+    if (/tender submission deadline/i.test(value)) push(value);
+    for (const pattern of deadlineRowPatterns) {
+      const matches = value.match(pattern) ?? [];
+      for (const match of matches) push(match);
+    }
+  };
+
+  for (const candidate of args.evidenceCandidates ?? []) {
+    considerBlock(String(candidate?.excerpt ?? ""));
+    considerBlock(String(candidate?.anchor ?? ""));
+  }
+
+  const extractedText = String(args.extractedText ?? "");
+  if (extractedText) {
+    const lines = extractedText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (!/tender submission deadline/i.test(line)) continue;
+      push([lines[i - 1], line, lines[i + 1]].filter(Boolean).join(" "));
+      push(line);
+    }
+    considerBlock(extractedText);
+  }
+
+  return out.slice(0, 12);
+}
+
+function resolveSubmissionDeadline(args: { rawInput: unknown; evidenceCandidates: EvidenceCandidate[]; extractedText?: string | null }) {
+  const direct = normalizeSubmissionDeadline(args.rawInput);
+  if (direct.parseStatus === "parsed") return { ...direct, source: "llm" as const };
+
+  const hints = extractSubmissionDeadlineHints({
+    evidenceCandidates: args.evidenceCandidates,
+    extractedText: args.extractedText,
+  });
+
+  for (const hint of hints) {
+    const parsed = normalizeSubmissionDeadline(hint);
+    if (parsed.parseStatus === "parsed") {
+      return { ...parsed, source: "evidence_fallback" as const };
+    }
+  }
+
+  return { ...direct, source: direct.parseStatus === "not_found" ? "not_found" as const : "unparseable" as const };
+}
+
+function deriveTenderStatus(args: { submissionDeadlineIso?: string | null; nowIso?: string }): TenderStatus {
+  const iso = String(args.submissionDeadlineIso ?? "").trim();
+  if (!iso) return "unclear";
+  const deadlineMs = Date.parse(iso);
+  const nowMs = Date.parse(String(args.nowIso ?? new Date().toISOString()));
+  if (!Number.isFinite(deadlineMs) || !Number.isFinite(nowMs)) return "unclear";
+  return deadlineMs < nowMs ? "expired" : "open";
+}
+
+function applyDecisionRules(args: {
+  aiOut: AiOutput;
+  evidenceCandidates: EvidenceCandidate[];
+  extractedText?: string | null;
+  nowIso?: string;
+}): AiOutput {
+  const nowIso = String(args.nowIso ?? new Date().toISOString());
+  const executive = args.aiOut?.executive_summary ?? ({} as AiOutput["executive_summary"]);
+  const llmDecisionBadge: DecisionBadge = executive?.decisionBadge === "Go" || executive?.decisionBadge === "Hold" || executive?.decisionBadge === "No-Go"
+    ? executive.decisionBadge
+    : "Hold";
+
+  const deadline = resolveSubmissionDeadline({
+    rawInput: executive?.submissionDeadline,
+    evidenceCandidates: args.evidenceCandidates,
+    extractedText: args.extractedText,
+  });
+  const tenderStatus = deriveTenderStatus({ submissionDeadlineIso: deadline.iso, nowIso });
+  const hardStopReasons = Array.isArray(executive?.hardStopReasons)
+    ? executive.hardStopReasons.map((item: any) => normalizeAiTextValue(item, 180)).filter(Boolean).slice(0, 4)
+    : [];
+
+  let finalDecisionBadge: DecisionBadge = llmDecisionBadge;
+  let decisionSource: DecisionSource = normalizeDecisionSourceValue(executive?.decisionSource);
+  let decisionLine = normalizeAiTextValue(executive?.decisionLine, 220);
+  let keyFindings = normalizeAiTextList(executive?.keyFindings, 6, 220);
+  let nextActions = normalizeAiTextList(executive?.nextActions, 4, 220);
+  let hardBlockers = Array.isArray(executive?.hard_blockers) ? [...executive.hard_blockers] : [];
+  let decisionReasons = Array.isArray(executive?.decision_reasons) ? [...executive.decision_reasons] : [];
+
+  if (tenderStatus === "expired") {
+    finalDecisionBadge = "No-Go";
+    decisionSource = "hard_rule";
+
+    const reasonText = "Tender deadline already expired";
+    if (!hardStopReasons.some((item) => item.toLowerCase() === reasonText.toLowerCase())) {
+      hardStopReasons.unshift(reasonText);
+    }
+
+    const deadlineLabel = deadline.rawText && deadline.rawText !== DEADLINE_NOT_FOUND_TEXT
+      ? deadline.rawText
+      : deadline.iso
+        ? deadline.iso
+        : "the documented submission deadline";
+
+    decisionLine = normalizeAiTextValue(`No Go because the submission deadline is already expired: ${deadlineLabel}.`, 220);
+
+    const deadlineEvidenceIds = bestEffortEvidenceIdsFromText({
+      text: `${deadline.rawText} submission deadline expired`,
+      evidenceCandidates: args.evidenceCandidates,
+      limit: 2,
+    });
+
+    if (!hardBlockers.some((item: any) => String(item?.title ?? "").toLowerCase().includes("deadline already expired"))) {
+      hardBlockers = [{
+        title: "Submission deadline already expired",
+        detail: normalizeAiTextValue(`The tender submission deadline is in the past relative to processing time: ${deadlineLabel}.`, 260),
+        evidence_ids: deadlineEvidenceIds,
+      }, ...hardBlockers].slice(0, 5);
+    }
+
+    if (!decisionReasons.some((item: any) => String(item?.reason ?? "").toLowerCase().includes("deadline is already expired"))) {
+      decisionReasons = [{
+        category: "submission",
+        reason: "The submission deadline is already expired, so the opportunity is no longer bid-ready.",
+        evidence_ids: deadlineEvidenceIds,
+      }, ...decisionReasons].slice(0, 6);
+    }
+
+    const deadlineFinding = `Submission deadline already expired: ${deadlineLabel}`;
+    if (!keyFindings.some((item) => item.toLowerCase().includes("deadline already expired"))) {
+      keyFindings = [deadlineFinding, ...keyFindings].slice(0, 6);
+    }
+
+    const nextAction = "Treat this tender as closed unless the buyer has formally extended or re-opened it.";
+    if (!nextActions.some((item) => item.toLowerCase().includes("treat this tender as closed"))) {
+      nextActions = [nextAction, ...nextActions].slice(0, 4);
+    }
+  } else if (decisionSource !== "policy_rule") {
+    decisionSource = "llm";
+  }
+
+  return {
+    ...args.aiOut,
+    executive_summary: {
+      ...executive,
+      decisionBadge: finalDecisionBadge,
+      llmDecisionBadge,
+      finalDecisionBadge,
+      decisionSource,
+      hardStopReasons,
+      submissionDeadline: deadline.rawText || DEADLINE_NOT_FOUND_TEXT,
+      submissionDeadlineIso: deadline.iso,
+      submissionTimezone: deadline.timezone,
+      submissionDeadlineSource: deadline.source,
+      tenderStatus,
+      decisionLine,
+      keyFindings,
+      nextActions,
+      hard_blockers: hardBlockers,
+      decision_reasons: decisionReasons,
+    },
   };
 }
 
@@ -1432,6 +1855,7 @@ function buildTenderReviewPrompt(args: {
   sourceLanguageName: string;
   playbookSection: string;
   evidenceList: string;
+  currentUtcIso: string;
 }): string {
   return `Task
 Review the tender evidence pack and produce a decision-first bid kit with stable, evidence-led judgment.
@@ -1442,11 +1866,11 @@ Strict rules
 1. Grounding. Use only the evidence snippets provided below as the citable basis for this run. They are curated evidence candidates and may be incomplete. Do not rely on hidden assumptions or uncited source text.
 2. Decision policy (STRICT).
    - Choose decisionBadge exactly as one of: Go, Hold, No-Go.
-   - Choose No-Go when the evidence shows an explicit blocker, disqualifier, impossible requirement, hard playbook conflict, or non-recoverable eligibility gap.
+   - Choose No-Go when the evidence shows an explicit blocker, disqualifier, impossible requirement, hard playbook conflict, non-recoverable eligibility gap, or a clearly expired submission deadline.
    - Choose Hold when decision-critical information is missing, clarification is required, evidence coverage is too thin for a reliable bid decision, or material uncertainty remains.
    - Choose Go only when no blocker is evidenced, no hard playbook conflict is present, and remaining risks appear manageable.
    - Provide decisionLine as one clear sentence.
-3. Submission deadline. If an explicit deadline date or time is present in the evidence, copy it verbatim. Otherwise set submissionDeadline to: Not found in extracted text.
+3. Submission deadline and current date. The current UTC time for this run is ${args.currentUtcIso}. If an explicit deadline date or time is present in the evidence, copy it verbatim into submissionDeadline. If that copied deadline is clearly in the past relative to the current UTC time, you MUST set decisionBadge to No-Go, make the first hard_blocker about the expired deadline, and make the first keyFinding say the submission deadline has already expired. Otherwise set submissionDeadline to: Not found in extracted text.
 4. Checklist. MUST means mandatory or disqualifying if missed. SHOULD means preferred, scored, or commercially important. INFO is context. Keep items atomic. Prefer one obligation per item whenever possible.
 5. Evidence (STRICT). You MUST cite evidence_ids:
    - For every MUST checklist item: include at least one evidence id that directly supports it.
@@ -1473,6 +1897,8 @@ Strict rules
 11. Language handling. The source tender text is in ${args.sourceLanguageName}. Analyse obligations, exclusions, submission instructions, qualifications, deadlines, commercial terms, evaluation criteria, and contract clauses in that source language. Keep evidence verbatim in the source language and cite only evidence_ids.
 12. Proposal draft. Keep proposal_draft skeletal and lightweight: maximum 8 short sections, under 900 words, outline quality only. Do not spend output budget on polished prose.
 13. Priority. Prefer precision over coverage. If the evidence pack does not prove something, do not state it as fact. If a reliable decision cannot be made from the curated evidence, prefer Hold over false confidence. Keep blockers and MUST items close to the tender wording, not generalized reformulations.
+14. Hard-stop ordering. When an expired deadline, explicit closure, cancellation, or another hard stop is evidenced, surface that first in decisionLine, keyFindings, hard_blockers, and nextActions. Do not bury hard stops behind fixable checklist items.
+15. Bidder vs tender separation. Keep tender-side facts, missing attachments, and bidder-side unknowns clearly separate. Missing bidder information is not proof of tender non-compliance.
 
 Evidence snippets (the ONLY citable basis for this run; cite their ids in evidence_ids):
 ${args.evidenceList}`;
@@ -1639,6 +2065,7 @@ function buildTenderReviewRequestParts(args: {
   const sourceLanguageName = langName(args.sourceLanguage);
   const playbookSection = buildPlaybookPromptSection(args.workspacePlaybook);
   const evidenceList = buildEvidenceList(args.evidenceCandidates);
+  const currentUtcIso = new Date().toISOString();
 
   const instructions =
     "You are TenderPilot. Drafting support only. Not legal advice. Not procurement advice. " +
@@ -1648,12 +2075,14 @@ function buildTenderReviewRequestParts(args: {
     "Keep decisionBadge exactly as Go, Hold, or No-Go. " +
     "Do not translate, rewrite, paraphrase, or normalize source evidence; you do not output excerpts, only evidence_ids. " +
     "Interpret procurement wording in the source language accurately, including legal or disqualifying phrasing. " +
-    "If evidence is incomplete, say so clearly and push uncertainty into buyer_questions.";
+    "If evidence is incomplete, say so clearly and push uncertainty into buyer_questions. " +
+    "If the evidence shows an expired submission deadline or another hard stop, surface that first and do not soften it with a Hold recommendation.";
 
   const userPrompt = buildTenderReviewPrompt({
     sourceLanguageName,
     playbookSection,
     evidenceList,
+    currentUtcIso,
   });
 
   return { instructions, userPrompt };
@@ -2924,6 +3353,12 @@ let extractedText = "";
     }
 
     aiOut = normalizeAiOutputForUi(aiOut);
+    aiOut = applyDecisionRules({
+      aiOut,
+      evidenceCandidates,
+      extractedText,
+      nowIso: new Date().toISOString(),
+    });
 
     // Evidence-first normalization (product-grade):
     // - AI should cite evidence_ids for MUST checklist items and for risks.
@@ -3056,6 +3491,28 @@ let extractedText = "";
         risks,
       };
     }
+    const decisionMeta = (aiOut as any)?.executive_summary ?? {};
+    const decisionPipelineResult = await mergeJobPipeline(supabaseAdmin, job, {
+      ai: {
+        llm_decision: decisionMeta?.llmDecisionBadge ?? decisionMeta?.decisionBadge ?? null,
+        final_decision: decisionMeta?.finalDecisionBadge ?? decisionMeta?.decisionBadge ?? null,
+        decision_source: decisionMeta?.decisionSource ?? null,
+        tender_status: decisionMeta?.tenderStatus ?? null,
+        hard_stop_reasons: Array.isArray(decisionMeta?.hardStopReasons) ? decisionMeta.hardStopReasons : [],
+        submission_deadline_text: decisionMeta?.submissionDeadline ?? null,
+        submission_deadline_iso: decisionMeta?.submissionDeadlineIso ?? null,
+        submission_deadline_timezone: decisionMeta?.submissionTimezone ?? null,
+        submission_deadline_source: decisionMeta?.submissionDeadlineSource ?? null,
+        decision_evaluated_at: new Date().toISOString(),
+      },
+    });
+
+    if (!decisionPipelineResult.ok) {
+      await logEvent(supabaseAdmin, job, "warn", "Pipeline decision metadata save failed", {
+        error: decisionPipelineResult.error?.message ?? String(decisionPipelineResult.error),
+      });
+    }
+
     const resultPayload: any = {
       job_id: job.id,
       user_id: job.user_id,
