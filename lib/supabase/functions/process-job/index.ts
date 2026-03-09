@@ -27,10 +27,18 @@ type EvidenceCandidate = {
   bucket?: EvidenceBucket;
 };
 
-const PROCESS_JOB_PROMPT_VERSION = "2026-03-08-c2";
-const PROCESS_JOB_SCHEMA_VERSION = "2026-03-08-c2";
-const EVIDENCE_SELECTION_VERSION = "2026-03-08-c2";
+const PROCESS_JOB_PROMPT_VERSION = "2026-03-08-c1";
+const PROCESS_JOB_SCHEMA_VERSION = "2026-03-08-c1";
+const EVIDENCE_SELECTION_VERSION = "2026-03-08-c1";
 const OPENAI_TEMPERATURE = 0;
+
+function modelSupportsTemperature(model: string): boolean {
+  const m = String(model ?? "").trim().toLowerCase();
+  if (!m) return true;
+  if (m.startsWith("gpt-5")) return false;
+  if (m.startsWith("o1") || m.startsWith("o3") || m.startsWith("o4")) return false;
+  return true;
+}
 const EVIDENCE_BUCKET_ORDER: EvidenceBucket[] = ["submission", "eligibility", "commercial", "evaluation", "contract_terms", "general"];
 
 type AiOutput = {
@@ -870,373 +878,6 @@ function normalizeAiOutputForUi(input: AiOutput): AiOutput {
 }
 
 
-
-type StableRequirementKey =
-  | "submission_deadline"
-  | "submission_package"
-  | "form_of_tender"
-  | "independent_declaration"
-  | "eligibility_core_docs"
-  | "tax_compliance"
-  | "business_permit"
-  | "registration_license"
-  | "cr12"
-  | "performance_security"
-  | "financial_capacity"
-  | "company_experience"
-  | "key_personnel"
-  | "equipment"
-  | "insurance"
-  | "contract_acceptance";
-
-type StableGapKey = "submission_deadline" | "eligibility_proof" | "submission_completeness" | "commercial_terms" | "contract_terms" | "playbook_conflict";
-
-type StableRequirementRecord = {
-  key: StableRequirementKey;
-  type: "MUST" | "SHOULD" | "INFO";
-  text: string;
-  evidence_ids: string[];
-  source?: string;
-  needs_verification?: boolean;
-  verification_reason?: string;
-};
-
-type StableGapRecord = {
-  key: StableGapKey;
-  severity: Severity;
-  title: string;
-  detail: string;
-  evidence_ids: string[];
-  source?: string;
-};
-
-function normalizeStableText(input: unknown): string {
-  return String(input ?? "")
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase();
-}
-
-function stableLangText(lang: LangCode, texts: { en: string; de: string; it: string; fr: string; es: string }): string {
-  if (lang === "de") return texts.de;
-  if (lang === "it") return texts.it;
-  if (lang === "fr") return texts.fr;
-  if (lang === "es") return texts.es;
-  return texts.en;
-}
-
-const STABLE_REQUIREMENT_ORDER: StableRequirementKey[] = [
-  "submission_deadline",
-  "submission_package",
-  "form_of_tender",
-  "independent_declaration",
-  "eligibility_core_docs",
-  "tax_compliance",
-  "business_permit",
-  "registration_license",
-  "cr12",
-  "performance_security",
-  "financial_capacity",
-  "company_experience",
-  "key_personnel",
-  "equipment",
-  "insurance",
-  "contract_acceptance",
-];
-
-const STABLE_GAP_ORDER: StableGapKey[] = [
-  "submission_deadline",
-  "eligibility_proof",
-  "submission_completeness",
-  "commercial_terms",
-  "contract_terms",
-  "playbook_conflict",
-];
-
-function detectStableRequirementKey(input: string): StableRequirementKey | null {
-  const t = normalizeStableText(input);
-  if (!t) return null;
-
-  if ((t.includes("deadline") || t.includes("closing date") || t.includes("submission date") || t.includes("submission time") || t.includes("date limite") || t.includes("scadenza") || t.includes("frist")) && t.includes("submit")) {
-    return "submission_deadline";
-  }
-  if (t.includes("bill of quantities") || t.includes("required schedules") || t.includes("required certificates") || t.includes("submit tender documents") || t.includes("documents and forms") || t.includes("envelope") || t.includes("serialize pages") || t.includes("copies of the tender") || t.includes("all required copies")) {
-    return "submission_package";
-  }
-  if (t.includes("form of tender") || t.includes("formular") && t.includes("offer") || t.includes("formulaire d'offre")) {
-    return "form_of_tender";
-  }
-  if (t.includes("independent tender determination") || t.includes("self-declaration") || t.includes("self declaration") || t.includes("declaration of the tenderer") || t.includes("declaration du soumissionnaire") || t.includes("autodichiar") || t.includes("selbsterklar")) {
-    return "independent_declaration";
-  }
-  if (t.includes("certificate of incorporation") || t.includes("incorporation") || t.includes("pin/vat") || t.includes("pin vat") || t.includes("vat certificate") || t.includes("eligibility documents") || t.includes("qualification documents")) {
-    return "eligibility_core_docs";
-  }
-  if (t.includes("tax compliance") || t.includes("tax clearance") || t.includes("tax exemption") || t.includes("tax obligations") || t.includes("certificat fiscal") || t.includes("compliance fiscale")) {
-    return "tax_compliance";
-  }
-  if (t.includes("business permit") || t.includes("single business permit") || t.includes("trade license") || t.includes("business licence") || t.includes("licenza commerciale") || t.includes("gewerbe")) {
-    return "business_permit";
-  }
-  if (t.includes("construction authority") || t.includes("nca") || t.includes("practicing license") || t.includes("practising license") || t.includes("registration and practicing license") || t.includes("professional license") || t.includes("registration certificate")) {
-    return "registration_license";
-  }
-  if (t.includes("cr12")) {
-    return "cr12";
-  }
-  if (t.includes("performance security") || t.includes("performance bond") || t.includes("bank guarantee") || t.includes("security as an unconditional demand bank guarantee")) {
-    return "performance_security";
-  }
-  if (t.includes("financial capacity") || t.includes("audited accounts") || t.includes("access to credit") || t.includes("bank statement") || t.includes("liquidity ratio")) {
-    return "financial_capacity";
-  }
-  if (t.includes("company experience") || t.includes("similar works") || t.includes("past performance") || t.includes("current contract commitments") || t.includes("works in progress")) {
-    return "company_experience";
-  }
-  if (t.includes("key personnel") || t.includes("contractor's representative") || t.includes("contractors representative") || t.includes("project manager") || t.includes("foreman") || t.includes("resume") || t.includes("curriculum vitae") || t.includes("cv")) {
-    return "key_personnel";
-  }
-  if (t.includes("equipment") || t.includes("logbook") || t.includes("leased agreement") || t.includes("lorry") || t.includes("mixer") || t.includes("vibrator")) {
-    return "equipment";
-  }
-  if (t.includes("insurance") || t.includes("insurer") || t.includes("insured") || t.includes("cover note")) {
-    return "insurance";
-  }
-  if (t.includes("contract terms") || t.includes("conditions of contract") || t.includes("accept the contract") || t.includes("agreement")) {
-    return "contract_acceptance";
-  }
-  return null;
-}
-
-function stableRequirementTemplate(lang: LangCode, key: StableRequirementKey): { type: "MUST" | "SHOULD" | "INFO"; text: string } {
-  const make = (type: "MUST" | "SHOULD" | "INFO", texts: { en: string; de: string; it: string; fr: string; es: string }) => ({ type, text: stableLangText(lang, texts) });
-  switch (key) {
-    case "submission_deadline":
-      return make("MUST", { en: "Confirm and meet the exact tender submission deadline.", de: "Bestätigen und erfüllen Sie die genaue Frist für die Angebotsabgabe.", it: "Confermare e rispettare la scadenza esatta per la presentazione dell'offerta.", fr: "Confirmer et respecter la date limite exacte de remise de l'offre.", es: "Confirmar y cumplir la fecha límite exacta de presentación de la oferta." });
-    case "submission_package":
-      return make("MUST", { en: "Submit the complete tender package with all required forms, schedules, certificates, and copies as instructed.", de: "Reichen Sie das vollständige Angebotspaket mit allen geforderten Formularen, Anlagen, Nachweisen und Kopien gemäß den Vorgaben ein.", it: "Presentare il pacchetto completo di gara con tutti i moduli, allegati, certificati e copie richiesti secondo le istruzioni.", fr: "Soumettre le dossier complet avec tous les formulaires, annexes, certificats et copies requis conformément aux instructions.", es: "Presentar el paquete completo de la licitación con todos los formularios, anexos, certificados y copias requeridos según las instrucciones." });
-    case "form_of_tender":
-      return make("MUST", { en: "Complete and submit the Form of Tender and required schedules without unauthorized changes.", de: "Füllen Sie das Angebotsformular und die erforderlichen Anlagen ohne unzulässige Änderungen aus und reichen Sie sie ein.", it: "Completare e presentare il Form of Tender e gli allegati richiesti senza modifiche non autorizzate.", fr: "Remplir et soumettre le formulaire d'offre et les annexes requises sans modifications non autorisées.", es: "Completar y presentar el Formulario de Oferta y los anexos requeridos sin cambios no autorizados." });
-    case "independent_declaration":
-      return make("MUST", { en: "Complete and sign the Certificate of Independent Tender Determination and required self-declarations.", de: "Füllen Sie die Bescheinigung zur unabhängigen Angebotsbestimmung und die erforderlichen Eigenerklärungen aus und unterschreiben Sie diese.", it: "Compilare e firmare il Certificato di Determinazione Indipendente dell'Offerta e le autodichiarazioni richieste.", fr: "Remplir et signer le certificat de détermination indépendante de l'offre et les autodéclarations requises.", es: "Completar y firmar el Certificado de Determinación Independiente de la Oferta y las autodeclaraciones requeridas." });
-    case "eligibility_core_docs":
-      return make("MUST", { en: "Provide the core eligibility documents required by the tender, including incorporation and registration evidence where requested.", de: "Legen Sie die vom Verfahren geforderten Kernnachweise zur Eignung vor, einschließlich Gründungs- und Registrierungsnachweisen soweit verlangt.", it: "Fornire i documenti essenziali di ammissibilità richiesti dalla gara, incluse le prove di costituzione e registrazione ove richieste.", fr: "Fournir les documents essentiels d'éligibilité exigés par l'appel d'offres, y compris les justificatifs de constitution et d'enregistrement le cas échéant.", es: "Aportar los documentos básicos de elegibilidad requeridos por la licitación, incluida la evidencia de constitución y registro cuando corresponda." });
-    case "tax_compliance":
-      return make("MUST", { en: "Provide a valid tax compliance, tax clearance, or tax exemption certificate where required.", de: "Legen Sie, falls erforderlich, einen gültigen Steuer-Compliance-, Steuerfreistellungs- oder Unbedenklichkeitsnachweis vor.", it: "Fornire, se richiesto, un certificato valido di regolarità fiscale, tax clearance o esenzione fiscale.", fr: "Fournir, le cas échéant, un certificat valide de conformité fiscale, de régularité fiscale ou d'exonération fiscale.", es: "Presentar, cuando se requiera, un certificado válido de cumplimiento fiscal, solvencia fiscal o exención fiscal." });
-    case "business_permit":
-      return make("MUST", { en: "Provide a valid business permit or equivalent operating license where required.", de: "Legen Sie, falls erforderlich, eine gültige Gewerbeberechtigung oder vergleichbare Betriebslizenz vor.", it: "Fornire, se richiesto, un permesso commerciale valido o una licenza operativa equivalente.", fr: "Fournir, le cas échéant, un permis d'exploitation valide ou une licence équivalente.", es: "Presentar, cuando se requiera, un permiso comercial válido o licencia operativa equivalente." });
-    case "registration_license":
-      return make("MUST", { en: "Provide the required authority registration and valid practicing or professional license.", de: "Legen Sie die erforderliche Behördenregistrierung und eine gültige Berufs- oder Ausübungslizenz vor.", it: "Fornire la registrazione presso l'autorità competente e la licenza professionale o di esercizio valida richiesta.", fr: "Fournir l'enregistrement requis auprès de l'autorité compétente et la licence professionnelle valide exigée.", es: "Presentar el registro exigido ante la autoridad competente y la licencia profesional o de ejercicio válida requerida." });
-    case "cr12":
-      return make("MUST", { en: "Submit the required CR12 or equivalent corporate ownership record within the stated validity period.", de: "Reichen Sie das geforderte CR12 oder einen gleichwertigen Eigentumsnachweis des Unternehmens innerhalb der angegebenen Gültigkeitsdauer ein.", it: "Presentare il CR12 richiesto o un documento equivalente sulla titolarità societaria entro il periodo di validità indicato.", fr: "Soumettre le CR12 requis ou un document équivalent sur la propriété de l'entreprise dans le délai de validité indiqué.", es: "Presentar el CR12 requerido o un registro equivalente de titularidad societaria dentro del período de validez indicado." });
-    case "performance_security":
-      return make("MUST", { en: "Provide the required performance security or performance bond if awarded or if tender conditions require it.", de: "Stellen Sie die geforderte Vertragserfüllungssicherheit oder Bürgschaft, falls bei Zuschlag oder laut Vergabebedingungen erforderlich.", it: "Fornire la garanzia di esecuzione o performance bond richiesta in caso di aggiudicazione o se prevista dalle condizioni di gara.", fr: "Fournir la garantie de bonne exécution ou la caution requise en cas d'attribution ou si les conditions de l'appel d'offres l'exigent.", es: "Aportar la garantía de cumplimiento o fianza requerida en caso de adjudicación o si las condiciones de la licitación lo exigen." });
-    case "financial_capacity":
-      return make("SHOULD", { en: "Provide the financial capacity evidence requested, such as audited accounts, bank statements, or access to credit.", de: "Legen Sie die geforderten Nachweise zur finanziellen Leistungsfähigkeit vor, etwa testierte Abschlüsse, Kontoauszüge oder Kreditnachweise.", it: "Fornire le prove richieste della capacità finanziaria, come bilanci certificati, estratti conto o accesso al credito.", fr: "Fournir les éléments demandés sur la capacité financière, tels que comptes audités, relevés bancaires ou accès au crédit.", es: "Aportar la evidencia requerida de capacidad financiera, como cuentas auditadas, extractos bancarios o acceso al crédito." });
-    case "company_experience":
-      return make("SHOULD", { en: "Provide the requested evidence of similar company experience, past performance, and current commitments.", de: "Legen Sie die geforderten Nachweise zu vergleichbarer Unternehmenserfahrung, Referenzen und laufenden Verpflichtungen vor.", it: "Fornire le prove richieste di esperienza aziendale simile, performance pregresse e impegni in corso.", fr: "Fournir les éléments demandés sur l'expérience similaire de l'entreprise, les références et les engagements en cours.", es: "Aportar la evidencia requerida de experiencia similar de la empresa, desempeño anterior y compromisos vigentes." });
-    case "key_personnel":
-      return make("SHOULD", { en: "Provide CVs, qualifications, and declarations for the required key personnel.", de: "Legen Sie Lebensläufe, Qualifikationen und Erklärungen für das erforderliche Schlüsselpersonal vor.", it: "Fornire CV, qualifiche e dichiarazioni per il personale chiave richiesto.", fr: "Fournir les CV, qualifications et déclarations du personnel clé requis.", es: "Aportar CV, cualificaciones y declaraciones del personal clave requerido." });
-    case "equipment":
-      return make("SHOULD", { en: "Provide evidence of the required equipment ownership or lease arrangements where requested.", de: "Legen Sie, falls gefordert, Nachweise über Eigentum oder Leasing der erforderlichen Ausrüstung vor.", it: "Fornire, se richiesto, prove della proprietà o del leasing delle attrezzature necessarie.", fr: "Fournir, le cas échéant, les preuves de propriété ou de location de l'équipement requis.", es: "Aportar, cuando se solicite, evidencia de propiedad o arrendamiento del equipo requerido." });
-    case "insurance":
-      return make("SHOULD", { en: "Confirm the required insurance coverage and supporting evidence before submission or award.", de: "Bestätigen Sie den geforderten Versicherungsschutz und die zugehörigen Nachweise vor Abgabe oder Zuschlag.", it: "Confermare la copertura assicurativa richiesta e la relativa documentazione prima della presentazione o dell'aggiudicazione.", fr: "Confirmer la couverture d'assurance requise et les justificatifs correspondants avant la remise ou l'attribution.", es: "Confirmar la cobertura de seguros requerida y la evidencia correspondiente antes de la presentación o adjudicación." });
-    case "contract_acceptance":
-      return make("INFO", { en: "Review the contract conditions, payment terms, and acceptance requirements before bid submission.", de: "Prüfen Sie vor Angebotsabgabe die Vertragsbedingungen, Zahlungsbedingungen und Annahmeanforderungen.", it: "Rivedere le condizioni contrattuali, i termini di pagamento e i requisiti di accettazione prima della presentazione dell'offerta.", fr: "Examiner les conditions contractuelles, modalités de paiement et exigences d'acceptation avant le dépôt de l'offre.", es: "Revisar las condiciones del contrato, los términos de pago y los requisitos de aceptación antes de presentar la oferta." });
-  }
-}
-
-function stableGapTemplate(lang: LangCode, key: StableGapKey): { title: string; detail: string; severity: Severity } {
-  switch (key) {
-    case "submission_deadline":
-      return {
-        severity: "high",
-        title: stableLangText(lang, { en: "Submission deadline not confirmed", de: "Abgabefrist nicht bestätigt", it: "Scadenza di presentazione non confermata", fr: "Date limite de remise non confirmée", es: "Fecha límite de presentación no confirmada" }),
-        detail: stableLangText(lang, { en: "No explicit tender submission deadline is confirmed in the current evidence pack, so timing remains decision-critical.", de: "Im aktuellen Evidenzpaket ist keine ausdrückliche Angebotsfrist bestätigt, daher bleibt der Zeitplan entscheidungskritisch.", it: "Nel pacchetto di evidenze attuale non è confermata una scadenza esplicita di presentazione, quindi la tempistica resta critica per la decisione.", fr: "Aucune date limite explicite de remise n'est confirmée dans le dossier de preuves actuel, la question du calendrier reste donc critique pour la décision.", es: "No se confirma una fecha límite explícita de presentación en el conjunto actual de evidencias, por lo que el calendario sigue siendo crítico para la decisión." }),
-      };
-    case "eligibility_proof":
-      return {
-        severity: "medium",
-        title: stableLangText(lang, { en: "Mandatory eligibility proof not confirmed", de: "Verbindliche Eignungsnachweise nicht bestätigt", it: "Prove obbligatorie di ammissibilità non confermate", fr: "Justificatifs obligatoires d'éligibilité non confirmés", es: "Pruebas obligatorias de elegibilidad no confirmadas" }),
-        detail: stableLangText(lang, { en: "The tender defines mandatory eligibility documents, registrations, or licenses, but the current evidence does not confirm complete compliance yet.", de: "Die Ausschreibung verlangt verbindliche Eignungsunterlagen, Registrierungen oder Lizenzen, doch die aktuelle Evidenz bestätigt die vollständige Erfüllung noch nicht.", it: "La gara richiede documenti, registrazioni o licenze obbligatorie di ammissibilità, ma le evidenze attuali non confermano ancora la piena conformità.", fr: "L'appel d'offres exige des documents, enregistrements ou licences obligatoires d'éligibilité, mais les preuves actuelles ne confirment pas encore une conformité complète.", es: "La licitación exige documentos, registros o licencias obligatorios de elegibilidad, pero la evidencia actual aún no confirma el cumplimiento completo." }),
-      };
-    case "submission_completeness":
-      return {
-        severity: "medium",
-        title: stableLangText(lang, { en: "Required submission package not fully confirmed", de: "Vollständigkeit des Angebots nicht vollständig bestätigt", it: "Completezza del pacchetto di presentazione non pienamente confermata", fr: "Intégralité du dossier de soumission non entièrement confirmée", es: "No se confirma plenamente la integridad del paquete de presentación" }),
-        detail: stableLangText(lang, { en: "Required forms, schedules, declarations, or packaging instructions are visible in the evidence, but full and compliant submission is not yet confirmed.", de: "Erforderliche Formulare, Anlagen, Erklärungen oder Verpackungsvorgaben sind in der Evidenz sichtbar, die vollständige und regelkonforme Einreichung ist jedoch noch nicht bestätigt.", it: "Moduli, allegati, dichiarazioni o istruzioni di confezionamento richiesti sono visibili nelle evidenze, ma la presentazione completa e conforme non è ancora confermata.", fr: "Les formulaires, annexes, déclarations ou consignes de conditionnement requis apparaissent dans les preuves, mais une soumission complète et conforme n'est pas encore confirmée.", es: "Los formularios, anexos, declaraciones o instrucciones de presentación requeridos aparecen en la evidencia, pero aún no se confirma una presentación completa y conforme." }),
-      };
-    case "commercial_terms":
-      return {
-        severity: "medium",
-        title: stableLangText(lang, { en: "Commercial terms need confirmation", de: "Kommerzielle Bedingungen müssen bestätigt werden", it: "Le condizioni commerciali devono essere confermate", fr: "Les conditions commerciales doivent être confirmées", es: "Las condiciones comerciales deben confirmarse" }),
-        detail: stableLangText(lang, { en: "Commercial or pricing-related conditions are only partially covered in the current evidence pack and may require clarification before bidding.", de: "Kommerzielle oder preisbezogene Bedingungen sind im aktuellen Evidenzpaket nur teilweise abgedeckt und können vor Angebotsabgabe Klärung erfordern.", it: "Le condizioni commerciali o legate al prezzo sono coperte solo parzialmente nel pacchetto di evidenze attuale e potrebbero richiedere chiarimenti prima dell'offerta.", fr: "Les conditions commerciales ou liées au prix ne sont couvertes que partiellement dans le dossier de preuves actuel et peuvent nécessiter des clarifications avant l'offre.", es: "Las condiciones comerciales o relacionadas con el precio solo están parcialmente cubiertas en el conjunto actual de evidencias y pueden requerir aclaración antes de ofertar." }),
-      };
-    case "contract_terms":
-      return {
-        severity: "low",
-        title: stableLangText(lang, { en: "Contract terms require review", de: "Vertragsbedingungen müssen geprüft werden", it: "Le clausole contrattuali richiedono revisione", fr: "Les clauses contractuelles doivent être revues", es: "Las cláusulas contractuales requieren revisión" }),
-        detail: stableLangText(lang, { en: "Contract conditions are visible but should be reviewed for insurances, securities, liabilities, and acceptance terms before submission.", de: "Vertragsbedingungen sind sichtbar, sollten aber vor Abgabe hinsichtlich Versicherungen, Sicherheiten, Haftung und Annahmebedingungen geprüft werden.", it: "Le condizioni contrattuali sono visibili ma devono essere riviste per assicurazioni, garanzie, responsabilità e termini di accettazione prima della presentazione.", fr: "Les conditions contractuelles sont visibles mais doivent être examinées avant la remise concernant assurances, garanties, responsabilités et conditions d'acceptation.", es: "Las condiciones contractuales son visibles, pero deben revisarse antes de la presentación en cuanto a seguros, garantías, responsabilidades y condiciones de aceptación." }),
-      };
-    case "playbook_conflict":
-      return {
-        severity: "high",
-        title: stableLangText(lang, { en: "Playbook conflict requires escalation", de: "Konflikt mit Playbook erfordert Eskalation", it: "Il conflitto con il playbook richiede escalation", fr: "Un conflit avec le playbook exige une escalade", es: "Un conflicto con el playbook requiere escalado" }),
-        detail: stableLangText(lang, { en: "The tender appears to conflict with a workspace playbook rule and should be escalated before proceeding.", de: "Die Ausschreibung scheint mit einer Regel des Workspace-Playbooks zu kollidieren und sollte vor dem weiteren Vorgehen eskaliert werden.", it: "La gara sembra entrare in conflitto con una regola del playbook del workspace e dovrebbe essere escalata prima di procedere.", fr: "L'appel d'offres semble entrer en conflit avec une règle du playbook de l'espace de travail et doit être escaladé avant de poursuivre.", es: "La licitación parece entrar en conflicto con una regla del playbook del espacio de trabajo y debe escalarse antes de continuar." }),
-      };
-  }
-}
-
-function buildDeterministicChecklist(args: {
-  checklist: AiOutput["checklist"];
-  evidenceById: Map<string, EvidenceCandidate>;
-  targetLang: LangCode;
-}): AiOutput["checklist"] {
-  const grouped = new Map<StableRequirementKey, any>();
-  const unknown: any[] = [];
-
-  for (const item of Array.isArray(args.checklist) ? args.checklist : []) {
-    const textValue = String((item as any)?.text ?? "").trim();
-    const sourceValue = String((item as any)?.source ?? "").trim();
-    const excerptText = ((item as any)?.evidence_ids ?? [])
-      .map((id: string) => args.evidenceById.get(String(id))?.excerpt ?? "")
-      .join(" ");
-    const key = detectStableRequirementKey([textValue, sourceValue, excerptText].filter(Boolean).join(" "));
-    if (!key) {
-      unknown.push(item);
-      continue;
-    }
-
-    const template = stableRequirementTemplate(args.targetLang, key);
-    const existing = grouped.get(key);
-    const mergedIds = Array.from(new Set([...(existing?.evidence_ids ?? []), ...(((item as any)?.evidence_ids ?? []).map((x: any) => String(x)))]));
-    grouped.set(key, {
-      ...(existing ?? {}),
-      type: template.type,
-      text: template.text,
-      evidence_ids: mergedIds,
-      source: existing?.source ?? sourceValue || undefined,
-      needs_verification: Boolean(existing?.needs_verification || (item as any)?.needs_verification),
-      verification_reason: existing?.verification_reason ?? (item as any)?.verification_reason,
-    });
-  }
-
-  const orderedKnown = STABLE_REQUIREMENT_ORDER
-    .map((key) => grouped.get(key))
-    .filter(Boolean);
-
-  const orderedUnknown = unknown
-    .slice()
-    .sort((a, b) => {
-      const typeRank: Record<string, number> = { MUST: 0, SHOULD: 1, INFO: 2 };
-      const aType = String((a as any)?.type ?? "INFO").toUpperCase();
-      const bType = String((b as any)?.type ?? "INFO").toUpperCase();
-      const diff = (typeRank[aType] ?? 9) - (typeRank[bType] ?? 9);
-      if (diff !== 0) return diff;
-      return String((a as any)?.text ?? "").localeCompare(String((b as any)?.text ?? ""));
-    });
-
-  return [...orderedKnown, ...orderedUnknown].slice(0, 20);
-}
-
-function buildDeterministicGaps(args: {
-  executive: AiOutput["executive_summary"];
-  risks: AiOutput["risks"];
-  checklist: AiOutput["checklist"];
-  policyTriggers: AiOutput["policy_triggers"];
-  targetLang: LangCode;
-  evidenceById: Map<string, EvidenceCandidate>;
-}): StableGapRecord[] {
-  const gapMap = new Map<StableGapKey, StableGapRecord>();
-
-  const addGap = (key: StableGapKey, ids: string[], sourceHint?: string) => {
-    const base = stableGapTemplate(args.targetLang, key);
-    const existing = gapMap.get(key);
-    const evidence_ids = Array.from(new Set([...(existing?.evidence_ids ?? []), ...ids.filter(Boolean)]));
-    const source = existing?.source ?? sourceHint ?? (evidence_ids[0] ? args.evidenceById.get(evidence_ids[0])?.excerpt : undefined);
-    gapMap.set(key, { key, severity: existing?.severity ?? base.severity, title: base.title, detail: base.detail, evidence_ids, ...(source ? { source } : {}) });
-  };
-
-  const submissionDeadlineMissing = /not found/i.test(String(args.executive?.submissionDeadline ?? "").trim()) || !String(args.executive?.submissionDeadline ?? "").trim();
-  if (submissionDeadlineMissing) {
-    const ids = (Array.isArray(args.executive?.decision_reasons) ? args.executive.decision_reasons : [])
-      .filter((item: any) => String(item?.category ?? "") === "uncertainty" || /deadline|submission/i.test(String(item?.reason ?? "")))
-      .flatMap((item: any) => Array.isArray(item?.evidence_ids) ? item.evidence_ids : []);
-    addGap("submission_deadline", ids);
-  }
-
-  if (args.executive?.evidence_coverage?.eligibility !== "covered" || (Array.isArray(args.executive?.decision_reasons) ? args.executive.decision_reasons : []).some((item: any) => ["eligibility", "blocker"].includes(String(item?.category ?? "")) || /eligib|license|licence|permit|tax|registration|qualification/i.test(String(item?.reason ?? "")))) {
-    const ids = [
-      ...(Array.isArray(args.executive?.decision_reasons) ? args.executive.decision_reasons : []).filter((item: any) => String(item?.category ?? "") === "eligibility" || /eligib|license|licence|permit|tax|registration|qualification/i.test(String(item?.reason ?? ""))).flatMap((item: any) => Array.isArray(item?.evidence_ids) ? item.evidence_ids : []),
-      ...args.checklist.filter((item: any) => {
-        const key = detectStableRequirementKey([String(item?.text ?? ""), String(item?.source ?? "")].join(" "));
-        return ["eligibility_core_docs", "tax_compliance", "business_permit", "registration_license", "cr12"].includes(String(key));
-      }).flatMap((item: any) => Array.isArray(item?.evidence_ids) ? item.evidence_ids : []),
-    ];
-    addGap("eligibility_proof", ids);
-  }
-
-  if (args.executive?.evidence_coverage?.submission !== "covered" || (Array.isArray(args.executive?.decision_reasons) ? args.executive.decision_reasons : []).some((item: any) => String(item?.category ?? "") === "submission" || /submit|form|document|package|envelope|copy/i.test(String(item?.reason ?? "")))) {
-    const ids = [
-      ...(Array.isArray(args.executive?.decision_reasons) ? args.executive.decision_reasons : []).filter((item: any) => String(item?.category ?? "") === "submission" || /submit|form|document|package|envelope|copy/i.test(String(item?.reason ?? ""))).flatMap((item: any) => Array.isArray(item?.evidence_ids) ? item.evidence_ids : []),
-      ...args.checklist.filter((item: any) => {
-        const key = detectStableRequirementKey([String(item?.text ?? ""), String(item?.source ?? "")].join(" "));
-        return ["submission_package", "form_of_tender", "independent_declaration", "submission_deadline"].includes(String(key));
-      }).flatMap((item: any) => Array.isArray(item?.evidence_ids) ? item.evidence_ids : []),
-    ];
-    addGap("submission_completeness", ids);
-  }
-
-  if (args.executive?.evidence_coverage?.commercial === "partial" || args.risks.some((item: any) => /commercial|pricing|price|payment/i.test(`${item?.title ?? ""} ${item?.detail ?? ""}`))) {
-    const ids = args.risks.filter((item: any) => /commercial|pricing|price|payment/i.test(`${item?.title ?? ""} ${item?.detail ?? ""}`)).flatMap((item: any) => Array.isArray(item?.evidence_ids) ? item.evidence_ids : []);
-    addGap("commercial_terms", ids);
-  }
-
-  if (args.executive?.evidence_coverage?.contract_terms === "partial" || args.risks.some((item: any) => /contract|insurance|liabilit|security|bond/i.test(`${item?.title ?? ""} ${item?.detail ?? ""}`))) {
-    const ids = args.risks.filter((item: any) => /contract|insurance|liabilit|security|bond/i.test(`${item?.title ?? ""} ${item?.detail ?? ""}`)).flatMap((item: any) => Array.isArray(item?.evidence_ids) ? item.evidence_ids : []);
-    addGap("contract_terms", ids);
-  }
-
-  if ((Array.isArray(args.policyTriggers) ? args.policyTriggers : []).some((item: any) => String(item?.impact ?? "") === "blocks")) {
-    const ids = (Array.isArray(args.executive?.decision_reasons) ? args.executive.decision_reasons : []).filter((item: any) => String(item?.category ?? "") === "playbook").flatMap((item: any) => Array.isArray(item?.evidence_ids) ? item.evidence_ids : []);
-    addGap("playbook_conflict", ids);
-  }
-
-  return STABLE_GAP_ORDER.map((key) => gapMap.get(key)).filter(Boolean) as StableGapRecord[];
-}
-
-function buildDeterministicHardBlockers(args: { gaps: StableGapRecord[] }): AiOutput["executive_summary"]["hard_blockers"] {
-  return args.gaps.slice(0, 4).map((gap) => ({
-    title: gap.title,
-    detail: gap.detail,
-    evidence_ids: gap.evidence_ids.slice(0, 3),
-    ...(gap.source ? { source: gap.source } : {}),
-  })) as any;
-}
-
-function buildDeterministicTopRisks(args: { gaps: StableGapRecord[] }): AiOutput["risks"] {
-  return args.gaps.slice(0, 5).map((gap) => ({
-    title: gap.title,
-    severity: gap.severity,
-    detail: gap.detail,
-    evidence_ids: gap.evidence_ids.slice(0, 3),
-    ...(gap.source ? { source: gap.source } : {}),
-  })) as any;
-}
-
-function buildDeterministicNextActions(args: { gaps: StableGapRecord[]; targetLang: LangCode }): string[] {
-  const out: string[] = [];
-  for (const gap of args.gaps) {
-    if (gap.key === "submission_deadline") out.push(stableLangText(args.targetLang, { en: "Obtain the exact tender submission deadline and any extension rules before final bid planning.", de: "Beschaffen Sie vor der finalen Angebotsplanung die genaue Angebotsfrist und etwaige Verlängerungsregeln.", it: "Ottenere la scadenza esatta di presentazione e le eventuali regole di proroga prima della pianificazione finale dell'offerta.", fr: "Obtenir la date limite exacte de remise et les éventuelles règles de prolongation avant la planification finale de l'offre.", es: "Obtener la fecha límite exacta de presentación y cualquier regla de prórroga antes de la planificación final de la oferta." }));
-    if (gap.key === "eligibility_proof") out.push(stableLangText(args.targetLang, { en: "Confirm all mandatory eligibility documents, registrations, permits, and licenses with current supporting evidence.", de: "Bestätigen Sie alle verbindlichen Eignungsunterlagen, Registrierungen, Genehmigungen und Lizenzen mit aktuellen Nachweisen.", it: "Confermare tutti i documenti, le registrazioni, i permessi e le licenze obbligatorie di ammissibilità con prove aggiornate.", fr: "Confirmer tous les documents, enregistrements, permis et licences obligatoires d'éligibilité avec des preuves à jour.", es: "Confirmar todos los documentos, registros, permisos y licencias obligatorios de elegibilidad con evidencia actualizada." }));
-    if (gap.key === "submission_completeness") out.push(stableLangText(args.targetLang, { en: "Verify that every required form, declaration, schedule, and submission instruction is covered in the bid package.", de: "Prüfen Sie, dass jedes erforderliche Formular, jede Erklärung, Anlage und Einreichungsanweisung im Angebotspaket enthalten ist.", it: "Verificare che ogni modulo, dichiarazione, allegato e istruzione di presentazione richiesti siano coperti nel pacchetto di offerta.", fr: "Vérifier que chaque formulaire, déclaration, annexe et instruction de soumission requis est bien couvert dans le dossier d'offre.", es: "Verificar que cada formulario, declaración, anexo e instrucción de presentación requeridos esté cubierto en el paquete de oferta." }));
-    if (gap.key === "commercial_terms") out.push(stableLangText(args.targetLang, { en: "Review the commercial conditions and clarify any pricing, payment, or security obligations before bidding.", de: "Prüfen Sie die kommerziellen Bedingungen und klären Sie vor Angebotsabgabe Preis-, Zahlungs- oder Sicherheitsverpflichtungen.", it: "Rivedere le condizioni commerciali e chiarire eventuali obblighi relativi a prezzi, pagamenti o garanzie prima dell'offerta.", fr: "Examiner les conditions commerciales et clarifier toute obligation relative au prix, au paiement ou aux garanties avant l'offre.", es: "Revisar las condiciones comerciales y aclarar cualquier obligación de precio, pago o garantía antes de ofertar." }));
-    if (gap.key === "contract_terms") out.push(stableLangText(args.targetLang, { en: "Review contract conditions, insurances, securities, and liabilities before bid approval.", de: "Prüfen Sie vor der Angebotsfreigabe Vertragsbedingungen, Versicherungen, Sicherheiten und Haftungen.", it: "Rivedere condizioni contrattuali, assicurazioni, garanzie e responsabilità prima dell'approvazione dell'offerta.", fr: "Examiner les conditions contractuelles, assurances, garanties et responsabilités avant l'approbation de l'offre.", es: "Revisar las condiciones contractuales, seguros, garantías y responsabilidades antes de aprobar la oferta." }));
-    if (gap.key === "playbook_conflict") out.push(stableLangText(args.targetLang, { en: "Escalate the playbook conflict before proceeding with the bid.", de: "Esklieren Sie den Konflikt mit dem Playbook, bevor Sie mit dem Angebot fortfahren.", it: "Escalare il conflitto con il playbook prima di procedere con l'offerta.", fr: "Faire remonter le conflit avec le playbook avant de poursuivre l'offre.", es: "Escalar el conflicto con el playbook antes de continuar con la oferta." }));
-  }
-  return Array.from(new Set(out)).slice(0, 4);
-}
-
 function mockExtractFixture(args: { sourceType: "pdf" | "docx"; fileName: string }) {
   const { sourceType, fileName } = args;
   return `TENDER DOCUMENT (MOCK)
@@ -1796,21 +1437,28 @@ async function runOpenAi(args: {
     evidenceList,
   });
 
-  const buildBody = (tokenBudget: number) => ({
-    model,
-    instructions,
-    input: [{ role: "user", content: userPrompt }],
-    temperature: OPENAI_TEMPERATURE,
-    max_output_tokens: tokenBudget,
-    text: {
-      format: {
-        type: "json_schema",
-        strict: true,
-        name: "TenderPilot_review",
-        schema,
+  const buildBody = (tokenBudget: number) => {
+    const body: Record<string, unknown> = {
+      model,
+      instructions,
+      input: [{ role: "user", content: userPrompt }],
+      max_output_tokens: tokenBudget,
+      text: {
+        format: {
+          type: "json_schema",
+          strict: true,
+          name: "TenderPilot_review",
+          schema,
+        },
       },
-    },
-  });
+    };
+
+    if (modelSupportsTemperature(model)) {
+      body.temperature = OPENAI_TEMPERATURE;
+    }
+
+    return body;
+  };
 
   const reqTimeoutMs = Math.max(3_000, Math.min(timeoutMs ?? 60_000, 90_000));
 
@@ -2627,9 +2275,6 @@ let extractedText = "";
 
     let aiOut: AiOutput;
     let playbookVersion: number | null = null;
-    const { output: outputLang } = await loadUserLanguagesAdmin(supabaseAdmin, job.user_id);
-    const targetLangCode = normalizeLang(outputLang);
-    const targetLanguage = langName(targetLangCode);
 
     if (useMockAi) {
       aiOut = mockAiFixture(extractedText);
@@ -2679,6 +2324,8 @@ let extractedText = "";
         });
       }
 
+      const { output: outputLang } = await loadUserLanguagesAdmin(supabaseAdmin, job.user_id);
+      const targetLanguage = langName(outputLang);
       const sourceLanguage = detectSourceLanguage(extractedText);
 
       await logEvent(supabaseAdmin, job, "info", "OpenAI prompt prepared", {
@@ -2700,12 +2347,19 @@ let extractedText = "";
       });
       await logEvent(supabaseAdmin, job, "info", "Analysis fingerprint", analysisFingerprint);
 
-      await logEvent(supabaseAdmin, job, "info", "OpenAI started", { model, maxOutputTokens, remaining_ms: remaining, temperature: OPENAI_TEMPERATURE });
+      const defaultOpenAiTimeoutCap = model.toLowerCase().startsWith("gpt-5") ? 50_000 : 35_000;
+      const openAiTimeoutCap = parseNumberEnv("OPENAI_TIMEOUT_MS", defaultOpenAiTimeoutCap);
 
-      // Configurable OpenAI timeout cap (default 35s)
-      const openAiTimeoutCap = parseNumberEnv("OPENAI_TIMEOUT_MS", 35_000);
+      await logEvent(supabaseAdmin, job, "info", "OpenAI started", {
+        model,
+        maxOutputTokens,
+        remaining_ms: remaining,
+        openai_timeout_cap_ms: openAiTimeoutCap,
+        temperature: modelSupportsTemperature(model) ? OPENAI_TEMPERATURE : null,
+        temperature_omitted: !modelSupportsTemperature(model),
+      });
 
-      // Give OpenAI only the remaining budget minus a safety buffer, but cap by OPENAI_TIMEOUT_MS
+      // Give OpenAI only the remaining budget minus a safety buffer, capped by OPENAI_TIMEOUT_MS.
       const timeoutMs = Math.max(
         3_000,
         Math.min(
@@ -2833,44 +2487,22 @@ let extractedText = "";
         };
       }).filter((item: any) => item.reason);
 
-      const normalizedChecklist = buildDeterministicChecklist({
-        checklist,
-        evidenceById,
-        targetLang: targetLangCode,
-      });
-
-      const deterministicGaps = buildDeterministicGaps({
-        executive: {
-          ...executive,
-          decision_reasons: decisionReasons,
-        },
-        risks,
-        checklist: normalizedChecklist,
-        policyTriggers: Array.isArray((aiOut as any)?.policy_triggers) ? (aiOut as any).policy_triggers : [],
-        targetLang: targetLangCode,
-        evidenceById,
-      });
-
-      const deterministicHardBlockers = buildDeterministicHardBlockers({ gaps: deterministicGaps });
-      const deterministicRisks = buildDeterministicTopRisks({ gaps: deterministicGaps });
-      const topRisks = deterministicRisks.slice(0, 3).map((item) => ({
+      const topRisks = risks.slice(0, 3).map((item) => ({
         title: item.title,
         severity: item.severity,
         detail: item.detail,
       }));
-      const nextActions = buildDeterministicNextActions({ gaps: deterministicGaps, targetLang: targetLangCode });
 
       aiOut = {
         ...aiOut,
         executive_summary: {
           ...executive,
-          hard_blockers: deterministicHardBlockers.length ? deterministicHardBlockers : hardBlockers,
+          hard_blockers: hardBlockers,
           decision_reasons: decisionReasons,
-          nextActions: nextActions.length ? nextActions : executive.nextActions,
           topRisks: topRisks.length ? topRisks : executive.topRisks,
         },
-        checklist: normalizedChecklist,
-        risks: deterministicRisks.length ? deterministicRisks : risks,
+        checklist,
+        risks,
       };
     }
     const resultPayload: any = {
