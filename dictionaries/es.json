@@ -1144,7 +1144,12 @@
         "inOneDay": "In 1 day",
         "inHours": "In {hours} hours",
         "inOneHour": "In 1 hour",
-        "inMinutes": "In {minutes} min"
+        "inMinutes": "In {minutes} min",
+        "sourceLocalTime": "Se muestra la fecha y hora tal como aparecen en el pliego.",
+        "normalizedLabel": "Normalizado",
+        "clarificationLabel": "Fecha límite de aclaraciones",
+        "submissionChannelLabel": "Canal de presentación",
+        "procedureLabel": "Procedimiento"
       },
       "metrics": {
         "risks": "{count} riesgos",

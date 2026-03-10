@@ -1144,7 +1144,12 @@
         "inOneDay": "In 1 day",
         "inHours": "In {hours} hours",
         "inOneHour": "In 1 hour",
-        "inMinutes": "In {minutes} min"
+        "inMinutes": "In {minutes} min",
+        "sourceLocalTime": "Showing the source date and time as written in the tender.",
+        "normalizedLabel": "Normalized",
+        "clarificationLabel": "Clarification deadline",
+        "submissionChannelLabel": "Submission channel",
+        "procedureLabel": "Procedure"
       },
       "metrics": {
         "risks": "{count} risks",

@@ -3692,9 +3692,14 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
     const raw = (job as any)?.pipeline?.ai?.pre_extracted_facts?.submission_deadline ?? null;
     const text = raw?.text ? String(raw.text).trim() : "";
     const iso = raw?.iso ? String(raw.iso).trim() : "";
+    const timezone = raw?.timezone ? String(raw.timezone).trim() : "";
     const source = raw?.source ? String(raw.source).trim() : "";
-    return { text, iso, source };
+    return { text, iso, timezone, source };
   }, [job]);
+
+
+
+
 
   const deadlineText = (() => {
     const executiveText = executive.submissionDeadline ? String(executive.submissionDeadline).trim() : "";
@@ -3707,7 +3712,6 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
     const s = String(input ?? "").trim();
     if (!s) return null;
 
-    // Common format seen in the UI: "15:00 28/05/2014"
     const m = s.match(/(\d{1,2}:\d{2})\s+(\d{1,2})\/(\d{1,2})\/(\d{4})/);
     if (m) {
       const [hh, mm] = m[1].split(":").map((x) => parseInt(x, 10));
@@ -3718,9 +3722,46 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
       return Number.isNaN(d.getTime()) ? null : d;
     }
 
-    // ISO-like fallback
     const d2 = new Date(s);
     return Number.isNaN(d2.getTime()) ? null : d2;
+  }
+
+  function extractDeadlineSourceDisplay(input: string): string {
+    const raw = String(input ?? "").replace(/\s+/g, " ").trim();
+    if (!raw || raw.toLowerCase() === "not found in extracted text") return "";
+
+    const timeThenDate = raw.match(/(?:ore\s*)?(\d{1,2})[:.](\d{2})[^\d]{0,24}(?:del\s+giorno\s+|am\s+|on\s+|le\s+|del\s+|de\s+)?(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/i);
+    if (timeThenDate) {
+      const hh = timeThenDate[1].padStart(2, "0");
+      const mm = timeThenDate[2].padStart(2, "0");
+      const dd = timeThenDate[3].padStart(2, "0");
+      const mo = timeThenDate[4].padStart(2, "0");
+      let yyyy = timeThenDate[5];
+      if (yyyy.length === 2) yyyy = `20${yyyy}`;
+      return `${dd}/${mo}/${yyyy} • ${hh}:${mm}`;
+    }
+
+    const dateThenTime = raw.match(/(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})[^\d]{0,24}(?:alle\s+ore\s+|ore\s+|at\s+|à\s+|um\s+|a las\s+)?(\d{1,2})[:.](\d{2})/i);
+    if (dateThenTime) {
+      const dd = dateThenTime[1].padStart(2, "0");
+      const mo = dateThenTime[2].padStart(2, "0");
+      let yyyy = dateThenTime[3];
+      if (yyyy.length === 2) yyyy = `20${yyyy}`;
+      const hh = dateThenTime[4].padStart(2, "0");
+      const mm = dateThenTime[5].padStart(2, "0");
+      return `${dd}/${mo}/${yyyy} • ${hh}:${mm}`;
+    }
+
+    const dateOnly = raw.match(/(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/);
+    if (dateOnly) {
+      const dd = dateOnly[1].padStart(2, "0");
+      const mo = dateOnly[2].padStart(2, "0");
+      let yyyy = dateOnly[3];
+      if (yyyy.length === 2) yyyy = `20${yyyy}`;
+      return `${dd}/${mo}/${yyyy}`;
+    }
+
+    return "";
   }
 
   const deadlineDate = useMemo(() => {
@@ -3730,22 +3771,7 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
     }
     return parseDeadlineToDate(deadlineText);
   }, [deadlineText, pipelineSubmissionDeadline.iso]);
-  const timeToDeadline = useMemo(() => {
-    if (!deadlineDate) return "";
-    const now = new Date();
-    const diffMs = deadlineDate.getTime() - now.getTime();
-    const diffMin = Math.round(diffMs / 60000);
-    if (diffMin <= 0) return t("app.review.deadline.passed");
 
-    const diffHours = Math.floor(diffMin / 60);
-    const diffDays = Math.floor(diffHours / 24);
-
-    if (diffDays >= 2) return t("app.review.deadline.inDays", { days: diffDays });
-    if (diffDays === 1) return t("app.review.deadline.inOneDay");
-    if (diffHours >= 2) return t("app.review.deadline.inHours", { hours: diffHours });
-    if (diffHours === 1) return t("app.review.deadline.inOneHour");
-    return t("app.review.deadline.inMinutes", { minutes: diffMin });
-  }, [deadlineDate, t]);
 
   const deadlineStatus = useMemo(() => {
     const tenderStatus = String((executive as any)?.tenderStatus ?? "").trim().toLowerCase();
@@ -3776,21 +3802,30 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
         ? t("app.common.open")
         : t("app.common.unknown");
 
-  const deadlineDisplayValue = useMemo(() => {
+  const deadlineSourceLocalValue = useMemo(() => {
+    return extractDeadlineSourceDisplay(pipelineSubmissionDeadline.text || deadlineText);
+  }, [deadlineText, pipelineSubmissionDeadline.text]);
+
+  const normalizedDeadlineValue = useMemo(() => {
     const isoCandidate = String((executive as any)?.submissionDeadlineIso ?? "").trim() || pipelineSubmissionDeadline.iso;
     if (isoCandidate) {
       const formattedIso = formatDate(isoCandidate);
       if (formattedIso) return formattedIso;
     }
     if (deadlineDate) return formatDate(deadlineDate.toISOString());
-    return deadlineText;
-  }, [deadlineDate, deadlineText, executive, pipelineSubmissionDeadline.iso]);
+    return "";
+  }, [deadlineDate, executive, pipelineSubmissionDeadline.iso]);
+
+  const deadlineDisplayValue = deadlineSourceLocalValue || normalizedDeadlineValue || deadlineText;
+
 
   const deadlineSourceQuery = useMemo(() => {
     const raw = String(deadlineText || pipelineSubmissionDeadline.text || "").trim();
     if (raw && raw.toLowerCase() !== "not found in extracted text") return raw;
     return "Tender Submission Deadline";
   }, [deadlineText, pipelineSubmissionDeadline.text]);
+
+
 
   const todayFocus = useMemo(() => {
     if (!showReady) return "";
@@ -4101,15 +4136,6 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
                   <Badge variant="outline" className={`rounded-full ${deadlineBadgeTone}`}>
                     {deadlineStatusLabel}
                   </Badge>
-                </div>
-
-                <div className="mt-3 space-y-2">
-                  {deadlineText && deadlineDisplayValue !== deadlineText ? (
-                    <p className="text-xs leading-relaxed text-muted-foreground">{deadlineText}</p>
-                  ) : null}
-                  <p className="text-xs leading-relaxed text-muted-foreground">
-                    {timeToDeadline || t("app.exports.tenderBrief.meta.deadlinePresentVerify")}
-                  </p>
                 </div>
 
                 <div className="mt-4 flex justify-end">

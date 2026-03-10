@@ -1144,7 +1144,12 @@
         "inOneDay": "In 1 day",
         "inHours": "In {hours} hours",
         "inOneHour": "In 1 hour",
-        "inMinutes": "In {minutes} min"
+        "inMinutes": "In {minutes} min",
+        "sourceLocalTime": "Mostro la data e l'ora come riportate nel bando.",
+        "normalizedLabel": "Normalizzato",
+        "clarificationLabel": "Scadenza chiarimenti",
+        "submissionChannelLabel": "Canale di presentazione",
+        "procedureLabel": "Procedura"
       },
       "metrics": {
         "risks": "{count} rischi",

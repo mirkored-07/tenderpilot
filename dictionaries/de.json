@@ -1144,7 +1144,12 @@
         "inOneDay": "In 1 day",
         "inHours": "In {hours} hours",
         "inOneHour": "In 1 hour",
-        "inMinutes": "In {minutes} min"
+        "inMinutes": "In {minutes} min",
+        "sourceLocalTime": "Datum und Uhrzeit werden wie im Vergabeunterlagen-Text angezeigt.",
+        "normalizedLabel": "Normalisiert",
+        "clarificationLabel": "Frist für Rückfragen",
+        "submissionChannelLabel": "Einreichungskanal",
+        "procedureLabel": "Verfahren"
       },
       "metrics": {
         "risks": "{count} Risiken",
