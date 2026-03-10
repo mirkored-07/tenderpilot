@@ -27,9 +27,35 @@ type EvidenceCandidate = {
   bucket?: EvidenceBucket;
 };
 
-const PROCESS_JOB_PROMPT_VERSION = "2026-03-08-c1";
+type DeterministicTenderFact = {
+  value: string;
+  evidence_ids: string[];
+  source: "evidence" | "text_fallback";
+  confidence: "high" | "medium";
+};
+
+type PreExtractedDeadlineFact = {
+  text: string;
+  iso: string | null;
+  timezone: string | null;
+  source: "parsed_from_evidence" | "not_found" | "unparseable";
+};
+
+type PreExtractedTenderFacts = {
+  submissionDeadline: PreExtractedDeadlineFact;
+  clarificationDeadline: PreExtractedDeadlineFact;
+  submissionChannel: DeterministicTenderFact | null;
+  procurementProcedure: DeterministicTenderFact | null;
+  validityPeriod: DeterministicTenderFact | null;
+  contractTerm: DeterministicTenderFact | null;
+  lotStructure: DeterministicTenderFact | null;
+  attachmentMentions: Array<{ value: string; evidence_ids: string[] }>;
+  scheduleMentions: Array<{ value: string; evidence_ids: string[] }>;
+};
+
+const PROCESS_JOB_PROMPT_VERSION = "2026-03-10-c4";
 const PROCESS_JOB_SCHEMA_VERSION = "2026-03-08-c1";
-const EVIDENCE_SELECTION_VERSION = "2026-03-08-c1";
+const EVIDENCE_SELECTION_VERSION = "2026-03-10-c2";
 const OPENAI_TEMPERATURE = 0;
 const GEMINI_TEMPERATURE = 0;
 const DEFAULT_LLM_MODEL_KEY = "openai:gpt-4.1-mini";
@@ -1196,29 +1222,121 @@ function buildUtcIso(args: { year: number; month: number; day: number; hour?: nu
 const MONTH_NAME_TO_NUMBER: Record<string, number> = {
   jan: 1,
   january: 1,
+  gennaio: 1,
+  gen: 1,
+  janvier: 1,
+  januar: 1,
+  ene: 1,
+  enero: 1,
   feb: 2,
   february: 2,
+  febbraio: 2,
+  fevrier: 2,
+  février: 2,
+  februar: 2,
+  febrero: 2,
   mar: 3,
   march: 3,
+  marzo: 3,
+  mars: 3,
+  märz: 3,
+  maerz: 3,
+  abr: 4,
   apr: 4,
   april: 4,
+  aprile: 4,
+  avril: 4,
+  abril: 4,
   may: 5,
+  maggio: 5,
+  mai: 5,
+  mayo: 5,
+  mag: 5,
   jun: 6,
   june: 6,
+  giugno: 6,
+  juin: 6,
+  juni: 6,
+  junio: 6,
+  giu: 6,
   jul: 7,
   july: 7,
+  luglio: 7,
+  juillet: 7,
+  juli: 7,
+  julio: 7,
+  lug: 7,
   aug: 8,
   august: 8,
+  agosto: 8,
+  aout: 8,
+  août: 8,
+  ago: 8,
   sep: 9,
   sept: 9,
   september: 9,
+  settembre: 9,
+  set: 9,
+  septembre: 9,
+  septiembre: 9,
+  okt: 10,
   oct: 10,
   october: 10,
+  ottobre: 10,
+  octobre: 10,
+  oktober: 10,
+  octubre: 10,
+  ott: 10,
   nov: 11,
   november: 11,
+  novembre: 11,
+  noviembre: 11,
   dec: 12,
   december: 12,
+  dicembre: 12,
+  decembre: 12,
+  décembre: 12,
+  dezember: 12,
+  diciembre: 12,
+  dic: 12,
 };
+
+const DEADLINE_TIMEZONE_TOKEN = String.raw`(?:UTC|GMT|BST|WET|WEST|CET|CEST|EET|EEST|PST|PDT|MST|MDT|CST|CDT|EST|EDT)`;
+const MULTILINGUAL_MONTH_TOKEN = String.raw`[A-Za-zÀ-ÿ]{3,15}`;
+const SUBMISSION_DEADLINE_POSITIVE_PATTERNS = [
+  /\b(tender submission deadline|submission deadline|deadline for (?:submission|tenders?|offers?|bids?)|offer deadline|bid deadline|tender deadline|deadline to submit)\b/i,
+  /\b(termine di presentazione(?: delle offerte| dell'offerta| della domanda di partecipazione)?|scadenza(?: per la presentazione(?: delle offerte| dell'offerta))?|presentazione dell'offerta|presentazione delle offerte|entro e non oltre)\b/i,
+  /\b(date limite(?: de remise| de soumission)?|date de remise des offres|date de soumission|remise des offres|soumission des offres|au plus tard le)\b/i,
+  /\b(angebotsfrist|einreichungsfrist|frist zur einreichung|frist für die abgabe|abgabefrist|abgabe der angebote|spätestens bis|spaetestens bis|spätestens zum|spaetestens zum)\b/i,
+  /\b(fecha l[íi]mite(?: de presentaci[oó]n)?|plazo de presentaci[oó]n|presentaci[oó]n de ofertas|a m[aá]s tardar|antes del)\b/i,
+];
+const SUBMISSION_DEADLINE_NEGATIVE_PATTERN = /\b(chiarimenti?|clarifications?|questions?|faq|quesiti|messaggistica|qa\b|q&a|site visit|visita|inspection|briefing|opening|apertura|award|aggiudicazione|stipula|signature|firma del contratto|date limite des questions|questions des soumissionnaires|fragen|bieterfragen|aclaraciones?)\b/i;
+const SUBMISSION_CONTEXT_PATTERN = /\b(submi(?:ssion|t)|offer|tender|bid|offert[ae]|domanda di partecipazione|presentazione(?: delle offerte| dell'offerta)?|soumission|remise des offres|offre|angebote?|einreichung|presentaci[oó]n(?: de ofertas?)?|oferta)\b/i;
+const EXPLICIT_SUBMISSION_LABEL_PATTERN = new RegExp([
+  String.raw`\b(?:tender submission deadline|submission deadline|deadline for (?:submission|tenders?|offers?|bids?)|offer deadline|bid deadline|tender deadline)\b`,
+  String.raw`\b(?:termine di presentazione(?: delle offerte| dell'offerta| della domanda di partecipazione)?|scadenza(?: per la presentazione(?: delle offerte| dell'offerta))?)\b`,
+  String.raw`\b(?:date limite(?: de remise| de soumission)?|date de remise des offres|date de soumission)\b`,
+  String.raw`\b(?:angebotsfrist|einreichungsfrist|frist zur einreichung|frist für die abgabe|abgabefrist|abgabe der angebote)\b`,
+  String.raw`\b(?:fecha l[íi]mite(?: de presentaci[oó]n)?|plazo de presentaci[oó]n|presentaci[oó]n de ofertas)\b`,
+].join("|"), "i");
+
+function scoreSubmissionDeadlineHint(text: string): number {
+  const normalized = String(text ?? "").replace(/\s+/g, " ").trim();
+  if (!normalized) return -999;
+  let score = 0;
+  for (const pattern of SUBMISSION_DEADLINE_POSITIVE_PATTERNS) {
+    if (pattern.test(normalized)) score += 6;
+  }
+  if (EXPLICIT_SUBMISSION_LABEL_PATTERN.test(normalized)) score += 8;
+  if (SUBMISSION_CONTEXT_PATTERN.test(normalized)) score += 4;
+  if (/\b(?:ore|at|alle|a las|um|à|au|am)\s*\d{1,2}[:.]\d{2}\b/i.test(normalized) || /\b\d{1,2}[:.]\d{2}\b/.test(normalized)) score += 2;
+  if (/\b\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}\b/.test(normalized) || new RegExp(String.raw`\b\d{1,2}(?:st|nd|rd|th)?\s+${MULTILINGUAL_MONTH_TOKEN}\s+\d{2,4}\b`, "i").test(normalized)) score += 2;
+  if (/\b(?:entro e non oltre|au plus tard|spätestens|spaetestens|a m[aá]s tardar)\b/i.test(normalized)) score += 2;
+  if (SUBMISSION_DEADLINE_NEGATIVE_PATTERN.test(normalized)) score -= 8;
+  if (/(?:chiarimenti?|clarifications?|questions?|faq|quesiti|fragen|aclaraciones?)/i.test(normalized) && !/(?:offert[ae]|submission|soumission|angebote?|presentaci[oó]n)/i.test(normalized)) score -= 6;
+  if (normalized.length <= 260) score += 1;
+  return score;
+}
 
 function normalizeSubmissionDeadline(rawInput: unknown): {
   rawText: string;
@@ -1235,11 +1353,11 @@ function normalizeSubmissionDeadline(rawInput: unknown): {
   const timezone = extractTimezoneLabel(text);
 
   const patterns = [
-    /\b(\d{1,2})[:.](\d{2})\s*(AM|PM)?\s*(UTC|GMT|BST|WET|WEST|CET|CEST|EET|EEST|PST|PDT|MST|MDT|CST|CDT|EST|EDT)?\s*(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})\b/i,
-    /\b(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})(?:\s+at|\s*,)?\s*(\d{1,2})[:.](\d{2})\s*(AM|PM)?\s*(UTC|GMT|BST|WET|WEST|CET|CEST|EET|EEST|PST|PDT|MST|MDT|CST|CDT|EST|EDT)?\b/i,
-    /\b(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s](\d{1,2})[:.](\d{2}))?\s*(UTC|GMT|BST|WET|WEST|CET|CEST|EET|EEST|PST|PDT|MST|MDT|CST|CDT|EST|EDT)?\b/i,
-    /\b(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]{3,9})\s+(\d{2,4})(?:\s+at|\s*,)?\s*(\d{1,2})[:.](\d{2})\s*(AM|PM)?\s*(UTC|GMT|BST|WET|WEST|CET|CEST|EET|EEST|PST|PDT|MST|MDT|CST|CDT|EST|EDT)?\b/i,
-    /\b(\d{1,2})[:.](\d{2})\s*(AM|PM)?\s*(UTC|GMT|BST|WET|WEST|CET|CEST|EET|EEST|PST|PDT|MST|MDT|CST|CDT|EST|EDT)?\s*(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]{3,9})\s+(\d{2,4})\b/i,
+    new RegExp(String.raw`\b(\d{1,2})[:.](\d{2})\s*(AM|PM)?\s*(${DEADLINE_TIMEZONE_TOKEN})?\s*(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})\b`, "i"),
+    new RegExp(String.raw`\b(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})(?:\s+(?:at|alle|ore|um|a las|à|au)\b|\s*,)?\s*(\d{1,2})[:.](\d{2})\s*(AM|PM)?\s*(${DEADLINE_TIMEZONE_TOKEN})?\b`, "i"),
+    new RegExp(String.raw`\b(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s](\d{1,2})[:.](\d{2}))?\s*(${DEADLINE_TIMEZONE_TOKEN})?\b`, "i"),
+    new RegExp(String.raw`\b(\d{1,2})(?:st|nd|rd|th)?\s+(${MULTILINGUAL_MONTH_TOKEN})\s+(\d{2,4})(?:\s+(?:at|alle|ore|um|a las|à|au)\b|\s*,)?\s*(\d{1,2})[:.](\d{2})\s*(AM|PM)?\s*(${DEADLINE_TIMEZONE_TOKEN})?\b`, "i"),
+    new RegExp(String.raw`\b(\d{1,2})[:.](\d{2})\s*(AM|PM)?\s*(${DEADLINE_TIMEZONE_TOKEN})?\s*(\d{1,2})(?:st|nd|rd|th)?\s+(${MULTILINGUAL_MONTH_TOKEN})\s+(\d{2,4})\b`, "i"),
   ];
 
   const first = text.match(patterns[0]);
@@ -1328,7 +1446,7 @@ function normalizeSubmissionDeadline(rawInput: unknown): {
     return { rawText, iso, timezone, parseStatus: iso ? "parsed" : "unparseable" };
   }
 
-  const dateOnlyMonthName = text.match(/\b(\d{1,2})(?:st|nd|rd|th)?\s+([A-Za-z]{3,9})\s+(\d{2,4})\b/i);
+  const dateOnlyMonthName = text.match(new RegExp(String.raw`\b(\d{1,2})(?:st|nd|rd|th)?\s+(${MULTILINGUAL_MONTH_TOKEN})\s+(\d{2,4})\b`, "i"));
   if (dateOnlyMonthName) {
     const day = Number(dateOnlyMonthName[1]);
     const month = MONTH_NAME_TO_NUMBER[String(dateOnlyMonthName[2] ?? "").toLowerCase()];
@@ -1347,35 +1465,67 @@ function normalizeSubmissionDeadline(rawInput: unknown): {
 }
 
 function extractSubmissionDeadlineHints(args: { evidenceCandidates: EvidenceCandidate[]; extractedText?: string | null }): string[] {
-  const out: string[] = [];
-  const seen = new Set<string>();
-  const push = (value: unknown) => {
+  const weighted = new Map<string, number>();
+  const evidenceBias = new Map<string, number>();
+
+  const push = (value: unknown, bonus = 0, source: "evidence" | "text" = "text") => {
     const text = String(value ?? "").replace(/\s+/g, " ").trim();
     if (!text) return;
     const key = text.toLowerCase();
-    if (seen.has(key)) return;
-    seen.add(key);
-    out.push(text);
+    const score = scoreSubmissionDeadlineHint(text) + bonus;
+    const existing = weighted.get(key) ?? Number.NEGATIVE_INFINITY;
+    if (score > existing) weighted.set(key, score);
+    if (source === "evidence") {
+      const evidenceScore = evidenceBias.get(key) ?? 0;
+      evidenceBias.set(key, Math.max(evidenceScore, 2));
+    }
   };
 
-  const deadlineRowPatterns = [
-    /(\d{1,2}[:.]\d{2}\s*(?:AM|PM)?\s*(?:UTC|GMT|BST|WET|WEST|CET|CEST|EET|EEST|PST|PDT|MST|MDT|CST|CDT|EST|EDT)?\s*\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}\s+Tender Submission Deadline)/ig,
-    /(\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}(?:\s+at|\s*,)?\s*\d{1,2}[:.]\d{2}\s*(?:AM|PM)?\s*(?:UTC|GMT|BST|WET|WEST|CET|CEST|EET|EEST|PST|PDT|MST|MDT|CST|CDT|EST|EDT)?\s+Tender Submission Deadline)/ig,
-    /(Tender Submission Deadline[^\n]{0,120})/ig,
+  const labelWindowPatterns = [
+    /(Tender Submission Deadline[^\n]{0,180})/ig,
+    /(Submission Deadline[^\n]{0,180})/ig,
+    /(deadline for (?:submission|offers?|bids?|tenders?)[^\n]{0,180})/ig,
+    /(termine di presentazione[^\n]{0,180})/ig,
+    /(scadenza[^\n]{0,180})/ig,
+    /(entro e non oltre[^\n]{0,180})/ig,
+    /(date limite[^\n]{0,180})/ig,
+    /(remise des offres[^\n]{0,180})/ig,
+    /(soumission[^\n]{0,180})/ig,
+    /(Angebotsfrist[^\n]{0,180})/ig,
+    /(Einreichungsfrist[^\n]{0,180})/ig,
+    /(Abgabefrist[^\n]{0,180})/ig,
+    /(fecha l[íi]mite[^\n]{0,180})/ig,
+    /(plazo de presentaci[oó]n[^\n]{0,180})/ig,
+    /(a m[aá]s tardar[^\n]{0,180})/ig,
   ];
 
-  const considerBlock = (value: string) => {
+  const temporalRowPatterns = [
+    new RegExp(String.raw`([^\n]{0,120}\b\d{1,2}[:.]\d{2}\b[^\n]{0,40}\b\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}\b[^\n]{0,120})`, "ig"),
+    new RegExp(String.raw`([^\n]{0,120}\b\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}\b[^\n]{0,40}\b\d{1,2}[:.]\d{2}\b[^\n]{0,120})`, "ig"),
+    new RegExp(String.raw`([^\n]{0,120}\b\d{1,2}(?:st|nd|rd|th)?\s+${MULTILINGUAL_MONTH_TOKEN}\s+\d{2,4}\b[^\n]{0,120})`, "ig"),
+  ];
+
+  const considerBlock = (value: string, source: "evidence" | "text") => {
     if (!value) return;
-    if (/tender submission deadline/i.test(value)) push(value);
-    for (const pattern of deadlineRowPatterns) {
-      const matches = value.match(pattern) ?? [];
-      for (const match of matches) push(match);
+    const compact = value.replace(/\s+/g, " ").trim();
+    for (const pattern of labelWindowPatterns) {
+      const matches = compact.match(pattern) ?? [];
+      for (const match of matches) push(match, 4, source);
+    }
+    for (const pattern of temporalRowPatterns) {
+      const matches = compact.match(pattern) ?? [];
+      for (const match of matches) {
+        if (scoreSubmissionDeadlineHint(match) >= 4) push(match, 2, source);
+      }
+    }
+    if (scoreSubmissionDeadlineHint(compact) >= 8) {
+      push(compact, 1, source);
     }
   };
 
   for (const candidate of args.evidenceCandidates ?? []) {
-    considerBlock(String(candidate?.excerpt ?? ""));
-    considerBlock(String(candidate?.anchor ?? ""));
+    considerBlock(String(candidate?.excerpt ?? ""), "evidence");
+    considerBlock(String(candidate?.anchor ?? ""), "evidence");
   }
 
   const extractedText = String(args.extractedText ?? "");
@@ -1383,14 +1533,25 @@ function extractSubmissionDeadlineHints(args: { evidenceCandidates: EvidenceCand
     const lines = extractedText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      if (!/tender submission deadline/i.test(line)) continue;
-      push([lines[i - 1], line, lines[i + 1]].filter(Boolean).join(" "));
-      push(line);
+      const joined = [lines[i - 1], line, lines[i + 1]].filter(Boolean).join(" ");
+      if (scoreSubmissionDeadlineHint(line) >= 4) {
+        push(joined || line, 3, "text");
+        push(line, 2, "text");
+      } else if (scoreSubmissionDeadlineHint(joined) >= 8) {
+        push(joined, 2, "text");
+      }
     }
-    considerBlock(extractedText);
+    considerBlock(extractedText, "text");
   }
 
-  return out.slice(0, 12);
+  return [...weighted.entries()]
+    .sort((a, b) => {
+      const scoreA = a[1] + (evidenceBias.get(a[0]) ?? 0);
+      const scoreB = b[1] + (evidenceBias.get(b[0]) ?? 0);
+      return scoreB - scoreA;
+    })
+    .map(([value]) => value)
+    .slice(0, 16);
 }
 
 function resolveSubmissionDeadline(args: { rawInput: unknown; evidenceCandidates: EvidenceCandidate[]; extractedText?: string | null }) {
@@ -1402,14 +1563,277 @@ function resolveSubmissionDeadline(args: { rawInput: unknown; evidenceCandidates
     extractedText: args.extractedText,
   });
 
-  for (const hint of hints) {
-    const parsed = normalizeSubmissionDeadline(hint);
-    if (parsed.parseStatus === "parsed") {
-      return { ...parsed, source: "evidence_fallback" as const };
-    }
+  const parsedHints = hints
+    .map((hint) => {
+      const parsed = normalizeSubmissionDeadline(hint);
+      const deadlineMs = parsed.iso ? Date.parse(parsed.iso) : Number.NEGATIVE_INFINITY;
+      return {
+        hint,
+        parsed,
+        score: scoreSubmissionDeadlineHint(hint) + (parsed.parseStatus === "parsed" ? 6 : 0),
+        deadlineMs: Number.isFinite(deadlineMs) ? deadlineMs : Number.NEGATIVE_INFINITY,
+      };
+    })
+    .filter((item) => item.parsed.parseStatus === "parsed");
+
+  parsedHints.sort((a, b) => (b.score - a.score) || (b.deadlineMs - a.deadlineMs) || (a.hint.length - b.hint.length));
+
+  const best = parsedHints[0];
+  if (best) {
+    return { ...best.parsed, source: "evidence_fallback" as const };
   }
 
   return { ...direct, source: direct.parseStatus === "not_found" ? "not_found" as const : "unparseable" as const };
+}
+
+const CLARIFICATION_CONTEXT_PATTERN = /\b(clarification|clarifications|questions?|q&a|faq|chiarimenti?|quesiti|messaggistica|questions? des soumissionnaires|fragen|bieterfragen|rueckfragen|rückfragen|aclaraciones?|consultas?)\b/i;
+const SITE_VISIT_CONTEXT_PATTERN = /\b(site visit|inspection|briefing|sopralluogo|visita obbligatoria|presa visione|visite du site|ortsbegehung|besichtigung|visita al sitio)\b/i;
+const CONTRACT_DEADLINE_CONTEXT_PATTERN = /\b(contract signature|signature of the contract|standstill|award date|award notice|stipula|firma del contratto|aggiudicazione|signature du contrat|attribution|vertragsunterzeichnung|zuschlag|firma del contrato|adjudicaci[oó]n)\b/i;
+const SUBMISSION_SECTION_CONTEXT_PATTERN = /\b(modalit[aà] di presentazione(?: dell'offerta| delle offerte)?|presentazione(?: dell'offerta| delle offerte)?|trasmissione dell'offerta|submission(?: of tenders?)?|submission instructions|submission requirements|remise des offres|soumission des offres|angebotsabgabe|einreichung(?: der angebote)?|presentaci[oó]n de ofertas?)\b/i;
+const CLARIFICATION_SECTION_HEADING_PATTERN = CLARIFICATION_CONTEXT_PATTERN;
+const SUBMISSION_SENTENCE_PATTERNS = [
+  /((?:presentare|trasmettere|inviare|submit|deliver|remettre|soumettre|abgeben|einreichen|presentar)[^.\n]{0,260}?(?:entro e non oltre|no later than|au plus tard|sp[aä]testens|a m[aá]s tardar)[^.\n]{0,120}(?:\b\d{1,2}[:.]\d{2}\b[^.\n]{0,80})?\b\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}\b[^.\n]{0,120})/ig,
+  /((?:submission|offert[ae]|soumission|angebot|oferta)[^.\n]{0,220}?(?:deadline|scadenza|date limite|angebotsfrist|fecha l[íi]mite)[^.\n]{0,120}(?:\b\d{1,2}[:.]\d{2}\b[^.\n]{0,80})?\b\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}\b[^.\n]{0,120})/ig,
+];
+const CLARIFICATION_SENTENCE_PATTERNS = [
+  /((?:clarifications?|questions?|q&a|chiarimenti?|quesiti|messaggistica|fragen|aclaraciones?|consultas?)[^.\n]{0,220}(?:entro e non oltre|no later than|au plus tard|sp[aä]testens|a m[aá]s tardar)?[^.\n]{0,120}(?:\b\d{1,2}[:.]\d{2}\b[^.\n]{0,80})?\b\d{1,2}[\/.\-]\d{1,2}[\/.\-]\d{2,4}\b[^.\n]{0,120})/ig,
+];
+
+type CriticalDeadlineCandidate = {
+  kind: "submission" | "clarification" | "site_visit" | "contract" | "other";
+  text: string;
+  heading: string | null;
+  source: "evidence" | "text";
+  evidence_ids: string[];
+  parsed: {
+    rawText: string;
+    iso: string | null;
+    timezone: string | null;
+    parseStatus: "not_found" | "parsed" | "unparseable";
+  };
+  score: number;
+};
+
+function looksLikeContextHeading(line: string): boolean {
+  const text = String(line ?? "").replace(/\s+/g, " ").trim();
+  if (!text || text.length > 180) return false;
+  if (/^\[page\s+\d+\]$/i.test(text)) return false;
+  if (SUBMISSION_SECTION_CONTEXT_PATTERN.test(text) || CLARIFICATION_CONTEXT_PATTERN.test(text) || SITE_VISIT_CONTEXT_PATTERN.test(text)) return true;
+  const uppercaseLike = text === text.toUpperCase() && /[A-ZÀ-Ü]/.test(text) && text.length >= 10;
+  const numberedSection = /^(?:[IVXLC]+|\d+(?:[.)]|(?:\.\d+)+))[\s-]+/.test(text);
+  return uppercaseLike || numberedSection;
+}
+
+function nearestContextHeading(lines: string[], index: number): string | null {
+  for (let i = index; i >= 0 && i >= index - 8; i--) {
+    const candidate = String(lines[i] ?? "").trim();
+    if (looksLikeContextHeading(candidate)) return candidate;
+  }
+  return null;
+}
+
+function classifyDeadlineCandidate(text: string, heading?: string | null): CriticalDeadlineCandidate["kind"] {
+  const material = `${String(heading ?? "")} ${String(text ?? "")}`.replace(/\s+/g, " ").trim();
+  if (!material) return "other";
+
+  let submission = 0;
+  let clarification = 0;
+  let siteVisit = 0;
+  let contract = 0;
+
+  if (EXPLICIT_SUBMISSION_LABEL_PATTERN.test(material)) submission += 10;
+  if (SUBMISSION_CONTEXT_PATTERN.test(material)) submission += 6;
+  if (SUBMISSION_SECTION_CONTEXT_PATTERN.test(material)) submission += 5;
+  if (/\b(?:entro e non oltre|no later than|au plus tard|sp[aä]testens|a m[aá]s tardar)\b/i.test(material)) submission += 2;
+  for (const re of SUBMISSION_DEADLINE_POSITIVE_PATTERNS) if (re.test(material)) submission += 4;
+
+  if (CLARIFICATION_CONTEXT_PATTERN.test(material)) clarification += 10;
+  if (/(?:messaggistica|questions? des soumissionnaires|bieterfragen|rueckfragen|rückfragen)/i.test(material)) clarification += 4;
+
+  if (SITE_VISIT_CONTEXT_PATTERN.test(material)) siteVisit += 10;
+  if (CONTRACT_DEADLINE_CONTEXT_PATTERN.test(material)) contract += 10;
+
+  if (SUBMISSION_CONTEXT_PATTERN.test(material) && CLARIFICATION_CONTEXT_PATTERN.test(material)) {
+    submission += 2;
+    clarification += 2;
+  }
+  if (COMMON_DATE_RE.test(material)) {
+    submission += 1;
+    clarification += 1;
+    siteVisit += 1;
+    contract += 1;
+  }
+  if (COMMON_TIME_RE.test(material)) {
+    submission += 1;
+    clarification += 1;
+  }
+
+  const ranked = [
+    { kind: "submission" as const, score: submission },
+    { kind: "clarification" as const, score: clarification },
+    { kind: "site_visit" as const, score: siteVisit },
+    { kind: "contract" as const, score: contract },
+  ].sort((a, b) => b.score - a.score);
+
+  return ranked[0].score >= 4 ? ranked[0].kind : "other";
+}
+
+function scoreDeadlineCandidate(
+  text: string,
+  heading: string | null,
+  kind: CriticalDeadlineCandidate["kind"],
+  source: "evidence" | "text",
+  parseStatus: "not_found" | "parsed" | "unparseable",
+): number {
+  const normalized = `${String(heading ?? "")} ${String(text ?? "")}`.replace(/\s+/g, " ").trim();
+  if (!normalized) return -999;
+
+  let score = 0;
+  if (kind === "submission") score += scoreSubmissionDeadlineHint(text);
+  if (kind === "clarification") {
+    if (CLARIFICATION_CONTEXT_PATTERN.test(normalized)) score += 14;
+    if (/\b(?:entro e non oltre|no later than|au plus tard|sp[aä]testens|a m[aá]s tardar)\b/i.test(normalized)) score += 2;
+  }
+  if (kind === "site_visit") score += SITE_VISIT_CONTEXT_PATTERN.test(normalized) ? 12 : 0;
+  if (kind === "contract") score += CONTRACT_DEADLINE_CONTEXT_PATTERN.test(normalized) ? 12 : 0;
+  if (heading && SUBMISSION_SECTION_CONTEXT_PATTERN.test(heading) && kind === "submission") score += 8;
+  if (heading && CLARIFICATION_SECTION_HEADING_PATTERN.test(heading) && kind === "clarification") score += 8;
+  if (COMMON_DATE_RE.test(normalized)) score += 2;
+  if (COMMON_TIME_RE.test(normalized)) score += 2;
+  if (parseStatus === "parsed") score += 8;
+  if (parseStatus === "unparseable") score -= 3;
+  if (source === "evidence") score += 3;
+  if (normalized.length <= 320) score += 1;
+  if (kind === "submission" && CLARIFICATION_CONTEXT_PATTERN.test(normalized) && !SUBMISSION_CONTEXT_PATTERN.test(normalized)) score -= 12;
+  if (kind === "submission" && (SITE_VISIT_CONTEXT_PATTERN.test(normalized) || CONTRACT_DEADLINE_CONTEXT_PATTERN.test(normalized))) score -= 10;
+  return score;
+}
+
+function collectDeadlineTextWindows(extractedText: string): Array<{ text: string; heading: string | null }> {
+  const raw = String(extractedText ?? "");
+  if (!raw) return [];
+  const lines = raw.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const windows: Array<{ text: string; heading: string | null }> = [];
+  const seen = new Set<string>();
+
+  const push = (value: string, heading: string | null = null) => {
+    const text = String(value ?? "").replace(/\s+/g, " ").trim();
+    if (!text) return;
+    if (!COMMON_DATE_RE.test(text) && !COMMON_TIME_RE.test(text)) return;
+    const key = `${String(heading ?? "").toLowerCase()}__${text.toLowerCase()}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    windows.push({ text, heading });
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const heading = nearestContextHeading(lines, i);
+    const line = lines[i];
+    const centered = lines.slice(Math.max(0, i - 1), Math.min(lines.length, i + 2)).join(" ");
+    const forward = lines.slice(i, Math.min(lines.length, i + 4)).join(" ");
+    push(line, heading);
+    push(centered, heading);
+    push(forward, heading);
+    if (heading) push(`${heading} ${forward}`, heading);
+  }
+
+  for (const pattern of SUBMISSION_SENTENCE_PATTERNS) {
+    const matches = raw.match(pattern) ?? [];
+    for (const match of matches) push(match, null);
+  }
+  for (const pattern of CLARIFICATION_SENTENCE_PATTERNS) {
+    const matches = raw.match(pattern) ?? [];
+    for (const match of matches) push(match, null);
+  }
+
+  for (const block of raw.split(/\r?\n\s*\r?\n/)) {
+    const compact = String(block ?? "").replace(/\s+/g, " ").trim();
+    if (!compact) continue;
+    push(compact, null);
+  }
+
+  return windows;
+}
+
+function extractCriticalDeadlineCandidates(args: { evidenceCandidates: EvidenceCandidate[]; extractedText?: string | null }): CriticalDeadlineCandidate[] {
+  const candidates = new Map<string, CriticalDeadlineCandidate>();
+
+  const consider = (value: string, heading: string | null, source: "evidence" | "text", evidenceIds: string[]) => {
+    const text = String(value ?? "").replace(/\s+/g, " ").trim();
+    if (!text) return;
+    if (!COMMON_DATE_RE.test(text) && !COMMON_TIME_RE.test(text)) return;
+    const kind = classifyDeadlineCandidate(text, heading);
+    if (kind === "other") return;
+    const parsed = normalizeSubmissionDeadline(text);
+    const score = scoreDeadlineCandidate(text, heading, kind, source, parsed.parseStatus);
+    if (score < 4) return;
+    const key = `${kind}__${text.toLowerCase()}`;
+    const existing = candidates.get(key);
+    if (!existing || score > existing.score) {
+      candidates.set(key, { kind, text, heading, source, evidence_ids: evidenceIds.slice(0, 3), parsed, score });
+    }
+  };
+
+  for (const candidate of args.evidenceCandidates ?? []) {
+    const excerpt = String(candidate?.excerpt ?? "");
+    const anchor = String(candidate?.anchor ?? "").trim() || null;
+    const evidenceIds = candidate?.id ? [String(candidate.id)] : [];
+    consider(excerpt, anchor, "evidence", evidenceIds);
+    if (anchor) consider(`${anchor} ${excerpt}`, anchor, "evidence", evidenceIds);
+  }
+
+  const windows = collectDeadlineTextWindows(String(args.extractedText ?? ""));
+  for (const window of windows) {
+    consider(window.text, window.heading, "text", []);
+  }
+
+  return [...candidates.values()];
+}
+
+function pickBestDeadlineCandidate(candidates: CriticalDeadlineCandidate[], kind: CriticalDeadlineCandidate["kind"]): CriticalDeadlineCandidate | null {
+  const ranked = candidates
+    .filter((candidate) => candidate.kind === kind)
+    .map((candidate) => ({
+      ...candidate,
+      deadlineMs: candidate.parsed.iso ? Date.parse(candidate.parsed.iso) : Number.NEGATIVE_INFINITY,
+    }))
+    .sort((a, b) => (b.score - a.score) || (b.deadlineMs - a.deadlineMs) || (a.text.length - b.text.length));
+  return ranked[0] ?? null;
+}
+
+function resolveDeterministicSubmissionDeadline(args: { rawInput: unknown; evidenceCandidates: EvidenceCandidate[]; extractedText?: string | null }) {
+  const candidates = extractCriticalDeadlineCandidates({
+    evidenceCandidates: args.evidenceCandidates,
+    extractedText: args.extractedText,
+  });
+  const bestSubmission = pickBestDeadlineCandidate(candidates, "submission");
+  if (bestSubmission && bestSubmission.parsed.parseStatus === "parsed") {
+    return { ...bestSubmission.parsed, source: "evidence_fallback" as const };
+  }
+
+  const direct = normalizeSubmissionDeadline(args.rawInput);
+  if (direct.parseStatus === "parsed") return { ...direct, source: "llm" as const };
+  return { ...direct, source: direct.parseStatus === "not_found" ? "not_found" as const : "unparseable" as const };
+}
+
+function resolveDeterministicClarificationDeadline(args: { evidenceCandidates: EvidenceCandidate[]; extractedText?: string | null }): PreExtractedDeadlineFact {
+  const candidates = extractCriticalDeadlineCandidates({
+    evidenceCandidates: args.evidenceCandidates,
+    extractedText: args.extractedText,
+  });
+  const bestClarification = pickBestDeadlineCandidate(candidates, "clarification");
+  if (!bestClarification) {
+    return { text: DEADLINE_NOT_FOUND_TEXT, iso: null, timezone: null, source: "not_found" };
+  }
+  if (bestClarification.parsed.parseStatus !== "parsed") {
+    return { text: bestClarification.text || DEADLINE_NOT_FOUND_TEXT, iso: null, timezone: bestClarification.parsed.timezone, source: "unparseable" };
+  }
+  return {
+    text: bestClarification.parsed.rawText || DEADLINE_NOT_FOUND_TEXT,
+    iso: bestClarification.parsed.iso,
+    timezone: bestClarification.parsed.timezone,
+    source: "parsed_from_evidence",
+  };
 }
 
 function deriveTenderStatus(args: { submissionDeadlineIso?: string | null; nowIso?: string }): TenderStatus {
@@ -1641,7 +2065,7 @@ function applyDecisionRules(args: {
     ? executive.decisionBadge
     : "Hold";
 
-  const deadline = resolveSubmissionDeadline({
+  const deadline = resolveDeterministicSubmissionDeadline({
     rawInput: executive?.submissionDeadline,
     evidenceCandidates: args.evidenceCandidates,
     extractedText: args.extractedText,
@@ -2099,9 +2523,228 @@ function buildEvidenceList(evidenceCandidates: EvidenceCandidate[]): string {
   return sections.join("\n\n") || "(No evidence snippets were extracted for this run.)";
 }
 
+function trimFactValue(raw: unknown, maxLen = 220): string {
+  return String(raw ?? "").replace(/\s+/g, " ").trim().slice(0, maxLen).trim();
+}
+
+type FactScanLine = { text: string; evidence_ids: string[]; source: "evidence" | "text_fallback" };
+
+function collectFactScanLines(args: { evidenceCandidates: EvidenceCandidate[]; extractedText?: string | null }): FactScanLine[] {
+  const out: FactScanLine[] = [];
+  const seen = new Set<string>();
+
+  const push = (value: unknown, evidenceIds: string[] = [], source: "evidence" | "text_fallback" = "text_fallback") => {
+    const text = trimFactValue(value, 320);
+    if (!text) return;
+    const key = `${source}::${text.toLowerCase()}::${evidenceIds.join(",")}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push({ text, evidence_ids: evidenceIds.filter(Boolean).slice(0, 3), source });
+  };
+
+  for (const candidate of args.evidenceCandidates ?? []) {
+    const evidenceIds = String(candidate?.id ?? "").trim() ? [String(candidate.id).trim()] : [];
+    push(candidate?.excerpt, evidenceIds, "evidence");
+    push(candidate?.anchor, evidenceIds, "evidence");
+  }
+
+  const extractedText = String(args.extractedText ?? "");
+  if (extractedText) {
+    const lines = extractedText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      push(line, [], "text_fallback");
+      const joined = [lines[i - 1], line, lines[i + 1]].filter(Boolean).join(" ");
+      if (joined && joined !== line) push(joined, [], "text_fallback");
+    }
+  }
+
+  return out;
+}
+
+function extractFocusedSnippet(text: string, pattern: RegExp, radius = 120): string {
+  const source = String(text ?? "").replace(/\s+/g, " ").trim();
+  if (!source) return "";
+  const match = source.match(pattern);
+  if (!match || typeof match.index !== "number") {
+    return source.slice(0, Math.min(source.length, radius * 2)).trim();
+  }
+  const start = Math.max(0, match.index - radius);
+  const end = Math.min(source.length, match.index + String(match[0] ?? "").length + radius);
+  let out = source.slice(start, end).trim();
+  if (start > 0) out = `… ${out}`;
+  if (end < source.length) out = `${out} …`;
+  return out;
+}
+
+function pickBestDeterministicFact(lines: FactScanLine[], pattern: RegExp, labelBias: string[] = []): DeterministicTenderFact | null {
+  const scored = lines
+    .map((line, index) => {
+      const regex = new RegExp(pattern.source, pattern.flags);
+      if (!regex.test(line.text)) return null;
+      let score = line.source === "evidence" ? 5 : 2;
+      if (line.evidence_ids.length) score += 2;
+      const lower = line.text.toLowerCase();
+      for (const token of labelBias) {
+        if (token && lower.includes(token.toLowerCase())) score += 1;
+      }
+      if (line.text.length <= 220) score += 1;
+      return {
+        line,
+        score,
+        index,
+        value: trimFactValue(extractFocusedSnippet(line.text, regex), 220),
+      };
+    })
+    .filter(Boolean) as Array<{ line: FactScanLine; score: number; index: number; value: string }>;
+
+  scored.sort((a, b) => (b.score - a.score) || (a.index - b.index));
+  const best = scored[0];
+  if (!best || !best.value) return null;
+  return {
+    value: best.value,
+    evidence_ids: best.line.evidence_ids.slice(0, 3),
+    source: best.line.source,
+    confidence: best.line.source === "evidence" ? "high" : "medium",
+  };
+}
+
+function extractNamedTenderReferences(lines: FactScanLine[], kind: "attachment" | "schedule") {
+  const out: Array<{ value: string; evidence_ids: string[] }> = [];
+  const seen = new Set<string>();
+  const regex = kind === "attachment"
+    ? /\b(?:Attachment|Attachments|Annex|Annexe|Appendix|Appendice|Allegato|Allegati|Annesso|Anlage|Anlagen|Anexo|Anexos|Ap[eé]ndice|Pi[eè]ce)\s*(?:No\.?|n\.?|nr\.?|nº|num\.?)?\s*[A-Za-z0-9.-]+(?:\s*[-–:]\s*[^;,.\n]{1,80})?/ig
+    : /\b(?:Schedule|Schedules|Framework Schedule|Pricing Schedule|Technical Schedule|Service Schedule|Annexe technique|Anlage|Anlagen|Cronoprogramma|Calendrier|Calendario)\s*[A-Za-z0-9.-]*(?:\s*[-–:]\s*[^;,.\n]{1,80})?/ig;
+
+  for (const line of lines) {
+    const matches = line.text.match(regex) ?? [];
+    for (const match of matches) {
+      const value = trimFactValue(match, 140);
+      if (!value) continue;
+      const key = value.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ value, evidence_ids: line.evidence_ids.slice(0, 2) });
+      if (out.length >= 8) return out;
+    }
+  }
+
+  return out;
+}
+
+function extractDeterministicTenderFacts(args: { evidenceCandidates: EvidenceCandidate[]; extractedText?: string | null }): PreExtractedTenderFacts {
+  const lines = collectFactScanLines(args);
+  const deadline = resolveDeterministicSubmissionDeadline({
+    rawInput: null,
+    evidenceCandidates: args.evidenceCandidates,
+    extractedText: args.extractedText,
+  });
+  const clarificationDeadline = resolveDeterministicClarificationDeadline({
+    evidenceCandidates: args.evidenceCandidates,
+    extractedText: args.extractedText,
+  });
+
+  const submissionChannel = pickBestDeterministicFact(
+    lines,
+    /\b(e-?sourcing|procurement portal|portal(?:e)? telematic[oa]?|piattaforma telematica|tramite il portale|through the portal|via the portal|suite|sistema telematico|pec|email|upload|caricare|presentare .* portale|plateforme|portail|portail d'achat|via il portale|durch das portal|vergabeportal|e-?vergabe|über das portal|uber das portal|plataforma|portal de compras|a trav[eé]s del portal|mediante el portal)\b/i,
+    ["submit", "submission", "presentazione", "offerta", "portal", "portale", "suite", "soumission", "offre", "angebot", "einreich", "presentación"],
+  );
+
+  const procurementProcedure = pickBestDeterministicFact(
+    lines,
+    /\b(open procedure|restricted procedure|competitive procedure|negotiated procedure|framework agreement|dynamic purchasing system|invitation to tender|procedura aperta|procedura ristretta|procedura negoziata|accordo quadro|sistema dinamico di acquisizione|gara europea|disciplinare di gara|proc[eé]dure ouverte|proc[eé]dure restreinte|proc[eé]dure n[eé]goci[eé]e|accord-cadre|syst[eè]me dynamique d'acquisition|offenes verfahren|nichtoffenes verfahren|verhandlungsverfahren|rahmenvereinbarung|dynamisches beschaffungssystem|procedimiento abierto|procedimiento restringido|procedimiento negociado|acuerdo marco|sistema din[aá]mico de adquisici[oó]n)\b/i,
+    ["procedure", "procedura", "framework", "tender", "gara", "procédure", "verfahren", "procedimiento"],
+  );
+
+  const validityPeriod = pickBestDeterministicFact(
+    lines,
+    /\b(validity period|remain valid|valid for \d+ days|\d+ days following|\d+ giorni|validit[aà] dell'offerta|vincolat\w*|offerta .* valid|remain capable of acceptance|dur[eé]e de validit[eé]|offre .* valable|g[üu]ltig(?:keit)?|bindefrist|plazo de validez|validez de la oferta|oferta .* v[aá]lida)\b/i,
+    ["valid", "giorni", "days", "offerta", "offer", "validité", "gültig", "bindefrist", "validez"],
+  );
+
+  const contractTerm = pickBestDeterministicFact(
+    lines,
+    /\b(contract term|contract duration|duration of the contract|durata del contratto|durata dell'appalto|durata .* mesi|durata .* anni|term of this framework|months? from|years? from|renewal|extension|prorog\w*|dur[eé]e du contrat|dur[eé]e du march[eé]|dur[eé]e .* mois|dur[eé]e .* ans|vertragslaufzeit|vertragsdauer|laufzeit .* monate|laufzeit .* jahre|duraci[oó]n del contrato|duraci[oó]n .* meses|duraci[oó]n .* años|pr[oó]rroga)\b/i,
+    ["contract", "durata", "months", "years", "renewal", "extension", "contrat", "vertrag", "contrato"],
+  );
+
+  const lotStructure = pickBestDeterministicFact(
+    lines,
+    /\b(lot(?:s)?|single lot|multi-?lot|lotti?|lotto unico|suddivis\w* in lotti|allotissement|lots?|los(?:e)?|einzellose?|mehrere lose|dividido en lotes|lote[s]?)\b/i,
+    ["lot", "lotti", "lotto", "lots", "lose", "lotes"],
+  );
+
+  return {
+    submissionDeadline: {
+      text: deadline.rawText || DEADLINE_NOT_FOUND_TEXT,
+      iso: deadline.iso,
+      timezone: deadline.timezone,
+      source: deadline.source === "evidence_fallback"
+        ? "parsed_from_evidence"
+        : deadline.source === "not_found"
+          ? "not_found"
+          : deadline.source === "unparseable"
+            ? "unparseable"
+            : "parsed_from_evidence",
+    },
+    clarificationDeadline,
+    submissionChannel,
+    procurementProcedure,
+    validityPeriod,
+    contractTerm,
+    lotStructure,
+    attachmentMentions: extractNamedTenderReferences(lines, "attachment"),
+    scheduleMentions: extractNamedTenderReferences(lines, "schedule"),
+  };
+}
+
+function buildPreExtractedFactsSection(facts: PreExtractedTenderFacts): string {
+  const lines: string[] = [];
+  lines.push("Deterministic pre-extracted tender facts (non-exhaustive; use these as prioritization hints, but still cite only evidence_ids from the evidence snippets section):");
+
+  const deadlineBits = [facts.submissionDeadline.text || DEADLINE_NOT_FOUND_TEXT];
+  if (facts.submissionDeadline.iso) deadlineBits.push(`ISO ${facts.submissionDeadline.iso}`);
+  if (facts.submissionDeadline.timezone) deadlineBits.push(`timezone ${facts.submissionDeadline.timezone}`);
+  deadlineBits.push(`source ${facts.submissionDeadline.source}`);
+  lines.push(`- Submission deadline: ${deadlineBits.join(" | ")}`);
+
+  const clarificationBits = [facts.clarificationDeadline.text || DEADLINE_NOT_FOUND_TEXT];
+  if (facts.clarificationDeadline.iso) clarificationBits.push(`ISO ${facts.clarificationDeadline.iso}`);
+  if (facts.clarificationDeadline.timezone) clarificationBits.push(`timezone ${facts.clarificationDeadline.timezone}`);
+  clarificationBits.push(`source ${facts.clarificationDeadline.source}`);
+  lines.push(`- Clarification deadline: ${clarificationBits.join(" | ")}`);
+
+  const pushFact = (label: string, fact: DeterministicTenderFact | null) => {
+    if (!fact) {
+      lines.push(`- ${label}: not confidently pre-extracted`);
+      return;
+    }
+    const ids = fact.evidence_ids.length ? ` | evidence_ids: ${fact.evidence_ids.join(", ")}` : " | evidence_ids: []";
+    lines.push(`- ${label}: ${fact.value} | source: ${fact.source} | confidence: ${fact.confidence}${ids}`);
+  };
+
+  pushFact("Submission channel", facts.submissionChannel);
+  pushFact("Procurement procedure", facts.procurementProcedure);
+  pushFact("Tender validity period", facts.validityPeriod);
+  pushFact("Contract term", facts.contractTerm);
+  pushFact("Lot structure", facts.lotStructure);
+
+  const attachmentSummary = facts.attachmentMentions.length
+    ? facts.attachmentMentions.map((item) => `${item.value}${item.evidence_ids.length ? ` [${item.evidence_ids.join(", ")}]` : ""}`).join("; ")
+    : "none confidently pre-extracted";
+  const scheduleSummary = facts.scheduleMentions.length
+    ? facts.scheduleMentions.map((item) => `${item.value}${item.evidence_ids.length ? ` [${item.evidence_ids.join(", ")}]` : ""}`).join("; ")
+    : "none confidently pre-extracted";
+
+  lines.push(`- Named attachments: ${attachmentSummary}`);
+  lines.push(`- Named schedules: ${scheduleSummary}`);
+  return lines.join("\n");
+}
+
 function buildTenderReviewPrompt(args: {
   sourceLanguageName: string;
   playbookSection: string;
+  preExtractedFactsSection: string;
   evidenceList: string;
   currentUtcIso: string;
 }): string {
@@ -2109,6 +2752,8 @@ function buildTenderReviewPrompt(args: {
 Review the tender evidence pack and produce a decision-first bid kit with stable, evidence-led judgment.
 
 ${args.playbookSection}
+
+${args.preExtractedFactsSection}
 
 Strict rules
 1. Grounding. Use only the evidence snippets provided below as the citable basis for this run. They are curated evidence candidates and may be incomplete. Do not rely on hidden assumptions or uncited source text.
@@ -2119,36 +2764,37 @@ Strict rules
    - Choose Go only when no blocker is evidenced, no hard playbook conflict is present, and remaining risks appear manageable.
    - Provide decisionLine as one clear sentence.
 3. Submission deadline and current date. The current UTC time for this run is ${args.currentUtcIso}. If an explicit deadline date or time is present in the evidence, copy it verbatim into submissionDeadline. If that copied deadline is clearly in the past relative to the current UTC time, you MUST set decisionBadge to No-Go, make the first hard_blocker about the expired deadline, and make the first keyFinding say the submission deadline has already expired. Otherwise set submissionDeadline to: Not found in extracted text.
-4. Checklist. MUST means mandatory or disqualifying if missed. SHOULD means preferred, scored, or commercially important. INFO is context. Keep items atomic. Prefer one obligation per item whenever possible.
-5. Evidence (STRICT). You MUST cite evidence_ids:
+4. Deterministic fact pack. A pre-extracted fact pack is provided above. Treat it as a prioritization hint and cross-check aid. It is non-exhaustive. Use it to surface submission channel, procedure, validity period, lot structure, contract term, and named attachments or schedules more reliably, but never cite the fact pack itself as evidence.
+5. Checklist. MUST means mandatory or disqualifying if missed. SHOULD means preferred, scored, or commercially important. INFO is context. Keep items atomic. Prefer one obligation per item whenever possible.
+6. Evidence (STRICT). You MUST cite evidence_ids:
    - For every MUST checklist item: include at least one evidence id that directly supports it.
    - For every risk: include at least one evidence id that directly supports it.
    - For every hard_blocker and every decision_reason where evidence exists: include supporting evidence_ids.
    - Do not invent clause numbers, section numbers, or cross-references. Cite only evidence ids.
    - If you cannot support a MUST, risk, blocker, or reason with evidence, either omit it or keep the wording explicitly cautious and return evidence_ids as [].
-6. Executive summary (STRICT).
+7. Executive summary (STRICT).
    - keyFindings must reflect evidence-backed facts or clearly framed absences from evidence.
    - nextActions should be operational and tied to what is missing, risky, or urgent in the evidence.
    - topRisks must stay aligned with the risks array. Do not introduce unsupported new risks here.
    - decision_reasons must explain why the decision was chosen, not restate the badge.
    - hard_blockers must contain only concrete blockers, not generic concerns.
    - evidence_coverage must assess whether the current evidence pack visibly covers submission, eligibility, scope, commercial, evaluation, and contract_terms.
-7. Playbook (STRICT). The playbook is policy, not evidence:
+8. Playbook (STRICT). The playbook is policy, not evidence:
    - Never cite the playbook as evidence.
    - If the playbook influences decision, prioritization, or required actions, add entries to policy_triggers.
    - When you claim a conflict with the playbook, rely on evidence ids that support the tender-side requirement driving the conflict.
-8. Policy triggers output (REQUIRED).
+9. Policy triggers output (REQUIRED).
    - policy_triggers must be an array. If no playbook constraints apply, return [].
    - Each trigger must be short, auditable, and map to exactly one playbook key.
-9. Missing info. Put unresolved ambiguities, unanswered buyer-side questions, or evidence gaps into buyer_questions.
-10. Writing style. Use plain business language. Avoid em dashes, en dashes, hype, filler, and legal-sounding padding. Keep sentences direct and natural. Prefer concrete tender obligations over abstract summaries.
-11. Language handling. The source tender text is in ${args.sourceLanguageName}. Analyse obligations, exclusions, submission instructions, qualifications, deadlines, commercial terms, evaluation criteria, and contract clauses in that source language. Keep evidence verbatim in the source language and cite only evidence_ids.
-12. Proposal draft. Keep proposal_draft skeletal and lightweight: maximum 8 short sections, under 900 words, outline quality only. Do not spend output budget on polished prose.
-13. Priority. Prefer precision over coverage. If the evidence pack does not prove something, do not state it as fact. If a reliable decision cannot be made from the curated evidence, prefer Hold over false confidence. Keep blockers and MUST items close to the tender wording, not generalized reformulations.
-14. Hard-stop ordering. When an expired deadline, explicit closure, cancellation, or another hard stop is evidenced, surface that first in decisionLine, keyFindings, hard_blockers, and nextActions. Do not bury hard stops behind fixable checklist items.
-15. Bidder vs tender separation. Keep tender-side facts, missing attachments, and bidder-side unknowns clearly separate. Missing bidder information is not proof of tender non-compliance.
-16. Explicit closure and cancellation. If the evidence states the tender, procurement, competition, or opportunity has been cancelled, withdrawn, closed, suspended, discontinued, or otherwise ended, recommend No-Go and surface that as a hard blocker first.
-17. Decision consistency. Do not return Go if hard_blockers remain unresolved, if critical MUST requirements are not fully evidenced in the current run, if the submission deadline is missing or unparseable, or if a workspace playbook trigger blocks pursuit. Use Hold for fixable evidence gaps and No-Go for hard stops.
+10. Missing info. Put unresolved ambiguities, unanswered buyer-side questions, or evidence gaps into buyer_questions.
+11. Writing style. Use plain business language. Avoid em dashes, en dashes, hype, filler, and legal-sounding padding. Keep sentences direct and natural. Prefer concrete tender obligations over abstract summaries.
+12. Language handling. The source tender text is in ${args.sourceLanguageName}. Analyse obligations, exclusions, submission instructions, qualifications, deadlines, commercial terms, evaluation criteria, and contract clauses in that source language. Keep evidence verbatim in the source language and cite only evidence_ids.
+13. Proposal draft. Keep proposal_draft skeletal and lightweight: maximum 8 short sections, under 900 words, outline quality only. Do not spend output budget on polished prose.
+14. Priority. Prefer precision over coverage. If the evidence pack does not prove something, do not state it as fact. If a reliable decision cannot be made from the curated evidence, prefer Hold over false confidence. Keep blockers and MUST items close to the tender wording, not generalized reformulations.
+15. Hard-stop ordering. When an expired deadline, explicit closure, cancellation, or another hard stop is evidenced, surface that first in decisionLine, keyFindings, hard_blockers, and nextActions. Do not bury hard stops behind fixable checklist items.
+16. Bidder vs tender separation. Keep tender-side facts, missing attachments, and bidder-side unknowns clearly separate. Missing bidder information is not proof of tender non-compliance.
+17. Explicit closure and cancellation. If the evidence states the tender, procurement, competition, or opportunity has been cancelled, withdrawn, closed, suspended, discontinued, or otherwise ended, recommend No-Go and surface that as a hard blocker first.
+18. Decision consistency. Do not return Go if hard_blockers remain unresolved, if critical MUST requirements are not fully evidenced in the current run, if the submission deadline is missing or unparseable, or if a workspace playbook trigger blocks pursuit. Use Hold for fixable evidence gaps and No-Go for hard stops.
 
 Evidence snippets (the ONLY citable basis for this run; cite their ids in evidence_ids):
 ${args.evidenceList}`;
@@ -2309,12 +2955,16 @@ function buildTenderReviewJsonSchema() {
 function buildTenderReviewRequestParts(args: {
   targetLanguage: string;
   sourceLanguage: LangCode;
+  extractedText: string;
   evidenceCandidates: EvidenceCandidate[];
   workspacePlaybook?: { playbook: any; version: number | null } | null;
+  preExtractedFacts?: PreExtractedTenderFacts | null;
 }) {
   const sourceLanguageName = langName(args.sourceLanguage);
   const playbookSection = buildPlaybookPromptSection(args.workspacePlaybook);
   const evidenceList = buildEvidenceList(args.evidenceCandidates);
+  const preExtractedFacts = args.preExtractedFacts ?? extractDeterministicTenderFacts({ evidenceCandidates: args.evidenceCandidates, extractedText: args.extractedText });
+  const preExtractedFactsSection = buildPreExtractedFactsSection(preExtractedFacts);
   const currentUtcIso = new Date().toISOString();
 
   const instructions =
@@ -2331,11 +2981,12 @@ function buildTenderReviewRequestParts(args: {
   const userPrompt = buildTenderReviewPrompt({
     sourceLanguageName,
     playbookSection,
+    preExtractedFactsSection,
     evidenceList,
     currentUtcIso,
   });
 
-  return { instructions, userPrompt };
+  return { instructions, userPrompt, preExtractedFacts };
 }
 
 function cleanStructuredJsonText(raw: string): string {
@@ -2401,8 +3052,9 @@ async function runOpenAi(args: {
   maxOutputTokens: number;
   timeoutMs?: number;
   workspacePlaybook?: { playbook: any; version: number | null } | null;
+  preExtractedFacts?: PreExtractedTenderFacts | null;
 }): Promise<AiOutput> {
-  const { apiKey, model, targetLanguage, sourceLanguage, extractedText, evidenceCandidates, maxOutputTokens, timeoutMs, workspacePlaybook } = args;
+  const { apiKey, model, targetLanguage, sourceLanguage, extractedText, evidenceCandidates, maxOutputTokens, timeoutMs, workspacePlaybook, preExtractedFacts } = args;
 
   validateRunLlmArgs({ model, targetLanguage, extractedText, evidenceCandidates });
 
@@ -2410,8 +3062,10 @@ async function runOpenAi(args: {
   const { instructions, userPrompt } = buildTenderReviewRequestParts({
     targetLanguage,
     sourceLanguage,
+    extractedText,
     evidenceCandidates,
     workspacePlaybook,
+    preExtractedFacts,
   });
 
   const buildBody = (tokenBudget: number) => {
@@ -2498,16 +3152,19 @@ async function runGemini(args: {
   maxOutputTokens: number;
   timeoutMs?: number;
   workspacePlaybook?: { playbook: any; version: number | null } | null;
+  preExtractedFacts?: PreExtractedTenderFacts | null;
 }): Promise<AiOutput> {
-  const { apiKey, model, targetLanguage, sourceLanguage, extractedText, evidenceCandidates, maxOutputTokens, timeoutMs, workspacePlaybook } = args;
+  const { apiKey, model, targetLanguage, sourceLanguage, extractedText, evidenceCandidates, maxOutputTokens, timeoutMs, workspacePlaybook, preExtractedFacts } = args;
 
   validateRunLlmArgs({ model, targetLanguage, extractedText, evidenceCandidates });
 
   const { instructions, userPrompt } = buildTenderReviewRequestParts({
     targetLanguage,
     sourceLanguage,
+    extractedText,
     evidenceCandidates,
     workspacePlaybook,
+    preExtractedFacts,
   });
   const geminiJsonInstructions = buildGeminiJsonOutputInstructions();
   const geminiThinkingBudget = parseNumberEnv("TP_GEMINI_THINKING_BUDGET", 0);
@@ -2643,6 +3300,7 @@ async function runLlm(args: {
   maxOutputTokens: number;
   timeoutMs?: number;
   workspacePlaybook?: { playbook: any; version: number | null } | null;
+  preExtractedFacts?: PreExtractedTenderFacts | null;
 }): Promise<AiOutput> {
   if (args.provider === "google") {
     return await runGemini(args);
@@ -3404,6 +4062,7 @@ let extractedText = "";
 
     let aiOut: AiOutput;
     let playbookVersion: number | null = null;
+    let preExtractedFacts = extractDeterministicTenderFacts({ evidenceCandidates: [], extractedText: "" });
 
     if (useMockAi) {
       aiOut = mockAiFixture(extractedText);
@@ -3484,6 +4143,7 @@ let extractedText = "";
       const { output: outputLang } = await loadUserLanguagesAdmin(supabaseAdmin, job.user_id);
       const targetLanguage = langName(outputLang);
       const sourceLanguage = detectSourceLanguage(extractedText);
+      preExtractedFacts = extractDeterministicTenderFacts({ evidenceCandidates, extractedText });
 
       const aiPipelineResult = await mergeJobPipeline(supabaseAdmin, job, {
         ai: {
@@ -3524,6 +4184,11 @@ let extractedText = "";
         evidence_candidates: evidenceCandidates.length,
         playbook_present: Boolean(workspacePlaybook.playbook),
         playbook_version: workspacePlaybook.version,
+        pre_extracted_deadline_source: preExtractedFacts.submissionDeadline.source,
+        pre_extracted_deadline_iso: preExtractedFacts.submissionDeadline.iso,
+        pre_extracted_submission_channel: preExtractedFacts.submissionChannel?.value ?? null,
+        pre_extracted_procurement_procedure: preExtractedFacts.procurementProcedure?.value ?? null,
+        pre_extracted_clarification_deadline_iso: preExtractedFacts.clarificationDeadline.iso,
       });
 
       const analysisFingerprint = buildAnalysisFingerprint({
@@ -3576,6 +4241,7 @@ let extractedText = "";
         maxOutputTokens,
         timeoutMs,
         workspacePlaybook,
+        preExtractedFacts,
       });
       await logEvent(supabaseAdmin, job, "info", "LLM completed", {
         requested_model: requestedModel,
@@ -3756,6 +4422,17 @@ let extractedText = "";
         submission_deadline_iso: decisionMeta?.submissionDeadlineIso ?? null,
         submission_deadline_timezone: decisionMeta?.submissionTimezone ?? null,
         submission_deadline_source: decisionMeta?.submissionDeadlineSource ?? null,
+        pre_extracted_facts: {
+          submission_deadline: preExtractedFacts.submissionDeadline,
+          clarification_deadline: preExtractedFacts.clarificationDeadline,
+          submission_channel: preExtractedFacts.submissionChannel,
+          procurement_procedure: preExtractedFacts.procurementProcedure,
+          validity_period: preExtractedFacts.validityPeriod,
+          contract_term: preExtractedFacts.contractTerm,
+          lot_structure: preExtractedFacts.lotStructure,
+          attachment_mentions: preExtractedFacts.attachmentMentions,
+          schedule_mentions: preExtractedFacts.scheduleMentions,
+        },
         decision_evaluated_at: new Date().toISOString(),
       },
     });

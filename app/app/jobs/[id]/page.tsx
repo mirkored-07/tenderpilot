@@ -3688,7 +3688,20 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
     );
   }
 
-  const deadlineText = executive.submissionDeadline ? String(executive.submissionDeadline).trim() : "";
+  const pipelineSubmissionDeadline = useMemo(() => {
+    const raw = (job as any)?.pipeline?.ai?.pre_extracted_facts?.submission_deadline ?? null;
+    const text = raw?.text ? String(raw.text).trim() : "";
+    const iso = raw?.iso ? String(raw.iso).trim() : "";
+    const source = raw?.source ? String(raw.source).trim() : "";
+    return { text, iso, source };
+  }, [job]);
+
+  const deadlineText = (() => {
+    const executiveText = executive.submissionDeadline ? String(executive.submissionDeadline).trim() : "";
+    if (executiveText && executiveText.toLowerCase() !== "not found in extracted text") return executiveText;
+    if (pipelineSubmissionDeadline.text && pipelineSubmissionDeadline.text.toLowerCase() !== "not found in extracted text") return pipelineSubmissionDeadline.text;
+    return executiveText || pipelineSubmissionDeadline.text || "";
+  })();
 
   function parseDeadlineToDate(input: string): Date | null {
     const s = String(input ?? "").trim();
@@ -3710,7 +3723,13 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
     return Number.isNaN(d2.getTime()) ? null : d2;
   }
 
-  const deadlineDate = useMemo(() => parseDeadlineToDate(deadlineText), [deadlineText]);
+  const deadlineDate = useMemo(() => {
+    if (pipelineSubmissionDeadline.iso) {
+      const isoDate = new Date(pipelineSubmissionDeadline.iso);
+      if (!Number.isNaN(isoDate.getTime())) return isoDate;
+    }
+    return parseDeadlineToDate(deadlineText);
+  }, [deadlineText, pipelineSubmissionDeadline.iso]);
   const timeToDeadline = useMemo(() => {
     if (!deadlineDate) return "";
     const now = new Date();
@@ -3732,7 +3751,7 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
     const tenderStatus = String((executive as any)?.tenderStatus ?? "").trim().toLowerCase();
     if (tenderStatus === "expired") return "expired" as const;
     if (deadlineDate && deadlineDate.getTime() <= Date.now()) return "expired" as const;
-    if (deadlineDate || deadlineText) return "open" as const;
+    if (deadlineDate || (deadlineText && deadlineText.toLowerCase() !== "not found in extracted text")) return "open" as const;
     return "unknown" as const;
   }, [deadlineDate, deadlineText, executive]);
 
@@ -3758,20 +3777,20 @@ async function saveTeamDecision(next: "Go" | "No-Go" | null) {
         : t("app.common.unknown");
 
   const deadlineDisplayValue = useMemo(() => {
-    const isoCandidate = String((executive as any)?.submissionDeadlineIso ?? "").trim();
+    const isoCandidate = String((executive as any)?.submissionDeadlineIso ?? "").trim() || pipelineSubmissionDeadline.iso;
     if (isoCandidate) {
       const formattedIso = formatDate(isoCandidate);
       if (formattedIso) return formattedIso;
     }
     if (deadlineDate) return formatDate(deadlineDate.toISOString());
     return deadlineText;
-  }, [deadlineDate, deadlineText, executive]);
+  }, [deadlineDate, deadlineText, executive, pipelineSubmissionDeadline.iso]);
 
   const deadlineSourceQuery = useMemo(() => {
-    const raw = String(deadlineText || "").trim();
-    if (raw) return raw;
+    const raw = String(deadlineText || pipelineSubmissionDeadline.text || "").trim();
+    if (raw && raw.toLowerCase() !== "not found in extracted text") return raw;
     return "Tender Submission Deadline";
-  }, [deadlineText]);
+  }, [deadlineText, pipelineSubmissionDeadline.text]);
 
   const todayFocus = useMemo(() => {
     if (!showReady) return "";
