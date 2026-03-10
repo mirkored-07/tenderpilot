@@ -5,9 +5,18 @@
  * - We cannot modify job_results schema to store IDs.
  * - This key must be deterministic across reloads/exports.
  */
+export type StableRefType =
+  | "requirement"
+  | "risk"
+  | "clarification"
+  | "outline"
+  | "deadline"
+  | "submission"
+  | "admin";
+
 export function stableRefKey(input: {
   jobId: string;
-  type: "requirement" | "risk" | "clarification" | "outline";
+  type: StableRefType;
   text: string;
   extra?: string;
 }): string {
