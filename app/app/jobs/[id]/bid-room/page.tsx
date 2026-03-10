@@ -26,6 +26,28 @@ type DbJobMetadata = {
   updated_at: string;
 };
 
+type DeterministicTenderFactValue = {
+  value: string;
+  evidenceIds: string[];
+  source: string | null;
+  confidence: string | null;
+};
+
+type DeterministicDeadlineValue = {
+  text: string;
+  iso: string | null;
+  timezone: string | null;
+  source: string | null;
+};
+
+type BidRoomTenderFacts = {
+  submissionDeadline: DeterministicDeadlineValue | null;
+  clarificationDeadline: DeterministicDeadlineValue | null;
+  submissionChannel: DeterministicTenderFactValue | null;
+  procurementProcedure: DeterministicTenderFactValue | null;
+  portalUrl: string | null;
+};
+
 function normalizeChecklist(raw: any): any[] {
   const items = Array.isArray(raw) ? raw : raw?.items ?? raw?.checklist ?? null;
   return Array.isArray(items) ? items : [];
@@ -51,6 +73,28 @@ function normalizeOutlineSections(rawDraft: any): Array<{ title: string; bullets
       .filter((s) => s.title);
   }
   return [];
+}
+
+function normalizeDeterministicFact(raw: any): DeterministicTenderFactValue | null {
+  if (!raw || typeof raw !== "object") return null;
+  const value = String((raw as any)?.value ?? "").trim();
+  if (!value) return null;
+  const evidenceIds = Array.isArray((raw as any)?.evidence_ids)
+    ? (raw as any).evidence_ids.map((x: any) => String(x ?? "").trim()).filter(Boolean)
+    : [];
+  const source = raw?.source ? String(raw.source).trim() : null;
+  const confidence = raw?.confidence ? String(raw.confidence).trim() : null;
+  return { value, evidenceIds, source, confidence };
+}
+
+function normalizeDeadlineFact(raw: any): DeterministicDeadlineValue | null {
+  if (!raw || typeof raw !== "object") return null;
+  const text = String((raw as any)?.text ?? "").trim();
+  const iso = raw?.iso ? String(raw.iso).trim() : null;
+  const timezone = raw?.timezone ? String(raw.timezone).trim() : null;
+  const source = raw?.source ? String(raw.source).trim() : null;
+  if (!text && !iso) return null;
+  return { text, iso, timezone, source };
 }
 
 export default function JobBidRoomPage() {
@@ -198,6 +242,27 @@ export default function JobBidRoomPage() {
   const questions = useMemo(() => normalizeQuestions(result?.clarifications), [result]);
   const outlineSections = useMemo(() => normalizeOutlineSections((result as any)?.proposal_draft), [result]);
 
+  const preExtractedFacts = useMemo(() => {
+    const raw = (job as any)?.pipeline?.ai?.pre_extracted_facts ?? null;
+    return {
+      submissionDeadline: normalizeDeadlineFact(raw?.submission_deadline),
+      clarificationDeadline: normalizeDeadlineFact(raw?.clarification_deadline),
+      submissionChannel: normalizeDeterministicFact(raw?.submission_channel),
+      procurementProcedure: normalizeDeterministicFact(raw?.procurement_procedure),
+    };
+  }, [job]);
+
+  const tenderFacts = useMemo<BidRoomTenderFacts>(() => {
+    const portalUrl = metaDraft.portal_url?.trim() || jobMeta?.portal_url?.trim() || null;
+    return {
+      submissionDeadline: preExtractedFacts.submissionDeadline,
+      clarificationDeadline: preExtractedFacts.clarificationDeadline,
+      submissionChannel: preExtractedFacts.submissionChannel,
+      procurementProcedure: preExtractedFacts.procurementProcedure,
+      portalUrl,
+    };
+  }, [jobMeta, metaDraft.portal_url, preExtractedFacts]);
+
   const metaSummaryDeadline = jobMeta?.deadline_override
     ? new Date(jobMeta.deadline_override).toLocaleString()
     : metaDraft.deadlineLocal
@@ -247,12 +312,12 @@ export default function JobBidRoomPage() {
         <CardContent className="p-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <button type="button" className="text-left" onClick={() => setMetaOpen((v) => !v)} aria-expanded={metaOpen}>
-              <p className="text-sm font-medium flex items-center gap-2">
+              <p className="flex items-center gap-2 text-sm font-medium">
                 {t("app.metadata.title")}
                 <span className="text-xs text-muted-foreground">{metaOpen ? "▲" : "▼"}</span>
               </p>
 
-              <div className="mt-1 text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-1">
+              <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
                 <span>
                   {t("app.metadata.labels.deadline")}: {metaSummaryDeadline}
                 </span>
@@ -351,7 +416,7 @@ export default function JobBidRoomPage() {
         </Card>
       ) : status !== "done" ? (
         <Card className="rounded-2xl">
-          <CardContent className="p-5 space-y-2">
+          <CardContent className="space-y-2 p-5">
             <p className="text-sm font-medium">{t("app.bidroom.notReadyTitle")}</p>
             <p className="text-sm text-muted-foreground">{t("app.bidroom.notReadyBody", { status })}</p>
           </CardContent>
@@ -366,6 +431,7 @@ export default function JobBidRoomPage() {
           questions={questions}
           outlineSections={outlineSections}
           canDownload={canDownload}
+          tenderFacts={tenderFacts}
         />
       )}
     </div>

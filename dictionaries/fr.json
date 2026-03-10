@@ -925,7 +925,10 @@
           "requirement": "Exigences",
           "risk": "Risques",
           "clarification": "Clarifications",
-          "outline": "Plan"
+          "outline": "Plan",
+          "deadline": "Deadlines",
+          "submission": "Submission",
+          "admin": "Admin"
         }
       },
       "fields": {
@@ -942,11 +945,41 @@
         "requirement": "Requirement",
         "risk": "Risk",
         "clarification": "Clarification",
-        "outline": "Outline"
+        "outline": "Outline",
+        "deadline": "Deadline",
+        "submission": "Submission",
+        "admin": "Admin"
       },
       "actions": {
         "addNote": "Ajouter une note",
         "openEvidence": "Ouvrir la preuve"
+      },
+      "facts": {
+        "title": "Tender facts",
+        "subtitle": "Key extracted facts to drive execution, not long analysis text.",
+        "labels": {
+          "submissionDeadline": "Submission deadline",
+          "clarificationDeadline": "Clarification deadline",
+          "submissionChannel": "Submission channel",
+          "procedure": "Procedure",
+          "portal": "Portal"
+        },
+        "status": {
+          "expired": "Passed",
+          "track": "Track"
+        },
+        "actions": {
+          "openPortal": "Open portal"
+        }
+      },
+      "autogen": {
+        "submissionDeadlineExpired": "Submission deadline already expired",
+        "submissionDeadlineOpen": "Submit tender before {deadline}",
+        "clarificationDeadlineExpired": "Clarification deadline already passed",
+        "clarificationDeadlineOpen": "Submit clarification questions before {deadline}",
+        "submissionChannel": "Confirm submission route: {value}",
+        "portalAccess": "Verify portal access and upload permissions",
+        "procedure": "Align response workflow with procedure: {value}"
       }
     },
     "compliance": {

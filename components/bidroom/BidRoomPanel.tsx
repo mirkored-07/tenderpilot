@@ -21,7 +21,7 @@ import { Separator } from "@/components/ui/separator";
 
 import { useAppI18n } from "@/app/app/_components/app-i18n-provider";
 
-type WorkItemType = "requirement" | "risk" | "clarification" | "outline";
+type WorkItemType = "requirement" | "risk" | "clarification" | "outline" | "deadline" | "submission" | "admin";
 
 type EvidenceCandidateUi = {
   id: string;
@@ -36,6 +36,30 @@ type WorkBaseRow = {
   title: string;
   meta?: string;
   evidenceIds?: string[];
+  defaultStatus?: "todo" | "doing" | "blocked" | "done";
+  defaultDueAt?: string | null;
+};
+
+type TenderFactValue = {
+  value: string;
+  evidenceIds: string[];
+  source: string | null;
+  confidence: string | null;
+};
+
+type TenderDeadlineFact = {
+  text: string;
+  iso: string | null;
+  timezone: string | null;
+  source: string | null;
+};
+
+type BidRoomTenderFacts = {
+  submissionDeadline: TenderDeadlineFact | null;
+  clarificationDeadline: TenderDeadlineFact | null;
+  submissionChannel: TenderFactValue | null;
+  procurementProcedure: TenderFactValue | null;
+  portalUrl: string | null;
 };
 
 function mergeUniqueEvidenceIds(...groups: Array<string[] | undefined>): string[] | undefined {
@@ -89,12 +113,13 @@ export function BidRoomPanel(props: {
   questions: string[];
   outlineSections: Array<{ title: string; bullets?: string[] }>;
   canDownload: boolean;
+  tenderFacts?: BidRoomTenderFacts | null;
   className?: string;
   showHeader?: boolean;
   showExport?: boolean;
   onExportError?: (msg: string) => void;
 }) {
-  const { jobId, checklist, risks, questions, outlineSections, canDownload } = props;
+  const { jobId, checklist, risks, questions, outlineSections, canDownload, tenderFacts } = props;
 
   const { t } = useAppI18n();
   const tx = (key: string, fallback: string, vars?: Record<string, string | number>) => {
@@ -140,6 +165,76 @@ export function BidRoomPanel(props: {
   function extractEvidenceIds(obj: any): string[] {
     const raw = (obj as any)?.evidence_ids ?? (obj as any)?.evidenceIds ?? (obj as any)?.evidence ?? null;
     return Array.isArray(raw) ? raw.map((x: any) => String(x ?? "").trim()).filter(Boolean) : [];
+  }
+
+  function looksUnknownValue(value: string | null | undefined): boolean {
+    const s = String(value ?? "").trim().toLowerCase();
+    return !s || s === "not found in extracted text" || s === "unknown" || s === "sconosciuto";
+  }
+
+  function toSourceDateDisplay(deadline: TenderDeadlineFact | null | undefined): string {
+    const raw = String(deadline?.text ?? "").replace(/\s+/g, " ").trim();
+    if (raw && !looksUnknownValue(raw)) {
+      const timeThenDate = raw.match(/(?:ore\s*)?(\d{1,2})[:.](\d{2})[^\d]{0,24}(?:del\s+giorno\s+|am\s+|on\s+|le\s+|del\s+|de\s+)?(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/i);
+      if (timeThenDate) {
+        const hh = timeThenDate[1].padStart(2, "0");
+        const mm = timeThenDate[2].padStart(2, "0");
+        const dd = timeThenDate[3].padStart(2, "0");
+        const mo = timeThenDate[4].padStart(2, "0");
+        let yyyy = timeThenDate[5];
+        if (yyyy.length === 2) yyyy = `20${yyyy}`;
+        return `${dd}/${mo}/${yyyy} • ${hh}:${mm}`;
+      }
+      const dateThenTime = raw.match(/(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})[^\d]{0,24}(?:alle\s+ore\s+|ore\s+|at\s+|à\s+|um\s+|a las\s+)?(\d{1,2})[:.](\d{2})/i);
+      if (dateThenTime) {
+        const dd = dateThenTime[1].padStart(2, "0");
+        const mo = dateThenTime[2].padStart(2, "0");
+        let yyyy = dateThenTime[3];
+        if (yyyy.length === 2) yyyy = `20${yyyy}`;
+        const hh = dateThenTime[4].padStart(2, "0");
+        const mm = dateThenTime[5].padStart(2, "0");
+        return `${dd}/${mo}/${yyyy} • ${hh}:${mm}`;
+      }
+      const dateOnly = raw.match(/(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/);
+      if (dateOnly) {
+        const dd = dateOnly[1].padStart(2, "0");
+        const mo = dateOnly[2].padStart(2, "0");
+        let yyyy = dateOnly[3];
+        if (yyyy.length === 2) yyyy = `20${yyyy}`;
+        return `${dd}/${mo}/${yyyy}`;
+      }
+    }
+
+    if (deadline?.iso) {
+      const d = new Date(deadline.iso);
+      if (!Number.isNaN(d.getTime())) {
+        const pad = (n: number) => String(n).padStart(2, "0");
+        return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} • ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      }
+    }
+
+    return tx("app.common.unknown", "Unknown");
+  }
+
+  function toDueDateValue(iso: string | null | undefined): string | null {
+    if (!iso) return null;
+    const d = new Date(String(iso));
+    if (Number.isNaN(d.getTime())) return null;
+    return d.toISOString();
+  }
+
+  function isExpiredIso(iso: string | null | undefined): boolean {
+    if (!iso) return false;
+    const d = new Date(String(iso));
+    if (Number.isNaN(d.getTime())) return false;
+    return d.getTime() < Date.now();
+  }
+
+  function compactFactValue(value: string | null | undefined, max = 88): string {
+    const s = String(value ?? "").replace(/\s+/g, " ").trim();
+    if (!s) return tx("app.common.unknown", "Unknown");
+    if (s.length <= max) return s;
+    return `${s.slice(0, max - 1).trimEnd()}…`;
   }
 
   async function openPdfAt(args?: { page?: number | null }) {
@@ -246,8 +341,134 @@ export function BidRoomPanel(props: {
     };
   }, [jobId]);
 
-  const workBaseRows: WorkBaseRow[] = useMemo(() => {
+  const factCards = useMemo(() => {
+    const cards: Array<{ key: string; label: string; value: string; note?: string; evidenceIds?: string[]; kind: "fact" | "deadline" | "portal"; isExpired?: boolean }> = [];
+
+    if (tenderFacts?.submissionDeadline) {
+      cards.push({
+        key: "submission_deadline",
+        label: t("app.bidroom.facts.labels.submissionDeadline"),
+        value: toSourceDateDisplay(tenderFacts.submissionDeadline),
+        note: isExpiredIso(tenderFacts.submissionDeadline.iso) ? t("app.bidroom.facts.status.expired") : t("app.bidroom.facts.status.track"),
+        kind: "deadline",
+        isExpired: isExpiredIso(tenderFacts.submissionDeadline.iso),
+      });
+    }
+
+    if (tenderFacts?.clarificationDeadline && !looksUnknownValue(tenderFacts.clarificationDeadline.text || tenderFacts.clarificationDeadline.iso || "")) {
+      cards.push({
+        key: "clarification_deadline",
+        label: t("app.bidroom.facts.labels.clarificationDeadline"),
+        value: toSourceDateDisplay(tenderFacts.clarificationDeadline),
+        note: isExpiredIso(tenderFacts.clarificationDeadline.iso) ? t("app.bidroom.facts.status.expired") : t("app.bidroom.facts.status.track"),
+        kind: "deadline",
+        isExpired: isExpiredIso(tenderFacts.clarificationDeadline.iso),
+      });
+    }
+
+    if (tenderFacts?.submissionChannel?.value) {
+      cards.push({
+        key: "submission_channel",
+        label: t("app.bidroom.facts.labels.submissionChannel"),
+        value: compactFactValue(tenderFacts.submissionChannel.value, 72),
+        evidenceIds: tenderFacts.submissionChannel.evidenceIds,
+        kind: "fact",
+      });
+    }
+
+    if (tenderFacts?.procurementProcedure?.value) {
+      cards.push({
+        key: "procedure",
+        label: t("app.bidroom.facts.labels.procedure"),
+        value: compactFactValue(tenderFacts.procurementProcedure.value, 72),
+        evidenceIds: tenderFacts.procurementProcedure.evidenceIds,
+        kind: "fact",
+      });
+    }
+
+    if (tenderFacts?.portalUrl) {
+      cards.push({
+        key: "portal_url",
+        label: t("app.bidroom.facts.labels.portal"),
+        value: compactFactValue(tenderFacts.portalUrl, 72),
+        kind: "portal",
+      });
+    }
+
+    return cards;
+  }, [t, tenderFacts]);
+
+  const factWorkRows = useMemo(() => {
     const rows: WorkBaseRow[] = [];
+
+    if (tenderFacts?.submissionDeadline) {
+      const display = toSourceDateDisplay(tenderFacts.submissionDeadline);
+      const expired = isExpiredIso(tenderFacts.submissionDeadline.iso);
+      const title = expired
+        ? tx("app.bidroom.autogen.submissionDeadlineExpired", "Submission deadline already expired")
+        : tx("app.bidroom.autogen.submissionDeadlineOpen", "Submit tender before {deadline}", { deadline: display });
+      rows.push({
+        type: "deadline",
+        ref_key: stableRefKey({ jobId, type: "deadline", text: "submission_deadline", extra: display }),
+        title,
+        meta: t("app.bidroom.facts.labels.submissionDeadline"),
+        defaultStatus: expired ? "blocked" : "todo",
+        defaultDueAt: toDueDateValue(tenderFacts.submissionDeadline.iso),
+      });
+    }
+
+    if (tenderFacts?.clarificationDeadline && !looksUnknownValue(tenderFacts.clarificationDeadline.text || tenderFacts.clarificationDeadline.iso || "")) {
+      const display = toSourceDateDisplay(tenderFacts.clarificationDeadline);
+      const expired = isExpiredIso(tenderFacts.clarificationDeadline.iso);
+      rows.push({
+        type: "deadline",
+        ref_key: stableRefKey({ jobId, type: "deadline", text: "clarification_deadline", extra: display }),
+        title: expired
+          ? tx("app.bidroom.autogen.clarificationDeadlineExpired", "Clarification deadline already passed")
+          : tx("app.bidroom.autogen.clarificationDeadlineOpen", "Submit clarification questions before {deadline}", { deadline: display }),
+        meta: t("app.bidroom.facts.labels.clarificationDeadline"),
+        defaultStatus: expired ? "blocked" : "todo",
+        defaultDueAt: toDueDateValue(tenderFacts.clarificationDeadline.iso),
+      });
+    }
+
+    if (tenderFacts?.submissionChannel?.value) {
+      rows.push({
+        type: "submission",
+        ref_key: stableRefKey({ jobId, type: "submission", text: "submission_channel", extra: tenderFacts.submissionChannel.value }),
+        title: tx("app.bidroom.autogen.submissionChannel", "Confirm submission route: {value}", { value: compactFactValue(tenderFacts.submissionChannel.value, 80) }),
+        meta: t("app.bidroom.facts.labels.submissionChannel"),
+        evidenceIds: tenderFacts.submissionChannel.evidenceIds,
+        defaultStatus: "todo",
+      });
+    }
+
+    if (tenderFacts?.portalUrl) {
+      rows.push({
+        type: "submission",
+        ref_key: stableRefKey({ jobId, type: "submission", text: "portal_access", extra: tenderFacts.portalUrl }),
+        title: tx("app.bidroom.autogen.portalAccess", "Verify portal access and upload permissions"),
+        meta: t("app.bidroom.facts.labels.portal"),
+        defaultStatus: "todo",
+      });
+    }
+
+    if (tenderFacts?.procurementProcedure?.value) {
+      rows.push({
+        type: "admin",
+        ref_key: stableRefKey({ jobId, type: "admin", text: "procurement_procedure", extra: tenderFacts.procurementProcedure.value }),
+        title: tx("app.bidroom.autogen.procedure", "Align response workflow with procedure: {value}", { value: compactFactValue(tenderFacts.procurementProcedure.value, 72) }),
+        meta: t("app.bidroom.facts.labels.procedure"),
+        evidenceIds: tenderFacts.procurementProcedure.evidenceIds,
+        defaultStatus: "todo",
+      });
+    }
+
+    return rows;
+  }, [jobId, t, tenderFacts]);
+
+  const workBaseRows: WorkBaseRow[] = useMemo(() => {
+    const rows: WorkBaseRow[] = [...factWorkRows];
 
     for (const it of checklist ?? []) {
       const kind = String((it as any)?.type ?? (it as any)?.level ?? (it as any)?.priority ?? "INFO").toUpperCase();
@@ -282,7 +503,7 @@ export function BidRoomPanel(props: {
     }
 
     return dedupeWorkBaseRows(rows);
-  }, [jobId, checklist, risks, questions, outlineSections]);
+  }, [factWorkRows, jobId, checklist, risks, questions, outlineSections]);
 
   const workByKey = useMemo(() => {
     // workItems is ordered by updated_at desc (newest first).
@@ -307,7 +528,7 @@ export function BidRoomPanel(props: {
       if (typeFilter !== "all" && r.type !== typeFilter) return false;
       const key = `${r.type}:${r.ref_key}`;
       const w = workByKey.get(key);
-      const st = canonicalizeWorkStatus(w?.status ?? "todo");
+      const st = canonicalizeWorkStatus(w?.status ?? r.defaultStatus ?? "todo");
       if (hideDone && isDoneWorkStatus(st)) return false;
       if (statusFilter !== "all" && st !== statusFilter) return false;
       if (q) {
@@ -320,9 +541,12 @@ export function BidRoomPanel(props: {
 
   const groupedRows = useMemo(() => {
     const groups: Record<WorkItemType, WorkBaseRow[]> = {
+      deadline: [],
+      submission: [],
       requirement: [],
       risk: [],
       clarification: [],
+      admin: [],
       outline: [],
     };
     for (const r of filteredRows) groups[r.type].push(r);
@@ -558,8 +782,22 @@ export function BidRoomPanel(props: {
     }
   }
 
-  const doneCount = useMemo(() => Array.from(workByKey.values()).filter((w: any) => isDoneWorkStatus(w?.status)).length, [workByKey]);
-  const blockedCount = useMemo(() => Array.from(workByKey.values()).filter((w: any) => isBlockedWorkStatus(w?.status)).length, [workByKey]);
+  const doneCount = useMemo(() => {
+    return workBaseRows.filter((r) => {
+      const key = `${r.type}:${r.ref_key}`;
+      const w = workByKey.get(key);
+      const st = canonicalizeWorkStatus(w?.status ?? r.defaultStatus ?? "todo");
+      return isDoneWorkStatus(st);
+    }).length;
+  }, [workBaseRows, workByKey]);
+  const blockedCount = useMemo(() => {
+    return workBaseRows.filter((r) => {
+      const key = `${r.type}:${r.ref_key}`;
+      const w = workByKey.get(key);
+      const st = canonicalizeWorkStatus(w?.status ?? r.defaultStatus ?? "todo");
+      return isBlockedWorkStatus(st);
+    }).length;
+  }, [workBaseRows, workByKey]);
 
   const header = props.showHeader !== false;
   const showExport = props.showExport !== false;
@@ -625,6 +863,46 @@ export function BidRoomPanel(props: {
           </div>
         ) : null}
 
+        {factCards.length ? (
+          <div className="rounded-2xl border bg-card/30 p-4">
+            <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <p className="text-sm font-semibold">{t("app.bidroom.facts.title")}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{t("app.bidroom.facts.subtitle")}</p>
+              </div>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+              {factCards.map((fact) => (
+                <div key={fact.key} className="rounded-2xl border bg-background p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{fact.label}</p>
+                    {fact.kind === "deadline" ? (
+                      <Badge variant={fact.isExpired ? "destructive" : "outline"} className="rounded-full">{fact.note}</Badge>
+                    ) : null}
+                  </div>
+                  <p className="mt-3 text-sm font-medium leading-snug break-words">{fact.value}</p>
+                  {fact.kind !== "deadline" && fact.note ? <p className="mt-2 text-xs text-muted-foreground">{fact.note}</p> : null}
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    {fact.kind === "portal" && tenderFacts?.portalUrl ? (
+                      <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={() => window.open(tenderFacts.portalUrl || "", "_blank", "noopener,noreferrer")}>
+                        {t("app.bidroom.facts.actions.openPortal")}
+                      </Button>
+                    ) : fact.evidenceIds?.length ? (
+                      <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={() => showEvidenceByIds(fact.evidenceIds)}>
+                        {t("app.bidroom.actions.openEvidence")}
+                      </Button>
+                    ) : (
+                      <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={() => openPdfAt()}>
+                        {t("app.common.locateInPdf")}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <Badge variant="outline" className="rounded-full">
@@ -652,9 +930,12 @@ export function BidRoomPanel(props: {
               onChange={(e) => setTypeFilter(e.target.value as any)}
             >
               <option value="all">{t("app.bidroom.panel.filters.allTypes")}</option>
+              <option value="deadline">{t("app.bidroom.types.deadline")}</option>
+              <option value="submission">{t("app.bidroom.types.submission")}</option>
               <option value="requirement">{t("app.bidroom.types.requirement")}</option>
               <option value="risk">{t("app.bidroom.types.risk")}</option>
               <option value="clarification">{t("app.bidroom.types.clarification")}</option>
+              <option value="admin">{t("app.bidroom.types.admin")}</option>
               <option value="outline">{t("app.bidroom.types.outline")}</option>
             </select>
 
@@ -714,9 +995,12 @@ export function BidRoomPanel(props: {
 
               {(
                 [
+                  { key: "deadline" as const, label: t("app.bidroom.panel.typeGroups.deadline") },
+                  { key: "submission" as const, label: t("app.bidroom.panel.typeGroups.submission") },
                   { key: "requirement" as const, label: t("app.bidroom.panel.typeGroups.requirement") },
                   { key: "risk" as const, label: t("app.bidroom.panel.typeGroups.risk") },
                   { key: "clarification" as const, label: t("app.bidroom.panel.typeGroups.clarification") },
+                  { key: "admin" as const, label: t("app.bidroom.panel.typeGroups.admin") },
                   { key: "outline" as const, label: t("app.bidroom.panel.typeGroups.outline") },
                 ] as const
               ).map((g) => {
@@ -733,17 +1017,20 @@ export function BidRoomPanel(props: {
                       {rows.map((r) => {
                         const key = `${r.type}:${r.ref_key}`;
                         const w = workByKey.get(key);
-                        const status = canonicalizeWorkStatus(w?.status ?? "todo");
+                        const status = canonicalizeWorkStatus(w?.status ?? r.defaultStatus ?? "todo");
                         const owner = String(w?.owner_label ?? "");
-                        const due = w?.due_at ? String(w.due_at).slice(0, 10) : "";
+                        const due = w?.due_at ? String(w.due_at).slice(0, 10) : (r.defaultDueAt ? String(r.defaultDueAt).slice(0, 10) : "");
                         const notes = String(w?.notes ?? "");
                         const hasEvidence = Array.isArray(r.evidenceIds) && r.evidenceIds.length > 0;
                         const notesIsOpen = notesOpen.has(key) || Boolean(notes);
 
                         const typeBadge = (() => {
+                          if (r.type === "deadline") return t("app.bidroom.panel.typeGroups.deadline");
+                          if (r.type === "submission") return t("app.bidroom.panel.typeGroups.submission");
                           if (r.type === "requirement") return t("app.bidroom.panel.typeGroups.requirement");
                           if (r.type === "risk") return t("app.bidroom.panel.typeGroups.risk");
                           if (r.type === "clarification") return t("app.bidroom.panel.typeGroups.clarification");
+                          if (r.type === "admin") return t("app.bidroom.panel.typeGroups.admin");
                           return t("app.bidroom.panel.typeGroups.outline");
                         })();
 

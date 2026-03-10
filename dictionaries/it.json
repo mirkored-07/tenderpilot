@@ -925,7 +925,10 @@
           "requirement": "Requisiti",
           "risk": "Rischi",
           "clarification": "Chiarimenti",
-          "outline": "Struttura"
+          "outline": "Struttura",
+          "deadline": "Scadenze",
+          "submission": "Presentazione",
+          "admin": "Admin"
         }
       },
       "fields": {
@@ -942,11 +945,41 @@
         "requirement": "Requirement",
         "risk": "Risk",
         "clarification": "Clarification",
-        "outline": "Outline"
+        "outline": "Outline",
+        "deadline": "Scadenza",
+        "submission": "Presentazione",
+        "admin": "Admin"
       },
       "actions": {
         "addNote": "Aggiungi nota",
         "openEvidence": "Apri evidenza"
+      },
+      "facts": {
+        "title": "Fatti di gara",
+        "subtitle": "Dati chiave estratti per guidare l’esecuzione, senza testo lungo.",
+        "labels": {
+          "submissionDeadline": "Scadenza presentazione",
+          "clarificationDeadline": "Scadenza chiarimenti",
+          "submissionChannel": "Canale di presentazione",
+          "procedure": "Procedura",
+          "portal": "Portale"
+        },
+        "status": {
+          "expired": "Scaduta",
+          "track": "Da monitorare"
+        },
+        "actions": {
+          "openPortal": "Apri portale"
+        }
+      },
+      "autogen": {
+        "submissionDeadlineExpired": "Scadenza presentazione offerta già superata",
+        "submissionDeadlineOpen": "Presentare l’offerta entro {deadline}",
+        "clarificationDeadlineExpired": "Scadenza chiarimenti già superata",
+        "clarificationDeadlineOpen": "Inviare i chiarimenti entro {deadline}",
+        "submissionChannel": "Confermare il canale di presentazione: {value}",
+        "portalAccess": "Verificare accesso al portale e permessi di caricamento",
+        "procedure": "Allineare il flusso di risposta alla procedura: {value}"
       }
     },
     "compliance": {
