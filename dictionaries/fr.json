@@ -1398,6 +1398,26 @@
         "outline": "Utilisez la structure pour estimer l’effort et attribuer les responsables.",
         "blockers": "Confirmez les exigences obligatoires avant d’investir dans la réponse.",
         "source": "Vérifiez directement les règles de soumission dans le texte de l’appel d’offres."
+      },
+      "decisionAudit": {
+        "title": "Audit de la décision",
+        "subtitle": "Indique si le résultat est piloté par des règles ou par le modèle, et où subsistent des incertitudes.",
+        "provenanceLabel": "Source de la décision",
+        "primaryDriver": "Facteur principal",
+        "supportingSignals": "Signaux d’appui",
+        "reviewBeforeCommit": "À vérifier avant de s’engager",
+        "confidence": {
+          "label": "Confiance",
+          "high": "Élevée",
+          "medium": "Moyenne",
+          "low": "Faible"
+        },
+        "source": {
+          "hardRule": "Règle stricte",
+          "policyRule": "Règle de politique",
+          "llm": "Jugement du modèle",
+          "unknown": "Inconnue"
+        }
       }
     },
     "account": {

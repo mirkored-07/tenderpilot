@@ -17,7 +17,7 @@ import {
 
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { getJobDisplayName } from "@/lib/pilot-job-names";
-import { getEffectiveReviewState, decisionBucket } from "@/lib/review-state";
+import { getEffectiveReviewState } from "@/lib/review-state";
 import { track } from "@/lib/telemetry";
 import { useAppI18n } from "../_components/app-i18n-provider";
 
@@ -88,8 +88,45 @@ function formatDeadline(d: Date) {
   }
 }
 
+function normalizeDecisionText(raw: string): string {
+  return String(raw ?? "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
+function isUseExtractedDecisionOverride(v: unknown): boolean {
+  const t = String(v ?? "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
 
+  if (!t) return true;
+  if (t === "extracted") return true;
+  if (t.includes("use extracted")) return true;
+  if (t.includes("extracted decision")) return true;
+  if (t.startsWith("(") && t.includes("extracted")) return true;
+
+  return false;
+}
+
+function decisionBucket(raw: string): "go" | "hold" | "no-go" | "unknown" {
+  const t = normalizeDecisionText(raw);
+
+  const isNoGo =
+    /\b(no[-\s]?go|nogo|do\s+not\s+(bid|proceed|submit)|not\s+(bid|proceed|submit)|reject|decline|withdraw)\b/.test(t);
+  if (isNoGo) return "no-go";
+
+  const isHold =
+    /\b(hold|caution|clarif(y|ication)|verify|pending|tbd|conditional|depends|review)\b/.test(t) ||
+    t.includes("proceed with caution");
+  if (isHold) return "hold";
+
+  const isGo = /\b(go|proceed|bid|submit)\b/.test(t);
+  if (isGo) return "go";
+
+  return "unknown";
+}
 
 function DecisionBadge({ text }: { text: string }) {
   const { t } = useAppI18n();
@@ -149,13 +186,34 @@ function StatusBadge({ status }: { status: JobStatus }) {
 }
 
 function parseDeadlineToDateLocal(deadlineText: string) {
-  const t = String(deadlineText ?? "").trim();
+  const t = String(deadlineText ?? "").replace(/\s+/g, " ").trim();
   if (!t) return null;
 
-  const isoTry = new Date(t);
-  if (Number.isFinite(isoTry.getTime())) return isoTry;
+  const timeThenDate = t.match(/(?:ore\s*)?(\d{1,2})[:.](\d{2})[^\d]{0,24}(?:del\s+giorno\s+|am\s+|on\s+|le\s+|del\s+|de\s+)?(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})/i);
+  if (timeThenDate) {
+    const hh = parseInt(timeThenDate[1], 10);
+    const mi = parseInt(timeThenDate[2], 10);
+    const dd = parseInt(timeThenDate[3], 10);
+    const mm = parseInt(timeThenDate[4], 10) - 1;
+    let yyyy = parseInt(timeThenDate[5], 10);
+    if (yyyy < 100) yyyy += 2000;
+    const d = new Date(yyyy, mm, dd, hh, mi, 0, 0);
+    if (Number.isFinite(d.getTime())) return d;
+  }
 
-  const m1 = t.match(/(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4})(?:\s+(\d{1,2}):(\d{2}))?/);
+  const dateThenTime = t.match(/(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})[^\d]{0,24}(?:alle\s+ore\s+|ore\s+|at\s+|à\s+|um\s+|a las\s+)?(\d{1,2})[:.](\d{2})/i);
+  if (dateThenTime) {
+    const dd = parseInt(dateThenTime[1], 10);
+    const mm = parseInt(dateThenTime[2], 10) - 1;
+    let yyyy = parseInt(dateThenTime[3], 10);
+    if (yyyy < 100) yyyy += 2000;
+    const hh = parseInt(dateThenTime[4], 10);
+    const mi = parseInt(dateThenTime[5], 10);
+    const d = new Date(yyyy, mm, dd, hh, mi, 0, 0);
+    if (Number.isFinite(d.getTime())) return d;
+  }
+
+  const m1 = t.match(/(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4})(?:[^\d]{1,12}(\d{1,2})[:.](\d{2}))?/);
   if (m1) {
     const dd = parseInt(m1[1], 10);
     const mm = parseInt(m1[2], 10) - 1;
@@ -177,6 +235,9 @@ function parseDeadlineToDateLocal(deadlineText: string) {
     const d = new Date(yyyy, mm, dd, hh, mi, 0, 0);
     if (Number.isFinite(d.getTime())) return d;
   }
+
+  const isoTry = new Date(t);
+  if (Number.isFinite(isoTry.getTime())) return isoTry;
 
   return null;
 }
@@ -231,7 +292,7 @@ export default function JobsPage() {
     const { data, error } = await supabase
       .from("jobs")
       .select(
-        "id,user_id,file_name,file_path,source_type,status,credits_used,created_at,updated_at"
+        "id,user_id,file_name,file_path,source_type,status,credits_used,pipeline,created_at,updated_at"
       )
       .order("created_at", { ascending: false });
 
@@ -426,17 +487,16 @@ export default function JobsPage() {
           String(job.source_type ?? "").trim() ||
           "";
 
-        const pipeline = (job as any)?.pipeline ?? null;
         const reviewState = getEffectiveReviewState({
           executive: exec,
-          pipeline,
+          pipeline: job.pipeline,
           decisionOverride: meta?.decision_override,
           deadlineOverride: meta?.deadline_override,
         });
         const deadlineText = reviewState.submissionDeadlineText;
+        const deadlineDisplayText = reviewState.submissionDeadlineDisplayText;
         const deadlineIso = reviewState.submissionDeadlineIso;
-        const extractedDeadline = parseDeadlineToDateLocal(deadlineIso || deadlineText);
-        const deadline = extractedDeadline;
+        const deadline = parseDeadlineToDateLocal(deadlineText) || parseDeadlineToDateLocal(deadlineIso);
         const hasDeadline = !!deadline && Number.isFinite((deadline as Date).getTime());
         const dueDays = hasDeadline ? daysUntil(deadline as Date, now) : null;
 
@@ -471,6 +531,7 @@ export default function JobsPage() {
           secondary,
           hasDeadline,
           deadline: hasDeadline ? (deadline as Date) : null,
+          deadlineDisplayText,
           dueDays,
           deadlineCategory,
           decisionText,
@@ -508,7 +569,7 @@ export default function JobsPage() {
     statusFilter === "all"
       ? t("app.common.all")
       : statusFilter === "ready"
-        ? t("app.review.state.ready")
+        ? t("app.common.ready")
         : statusFilter === "failed"
           ? t("app.common.failed")
           : t("app.common.processing");
@@ -610,7 +671,7 @@ export default function JobsPage() {
                   <DropdownMenuContent align="start">
                     {[
                       { v: "all", label: t("app.common.all") },
-                      { v: "ready", label: t("app.review.state.ready") },
+                      { v: "ready", label: t("app.common.ready") },
                       { v: "processing", label: t("app.common.processing") },
                       { v: "failed", label: t("app.common.failed") },
                     ].map((o) => (
@@ -805,7 +866,9 @@ export default function JobsPage() {
                                 : "text-muted-foreground"
                           }
                         >
-                          {r.hasDeadline && r.deadline ? `${formatDeadline(r.deadline)} · ${deadlineLabelText}` : deadlineLabelText}
+                          {r.hasDeadline && (r.deadlineDisplayText || r.deadline)
+                            ? `${r.deadlineDisplayText || (r.deadline ? formatDeadline(r.deadline) : "")} · ${deadlineLabelText}`
+                            : deadlineLabelText}
                         </span>
 
                         <span className="text-muted-foreground">{t("app.tenders.createdAt", { date: formatDate(job.created_at) })}</span>

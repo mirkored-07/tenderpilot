@@ -1398,6 +1398,26 @@
         "outline": "Usa la estructura para estimar el esfuerzo y asignar responsables.",
         "blockers": "Confirma los requisitos obligatorios antes de invertir en la respuesta.",
         "source": "Verifica las reglas de presentación directamente en el texto de la licitación."
+      },
+      "decisionAudit": {
+        "title": "Auditoría de la decisión",
+        "subtitle": "Muestra si el resultado está impulsado por reglas o por el modelo y dónde sigue habiendo incertidumbre.",
+        "provenanceLabel": "Origen de la decisión",
+        "primaryDriver": "Motivo principal",
+        "supportingSignals": "Señales de apoyo",
+        "reviewBeforeCommit": "Revisar antes de comprometerse",
+        "confidence": {
+          "label": "Confianza",
+          "high": "Alta",
+          "medium": "Media",
+          "low": "Baja"
+        },
+        "source": {
+          "hardRule": "Regla dura",
+          "policyRule": "Regla de política",
+          "llm": "Juicio del modelo",
+          "unknown": "Desconocido"
+        }
       }
     },
     "account": {

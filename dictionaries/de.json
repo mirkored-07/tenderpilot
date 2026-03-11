@@ -1398,6 +1398,26 @@
         "outline": "Nutze die Struktur, um Aufwand abzuschätzen und Verantwortliche zuzuweisen.",
         "blockers": "Pflichtanforderungen bestätigen, bevor du weiter in die Antwort investierst.",
         "source": "Einreichungsregeln direkt im Ausschreibungstext prüfen."
+      },
+      "decisionAudit": {
+        "title": "Entscheidungsprüfung",
+        "subtitle": "Zeigt, ob das Ergebnis regelbasiert oder modellbasiert ist und wo noch Unsicherheit besteht.",
+        "provenanceLabel": "Entscheidungsquelle",
+        "primaryDriver": "Haupttreiber",
+        "supportingSignals": "Stützende Signale",
+        "reviewBeforeCommit": "Vor Freigabe prüfen",
+        "confidence": {
+          "label": "Sicherheit",
+          "high": "Hoch",
+          "medium": "Mittel",
+          "low": "Niedrig"
+        },
+        "source": {
+          "hardRule": "Harte Regel",
+          "policyRule": "Policy-Regel",
+          "llm": "Modellbewertung",
+          "unknown": "Unbekannt"
+        }
       }
     },
     "account": {

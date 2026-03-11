@@ -49,6 +49,9 @@ export function HoldUnblockCard(props: {
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{r.displayName}</p>
+                      {r.hasDuplicateName ? (
+                        <p className="mt-1 text-[11px] text-muted-foreground">{r.displayMeta}</p>
+                      ) : null}
                       <p className="mt-1 text-xs text-muted-foreground">
                         {openCount === 1
                           ? t("app.dashboard.attention.holdOpenActionsOne", { count: openCount })

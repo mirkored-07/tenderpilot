@@ -103,7 +103,28 @@ function DecisionBadge({ raw }: { raw: string }) {
   );
 }
 
+function formatCreatedDateTime(iso: string) {
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(iso));
+  } catch {
+    return iso;
+  }
+}
 
+function getJobRefSuffix(jobId: string) {
+  const id = String(jobId ?? "").trim();
+  return id ? id.slice(-6) : "";
+}
+
+function getDuplicateKey(name: string) {
+  return String(name ?? "").trim().toLowerCase();
+}
 
 
 function isDoneStatus(s?: string | null) {
@@ -331,12 +352,12 @@ export default function DashboardPage() {
       (byJob[jid] ||= []).push(wi);
     }
 
-    return (jobs ?? []).map((job) => {
+    const baseRows = (jobs ?? []).map((job) => {
       const r = jobResults[job.id];
       const exec = r?.executive_summary ?? {};
       const meta = jobMeta[job.id];
 
-      const pipeline = (job as any)?.pipeline ?? null;
+      const pipeline = job.pipeline ?? null;
       const reviewState = getEffectiveReviewState({
         executive: exec,
         pipeline,
@@ -350,7 +371,6 @@ export default function DashboardPage() {
       const decisionText = reviewState.decisionText;
       const bucket = reviewState.decision;
 
-
       const decisionLabel =
         bucket === "go"
           ? t("app.decision.go")
@@ -362,7 +382,6 @@ export default function DashboardPage() {
 
       const dueSoon = hasValidDeadline ? daysUntil(deadline as Date, now) : null;
       const missingDeadline = !hasValidDeadline;
-
       const missingDecision = bucket === "unknown";
 
       const items = byJob[job.id] ?? [];
@@ -375,6 +394,9 @@ export default function DashboardPage() {
       return {
         job,
         displayName,
+        duplicateKey: getDuplicateKey(displayName),
+        createdAtLabel: t("app.tenders.createdAt", { date: formatCreatedDateTime(job.created_at) }),
+        jobRefSuffix: getJobRefSuffix(job.id),
         decisionText,
         decisionLabel,
         decisionBucket: bucket,
@@ -389,7 +411,40 @@ export default function DashboardPage() {
         updatedAt: job.updated_at,
       };
     });
-  }, [jobs, jobResults, jobMeta, workItems]);
+
+    const duplicateCounts = new Map<string, number>();
+    for (const row of baseRows) {
+      duplicateCounts.set(row.duplicateKey, (duplicateCounts.get(row.duplicateKey) || 0) + 1);
+    }
+
+    return baseRows.map((row) => ({
+      ...row,
+      hasDuplicateName: (duplicateCounts.get(row.duplicateKey) || 0) > 1,
+      displayMeta: `${row.createdAtLabel} • #${row.jobRefSuffix}`,
+    }));
+  }, [jobs, jobResults, jobMeta, workItems, t]);
+
+  const latestDashboardRows = useMemo(() => {
+    const latestByDuplicateKey = new Map<string, any>();
+
+    for (const row of dashboardRows) {
+      const existing = latestByDuplicateKey.get(row.duplicateKey);
+      if (!existing) {
+        latestByDuplicateKey.set(row.duplicateKey, row);
+        continue;
+      }
+
+      const existingCreated = new Date(String(existing.job?.created_at ?? 0)).getTime();
+      const rowCreated = new Date(String(row.job?.created_at ?? 0)).getTime();
+
+      if (rowCreated > existingCreated) {
+        latestByDuplicateKey.set(row.duplicateKey, row);
+      }
+    }
+
+    return Array.from(latestByDuplicateKey.values());
+  }, [dashboardRows]);
+
   const workloadByOwner = useMemo(() => {
     const m = new Map<string, { total: number; blocked: number; overdue: number }>();
     const now = new Date();
@@ -422,7 +477,7 @@ export default function DashboardPage() {
   }, [workloadByOwner, jobs, jobMeta]);
 
   const filteredRows = useMemo(() => {
-    return dashboardRows.filter((r) => {
+    return latestDashboardRows.filter((r) => {
       if (decisionFilter !== FILTER_ALL && r.decisionBucket !== decisionFilter) return false;
       if (ownerFilter === FILTER_ALL) return true;
 
@@ -434,7 +489,7 @@ export default function DashboardPage() {
 
       return hasOwner || hasMetaOwner;
     });
-  }, [dashboardRows, workItems, decisionFilter, ownerFilter, jobMeta]);
+  }, [latestDashboardRows, workItems, decisionFilter, ownerFilter, jobMeta]);
 
 
   const kpiTotals = useMemo(() => {
@@ -523,8 +578,10 @@ export default function DashboardPage() {
           .filter((wi) => !isDoneStatus(wi.status));
         return { row: r, jobId: jid, openCount: openUnblock.length };
       })
-      .filter((x) => x.openCount > 0)
-      .sort((a, b) => b.openCount - a.openCount)
+      .sort((a, b) => {
+        if (b.openCount !== a.openCount) return b.openCount - a.openCount;
+        return String(b.row.updatedAt).localeCompare(String(a.row.updatedAt));
+      })
       .map((x) => x.row);
 return {
       needsTriage,
@@ -986,9 +1043,14 @@ return {
                       <>
                         {rows.map((r) => (
                           <div key={r.job.id} className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-                            <Link className="text-sm underline-offset-2 hover:underline" href={`/app/jobs/${r.job.id}`}>
-                              {r.displayName}
-                            </Link>
+                            <div className="min-w-0">
+                              <Link className="text-sm underline-offset-2 hover:underline" href={`/app/jobs/${r.job.id}`}>
+                                {r.displayName}
+                              </Link>
+                              {r.hasDuplicateName ? (
+                                <p className="mt-1 text-[11px] text-muted-foreground">{r.displayMeta}</p>
+                              ) : null}
+                            </div>
                             <span className="text-xs text-muted-foreground">{t("app.dashboard.filters.owner")}: {t("app.common.unknown")}</span>
                           </div>
                         ))}
@@ -1025,9 +1087,14 @@ return {
                       <>
                         {rows.map((r) => (
                           <div key={r.job.id} className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-                            <Link className="text-sm underline-offset-2 hover:underline" href={`/app/jobs/${r.job.id}`}>
-                              {r.displayName}
-                            </Link>
+                            <div className="min-w-0">
+                              <Link className="text-sm underline-offset-2 hover:underline" href={`/app/jobs/${r.job.id}`}>
+                                {r.displayName}
+                              </Link>
+                              {r.hasDuplicateName ? (
+                                <p className="mt-1 text-[11px] text-muted-foreground">{r.displayMeta}</p>
+                              ) : null}
+                            </div>
                             <span className="text-xs text-muted-foreground">{t("app.dashboard.actions.addOverride")}</span>
                           </div>
                         ))}
@@ -1064,9 +1131,14 @@ return {
                       <>
                         {rows.map((r) => (
                           <div key={r.job.id} className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-                            <Link className="text-sm underline-offset-2 hover:underline" href={`/app/jobs/${r.job.id}`}>
-                              {r.displayName}
-                            </Link>
+                            <div className="min-w-0">
+                              <Link className="text-sm underline-offset-2 hover:underline" href={`/app/jobs/${r.job.id}`}>
+                                {r.displayName}
+                              </Link>
+                              {r.hasDuplicateName ? (
+                                <p className="mt-1 text-[11px] text-muted-foreground">{r.displayMeta}</p>
+                              ) : null}
+                            </div>
                             <span className="text-xs text-muted-foreground">
                               {r.deadline ? new Date(r.deadline).toLocaleDateString() : "—"}
                             </span>
@@ -1460,9 +1532,14 @@ return {
                             className="flex flex-wrap items-center justify-between gap-3 rounded-xl border p-3"
                           >
                             <div className="min-w-0">
-                              <Link href={`/app/jobs/${r.job.id}`} className="text-sm font-semibold hover:underline">
-                                {r.displayName}
-                              </Link>
+                              <div className="min-w-0">
+                                <Link href={`/app/jobs/${r.job.id}`} className="text-sm font-semibold hover:underline">
+                                  {r.displayName}
+                                </Link>
+                                {r.hasDuplicateName ? (
+                                  <p className="mt-1 text-[11px] text-muted-foreground">{r.displayMeta}</p>
+                                ) : null}
+                              </div>
                               <p className="mt-1 text-xs text-muted-foreground">
                                 {r.missingDecision ? t("app.dashboard.labels.decisionMissing") : r.decisionLabel || t("app.dashboard.labels.decisionUnknown")}
                                 {" • "}

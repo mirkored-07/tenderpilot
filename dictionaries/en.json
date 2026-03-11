@@ -1457,6 +1457,26 @@
         "outline": "Use the outline to estimate effort and assign owners.",
         "blockers": "Confirm mandatory requirements before investing in the response.",
         "source": "Verify submission rules directly in the tender text."
+      },
+      "decisionAudit": {
+        "title": "Decision audit",
+        "subtitle": "Shows whether the outcome is rule-driven or model-driven, and where uncertainty remains.",
+        "provenanceLabel": "Decision source",
+        "primaryDriver": "Primary driver",
+        "supportingSignals": "Supporting signals",
+        "reviewBeforeCommit": "Review before committing",
+        "confidence": {
+          "label": "Confidence",
+          "high": "High",
+          "medium": "Medium",
+          "low": "Low"
+        },
+        "source": {
+          "hardRule": "Hard rule",
+          "policyRule": "Policy rule",
+          "llm": "Model judgment",
+          "unknown": "Unknown"
+        }
       }
     },
     "account": {

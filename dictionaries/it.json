@@ -1398,6 +1398,26 @@
         "outline": "Usa la struttura per stimare lo sforzo e assegnare i responsabili.",
         "blockers": "Conferma i requisiti obbligatori prima di investire nella risposta.",
         "source": "Verifica le regole di presentazione direttamente nel testo di gara."
+      },
+      "decisionAudit": {
+        "title": "Audit della decisione",
+        "subtitle": "Mostra se l’esito deriva da regole o dal modello e dove rimangono incertezze.",
+        "provenanceLabel": "Fonte della decisione",
+        "primaryDriver": "Driver principale",
+        "supportingSignals": "Segnali di supporto",
+        "reviewBeforeCommit": "Da verificare prima di procedere",
+        "confidence": {
+          "label": "Affidabilità",
+          "high": "Alta",
+          "medium": "Media",
+          "low": "Bassa"
+        },
+        "source": {
+          "hardRule": "Regola rigida",
+          "policyRule": "Regola di policy",
+          "llm": "Giudizio del modello",
+          "unknown": "Sconosciuta"
+        }
       }
     },
     "account": {

@@ -55,18 +55,7 @@ export function isUseExtractedDecisionOverride(v: unknown): boolean {
   const t = normalizeDecisionText(extractDecisionLikeText(v));
 
   if (!t) return true;
-  if (t === "extracted") return true;
-  if (t === "unknown") return true;
-  if (t === "unset") return true;
-  if (t === "none") return true;
-  if (t === "null") return true;
-  if (t === "n/a") return true;
-  if (t === "na") return true;
-  if (t === "auto") return true;
-  if (t === "automatic") return true;
-  if (t === "ai") return true;
-  if (t === "system") return true;
-  if (t === "default") return true;
+  if (["extracted", "unknown", "unset", "none", "null", "n/a", "na", "auto", "automatic", "ai", "system", "default"].includes(t)) return true;
   if (t.includes("use extracted")) return true;
   if (t.includes("extracted decision")) return true;
   if (t.includes("follow ai")) return true;
@@ -79,18 +68,15 @@ export function isUseExtractedDecisionOverride(v: unknown): boolean {
 export function decisionBucket(raw: unknown): DecisionBucket {
   const t = normalizeDecisionText(raw);
 
-  const isNoGo =
-    /\b(no[-\s]?go|nogo|do\s+not\s+(bid|proceed|submit)|not\s+(bid|proceed|submit)|reject|decline|withdraw)\b/.test(t);
-  if (isNoGo) return "no-go";
-
-  const isHold =
-    /\b(hold|caution|clarif(y|ication)|verify|pending|tbd|conditional|depends|review)\b/.test(t) ||
-    t.includes("proceed with caution");
-  if (isHold) return "hold";
-
-  const isGo = /\b(go|proceed|bid|submit)\b/.test(t);
-  if (isGo) return "go";
-
+  if (/\b(no[-\s]?go|nogo|do\s+not\s+(bid|proceed|submit)|not\s+(bid|proceed|submit)|reject|decline|withdraw)\b/.test(t)) {
+    return "no-go";
+  }
+  if (/\b(hold|caution|clarif(y|ication)|verify|pending|tbd|conditional|depends|review)\b/.test(t) || t.includes("proceed with caution")) {
+    return "hold";
+  }
+  if (/\b(go|proceed|bid|submit)\b/.test(t)) {
+    return "go";
+  }
   return "unknown";
 }
 
@@ -109,15 +95,7 @@ function pickArray(value: unknown): string[] {
 
 function isTerminalTenderStatus(status: string): boolean {
   const t = normalizeDecisionText(status);
-  if (!t) return false;
-  return (
-    t === "expired" ||
-    t === "closed" ||
-    t === "cancelled" ||
-    t === "canceled" ||
-    t === "withdrawn" ||
-    t === "terminated"
-  );
+  return ["expired", "closed", "cancelled", "canceled", "withdrawn", "terminated"].includes(t);
 }
 
 function inferBucketFromRuleMetadata(args: { tenderStatus?: unknown; hardStopReasons?: unknown }): DecisionBucket {
@@ -134,7 +112,6 @@ function inferBucketFromRuleMetadata(args: { tenderStatus?: unknown; hardStopRea
   if (/\b(exclusion|formalit|signature|required|mandatory|missing|policy mismatch|jurisdiction)\b/.test(joined)) {
     return "hold";
   }
-
   return "unknown";
 }
 
@@ -182,7 +159,6 @@ export function getEffectiveDecisionText(args: { executive?: any; pipeline?: any
   if (inferredBucket === "no-go") return "No-Go";
   if (inferredBucket === "hold") return "Hold";
   if (inferredBucket === "go") return "Go";
-
   return "";
 }
 
@@ -202,13 +178,58 @@ export function getSubmissionDeadlineText(args: { executive?: any; pipeline?: an
     pipelineAi?.submissionDeadlineText,
     pipelineAi?.pre_extracted_facts?.submission_deadline?.source_text,
     pipelineAi?.pre_extracted_facts?.submission_deadline?.text,
+    pipelineAi?.pre_extracted_facts?.submission_deadline?.display_text,
     args.pipeline?.pre_extracted_facts?.submission_deadline?.source_text,
     args.pipeline?.pre_extracted_facts?.submission_deadline?.text,
+    args.pipeline?.pre_extracted_facts?.submission_deadline?.display_text,
   );
 
   if (executiveText && executiveText.toLowerCase() !== "not found in extracted text") return executiveText;
   if (pipelineText && pipelineText.toLowerCase() !== "not found in extracted text") return pipelineText;
   return executiveText || pipelineText;
+}
+
+export function extractDeadlineSourceDisplay(input: unknown): string {
+  const raw = cleanText(input);
+  if (!raw || raw.toLowerCase() === "not found in extracted text") return "";
+
+  const timeThenDate = raw.match(/(?:ore\s*)?(\d{1,2})[:.](\d{2})[^\d]{0,24}(?:del\s+giorno\s+|am\s+|on\s+|le\s+|del\s+|de\s+)?(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/i);
+  if (timeThenDate) {
+    const hh = timeThenDate[1].padStart(2, "0");
+    const mm = timeThenDate[2].padStart(2, "0");
+    const dd = timeThenDate[3].padStart(2, "0");
+    const mo = timeThenDate[4].padStart(2, "0");
+    let yyyy = timeThenDate[5];
+    if (yyyy.length === 2) yyyy = `20${yyyy}`;
+    return `${dd}/${mo}/${yyyy} • ${hh}:${mm}`;
+  }
+
+  const dateThenTime = raw.match(/(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})[^\d]{0,24}(?:alle\s+ore\s+|ore\s+|at\s+|à\s+|um\s+|a las\s+)?(\d{1,2})[:.](\d{2})/i);
+  if (dateThenTime) {
+    const dd = dateThenTime[1].padStart(2, "0");
+    const mo = dateThenTime[2].padStart(2, "0");
+    let yyyy = dateThenTime[3];
+    if (yyyy.length === 2) yyyy = `20${yyyy}`;
+    const hh = dateThenTime[4].padStart(2, "0");
+    const mm = dateThenTime[5].padStart(2, "0");
+    return `${dd}/${mo}/${yyyy} • ${hh}:${mm}`;
+  }
+
+  const dateOnly = raw.match(/(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/);
+  if (dateOnly) {
+    const dd = dateOnly[1].padStart(2, "0");
+    const mo = dateOnly[2].padStart(2, "0");
+    let yyyy = dateOnly[3];
+    if (yyyy.length === 2) yyyy = `20${yyyy}`;
+    return `${dd}/${mo}/${yyyy}`;
+  }
+
+  return raw.length <= 48 ? raw : "";
+}
+
+export function getSubmissionDeadlineDisplayText(args: { executive?: any; pipeline?: any; deadlineOverride?: unknown }): string {
+  const rawText = getSubmissionDeadlineText(args);
+  return extractDeadlineSourceDisplay(rawText) || rawText;
 }
 
 export function getSubmissionDeadlineIso(args: { executive?: any; pipeline?: any; deadlineOverride?: unknown }): string {
@@ -231,12 +252,14 @@ export function getEffectiveReviewState(args: { executive?: any; pipeline?: any;
   const decisionText = getEffectiveDecisionText(args);
   const decision = decisionBucket(decisionText);
   const submissionDeadlineText = getSubmissionDeadlineText(args);
+  const submissionDeadlineDisplayText = getSubmissionDeadlineDisplayText(args);
   const submissionDeadlineIso = getSubmissionDeadlineIso(args);
 
   return {
     decisionText,
     decision,
     submissionDeadlineText,
+    submissionDeadlineDisplayText,
     submissionDeadlineIso,
   };
 }

@@ -51,6 +51,9 @@ export function AttentionBidsCard(props: {
                     <Link href={`/app/jobs/${r.job.id}`} className="text-sm font-semibold hover:underline">
                       {r.displayName}
                     </Link>
+                    {r.hasDuplicateName ? (
+                      <p className="mt-1 text-[11px] text-muted-foreground">{r.displayMeta}</p>
+                    ) : null}
 
                     <p className="mt-1 text-xs text-muted-foreground">
                       {r.missingDecision
