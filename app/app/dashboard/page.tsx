@@ -364,10 +364,14 @@ export default function DashboardPage() {
         decisionOverride: meta?.decision_override,
         deadlineOverride: meta?.deadline_override,
       });
+      
       const deadlineText = reviewState.submissionDeadlineText;
       const deadlineIso = reviewState.submissionDeadlineIso;
+      const deadlineDisplayText = reviewState.submissionDeadlineDisplayText; // Harmonized with jobs list
+
       const deadline = parseDeadlineToDateLocal(deadlineIso || deadlineText);
       const hasValidDeadline = !!deadline && Number.isFinite((deadline as Date).getTime());
+      
       const decisionText = reviewState.decisionText;
       const bucket = reviewState.decision;
 
@@ -400,7 +404,7 @@ export default function DashboardPage() {
         decisionText,
         decisionLabel,
         decisionBucket: bucket,
-        deadlineText,
+        deadlineText: deadlineDisplayText || deadlineText, // Respect the centralized override format first
         deadline: deadline ? (deadline as Date).toISOString() : null,
         dueSoon,
         missingDeadline,
