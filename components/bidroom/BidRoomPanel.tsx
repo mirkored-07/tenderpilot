@@ -54,8 +54,10 @@ type TenderDeadlineFact = {
   source: string | null;
 };
 
+import { getEffectiveReviewState } from "@/lib/review-state";
+
 type BidRoomTenderFacts = {
-  submissionDeadline: TenderDeadlineFact | null;
+  reviewState: ReturnType<typeof getEffectiveReviewState>;
   clarificationDeadline: TenderDeadlineFact | null;
   submissionChannel: TenderFactValue | null;
   procurementProcedure: TenderFactValue | null;
@@ -170,69 +172,11 @@ export function BidRoomPanel(props: {
     return Array.isArray(raw) ? raw.map((x: any) => String(x ?? "").trim()).filter(Boolean) : [];
   }
 
-  function looksUnknownValue(value: string | null | undefined): boolean {
-    const s = String(value ?? "").trim().toLowerCase();
-    return !s || s === "not found in extracted text" || s === "unknown" || s === "sconosciuto";
-  }
-
-  function toSourceDateDisplay(deadline: TenderDeadlineFact | null | undefined): string {
-    const raw = String(deadline?.text ?? "").replace(/\s+/g, " ").trim();
-    if (raw && !looksUnknownValue(raw)) {
-      const timeThenDate = raw.match(/(?:ore\s*)?(\d{1,2})[:.](\d{2})[^\d]{0,24}(?:del\s+giorno\s+|am\s+|on\s+|le\s+|del\s+|de\s+)?(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/i);
-      if (timeThenDate) {
-        const hh = timeThenDate[1].padStart(2, "0");
-        const mm = timeThenDate[2].padStart(2, "0");
-        const dd = timeThenDate[3].padStart(2, "0");
-        const mo = timeThenDate[4].padStart(2, "0");
-        let yyyy = timeThenDate[5];
-        if (yyyy.length === 2) yyyy = `20${yyyy}`;
-        return `${dd}/${mo}/${yyyy} • ${hh}:${mm}`;
-      }
-      const dateThenTime = raw.match(/(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})[^\d]{0,24}(?:alle\s+ore\s+|ore\s+|at\s+|à\s+|um\s+|a las\s+)?(\d{1,2})[:.](\d{2})/i);
-      if (dateThenTime) {
-        const dd = dateThenTime[1].padStart(2, "0");
-        const mo = dateThenTime[2].padStart(2, "0");
-        let yyyy = dateThenTime[3];
-        if (yyyy.length === 2) yyyy = `20${yyyy}`;
-        const hh = dateThenTime[4].padStart(2, "0");
-        const mm = dateThenTime[5].padStart(2, "0");
-        return `${dd}/${mo}/${yyyy} • ${hh}:${mm}`;
-      }
-      const dateOnly = raw.match(/(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})/);
-      if (dateOnly) {
-        const dd = dateOnly[1].padStart(2, "0");
-        const mo = dateOnly[2].padStart(2, "0");
-        let yyyy = dateOnly[3];
-        if (yyyy.length === 2) yyyy = `20${yyyy}`;
-        return `${dd}/${mo}/${yyyy}`;
-      }
-    }
-
-    if (raw && !looksUnknownValue(raw)) return raw;
-
-    if (deadline?.iso) {
-      const d = new Date(deadline.iso);
-      if (!Number.isNaN(d.getTime())) {
-        const pad = (n: number) => String(n).padStart(2, "0");
-        return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} • ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-      }
-    }
-
-    return tx("app.common.unknown", "Unknown");
-  }
-
   function toDueDateValue(iso: string | null | undefined): string | null {
     if (!iso) return null;
     const d = new Date(String(iso));
     if (Number.isNaN(d.getTime())) return null;
     return d.toISOString();
-  }
-
-  function isExpiredIso(iso: string | null | undefined): boolean {
-    if (!iso) return false;
-    const d = new Date(String(iso));
-    if (Number.isNaN(d.getTime())) return false;
-    return d.getTime() < Date.now();
   }
 
   function compactFactValue(value: string | null | undefined, max = 88): string {
@@ -347,27 +291,51 @@ export function BidRoomPanel(props: {
   }, [jobId]);
 
   const factCards = useMemo(() => {
-    const cards: Array<{ key: string; label: string; value: string; note?: string; evidenceIds?: string[]; kind: "fact" | "deadline" | "portal"; isExpired?: boolean }> = [];
+    const cards: Array<{ key: string; label: string; value: string; note?: string; evidenceIds?: string[]; kind: "fact" | "deadline" | "portal" | "decision"; isExpired?: boolean }> = [];
 
-    if (tenderFacts?.submissionDeadline) {
+    const rs = tenderFacts?.reviewState;
+
+    if (rs?.decisionText) {
+      const isGo = rs.decision === "go";
+      const isNoGo = rs.decision === "no-go";
+      const isHold = rs.decision === "hold";
       cards.push({
-        key: "submission_deadline",
-        label: t("app.bidroom.facts.labels.submissionDeadline"),
-        value: toSourceDateDisplay(tenderFacts.submissionDeadline),
-        note: isExpiredIso(tenderFacts.submissionDeadline.iso) ? t("app.bidroom.facts.status.expired") : t("app.bidroom.facts.status.track"),
-        kind: "deadline",
-        isExpired: isExpiredIso(tenderFacts.submissionDeadline.iso),
+        key: "decision",
+        label: tx("app.bidroom.facts.labels.decision", "Go/No-Go Decision"),
+        value: rs.decisionText,
+        note: isGo ? "Go" : isNoGo ? "No-Go" : isHold ? "Hold" : "Unknown",
+        kind: "decision",
       });
     }
 
-    if (tenderFacts?.clarificationDeadline && !looksUnknownValue(tenderFacts.clarificationDeadline.text || tenderFacts.clarificationDeadline.iso || "")) {
+    if (rs?.submissionDeadlineText) {
+      cards.push({
+        key: "submission_deadline",
+        label: t("app.bidroom.facts.labels.submissionDeadline"),
+        value: rs.submissionDeadlineDisplayText || rs.submissionDeadlineText,
+        note: rs.submissionDeadlineIso && new Date(rs.submissionDeadlineIso).getTime() < Date.now() ? t("app.bidroom.facts.status.expired") : t("app.bidroom.facts.status.track"),
+        kind: "deadline",
+        isExpired: rs.submissionDeadlineIso ? new Date(rs.submissionDeadlineIso).getTime() < Date.now() : false,
+      });
+    }
+
+    if (tenderFacts?.clarificationDeadline && tenderFacts.clarificationDeadline.text !== "not found in extracted text" && tenderFacts.clarificationDeadline.text !== "unknown") {
+      const iso = tenderFacts.clarificationDeadline.iso;
+      const isExpired = iso ? new Date(iso).getTime() < Date.now() : false;
+      
+      const d = iso ? new Date(iso) : null;
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const display = d && !Number.isNaN(d.getTime()) 
+        ? `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} • ${pad(d.getHours())}:${pad(d.getMinutes())}`
+        : tenderFacts.clarificationDeadline.text;
+
       cards.push({
         key: "clarification_deadline",
         label: t("app.bidroom.facts.labels.clarificationDeadline"),
-        value: toSourceDateDisplay(tenderFacts.clarificationDeadline),
-        note: isExpiredIso(tenderFacts.clarificationDeadline.iso) ? t("app.bidroom.facts.status.expired") : t("app.bidroom.facts.status.track"),
+        value: display,
+        note: isExpired ? t("app.bidroom.facts.status.expired") : t("app.bidroom.facts.status.track"),
         kind: "deadline",
-        isExpired: isExpiredIso(tenderFacts.clarificationDeadline.iso),
+        isExpired,
       });
     }
 
@@ -436,9 +404,10 @@ export function BidRoomPanel(props: {
   const factWorkRows = useMemo(() => {
     const rows: WorkBaseRow[] = [];
 
-    if (tenderFacts?.submissionDeadline) {
-      const display = toSourceDateDisplay(tenderFacts.submissionDeadline);
-      const expired = isExpiredIso(tenderFacts.submissionDeadline.iso);
+    const rs = tenderFacts?.reviewState;
+    if (rs?.submissionDeadlineText) {
+      const display = rs.submissionDeadlineDisplayText || rs.submissionDeadlineText;
+      const expired = rs.submissionDeadlineIso ? new Date(rs.submissionDeadlineIso).getTime() < Date.now() : false;
       const title = expired
         ? tx("app.bidroom.autogen.submissionDeadlineExpired", "Submission deadline already expired")
         : tx("app.bidroom.autogen.submissionDeadlineOpen", "Submit tender before {deadline}", { deadline: display });
@@ -448,13 +417,20 @@ export function BidRoomPanel(props: {
         title,
         meta: t("app.bidroom.facts.labels.submissionDeadline"),
         defaultStatus: expired ? "blocked" : "todo",
-        defaultDueAt: toDueDateValue(tenderFacts.submissionDeadline.iso),
+        defaultDueAt: toDueDateValue(rs.submissionDeadlineIso),
       });
     }
 
-    if (tenderFacts?.clarificationDeadline && !looksUnknownValue(tenderFacts.clarificationDeadline.text || tenderFacts.clarificationDeadline.iso || "")) {
-      const display = toSourceDateDisplay(tenderFacts.clarificationDeadline);
-      const expired = isExpiredIso(tenderFacts.clarificationDeadline.iso);
+    if (tenderFacts?.clarificationDeadline && tenderFacts.clarificationDeadline.text !== "not found in extracted text" && tenderFacts.clarificationDeadline.text !== "unknown") {
+      const iso = tenderFacts.clarificationDeadline.iso;
+      const expired = iso ? new Date(iso).getTime() < Date.now() : false;
+      
+      const d = iso ? new Date(iso) : null;
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const display = d && !Number.isNaN(d.getTime()) 
+        ? `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} • ${pad(d.getHours())}:${pad(d.getMinutes())}`
+        : tenderFacts.clarificationDeadline.text;
+
       rows.push({
         type: "deadline",
         ref_key: stableRefKey({ jobId, type: "deadline", text: "clarification_deadline", extra: display }),
@@ -463,7 +439,7 @@ export function BidRoomPanel(props: {
           : tx("app.bidroom.autogen.clarificationDeadlineOpen", "Submit clarification questions before {deadline}", { deadline: display }),
         meta: t("app.bidroom.facts.labels.clarificationDeadline"),
         defaultStatus: expired ? "blocked" : "todo",
-        defaultDueAt: toDueDateValue(tenderFacts.clarificationDeadline.iso),
+        defaultDueAt: toDueDateValue(iso),
       });
     }
 
@@ -946,10 +922,12 @@ export function BidRoomPanel(props: {
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{fact.label}</p>
                     {fact.kind === "deadline" ? (
                       <Badge variant={fact.isExpired ? "destructive" : "outline"} className="rounded-full">{fact.note}</Badge>
+                    ) : fact.kind === "decision" ? (
+                      <Badge variant={fact.note === "Go" ? "default" : fact.note === "No-Go" ? "destructive" : "secondary"} className="rounded-full">{fact.note}</Badge>
                     ) : null}
                   </div>
                   <p className="mt-3 text-sm font-medium leading-snug break-words">{fact.value}</p>
-                  {fact.kind !== "deadline" && fact.note ? <p className="mt-2 text-xs text-muted-foreground">{fact.note}</p> : null}
+                  {fact.kind !== "deadline" && fact.kind !== "decision" && fact.note ? <p className="mt-2 text-xs text-muted-foreground">{fact.note}</p> : null}
                   <div className="mt-4 flex flex-wrap items-center gap-2">
                     {fact.kind === "portal" && tenderFacts?.portalUrl ? (
                       <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={() => window.open(tenderFacts.portalUrl || "", "_blank", "noopener,noreferrer")}>

@@ -12,6 +12,7 @@ import { BidRoomPanel } from "@/components/bidroom/BidRoomPanel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { getEffectiveReviewState } from "@/lib/review-state";
 
 type JobStatus = "queued" | "processing" | "done" | "failed";
 
@@ -41,7 +42,7 @@ type DeterministicDeadlineValue = {
 };
 
 type BidRoomTenderFacts = {
-  submissionDeadline: DeterministicDeadlineValue | null;
+  reviewState: ReturnType<typeof getEffectiveReviewState>;
   clarificationDeadline: DeterministicDeadlineValue | null;
   submissionChannel: DeterministicTenderFactValue | null;
   procurementProcedure: DeterministicTenderFactValue | null;
@@ -261,8 +262,14 @@ export default function JobBidRoomPage() {
 
   const tenderFacts = useMemo<BidRoomTenderFacts>(() => {
     const portalUrl = metaDraft.portal_url?.trim() || jobMeta?.portal_url?.trim() || preExtractedFacts.portalLink?.value?.trim() || null;
+    const reviewState = getEffectiveReviewState({
+      executive: job?.executive,
+      pipeline: job?.pipeline,
+      decisionOverride: jobMeta?.decision_override,
+      deadlineOverride: metaDraft.deadlineLocal || jobMeta?.deadline_override,
+    });
     return {
-      submissionDeadline: preExtractedFacts.submissionDeadline,
+      reviewState,
       clarificationDeadline: preExtractedFacts.clarificationDeadline,
       submissionChannel: preExtractedFacts.submissionChannel,
       procurementProcedure: preExtractedFacts.procurementProcedure,
@@ -271,7 +278,7 @@ export default function JobBidRoomPage() {
       lotStructure: preExtractedFacts.lotStructure,
       portalUrl,
     };
-  }, [jobMeta, metaDraft.portal_url, preExtractedFacts]);
+  }, [job, jobMeta, metaDraft.portal_url, metaDraft.deadlineLocal, preExtractedFacts]);
 
   const metaSummaryDeadline = jobMeta?.deadline_override
     ? new Date(jobMeta.deadline_override).toLocaleString()
