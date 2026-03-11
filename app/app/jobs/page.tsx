@@ -17,6 +17,7 @@ import {
 
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { getJobDisplayName } from "@/lib/pilot-job-names";
+import { getEffectiveReviewState, decisionBucket } from "@/lib/review-state";
 import { track } from "@/lib/telemetry";
 import { useAppI18n } from "../_components/app-i18n-provider";
 
@@ -30,6 +31,7 @@ type DbJob = {
   source_type: string | null;
   status: JobStatus;
   credits_used: number;
+  pipeline: any;
   created_at: string;
   updated_at: string;
 };
@@ -37,7 +39,6 @@ type DbJob = {
 type DbJobResultLite = {
   job_id: string;
   executive_summary: any;
-  pipeline: any;
   created_at: string;
   updated_at: string;
 };
@@ -87,45 +88,8 @@ function formatDeadline(d: Date) {
   }
 }
 
-function normalizeDecisionText(raw: string): string {
-  return String(raw ?? "")
-    .toLowerCase()
-    .replace(/\s+/g, " ")
-    .trim();
-}
 
-function isUseExtractedDecisionOverride(v: unknown): boolean {
-  const t = String(v ?? "")
-    .toLowerCase()
-    .replace(/\s+/g, " ")
-    .trim();
 
-  if (!t) return true;
-  if (t === "extracted") return true;
-  if (t.includes("use extracted")) return true;
-  if (t.includes("extracted decision")) return true;
-  if (t.startsWith("(") && t.includes("extracted")) return true;
-
-  return false;
-}
-
-function decisionBucket(raw: string): "go" | "hold" | "no-go" | "unknown" {
-  const t = normalizeDecisionText(raw);
-
-  const isNoGo =
-    /\b(no[-\s]?go|nogo|do\s+not\s+(bid|proceed|submit)|not\s+(bid|proceed|submit)|reject|decline|withdraw)\b/.test(t);
-  if (isNoGo) return "no-go";
-
-  const isHold =
-    /\b(hold|caution|clarif(y|ication)|verify|pending|tbd|conditional|depends|review)\b/.test(t) ||
-    t.includes("proceed with caution");
-  if (isHold) return "hold";
-
-  const isGo = /\b(go|proceed|bid|submit)\b/.test(t);
-  if (isGo) return "go";
-
-  return "unknown";
-}
 
 function DecisionBadge({ text }: { text: string }) {
   const { t } = useAppI18n();
@@ -162,7 +126,7 @@ function DecisionBadge({ text }: { text: string }) {
 function StatusBadge({ status }: { status: JobStatus }) {
   const { t } = useAppI18n();
 
-  if (status === "done") return <Badge className="rounded-full">{t("app.common.ready")}</Badge>;
+  if (status === "done") return <Badge variant="outline" className="rounded-full">{t("app.review.state.ready")}</Badge>;
   if (status === "failed") {
     return (
       <Badge variant="destructive" className="rounded-full">
@@ -285,7 +249,7 @@ export default function JobsPage() {
       const ids = rows.map((j) => String(j.id));
       if (ids.length) {
         const [{ data: resultsData }, { data: metaData }, { data: workData }] = await Promise.all([
-          supabase.from("job_results").select("job_id,executive_summary,pipeline,created_at,updated_at").in("job_id", ids),
+          supabase.from("job_results").select("job_id,executive_summary,created_at,updated_at").in("job_id", ids),
           supabase
             .from("job_metadata")
             .select("job_id,deadline_override,target_decision_at,portal_url,internal_bid_id,owner_label,decision_override,updated_at")
@@ -462,19 +426,22 @@ export default function JobsPage() {
           String(job.source_type ?? "").trim() ||
           "";
 
-        const extractedDeadlineText = String(exec?.submissionDeadline ?? "").trim();
-        const extractedDeadline = parseDeadlineToDateLocal(extractedDeadlineText);
-        const deadline = meta?.deadline_override
-          ? new Date(String(meta.deadline_override))
-          : extractedDeadline;
+        const pipeline = (job as any)?.pipeline ?? null;
+        const reviewState = getEffectiveReviewState({
+          executive: exec,
+          pipeline,
+          decisionOverride: meta?.decision_override,
+          deadlineOverride: meta?.deadline_override,
+        });
+        const deadlineText = reviewState.submissionDeadlineText;
+        const deadlineIso = reviewState.submissionDeadlineIso;
+        const extractedDeadline = parseDeadlineToDateLocal(deadlineIso || deadlineText);
+        const deadline = extractedDeadline;
         const hasDeadline = !!deadline && Number.isFinite((deadline as Date).getTime());
         const dueDays = hasDeadline ? daysUntil(deadline as Date, now) : null;
 
-        const extractedDecisionTextRaw = String(exec?.decisionBadge ?? exec?.decision ?? exec?.verdict ?? "").trim();
-        const extractedDecisionText = extractedDecisionTextRaw || "Hold";
-        const overrideRaw = meta?.decision_override;
-        const decisionText = isUseExtractedDecisionOverride(overrideRaw) ? extractedDecisionText : String(overrideRaw ?? "").trim();
-        const bucket = decisionBucket(decisionText);
+        const decisionText = reviewState.decisionText;
+        const bucket = reviewState.decision;
 
         const items = workByJob[job.id] ?? [];
         const openItems = items.filter((x) => !isDoneStatus((x as any)?.status)).length;
@@ -541,7 +508,7 @@ export default function JobsPage() {
     statusFilter === "all"
       ? t("app.common.all")
       : statusFilter === "ready"
-        ? t("app.common.ready")
+        ? t("app.review.state.ready")
         : statusFilter === "failed"
           ? t("app.common.failed")
           : t("app.common.processing");
@@ -643,7 +610,7 @@ export default function JobsPage() {
                   <DropdownMenuContent align="start">
                     {[
                       { v: "all", label: t("app.common.all") },
-                      { v: "ready", label: t("app.common.ready") },
+                      { v: "ready", label: t("app.review.state.ready") },
                       { v: "processing", label: t("app.common.processing") },
                       { v: "failed", label: t("app.common.failed") },
                     ].map((o) => (

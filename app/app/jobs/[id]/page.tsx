@@ -565,7 +565,7 @@ function toSafeFileBaseName(input: string) {
 }
 
 function statusBadge(status: JobStatus, t: (key: string) => string) {
-  if (status === "done") return <Badge className="rounded-full">{t("app.common.ready")}</Badge>;
+  if (status === "done") return <Badge variant="outline" className="rounded-full">{t("app.review.state.ready")}</Badge>;
   if (status === "failed")
     return (
       <Badge variant="destructive" className="rounded-full">

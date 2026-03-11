@@ -45,6 +45,9 @@ type BidRoomTenderFacts = {
   clarificationDeadline: DeterministicDeadlineValue | null;
   submissionChannel: DeterministicTenderFactValue | null;
   procurementProcedure: DeterministicTenderFactValue | null;
+  validityPeriod: DeterministicTenderFactValue | null;
+  contractTerm: DeterministicTenderFactValue | null;
+  lotStructure: DeterministicTenderFactValue | null;
   portalUrl: string | null;
 };
 
@@ -248,17 +251,24 @@ export default function JobBidRoomPage() {
       submissionDeadline: normalizeDeadlineFact(raw?.submission_deadline),
       clarificationDeadline: normalizeDeadlineFact(raw?.clarification_deadline),
       submissionChannel: normalizeDeterministicFact(raw?.submission_channel),
-      procurementProcedure: normalizeDeterministicFact(raw?.procurement_procedure),
+      procurementProcedure: normalizeDeterministicFact(raw?.procurement_procedure ?? raw?.procedure_type),
+      validityPeriod: normalizeDeterministicFact(raw?.validity_period),
+      contractTerm: normalizeDeterministicFact(raw?.contract_term),
+      lotStructure: normalizeDeterministicFact(raw?.lot_structure),
+      portalLink: normalizeDeterministicFact(raw?.portal_link),
     };
   }, [job]);
 
   const tenderFacts = useMemo<BidRoomTenderFacts>(() => {
-    const portalUrl = metaDraft.portal_url?.trim() || jobMeta?.portal_url?.trim() || null;
+    const portalUrl = metaDraft.portal_url?.trim() || jobMeta?.portal_url?.trim() || preExtractedFacts.portalLink?.value?.trim() || null;
     return {
       submissionDeadline: preExtractedFacts.submissionDeadline,
       clarificationDeadline: preExtractedFacts.clarificationDeadline,
       submissionChannel: preExtractedFacts.submissionChannel,
       procurementProcedure: preExtractedFacts.procurementProcedure,
+      validityPeriod: preExtractedFacts.validityPeriod,
+      contractTerm: preExtractedFacts.contractTerm,
+      lotStructure: preExtractedFacts.lotStructure,
       portalUrl,
     };
   }, [jobMeta, metaDraft.portal_url, preExtractedFacts]);

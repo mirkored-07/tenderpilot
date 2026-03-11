@@ -45,10 +45,14 @@ type PreExtractedTenderFacts = {
   submissionDeadline: PreExtractedDeadlineFact;
   clarificationDeadline: PreExtractedDeadlineFact;
   submissionChannel: DeterministicTenderFact | null;
+  portalLink: DeterministicTenderFact | null;
   procurementProcedure: DeterministicTenderFact | null;
+  procedureType: DeterministicTenderFact | null;
   validityPeriod: DeterministicTenderFact | null;
   contractTerm: DeterministicTenderFact | null;
   lotStructure: DeterministicTenderFact | null;
+  explicitExclusionSignals: DeterministicTenderFact[];
+  requiredSubmissionFormalities: DeterministicTenderFact[];
   attachmentMentions: Array<{ value: string; evidence_ids: string[] }>;
   scheduleMentions: Array<{ value: string; evidence_ids: string[] }>;
 };
@@ -274,6 +278,10 @@ type AiOutput = {
     submissionTimezone?: string | null;
     submissionDeadlineSource?: "llm" | "evidence_fallback" | "not_found" | "unparseable";
     tenderStatus?: TenderStatus;
+    confidenceLevel?: "high" | "medium" | "low";
+    confidenceReasons?: string[];
+    lowConfidenceFlags?: string[];
+    consistencyNotes?: string[];
     decision_reasons: Array<{
       category: "blocker" | "eligibility" | "submission" | "commercial" | "technical" | "playbook" | "uncertainty" | "fit";
       reason: string;
@@ -1920,7 +1928,126 @@ function detectExplicitClosureSignal(args: { evidenceCandidates: EvidenceCandida
   return null;
 }
 
-function applyDecisionConsistencyChecks(args: { aiOut: AiOutput }): AiOutput {
+type SubmissionRouteUnavailableSignal = {
+  title: string;
+  detail: string;
+  reason: string;
+  evidence_ids: string[];
+  matchedText: string;
+};
+
+function detectSubmissionRouteUnavailableSignal(args: { evidenceCandidates: EvidenceCandidate[]; extractedText?: string | null }): SubmissionRouteUnavailableSignal | null {
+  const route = String.raw`(?:portal|portale|plattform|plataforma|plateforme|e-?procurement|e-?sourcing|vergabeportal|e-?vergabe|procurement portal|tender portal|portail|suite|sistema telematico|submission route|upload)`;
+  const unavailable = String.raw`(?:closed|chius\w*|geschlossen|cerrad\w*|ferm\w*|not available|non disponibile|nicht verf[üu]gbar|no disponible|indisponible|not accessible|non accessibile|nicht zug[aä]nglich|no accesible|inaccessible|disabled|disabilitat\w*|deaktiviert|deshabilitad\w*|submission not possible|upload not possible|no longer accepts submissions|non consente l'invio|accepting submissions ended)`;
+  const patterns = [
+    new RegExp(`\b${route}\b[^.!?\n]{0,100}\b${unavailable}\b`, 'i'),
+    new RegExp(`\b${unavailable}\b[^.!?\n]{0,100}\b${route}\b`, 'i'),
+  ];
+
+  const snippets = collectRuleScanSnippets(args);
+  for (const snippet of snippets) {
+    for (const pattern of patterns) {
+      const match = snippet.text.match(pattern);
+      if (!match) continue;
+      const matchedText = String(match[0] ?? snippet.text).replace(/\s+/g, ' ').trim();
+      const evidenceIds = snippet.evidence_ids.length
+        ? snippet.evidence_ids
+        : bestEffortEvidenceIdsFromText({ text: matchedText || snippet.text, evidenceCandidates: args.evidenceCandidates, limit: 2 });
+      return {
+        title: 'Mandatory submission route unavailable',
+        detail: normalizeAiTextValue(`The tender documents indicate that the mandatory submission route or portal is unavailable or closed for submissions: ${matchedText}.`, 260),
+        reason: 'Mandatory submission route unavailable or closed',
+        evidence_ids: evidenceIds,
+        matchedText,
+      };
+    }
+  }
+
+  return null;
+}
+
+function applyAnalysisConfidence(args: { aiOut: AiOutput; preExtractedFacts?: PreExtractedTenderFacts | null }): AiOutput {
+  const executive = args.aiOut?.executive_summary ?? ({} as AiOutput['executive_summary']);
+  const checklist = Array.isArray(args.aiOut?.checklist) ? args.aiOut.checklist : [];
+  const risks = Array.isArray(args.aiOut?.risks) ? args.aiOut.risks : [];
+  const hardBlockers = Array.isArray(executive?.hard_blockers) ? executive.hard_blockers : [];
+  const lowConfidenceFlags = normalizeAiTextList(executive?.lowConfidenceFlags, 8, 180);
+  const confidenceReasons = normalizeAiTextList(executive?.confidenceReasons, 6, 180);
+  const consistencyNotes = normalizeAiTextList(executive?.consistencyNotes, 6, 180);
+
+  const addUnique = (bucket: string[], value: string, maxLen = 180) => {
+    const normalized = normalizeAiTextValue(value, maxLen);
+    if (!normalized) return;
+    if (!bucket.some((item) => item.toLowerCase() === normalized.toLowerCase())) bucket.push(normalized);
+  };
+
+  const unsupportedMust = checklist.filter((item: any) => String(item?.type ?? '').trim() === 'MUST' && (!Array.isArray(item?.evidence_ids) || item.evidence_ids.length === 0 || item?.needs_verification === true));
+  const unsupportedRisks = risks.filter((item: any) => !Array.isArray(item?.evidence_ids) || item.evidence_ids.length === 0 || item?.needs_verification === true);
+  const unsupportedHardBlockers = hardBlockers.filter((item: any) => !Array.isArray(item?.evidence_ids) || item.evidence_ids.length === 0);
+  const deadlineSource = String(executive?.submissionDeadlineSource ?? '').trim();
+  const tenderStatus = String(executive?.tenderStatus ?? '').trim();
+  const preExtractedFacts = args.preExtractedFacts ?? null;
+  const portalRouteDetected = Boolean(
+    preExtractedFacts?.submissionChannel?.value && /\b(portal|portale|plattform|plataforma|plateforme|suite|vergabeportal|e-?procurement|upload)\b/i.test(String(preExtractedFacts.submissionChannel.value))
+  );
+  const deadlineMentionedNarratively = [
+    ...(Array.isArray(executive?.keyFindings) ? executive.keyFindings : []),
+    ...(Array.isArray(executive?.decision_reasons) ? executive.decision_reasons.map((item: any) => item?.reason) : []),
+  ].some((item: any) => /\b(deadline|frist|scadenza|date limite|fecha l[ií]mite)\b/i.test(String(item ?? '')));
+
+  if (deadlineSource === 'not_found' || deadlineSource === 'unparseable') {
+    addUnique(lowConfidenceFlags, 'Submission deadline could not be normalized with high confidence');
+    addUnique(confidenceReasons, 'Deadline handling is partially uncertain because the source date/time could not be normalized cleanly');
+  }
+  if (tenderStatus === 'unclear') {
+    addUnique(lowConfidenceFlags, 'Tender status remains unclear from the structured deadline data');
+    addUnique(confidenceReasons, 'Tender status is not fully deterministic because the deadline status could not be resolved');
+  }
+  if (unsupportedHardBlockers.length > 0) {
+    addUnique(lowConfidenceFlags, 'One or more hard blockers are not yet linked to evidence');
+    addUnique(confidenceReasons, 'Blocker confidence is reduced because some blocker claims do not have resolved evidence ids');
+  }
+  if (unsupportedMust.length > 0) {
+    addUnique(lowConfidenceFlags, 'One or more MUST requirements still require verification');
+    addUnique(confidenceReasons, 'Critical requirements remain only partially evidenced in the current run');
+  }
+  if (unsupportedRisks.length > 0) {
+    addUnique(lowConfidenceFlags, 'Some risks are inferred without resolved supporting evidence');
+  }
+  if (portalRouteDetected && !preExtractedFacts?.portalLink?.value) {
+    addUnique(lowConfidenceFlags, 'Portal-based submission route detected but a direct portal link was not confidently extracted');
+  }
+  if (deadlineMentionedNarratively && !String(executive?.submissionDeadlineIso ?? '').trim() && deadlineSource !== 'not_found') {
+    addUnique(consistencyNotes, 'Deadline is discussed in the narrative output but does not have a normalized structured ISO value');
+  }
+  if ((preExtractedFacts?.explicitExclusionSignals?.length ?? 0) > 0) {
+    addUnique(confidenceReasons, 'The tender contains explicit exclusion wording that should be checked carefully against bidder-side readiness');
+  }
+
+  let confidenceLevel: 'high' | 'medium' | 'low' = 'high';
+  if (deadlineSource === 'not_found' || deadlineSource === 'unparseable' || unsupportedHardBlockers.length > 0 || unsupportedMust.length > 1) {
+    confidenceLevel = 'low';
+  } else if (unsupportedMust.length > 0 || unsupportedRisks.length > 0 || (portalRouteDetected && !preExtractedFacts?.portalLink?.value) || consistencyNotes.length > 0) {
+    confidenceLevel = 'medium';
+  }
+
+  if (confidenceLevel === 'high') {
+    addUnique(confidenceReasons, 'Core decision drivers are backed by structured tender facts and linked evidence in the current run');
+  }
+
+  return {
+    ...args.aiOut,
+    executive_summary: {
+      ...executive,
+      confidenceLevel,
+      confidenceReasons: confidenceReasons.slice(0, 6),
+      lowConfidenceFlags: lowConfidenceFlags.slice(0, 8),
+      consistencyNotes: consistencyNotes.slice(0, 6),
+    },
+  };
+}
+
+function applyDecisionConsistencyChecks(args: { aiOut: AiOutput; preExtractedFacts?: PreExtractedTenderFacts | null }): AiOutput {
   const executive = args.aiOut?.executive_summary ?? ({} as AiOutput["executive_summary"]);
   const startingDecision = executive?.finalDecisionBadge ?? executive?.decisionBadge;
   let finalDecisionBadge: DecisionBadge = startingDecision === "Go" || startingDecision === "Hold" || startingDecision === "No-Go"
@@ -1944,6 +2071,8 @@ function applyDecisionConsistencyChecks(args: { aiOut: AiOutput }): AiOutput {
     .filter((item: any) => item?.needs_verification === true || !Array.isArray(item?.evidence_ids) || item.evidence_ids.length === 0);
 
   const deadlineSource = String(executive?.submissionDeadlineSource ?? "").trim();
+  const preExtractedFacts = args.preExtractedFacts ?? null;
+  const unresolvedFormalityItems = unresolvedMustItems.filter((item: any) => /\b(signature|signed|firma|form|formular|formulario|modulo|template|annex|allegato|anexo|anlage|upload|portal|submission)\b/i.test(String(item?.text ?? "")));
 
   if (blockingPolicyTriggers.length) {
     const first = blockingPolicyTriggers[0];
@@ -2034,6 +2163,22 @@ function applyDecisionConsistencyChecks(args: { aiOut: AiOutput }): AiOutput {
       nextActions = [nextAction, ...nextActions].slice(0, 4);
     }
     decisionLine = normalizeAiTextValue("Hold because the submission deadline could not be reliably normalized from the current evidence pack.", 220);
+  } else if (finalDecisionBadge === "Go" && unresolvedFormalityItems.length > 0 && (preExtractedFacts?.requiredSubmissionFormalities?.length ?? 0) > 0) {
+    finalDecisionBadge = "Hold";
+    if (decisionSource !== "hard_rule" && decisionSource !== "policy_rule") decisionSource = "llm";
+    const firstFormality = normalizeAiTextValue(unresolvedFormalityItems[0]?.text, 180) || "Mandatory submission formalities";
+    const reasonText = `Mandatory submission formalities still need verification: ${firstFormality}`;
+    if (!decisionReasons.some((item: any) => String(item?.reason ?? "").toLowerCase() === reasonText.toLowerCase())) {
+      decisionReasons = [{ category: "submission", reason: reasonText, evidence_ids: Array.isArray(unresolvedFormalityItems[0]?.evidence_ids) ? unresolvedFormalityItems[0].evidence_ids : [] }, ...decisionReasons].slice(0, 6);
+    }
+    if (!keyFindings.some((item) => item.toLowerCase().includes("submission formalities"))) {
+      keyFindings = ["Mandatory submission formalities still need verification before bid submission", ...keyFindings].slice(0, 6);
+    }
+    const nextAction = "Verify mandatory forms, signatures, upload packaging, and portal submission mechanics before treating this opportunity as Go.";
+    if (!nextActions.some((item) => item.toLowerCase().includes("mandatory forms"))) {
+      nextActions = [nextAction, ...nextActions].slice(0, 4);
+    }
+    decisionLine = normalizeAiTextValue("Hold because mandatory submission formalities still need verification in the current evidence pack.", 220);
   }
 
   return {
@@ -2057,6 +2202,7 @@ function applyDecisionRules(args: {
   aiOut: AiOutput;
   evidenceCandidates: EvidenceCandidate[];
   extractedText?: string | null;
+  preExtractedFacts?: PreExtractedTenderFacts | null;
   nowIso?: string;
 }): AiOutput {
   const nowIso = String(args.nowIso ?? new Date().toISOString());
@@ -2071,7 +2217,15 @@ function applyDecisionRules(args: {
     extractedText: args.extractedText,
   });
   const tenderStatus = deriveTenderStatus({ submissionDeadlineIso: deadline.iso, nowIso });
+  const preExtractedFacts = args.preExtractedFacts ?? extractDeterministicTenderFacts({
+    evidenceCandidates: args.evidenceCandidates,
+    extractedText: args.extractedText,
+  });
   const closureSignal = detectExplicitClosureSignal({
+    evidenceCandidates: args.evidenceCandidates,
+    extractedText: args.extractedText,
+  });
+  const submissionRouteUnavailableSignal = detectSubmissionRouteUnavailableSignal({
     evidenceCandidates: args.evidenceCandidates,
     extractedText: args.extractedText,
   });
@@ -2121,6 +2275,68 @@ function applyDecisionRules(args: {
     }
 
     decisionLine = normalizeAiTextValue("No Go because the provided documents indicate that the tender is cancelled, withdrawn, closed, suspended, or otherwise ended.", 220);
+  } else if (submissionRouteUnavailableSignal) {
+    finalDecisionBadge = "No-Go";
+    decisionSource = "hard_rule";
+
+    if (!hardStopReasons.some((item) => item.toLowerCase() === submissionRouteUnavailableSignal.reason.toLowerCase())) {
+      hardStopReasons.unshift(submissionRouteUnavailableSignal.reason);
+    }
+
+    if (!hardBlockers.some((item: any) => String(item?.title ?? "").toLowerCase().includes("submission route unavailable"))) {
+      hardBlockers = [{
+        title: submissionRouteUnavailableSignal.title,
+        detail: submissionRouteUnavailableSignal.detail,
+        evidence_ids: submissionRouteUnavailableSignal.evidence_ids,
+      }, ...hardBlockers].slice(0, 5);
+    }
+
+    if (!decisionReasons.some((item: any) => String(item?.reason ?? "").toLowerCase() === submissionRouteUnavailableSignal.reason.toLowerCase())) {
+      decisionReasons = [{
+        category: "submission",
+        reason: submissionRouteUnavailableSignal.reason,
+        evidence_ids: submissionRouteUnavailableSignal.evidence_ids,
+      }, ...decisionReasons].slice(0, 6);
+    }
+
+    if (!keyFindings.some((item) => item.toLowerCase().includes("submission route") || item.toLowerCase().includes("portal"))) {
+      keyFindings = [submissionRouteUnavailableSignal.title, ...keyFindings].slice(0, 6);
+    }
+
+    const nextAction = "Treat this tender as not actionable until the buyer re-enables the required submission route or confirms an alternative submission method.";
+    if (!nextActions.some((item) => item.toLowerCase().includes("submission route") || item.toLowerCase().includes("alternative submission method"))) {
+      nextActions = [nextAction, ...nextActions].slice(0, 4);
+    }
+
+    decisionLine = normalizeAiTextValue("No Go because the mandatory submission route appears unavailable or closed for submissions.", 220);
+  }
+
+  if (finalDecisionBadge !== "No-Go" && (preExtractedFacts.explicitExclusionSignals?.length ?? 0) > 0) {
+    finalDecisionBadge = "Hold";
+    if (decisionSource !== "hard_rule" && decisionSource !== "policy_rule") decisionSource = "llm";
+
+    const exclusionFact = preExtractedFacts.explicitExclusionSignals[0];
+    const reasonText = normalizeAiTextValue(`Tender contains explicit exclusion wording that should be checked carefully before bid submission: ${exclusionFact?.value ?? 'Exclusion wording detected'}`, 220)
+      || 'Tender contains explicit exclusion wording that should be checked carefully before bid submission';
+    const evidenceIds = Array.isArray(exclusionFact?.evidence_ids) ? exclusionFact.evidence_ids : [];
+
+    if (!decisionReasons.some((item: any) => String(item?.reason ?? '').toLowerCase() === reasonText.toLowerCase())) {
+      decisionReasons = [{
+        category: 'eligibility',
+        reason: reasonText,
+        evidence_ids: evidenceIds,
+      }, ...decisionReasons].slice(0, 6);
+    }
+
+    if (!keyFindings.some((item) => item.toLowerCase().includes('exclusion wording'))) {
+      keyFindings = ['Tender contains explicit exclusion wording that should be checked against bidder readiness', ...keyFindings].slice(0, 6);
+    }
+
+    if (!nextActions.some((item) => item.toLowerCase().includes('exclusion wording'))) {
+      nextActions = ['Verify explicit exclusion wording, mandatory declarations, and bidder-side admissibility before submission.', ...nextActions].slice(0, 4);
+    }
+
+    decisionLine = normalizeAiTextValue('Hold because the tender contains explicit exclusion wording that still needs bidder-side verification.', 220);
   }
 
   if (tenderStatus === "expired") {
@@ -2609,6 +2825,79 @@ function pickBestDeterministicFact(lines: FactScanLine[], pattern: RegExp, label
   };
 }
 
+function pickDeterministicFactList(lines: FactScanLine[], pattern: RegExp, labelBias: string[] = [], maxItems = 3): DeterministicTenderFact[] {
+  const scored = lines
+    .map((line, index) => {
+      const regex = new RegExp(pattern.source, pattern.flags);
+      if (!regex.test(line.text)) return null;
+      let score = line.source === "evidence" ? 5 : 2;
+      if (line.evidence_ids.length) score += 2;
+      const lower = line.text.toLowerCase();
+      for (const token of labelBias) {
+        if (token && lower.includes(token.toLowerCase())) score += 1;
+      }
+      if (line.text.length <= 240) score += 1;
+      return {
+        line,
+        score,
+        index,
+        value: trimFactValue(extractFocusedSnippet(line.text, regex, 150), 220),
+      };
+    })
+    .filter(Boolean) as Array<{ line: FactScanLine; score: number; index: number; value: string }>;
+
+  scored.sort((a, b) => (b.score - a.score) || (a.index - b.index));
+  const out: DeterministicTenderFact[] = [];
+  const seen = new Set<string>();
+
+  for (const item of scored) {
+    const key = item.value.toLowerCase();
+    if (!item.value || seen.has(key)) continue;
+    seen.add(key);
+    out.push({
+      value: item.value,
+      evidence_ids: item.line.evidence_ids.slice(0, 3),
+      source: item.line.source,
+      confidence: item.line.source === "evidence" ? "high" : "medium",
+    });
+    if (out.length >= maxItems) break;
+  }
+
+  return out;
+}
+
+function pickBestPortalLinkFact(lines: FactScanLine[]): DeterministicTenderFact | null {
+  const urlRegex = /\b(?:https?:\/\/|www\.)[^\s<>()"']+/i;
+  const portalContext = /\b(portal|portale|plattform|plataforma|plateforme|e-?procurement|e-?sourcing|vergabeportal|e-?vergabe|procurement portal|tender portal|portail|suite|sistema telematico|portal de compras)\b/i;
+
+  const scored = lines
+    .map((line, index) => {
+      const urlMatch = line.text.match(urlRegex);
+      if (!urlMatch) return null;
+      if (!portalContext.test(line.text)) return null;
+      let score = line.source === "evidence" ? 5 : 2;
+      if (line.evidence_ids.length) score += 2;
+      if (/https?:\/\//i.test(urlMatch[0])) score += 1;
+      return {
+        line,
+        score,
+        index,
+        value: trimFactValue(String(urlMatch[0]).replace(/[),.;]+$/, ""), 220),
+      };
+    })
+    .filter(Boolean) as Array<{ line: FactScanLine; score: number; index: number; value: string }>;
+
+  scored.sort((a, b) => (b.score - a.score) || (a.index - b.index));
+  const best = scored[0];
+  if (!best || !best.value) return null;
+  return {
+    value: best.value,
+    evidence_ids: best.line.evidence_ids.slice(0, 3),
+    source: best.line.source,
+    confidence: best.line.source === "evidence" ? "high" : "medium",
+  };
+}
+
 function extractNamedTenderReferences(lines: FactScanLine[], kind: "attachment" | "schedule") {
   const out: Array<{ value: string; evidence_ids: string[] }> = [];
   const seen = new Set<string>();
@@ -2646,32 +2935,48 @@ function extractDeterministicTenderFacts(args: { evidenceCandidates: EvidenceCan
 
   const submissionChannel = pickBestDeterministicFact(
     lines,
-    /\b(e-?sourcing|procurement portal|portal(?:e)? telematic[oa]?|piattaforma telematica|tramite il portale|through the portal|via the portal|suite|sistema telematico|pec|email|upload|caricare|presentare .* portale|plateforme|portail|portail d'achat|via il portale|durch das portal|vergabeportal|e-?vergabe|über das portal|uber das portal|plataforma|portal de compras|a trav[eé]s del portal|mediante el portal)\b/i,
-    ["submit", "submission", "presentazione", "offerta", "portal", "portale", "suite", "soumission", "offre", "angebot", "einreich", "presentación"],
+    /^(e-?sourcing|procurement portal|portal(?:e)? telematic[oa]?|piattaforma telematica|tramite il portale|through the portal|via the portal|suite|sistema telematico|pec|email|upload|caricare|presentare .* portale|plateforme|portail|portail d'achat|via il portale|durch das portal|vergabeportal|e-?vergabe|über das portal|uber das portal|plataforma|portal de compras|a trav[eé]s del portal|mediante el portal)$/i,
+    ['submit', 'submission', 'presentazione', 'offerta', 'portal', 'portale', 'suite', 'soumission', 'offre', 'angebot', 'einreich', 'presentación'],
   );
+
+  const portalLink = pickBestPortalLinkFact(lines);
 
   const procurementProcedure = pickBestDeterministicFact(
     lines,
-    /\b(open procedure|restricted procedure|competitive procedure|negotiated procedure|framework agreement|dynamic purchasing system|invitation to tender|procedura aperta|procedura ristretta|procedura negoziata|accordo quadro|sistema dinamico di acquisizione|gara europea|disciplinare di gara|proc[eé]dure ouverte|proc[eé]dure restreinte|proc[eé]dure n[eé]goci[eé]e|accord-cadre|syst[eè]me dynamique d'acquisition|offenes verfahren|nichtoffenes verfahren|verhandlungsverfahren|rahmenvereinbarung|dynamisches beschaffungssystem|procedimiento abierto|procedimiento restringido|procedimiento negociado|acuerdo marco|sistema din[aá]mico de adquisici[oó]n)\b/i,
-    ["procedure", "procedura", "framework", "tender", "gara", "procédure", "verfahren", "procedimiento"],
+    /^(open procedure|restricted procedure|competitive procedure|negotiated procedure|framework agreement|dynamic purchasing system|invitation to tender|procedura aperta|procedura ristretta|procedura negoziata|accordo quadro|sistema dinamico di acquisizione|gara europea|disciplinare di gara|proc[eé]dure ouverte|proc[eé]dure restreinte|proc[eé]dure n[eé]goci[eé]e|accord-cadre|syst[eè]me dynamique d'acquisition|offenes verfahren|nichtoffenes verfahren|verhandlungsverfahren|rahmenvereinbarung|dynamisches beschaffungssystem|procedimiento abierto|procedimiento restringido|procedimiento negociado|acuerdo marco|sistema din[aá]mico de adquisición)$/i,
+    ['procedure', 'procedura', 'framework', 'tender', 'gara', 'procédure', 'verfahren', 'procedimiento'],
   );
 
   const validityPeriod = pickBestDeterministicFact(
     lines,
-    /\b(validity period|remain valid|valid for \d+ days|\d+ days following|\d+ giorni|validit[aà] dell'offerta|vincolat\w*|offerta .* valid|remain capable of acceptance|dur[eé]e de validit[eé]|offre .* valable|g[üu]ltig(?:keit)?|bindefrist|plazo de validez|validez de la oferta|oferta .* v[aá]lida)\b/i,
-    ["valid", "giorni", "days", "offerta", "offer", "validité", "gültig", "bindefrist", "validez"],
+    /^(validity period|remain valid|valid for \d+ days|\d+ days following|\d+ giorni|validit[aà] dell'offerta|vincolat\w*|offerta .* valid|remain capable of acceptance|dur[eé]e de validit[eé]|offre .* valable|gültig(?:keit)?|bindefrist|plazo de validez|validez de la oferta|oferta .* v[aá]lida)$/i,
+    ['valid', 'giorni', 'days', 'offerta', 'offer', 'validità', 'gültig', 'bindefrist', 'validez'],
   );
 
   const contractTerm = pickBestDeterministicFact(
     lines,
-    /\b(contract term|contract duration|duration of the contract|durata del contratto|durata dell'appalto|durata .* mesi|durata .* anni|term of this framework|months? from|years? from|renewal|extension|prorog\w*|dur[eé]e du contrat|dur[eé]e du march[eé]|dur[eé]e .* mois|dur[eé]e .* ans|vertragslaufzeit|vertragsdauer|laufzeit .* monate|laufzeit .* jahre|duraci[oó]n del contrato|duraci[oó]n .* meses|duraci[oó]n .* años|pr[oó]rroga)\b/i,
-    ["contract", "durata", "months", "years", "renewal", "extension", "contrat", "vertrag", "contrato"],
+    /^(contract term|contract duration|duration of the contract|durata del contratto|durata dell'appalto|durata .* mesi|durata .* anni|term of this framework|months? from|years? from|renewal|extension|prorog\w*|dur[eé]e du contrat|dur[eé]e du march[eé]|dur[eé]e .* mois|dur[eé]e .* ans|vertragslaufzeit|vertragsdauer|laufzeit .* monate|laufzeit .* jahre|duración del contrato|duración .* meses|duración .* años|prórroga)$/i,
+    ['contract', 'durata', 'months', 'years', 'renewal', 'extension', 'contrat', 'vertrag', 'contrato'],
   );
 
   const lotStructure = pickBestDeterministicFact(
     lines,
-    /\b(lot(?:s)?|single lot|multi-?lot|lotti?|lotto unico|suddivis\w* in lotti|allotissement|lots?|los(?:e)?|einzellose?|mehrere lose|dividido en lotes|lote[s]?)\b/i,
-    ["lot", "lotti", "lotto", "lots", "lose", "lotes"],
+    /^(lot(?:s)?|single lot|multi-?lot|lotti?|lotto unico|suddivis\w* in lotti|allotissement|los(?:e)?|einzellose?|mehrere lose|dividido en lotes|lote(?:s)?)$/i,
+    ['lot', 'lotti', 'lotto', 'lots', 'lose', 'lotes'],
+  );
+
+  const explicitExclusionSignals = pickDeterministicFactList(
+    lines,
+    /^(a pena di esclusione|pena di esclusione|esclusione|sar[aà] esclus[oa]|saranno esclus[ie]|will be excluded|shall be excluded|will be rejected|shall be rejected|inadmissible|non ammissibile|non admissible|ausgeschlossen|wird ausgeschlossen|ser[aá] excluid[oa]|quedar[aá] excluid[oa]|sera rejet[eé]e?|rejet[eé]e? d'office)$/i,
+    ['excluded', 'rejected', 'esclusione', 'a pena', 'ausgeschlossen', 'inadmissible', 'excluid'],
+    3,
+  );
+
+  const requiredSubmissionFormalities = pickDeterministicFactList(
+    lines,
+    /^(digital signature|electronic signature|qualified electronic signature|signature required|signed declaration|signed form|signature form|firma digitale|firma elettronica|sottoscritt\w*|firma obbligatoria|modulo firmato|modello firmato|busta amministrativa|busta tecnica|busta economica|formato pdf|file pdf|sign[eé] électronique\w*|signature électronique|document sign[eé]|unterzeichnet|qualifizierte elektronische signatur|formblatt|formular unterschrieben|firma electrónica|documento firmado|formulario firmado|adjuntar .* firmado)$/i,
+    ['signature', 'firma', 'signed', 'form', 'modulo', 'formulario', 'pdf', 'busta', 'formular', 'unterzeichnet'],
+    4,
   );
 
   return {
@@ -2679,22 +2984,26 @@ function extractDeterministicTenderFacts(args: { evidenceCandidates: EvidenceCan
       text: deadline.rawText || DEADLINE_NOT_FOUND_TEXT,
       iso: deadline.iso,
       timezone: deadline.timezone,
-      source: deadline.source === "evidence_fallback"
-        ? "parsed_from_evidence"
-        : deadline.source === "not_found"
-          ? "not_found"
-          : deadline.source === "unparseable"
-            ? "unparseable"
-            : "parsed_from_evidence",
+      source: deadline.source === 'evidence_fallback'
+        ? 'parsed_from_evidence'
+        : deadline.source === 'not_found'
+          ? 'not_found'
+          : deadline.source === 'unparseable'
+            ? 'unparseable'
+            : 'parsed_from_evidence',
     },
     clarificationDeadline,
     submissionChannel,
+    portalLink,
     procurementProcedure,
+    procedureType: procurementProcedure,
     validityPeriod,
     contractTerm,
     lotStructure,
-    attachmentMentions: extractNamedTenderReferences(lines, "attachment"),
-    scheduleMentions: extractNamedTenderReferences(lines, "schedule"),
+    explicitExclusionSignals,
+    requiredSubmissionFormalities,
+    attachmentMentions: extractNamedTenderReferences(lines, 'attachment'),
+    scheduleMentions: extractNamedTenderReferences(lines, 'schedule'),
   };
 }
 
@@ -2724,11 +3033,19 @@ function buildPreExtractedFactsSection(facts: PreExtractedTenderFacts): string {
   };
 
   pushFact("Submission channel", facts.submissionChannel);
+  pushFact("Portal link", facts.portalLink);
   pushFact("Procurement procedure", facts.procurementProcedure);
+  pushFact("Procedure type", facts.procedureType);
   pushFact("Tender validity period", facts.validityPeriod);
   pushFact("Contract term", facts.contractTerm);
   pushFact("Lot structure", facts.lotStructure);
 
+  const exclusionSummary = facts.explicitExclusionSignals.length
+    ? facts.explicitExclusionSignals.map((item) => `${item.value}${item.evidence_ids.length ? ` [${item.evidence_ids.join(", ")}]` : ""}`).join("; ")
+    : "none confidently pre-extracted";
+  const formalitySummary = facts.requiredSubmissionFormalities.length
+    ? facts.requiredSubmissionFormalities.map((item) => `${item.value}${item.evidence_ids.length ? ` [${item.evidence_ids.join(", ")}]` : ""}`).join("; ")
+    : "none confidently pre-extracted";
   const attachmentSummary = facts.attachmentMentions.length
     ? facts.attachmentMentions.map((item) => `${item.value}${item.evidence_ids.length ? ` [${item.evidence_ids.join(", ")}]` : ""}`).join("; ")
     : "none confidently pre-extracted";
@@ -2736,6 +3053,8 @@ function buildPreExtractedFactsSection(facts: PreExtractedTenderFacts): string {
     ? facts.scheduleMentions.map((item) => `${item.value}${item.evidence_ids.length ? ` [${item.evidence_ids.join(", ")}]` : ""}`).join("; ")
     : "none confidently pre-extracted";
 
+  lines.push(`- Explicit exclusion signals: ${exclusionSummary}`);
+  lines.push(`- Required submission formalities: ${formalitySummary}`);
   lines.push(`- Named attachments: ${attachmentSummary}`);
   lines.push(`- Named schedules: ${scheduleSummary}`);
   return lines.join("\n");
@@ -4187,6 +4506,7 @@ let extractedText = "";
         pre_extracted_deadline_source: preExtractedFacts.submissionDeadline.source,
         pre_extracted_deadline_iso: preExtractedFacts.submissionDeadline.iso,
         pre_extracted_submission_channel: preExtractedFacts.submissionChannel?.value ?? null,
+        pre_extracted_portal_link: preExtractedFacts.portalLink?.value ?? null,
         pre_extracted_procurement_procedure: preExtractedFacts.procurementProcedure?.value ?? null,
         pre_extracted_clarification_deadline_iso: preExtractedFacts.clarificationDeadline.iso,
       });
@@ -4273,6 +4593,7 @@ let extractedText = "";
       aiOut,
       evidenceCandidates,
       extractedText,
+      preExtractedFacts,
       nowIso: new Date().toISOString(),
     });
 
@@ -4408,7 +4729,8 @@ let extractedText = "";
       };
     }
 
-    aiOut = applyDecisionConsistencyChecks({ aiOut });
+    aiOut = applyAnalysisConfidence({ aiOut, preExtractedFacts });
+    aiOut = applyDecisionConsistencyChecks({ aiOut, preExtractedFacts });
 
     const decisionMeta = (aiOut as any)?.executive_summary ?? {};
     const decisionPipelineResult = await mergeJobPipeline(supabaseAdmin, job, {
@@ -4426,10 +4748,14 @@ let extractedText = "";
           submission_deadline: preExtractedFacts.submissionDeadline,
           clarification_deadline: preExtractedFacts.clarificationDeadline,
           submission_channel: preExtractedFacts.submissionChannel,
+          portal_link: preExtractedFacts.portalLink,
           procurement_procedure: preExtractedFacts.procurementProcedure,
+          procedure_type: preExtractedFacts.procedureType,
           validity_period: preExtractedFacts.validityPeriod,
           contract_term: preExtractedFacts.contractTerm,
           lot_structure: preExtractedFacts.lotStructure,
+          explicit_exclusion_signals: preExtractedFacts.explicitExclusionSignals,
+          required_submission_formalities: preExtractedFacts.requiredSubmissionFormalities,
           attachment_mentions: preExtractedFacts.attachmentMentions,
           schedule_mentions: preExtractedFacts.scheduleMentions,
         },

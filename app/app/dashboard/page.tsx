@@ -7,6 +7,7 @@ import { MoreHorizontal, RefreshCw } from "lucide-react";
 import { supabaseBrowser } from "@/lib/supabase/browser";
 import { isBlockedWorkStatus, isDoneWorkStatus as isCanonicalDoneWorkStatus } from "@/lib/bid-workflow/work-status";
 import { getJobDisplayName } from "@/lib/pilot-job-names";
+import { getEffectiveReviewState, decisionBucket } from "@/lib/review-state";
 import { useAppI18n } from "../_components/app-i18n-provider";
 
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +34,7 @@ type DbJob = {
   user_id: string;
   status: JobStatus;
   file_name: string | null;
+  pipeline: any;
   created_at: string;
   updated_at: string;
 };
@@ -40,7 +42,6 @@ type DbJob = {
 type DbJobResult = {
   job_id: string;
   executive_summary: any;
-  pipeline: any;
   created_at: string;
   updated_at: string;
 };
@@ -102,50 +103,8 @@ function DecisionBadge({ raw }: { raw: string }) {
   );
 }
 
-function normalizeDecisionText(raw: string): string {
-  return String(raw ?? "")
-    .toLowerCase()
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function isUseExtractedDecisionOverride(v: unknown): boolean {
-  const t = String(v ?? "")
-    .toLowerCase()
-    .replace(/\s+/g, " ")
-    .trim();
-
-  // Treat sentinel UI values as "no override"
-  if (!t) return true;
-  if (t === "extracted") return true;
-  if (t.includes("use extracted")) return true;
-  if (t.includes("extracted decision")) return true;
-  if (t.startsWith("(") && t.includes("extracted")) return true;
-
-  return false;
-}
-
-function decisionBucket(raw: string): "go" | "hold" | "no-go" | "unknown" {
-  const t = normalizeDecisionText(raw);
-
-  // Order matters: check no-go first so "go/no-go" doesn't classify as "go"
-  const isNoGo =
-    /\b(no[-\s]?go|nogo|do\s+not\s+(bid|proceed|submit)|not\s+(bid|proceed|submit)|reject|decline|withdraw)\b/.test(t);
-  if (isNoGo) return "no-go";
-
-  // Treat "Proceed with caution" as Hold (caution state)
-  const isHold =
-  /\b(hold|caution|clarif(y|ication)|verify|pending|tbd|conditional|depends|review)\b/.test(t) ||
-  t.includes("proceed with caution");
-if (isHold) return "hold";
 
 
-
-  const isGo = /\b(go|proceed|bid|submit)\b/.test(t);
-  if (isGo) return "go";
-
-  return "unknown";
-}
 
 function isDoneStatus(s?: string | null) {
   return isCanonicalDoneWorkStatus(s);
@@ -318,7 +277,7 @@ export default function DashboardPage() {
 
       const { data: jobsData, error: jobsErr } = await supabase
         .from("jobs")
-        .select("id,user_id,status,file_name,created_at,updated_at")
+        .select("id,user_id,status,file_name,pipeline,created_at,updated_at")
         .order("created_at", { ascending: false })
         .limit(200);
 
@@ -329,7 +288,7 @@ export default function DashboardPage() {
 
       const { data: resultsData } = await supabase
         .from("job_results")
-        .select("job_id,executive_summary,pipeline,created_at,updated_at")
+        .select("job_id,executive_summary,created_at,updated_at")
         .in("job_id", ids);
 
       const resMap: Record<string, any> = {};
@@ -377,31 +336,21 @@ export default function DashboardPage() {
       const exec = r?.executive_summary ?? {};
       const meta = jobMeta[job.id];
 
-      const extractedDeadlineText = String(exec?.submissionDeadline ?? "").trim();
-      const extractedDeadline = parseDeadlineToDateLocal(extractedDeadlineText);
-
-      const deadline = meta?.deadline_override ? new Date(String(meta.deadline_override)) : extractedDeadline;
+      const pipeline = (job as any)?.pipeline ?? null;
+      const reviewState = getEffectiveReviewState({
+        executive: exec,
+        pipeline,
+        decisionOverride: meta?.decision_override,
+        deadlineOverride: meta?.deadline_override,
+      });
+      const deadlineText = reviewState.submissionDeadlineText;
+      const deadlineIso = reviewState.submissionDeadlineIso;
+      const deadline = parseDeadlineToDateLocal(deadlineIso || deadlineText);
       const hasValidDeadline = !!deadline && Number.isFinite((deadline as Date).getTime());
-
-     const extractedDecisionTextRaw = String(
-		  exec?.decisionBadge ?? exec?.decision ?? exec?.verdict ?? ""
-		).trim();
-
-		// Keep dashboard consistent with Job page: if AI did not provide a decision badge,
-		// the UI defaults to "Proceed with caution" (caution state), not "missing".
-		const extractedDecisionText = extractedDecisionTextRaw || "Hold";
+      const decisionText = reviewState.decisionText;
+      const bucket = reviewState.decision;
 
 
-
-	const overrideRaw = meta?.decision_override;
-	const decisionText = isUseExtractedDecisionOverride(overrideRaw)
-	  ? extractedDecisionText
-	  : String(overrideRaw ?? "").trim();
-
-	const bucket = decisionBucket(decisionText);
-
-
-      const deadlineText = meta?.deadline_override ? String(meta.deadline_override) : extractedDeadlineText;
       const decisionLabel =
         bucket === "go"
           ? t("app.decision.go")
@@ -1536,7 +1485,7 @@ return {
                                 </Badge>
                               )}
                               <Badge variant="outline" className="rounded-full">
-                                {r.job.status}
+                                {r.job.status === "done" ? t("app.review.state.ready") : r.job.status === "processing" ? t("app.common.processing") : r.job.status === "queued" ? t("app.common.queued") : t("app.common.failed")}
                               </Badge>
                             </div>
                           </div>

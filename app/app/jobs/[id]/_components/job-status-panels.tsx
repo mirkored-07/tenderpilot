@@ -199,7 +199,7 @@ export function ProgressCard({
       : status === "processing"
         ? t("app.review.progress.working")
         : status === "done"
-          ? t("app.common.ready")
+          ? t("app.review.state.ready")
           : failure.title;
 
   const subtitle =

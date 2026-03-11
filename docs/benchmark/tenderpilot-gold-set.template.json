@@ -1,0 +1,61 @@
+{
+  "benchmark_name": "TenderPilot Phase 6 gold set",
+  "version": 1,
+  "cases": [
+    {
+      "case_id": "expired_deadline_clear",
+      "label": "Expired tender with explicit deadline",
+      "input_notes": "Use a tender whose submission deadline is clearly in the past and evidenced in the source PDF.",
+      "expected": {
+        "deadline_correctness": 2,
+        "tender_status": "expired",
+        "final_decision": "No-Go",
+        "decision_source": "hard_rule",
+        "main_blocker_contains": "deadline",
+        "evidence_support_quality": 2,
+        "bidder_unknown_separation": 2,
+        "structural_completeness": 2
+      },
+      "review": {
+        "actual": {},
+        "scores": {},
+        "notes": ""
+      }
+    },
+    {
+      "case_id": "open_portal_submission",
+      "label": "Open tender with portal submission route",
+      "input_notes": "Use a tender with a portal URL and clear submission mechanics.",
+      "expected": {
+        "deadline_correctness": 2,
+        "tender_status": "open",
+        "final_decision": "Hold",
+        "main_blocker_contains": "",
+        "evidence_support_quality": 2,
+        "bidder_unknown_separation": 2,
+        "structural_completeness": 2
+      },
+      "review": {
+        "actual": {},
+        "scores": {},
+        "notes": ""
+      }
+    },
+    {
+      "case_id": "explicit_exclusion_wording",
+      "label": "Tender with explicit exclusion wording",
+      "input_notes": "Use a tender that contains exclusion wording such as a pena di esclusione, inadmissible, or equivalent.",
+      "expected": {
+        "final_decision": "Hold",
+        "main_blocker_contains": "exclusion",
+        "evidence_support_quality": 2,
+        "confidence_signal_quality": 2
+      },
+      "review": {
+        "actual": {},
+        "scores": {},
+        "notes": ""
+      }
+    }
+  ]
+}

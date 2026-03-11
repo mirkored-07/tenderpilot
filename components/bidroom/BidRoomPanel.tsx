@@ -59,6 +59,9 @@ type BidRoomTenderFacts = {
   clarificationDeadline: TenderDeadlineFact | null;
   submissionChannel: TenderFactValue | null;
   procurementProcedure: TenderFactValue | null;
+  validityPeriod: TenderFactValue | null;
+  contractTerm: TenderFactValue | null;
+  lotStructure: TenderFactValue | null;
   portalUrl: string | null;
 };
 
@@ -204,6 +207,8 @@ export function BidRoomPanel(props: {
         return `${dd}/${mo}/${yyyy}`;
       }
     }
+
+    if (raw && !looksUnknownValue(raw)) return raw;
 
     if (deadline?.iso) {
       const d = new Date(deadline.iso);
@@ -386,6 +391,36 @@ export function BidRoomPanel(props: {
       });
     }
 
+    if (tenderFacts?.validityPeriod?.value) {
+      cards.push({
+        key: "validity_period",
+        label: tx("app.bidroom.facts.labels.validityPeriod", "Validity period"),
+        value: compactFactValue(tenderFacts.validityPeriod.value, 72),
+        evidenceIds: tenderFacts.validityPeriod.evidenceIds,
+        kind: "fact",
+      });
+    }
+
+    if (tenderFacts?.contractTerm?.value) {
+      cards.push({
+        key: "contract_term",
+        label: tx("app.bidroom.facts.labels.contractTerm", "Contract term"),
+        value: compactFactValue(tenderFacts.contractTerm.value, 72),
+        evidenceIds: tenderFacts.contractTerm.evidenceIds,
+        kind: "fact",
+      });
+    }
+
+    if (tenderFacts?.lotStructure?.value) {
+      cards.push({
+        key: "lot_structure",
+        label: tx("app.bidroom.facts.labels.lotStructure", "Lot structure"),
+        value: compactFactValue(tenderFacts.lotStructure.value, 72),
+        evidenceIds: tenderFacts.lotStructure.evidenceIds,
+        kind: "fact",
+      });
+    }
+
     if (tenderFacts?.portalUrl) {
       cards.push({
         key: "portal_url",
@@ -464,8 +499,41 @@ export function BidRoomPanel(props: {
       });
     }
 
+    if (tenderFacts?.validityPeriod?.value) {
+      rows.push({
+        type: "admin",
+        ref_key: stableRefKey({ jobId, type: "admin", text: "validity_period", extra: tenderFacts.validityPeriod.value }),
+        title: tx("app.bidroom.autogen.validityPeriod", "Confirm offer validity period: {value}", { value: compactFactValue(tenderFacts.validityPeriod.value, 72) }),
+        meta: tx("app.bidroom.facts.labels.validityPeriod", "Validity period"),
+        evidenceIds: tenderFacts.validityPeriod.evidenceIds,
+        defaultStatus: "todo",
+      });
+    }
+
+    if (tenderFacts?.contractTerm?.value) {
+      rows.push({
+        type: "admin",
+        ref_key: stableRefKey({ jobId, type: "admin", text: "contract_term", extra: tenderFacts.contractTerm.value }),
+        title: tx("app.bidroom.autogen.contractTerm", "Review contract term and delivery horizon: {value}", { value: compactFactValue(tenderFacts.contractTerm.value, 72) }),
+        meta: tx("app.bidroom.facts.labels.contractTerm", "Contract term"),
+        evidenceIds: tenderFacts.contractTerm.evidenceIds,
+        defaultStatus: "todo",
+      });
+    }
+
+    if (tenderFacts?.lotStructure?.value) {
+      rows.push({
+        type: "admin",
+        ref_key: stableRefKey({ jobId, type: "admin", text: "lot_structure", extra: tenderFacts.lotStructure.value }),
+        title: tx("app.bidroom.autogen.lotStructure", "Confirm bidding scope by lot: {value}", { value: compactFactValue(tenderFacts.lotStructure.value, 72) }),
+        meta: tx("app.bidroom.facts.labels.lotStructure", "Lot structure"),
+        evidenceIds: tenderFacts.lotStructure.evidenceIds,
+        defaultStatus: "todo",
+      });
+    }
+
     return rows;
-  }, [jobId, t, tenderFacts]);
+  }, [jobId, t, tenderFacts, tx]);
 
   const workBaseRows: WorkBaseRow[] = useMemo(() => {
     const rows: WorkBaseRow[] = [...factWorkRows];
