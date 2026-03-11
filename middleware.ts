@@ -5,7 +5,7 @@ import { NextResponse, type NextRequest } from "next/server";
 // - /auth/callback (sets cookies)
 // - client-side supabaseBrowser() refresh
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   return NextResponse.next({
     request: { headers: request.headers },
   });
