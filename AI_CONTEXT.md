@@ -12,6 +12,10 @@ TenderPilot is transitioning from MVP to a hardened production application. The 
 ## Active Sprint / Next Steps
 - **Step 3:** Audit the Bid Room (`app/app/jobs/[id]/page.tsx` and related components) to ensure the execution layer uses the exact same deadline and decision rendering logic as the portfolio layer.
 
+## Known Issues / Audit Findings (March 2026)
+1. **Bid Room Save (`job_work_items` check constraint):** The UI added support for `deadline`, `submission`, and `admin` types but the database `job_work_items_type_check` constraint wasn't updated. A fix script was added to `supabase/job_work_items_type_check.sql` to drop and recreate the constraint to allow these types.
+2. **TypeScript `any` Types:** The codebase has ~850 `any` type usages flagged by the linter. Future work should incrementally adopt strict type definitions to prevent runtime regressions.
+
 ## AI Execution Rules (Strict)
 1. **Full File Output:** When writing or refactoring code, the AI must output the *entire, complete file content* (no truncating or saying "rest of the code goes here"). 
 2. **File Paths:** The AI must always state the exact folder structure and file name above the code block so the user can easily copy and paste to replace the local file (e.g., `app/app/jobs/[id]/page.tsx`).
