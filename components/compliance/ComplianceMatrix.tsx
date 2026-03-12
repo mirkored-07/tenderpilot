@@ -18,7 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { FileDown, FileText, MoreHorizontal, X } from "lucide-react";
+import { FileDown, FileText, MoreHorizontal, X, User } from "lucide-react";
 import { useAppI18n } from "@/app/app/_components/app-i18n-provider";
 
 type ReqType = "MUST" | "SHOULD" | "INFO";
@@ -29,6 +29,7 @@ type NormalizedReq = {
   kind: ReqType;
   text: string;
   evidenceIds: string[];
+  owner_label?: string;
   base_ref_key: string; // aligns with Bid room requirement key
   cm_ref_key: string; // stored overlay key for compliance
 };
@@ -323,7 +324,7 @@ export function ComplianceMatrix(props: {
         ref_key: req.base_ref_key,
         title: req.text,
         status: "todo",
-        owner_label: null,
+        owner_label: req.owner_label || null,
         due_at: null,
         notes: noteParts.join(" • "),
       };
@@ -368,10 +369,12 @@ export function ComplianceMatrix(props: {
         const text = String(textRaw ?? "").trim();
         if (!text) return null;
 
+        const owner_label = String((it as any)?.owner_label ?? (it as any)?.owner ?? (it as any)?.assignee ?? "").trim();
+
         const base_ref_key = stableRefKey({ jobId, type: "requirement", text, extra: kind });
         const cm_ref_key = `${CM_PREFIX}${base_ref_key}`;
 
-        return { kind, text, evidenceIds, base_ref_key, cm_ref_key };
+        return { kind, text, evidenceIds, owner_label, base_ref_key, cm_ref_key };
       })
       .filter(Boolean) as NormalizedReq[];
   }, [checklist, jobId]);
@@ -396,7 +399,8 @@ export function ComplianceMatrix(props: {
         (String(j?.complianceStatus ?? "tbd").toLowerCase() as ComplianceStatus) || "tbd";
       const proposalSection = String(j?.proposalSection ?? "");
       const note = String(j?.note ?? "");
-      return { r, w, j, complianceStatus, proposalSection, note };
+      const ownerLabel = String(w?.owner_label ?? r.owner_label ?? "");
+      return { r, w, j, complianceStatus, proposalSection, note, ownerLabel };
     });
   }, [normalized, cmByRef]);
 
@@ -464,6 +468,7 @@ export function ComplianceMatrix(props: {
           x.r.base_ref_key,
           x.r.kind,
           x.r.text,
+          x.ownerLabel,
           x.complianceStatus,
           x.proposalSection,
           x.note,
@@ -492,6 +497,7 @@ export function ComplianceMatrix(props: {
     complianceStatus?: ComplianceStatus;
     proposalSection?: string;
     note?: string;
+    ownerLabel?: string;
   }) {
     setWorkError(null);
     setSavingKey(input.cm_ref_key);
@@ -523,6 +529,8 @@ export function ComplianceMatrix(props: {
       if (!next.complianceStatus) next.complianceStatus = current?.complianceStatus ?? "tbd";
       if (typeof next.proposalSection !== "string") next.proposalSection = String(current?.proposalSection ?? "");
       if (typeof next.note !== "string") next.note = String(current?.note ?? "");
+      
+      const nextOwnerLabel = Object.prototype.hasOwnProperty.call(input, "ownerLabel") ? input.ownerLabel : String((existing as any)?.owner_label ?? "");
 
       // Keep compliance data isolated from Bid room by using cm__-prefixed ref_key.
       // Store compliance fields inside notes as JSON; keep status as "todo".
@@ -532,7 +540,7 @@ export function ComplianceMatrix(props: {
         ref_key: input.cm_ref_key,
         title: input.title,
         status: "todo",
-        owner_label: null,
+        owner_label: nextOwnerLabel || null,
         due_at: null,
         notes: stringifyJsonNotes(next),
       };
@@ -540,7 +548,7 @@ export function ComplianceMatrix(props: {
       if (existing && (existing as any).id) {
         const { error } = await supabase
           .from("job_work_items")
-          .update({ title: payload.title, notes: payload.notes })
+          .update({ title: payload.title, notes: payload.notes, owner_label: payload.owner_label })
           .eq("id", (existing as any).id);
         if (error) throw error;
       } else {
@@ -768,7 +776,7 @@ export function ComplianceMatrix(props: {
                 const evResolved = firstEv ? evidenceById.get(firstEv) : undefined;
 
                 return (
-                  <div key={r.cm_ref_key} className="px-4 py-4">
+                  <div key={r.cm_ref_key} className="group relative px-4 py-4 transition-colors hover:bg-muted/30 focus-within:bg-muted/50">
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
@@ -788,12 +796,12 @@ export function ComplianceMatrix(props: {
                         </p>
                       </div>
 
-                      <div className="w-full lg:w-[420px]">
+                      <div className="w-full lg:w-[460px]">
                         <div className="grid grid-cols-1 gap-2 sm:grid-cols-12">
-                          <div className="col-span-12 sm:col-span-5">
+                          <div className="col-span-12 sm:col-span-4">
                             <label className="text-[11px] font-medium text-muted-foreground">{t("app.compliance.fields.stance")}</label>
                             <select
-                              className="mt-1 h-9 w-full rounded-md border bg-background px-2 text-xs"
+                              className="mt-1 h-9 w-full cursor-pointer rounded-md border bg-background px-2 text-xs transition-colors hover:bg-muted/50 focus:border-primary focus:ring-1 focus:ring-primary"
                               value={complianceStatus}
                               disabled={savingKey === r.cm_ref_key}
                               onChange={(e) => {
@@ -822,13 +830,50 @@ export function ComplianceMatrix(props: {
                               <option value="na">{statusLabel("na", t)}</option>
                             </select>
                           </div>
+                          
+                          <div className="col-span-12 sm:col-span-4">
+                            <label className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
+                              <User className="h-3 w-3" />
+                              {t("app.work.list.owner")}
+                            </label>
+                            <select
+                              className="mt-1 h-9 w-full cursor-pointer rounded-md border bg-background px-2 text-xs transition-colors hover:bg-muted/50 focus:border-primary focus:ring-1 focus:ring-primary"
+                              value={x.ownerLabel || ""}
+                              onChange={(e) => {
+                                const v = e.target.value || "";
+                                // optimistic UI update
+                                setCmItems((prev) => {
+                                  const next = [...(prev ?? [])];
+                                  const idx = next.findIndex((it) => String(it?.ref_key ?? "") === r.cm_ref_key);
+                                  if (idx >= 0) next[idx] = { ...next[idx], owner_label: v || null };
+                                  else next.unshift({ job_id: jobId, type: "requirement", ref_key: r.cm_ref_key, title: r.text, status: "todo", owner_label: v || null, notes: stringifyJsonNotes(j) });
+                                  return next;
+                                });
+                                // persist immediately
+                                void upsertCompliance({
+                                  cm_ref_key: r.cm_ref_key,
+                                  title: r.text,
+                                  ownerLabel: v || "",
+                                });
+                              }}
+                            >
+                              <option value="">{t("app.work.list.unassigned")}</option>
+                              <option value="Legal">{tx("app.work.list.ownerLegal", "Legal")}</option>
+                              <option value="Technical">{tx("app.work.list.ownerTechnical", "Technical")}</option>
+                              <option value="Commercial">{tx("app.work.list.ownerCommercial", "Commercial")}</option>
+                              <option value="Partner">{tx("app.work.list.ownerPartner", "Partner")}</option>
+                              <option value="Finance">{tx("app.work.list.ownerFinance", "Finance")}</option>
+                              <option value="Security">{tx("app.work.list.ownerSecurity", "Security")}</option>
+                              <option value="Compliance">{tx("app.work.list.ownerCompliance", "Compliance")}</option>
+                            </select>
+                          </div>
 
-                          <div className="col-span-12 sm:col-span-7">
+                          <div className="col-span-12 sm:col-span-4">
                             <label className="text-[11px] font-medium text-muted-foreground">{t("app.compliance.fields.proposalSection")}</label>
                             <Input
                               value={proposalSection}
                               placeholder={t("app.compliance.placeholders.proposalSection")}
-                              className="mt-1 h-9"
+                              className="mt-1 h-9 bg-background focus:bg-background hover:bg-muted/50 transition-colors"
                               disabled={savingKey === r.cm_ref_key}
                               onChange={(e) => {
                                 const v = e.target.value;
@@ -863,7 +908,7 @@ export function ComplianceMatrix(props: {
                             <Input
                               value={note}
                               placeholder={t("app.compliance.placeholders.auditNote")}
-                              className="mt-1 h-9"
+                              className="mt-1 h-9 bg-background focus:bg-background hover:bg-muted/50 transition-colors"
                               disabled={savingKey === r.cm_ref_key}
                               onChange={(e) => {
                                 const v = e.target.value;
