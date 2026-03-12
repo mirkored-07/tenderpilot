@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
@@ -206,6 +207,9 @@ export async function createJobAction(input: {
       }
     }
   }
+
+  // Force Next.js to purge the cache and re-fetch the layout data (credit balance)
+  revalidatePath("/app", "layout");
 
   return { jobId };
 }
