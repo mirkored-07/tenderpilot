@@ -696,6 +696,7 @@ export function BidRoomPanel(props: {
         let lastError: any = null;
         for (const candidate of statusCandidates) {
           const patch = buildPatch(candidate);
+          console.log("BidRoomPanel upsertWorkItem patching id", id, "with payload:", patch);
           const { data, error } = await supabase
             .from("job_work_items")
             .update(patch)
@@ -728,6 +729,7 @@ export function BidRoomPanel(props: {
             notes: Object.prototype.hasOwnProperty.call(input, "notes") ? input.notes : null,
           };
 
+          console.log("BidRoomPanel upsertWorkItem inserting row:", row);
           const { data, error } = await supabase.from("job_work_items").insert(row).select("*").single();
 
           if (!error) {
@@ -770,8 +772,9 @@ export function BidRoomPanel(props: {
       // Make sure we log something useful even if it's a non-enumerable Error.
       const safe = (() => {
         try {
+          const base = e ? { message: e.message, code: e.code, details: e.details, hint: e.hint, status: e.status } : {};
           const props = e && typeof e === "object" ? Object.getOwnPropertyNames(e) : [];
-          return { ...JSON.parse(JSON.stringify(e, props)), message: e?.message, code: e?.code, status: e?.status };
+          return { ...base, ...JSON.parse(JSON.stringify(e, props)) };
         } catch {
           return { asString: String(e), message: e?.message, code: e?.code, status: e?.status };
         }
