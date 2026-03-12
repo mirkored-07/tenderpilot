@@ -5,6 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAppI18n } from "@/app/app/_components/app-i18n-provider";
+import { saveToAnswerLibrary } from "@/app/actions/knowledge-base";
 
 type ChecklistItem = {
   type?: "MUST" | "SHOULD" | "INFO";
@@ -55,6 +56,11 @@ export default function BuyerQuestions({
   const [selectedLocal, setSelectedLocal] = useState<Record<number, false>>({});
   const [showDraft, setShowDraft] = useState(false);
   const [showExtracts, setShowExtracts] = useState(false);
+
+  // Knowledge Base State
+  const [drafts, setDrafts] = useState<Record<number, string>>({});
+  const [savingIdx, setSavingIdx] = useState<number | null>(null);
+  const [savedIdx, setSavedIdx] = useState<Record<number, boolean>>({});
 
   const selected = selectedMap ?? selectedLocal;
 
@@ -146,6 +152,26 @@ export default function BuyerQuestions({
       window.setTimeout(() => setCopied(null), 1200);
     } catch {
       // ignore
+    }
+  }
+
+  async function handleSaveAnswer(idx: number, questionText: string) {
+    const answer = drafts[idx];
+    if (!answer?.trim()) return;
+
+    setSavingIdx(idx);
+    try {
+      const res = await saveToAnswerLibrary(questionText, answer, ["clarification"]);
+      if (res?.success) {
+        setSavedIdx((prev) => ({ ...prev, [idx]: true }));
+        window.setTimeout(() => setSavedIdx((prev) => ({ ...prev, [idx]: false })), 3000);
+      } else {
+        alert(res?.message || "Error saving answer.");
+      }
+    } catch (e) {
+      alert("A network error occurred. Please try again.");
+    } finally {
+      setSavingIdx(null);
     }
   }
 
@@ -271,7 +297,7 @@ export default function BuyerQuestions({
 
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="secondary" className="rounded-full">
-{t("app.review.questionsPanel.selectedBadge", { selected: selectedCount, total: totalCount })}
+                {t("app.review.questionsPanel.selectedBadge", { selected: selectedCount, total: totalCount })}
               </Badge>
 
               <Button
@@ -442,21 +468,21 @@ export default function BuyerQuestions({
                       type="checkbox"
                       className="mt-1 h-4 w-4"
                       checked={selected[idx] !== false}
-                    onChange={() => {
-                      if (onToggleSelected) {
-                        onToggleSelected(idx);
-                        return;
-                      }
-                      setSelectedLocal((prev) => {
-                        const next: Record<number, false> = { ...prev };
-                        if (next[idx] === false) {
-                          delete (next as any)[idx];
-                        } else {
-                          (next as any)[idx] = false;
+                      onChange={() => {
+                        if (onToggleSelected) {
+                          onToggleSelected(idx);
+                          return;
                         }
-                        return next;
-                      });
-                    }}
+                        setSelectedLocal((prev) => {
+                          const next: Record<number, false> = { ...prev };
+                          if (next[idx] === false) {
+                            delete (next as any)[idx];
+                          } else {
+                            (next as any)[idx] = false;
+                          }
+                          return next;
+                        });
+                      }}
                       aria-label={t("app.review.questionsPanel.selectQuestionAria")}
                     />
                     <p className="min-w-0 text-sm leading-relaxed">{q.text}</p>
@@ -479,6 +505,31 @@ export default function BuyerQuestions({
                       onClick={() => onJumpToSource(q.anchor)}
                     >
                       {t("app.review.questionsPanel.locateInSource")}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Answer Draft Section */}
+                <div className="mt-4 rounded-xl border border-border bg-muted/10 p-3">
+                  <textarea
+                    className="w-full min-h-[80px] rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground"
+                    placeholder={t("app.review.questionsPanel.draftPlaceholder") || "Draft your answer here..."}
+                    value={drafts[idx] || ""}
+                    onChange={(e) => setDrafts({ ...drafts, [idx]: e.target.value })}
+                  />
+                  <div className="mt-3 flex justify-end">
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="rounded-full"
+                      onClick={() => handleSaveAnswer(idx, q.text)}
+                      disabled={savingIdx === idx || !(drafts[idx] || "").trim()}
+                    >
+                      {savingIdx === idx 
+                        ? (t("app.common.saving") || "Saving...") 
+                        : savedIdx[idx] 
+                          ? (t("app.common.saved") || "Saved!") 
+                          : "Save for future bids"}
                     </Button>
                   </div>
                 </div>

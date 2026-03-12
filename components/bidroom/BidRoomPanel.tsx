@@ -20,6 +20,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 
 import { useAppI18n } from "@/app/app/_components/app-i18n-provider";
+import { saveToAnswerLibrary } from "@/app/actions/knowledge-base";
 
 type WorkItemType = "requirement" | "risk" | "clarification" | "outline" | "deadline" | "submission" | "admin";
 
@@ -134,8 +135,6 @@ export function BidRoomPanel(props: {
 
   const [workItems, setWorkItems] = useState<any[]>([]);
   const [workError, setWorkError] = useState<string | null>(null);
-  // NOTE: We intentionally do not disable inputs during autosave.
-  // Disabling while saving makes typing feel broken on slower networks.
   const [workSaving, setWorkSaving] = useState<string | null>(null);
 
   const [query, setQuery] = useState<string>("");
@@ -147,14 +146,31 @@ export function BidRoomPanel(props: {
   const [evidenceFocus, setEvidenceFocus] = useState<EvidenceFocus | null>(null);
   const [notesOpen, setNotesOpen] = useState<Set<string>>(() => new Set());
 
-  // Ensure we never run overlapping writes for the same work item.
-  // Overlapping inserts can cause duplicate-key errors (if a unique constraint exists)
-  // and refreshes can momentarily fail on slower networks.
+  // --- NEW: Knowledge Base State ---
+  const [savingKbIdx, setSavingKbIdx] = useState<string | null>(null);
+  const [savedKbIdx, setSavedKbIdx] = useState<Record<string, boolean>>({});
+
+  async function handleSaveToKb(key: string, questionText: string, answerText: string) {
+    if (!answerText.trim()) return;
+    setSavingKbIdx(key);
+    try {
+      const res = await saveToAnswerLibrary(questionText, answerText, ["clarification"]);
+      if (res?.success) {
+        setSavedKbIdx((prev) => ({ ...prev, [key]: true }));
+        window.setTimeout(() => setSavedKbIdx((prev) => ({ ...prev, [key]: false })), 3000);
+      } else {
+        alert(res?.message || "Error saving answer.");
+      }
+    } catch (e) {
+      alert("A network error occurred. Please try again.");
+    } finally {
+      setSavingKbIdx(null);
+    }
+  }
+  // ----------------------------------
+
   const workWriteInFlightRef = useRef<Set<string>>(new Set());
   const workWritePendingRef = useRef<Map<string, any>>(new Map());
-
-  // Save text inputs on blur instead of while typing.
-  // This keeps editing smooth and avoids firing writes against half-finished drafts.
 
   const evidenceById = useMemo(() => {
     const map = new Map<string, EvidenceCandidateUi>();
@@ -196,21 +212,6 @@ export function BidRoomPanel(props: {
 
     try {
       const supabase = supabaseBrowser();
-      if (process.env.NODE_ENV !== "production") {
-        try {
-          const { data } = await supabase.auth.getSession();
-          // eslint-disable-next-line no-console
-          console.debug("[BidRoom openPDF]", {
-		  jobId,
-		  filePath,
-		  supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
-		  hasSession: Boolean(data?.session),
-		  userId: data?.session?.user?.id,
-		});
-        } catch {
-          // ignore
-        }
-      }
       const { data, error } = await supabase.storage.from("uploads").createSignedUrl(filePath, 60 * 10);
       if (error || !data?.signedUrl) throw error || new Error(t("app.bidroom.errors.noSignedUrl"));
       const p = typeof args?.page === "number" && Number.isFinite(args.page) ? Math.max(1, Math.floor(args.page)) : null;
@@ -550,8 +551,6 @@ export function BidRoomPanel(props: {
   }, [factWorkRows, jobId, checklist, risks, questions, outlineSections]);
 
   const workByKey = useMemo(() => {
-    // workItems is ordered by updated_at desc (newest first).
-    // If duplicates exist, we must keep the newest row (first) and ignore older rows.
     const m = new Map<string, any>();
     for (const w of workItems ?? []) {
       const k = `${String(w?.type ?? "")}:${String(w?.ref_key ?? "")}`;
@@ -612,7 +611,6 @@ export function BidRoomPanel(props: {
     try {
       await refreshWork();
     } catch (e) {
-      // Don't fail the entire save if refresh is temporarily blocked.
       console.warn("BidRoomPanel refreshWork failed", e);
     }
   }
@@ -627,8 +625,6 @@ export function BidRoomPanel(props: {
     type: WorkItemType;
     ref_key: string;
     title: string;
-    // NOTE: treat optional fields as PATCH fields.
-    // If a field is omitted, we must NOT overwrite the existing DB value.
     status?: string;
     owner_label?: string | null;
     due_at?: string | null;
@@ -654,7 +650,6 @@ export function BidRoomPanel(props: {
           }
         }
 
-        // Replace first row with the same logical key (type+ref_key), otherwise prepend.
         const byKey = next.findIndex((x) => `${x?.type ?? ""}:${x?.ref_key ?? ""}` === rowKey);
         if (byKey >= 0) {
           next[byKey] = { ...next[byKey], ...row };
@@ -669,7 +664,6 @@ export function BidRoomPanel(props: {
     try {
       const supabase = supabaseBrowser();
 
-      // PATCH update: only write fields explicitly provided.
       const existing = workByKeyRef.current.get(rowKey);
       const existingId = existing?.id ? String(existing.id) : "";
       const existingRawStatus = String(existing?.status ?? "").trim();
@@ -696,7 +690,6 @@ export function BidRoomPanel(props: {
         let lastError: any = null;
         for (const candidate of statusCandidates) {
           const patch = buildPatch(candidate);
-          console.log("BidRoomPanel upsertWorkItem patching id", id, "with payload:", patch);
           const { data, error } = await supabase
             .from("job_work_items")
             .update(patch)
@@ -729,7 +722,6 @@ export function BidRoomPanel(props: {
             notes: Object.prototype.hasOwnProperty.call(input, "notes") ? input.notes : null,
           };
 
-          console.log("BidRoomPanel upsertWorkItem inserting row:", row);
           const { data, error } = await supabase.from("job_work_items").insert(row).select("*").single();
 
           if (!error) {
@@ -769,24 +761,8 @@ export function BidRoomPanel(props: {
         await insertNewRow();
       }
     } catch (e: any) {
-      // Make sure we log something useful even if it's a non-enumerable Error.
-      const safe = (() => {
-        try {
-          const base = e ? { message: e.message, code: e.code, details: e.details, hint: e.hint, status: e.status } : {};
-          const props = e && typeof e === "object" ? Object.getOwnPropertyNames(e) : [];
-          return { ...base, ...JSON.parse(JSON.stringify(e, props)) };
-        } catch {
-          return { asString: String(e), message: e?.message, code: e?.code, status: e?.status };
-        }
-      })();
-
-      console.error("BidRoomPanel upsertWorkItem failed", safe);
-      console.error("BidRoomPanel upsertWorkItem raw", e);
-
-      const msg = String((safe as any)?.message ?? "").toLowerCase();
-      const looksLikeRls = msg.includes("row-level security") || msg.includes("violates row-level security") || msg.includes("permission denied");
-      setWorkError(looksLikeRls ? tx("app.bidroom.errors.policyBlockedSave", "Bid Room save is blocked by your Supabase policy. Run the job_work_items RLS SQL from the repo, then try again.") : t("app.bidroom.panel.saveFailed"));
-      // Roll back optimistic UI to the last known server state (best-effort).
+      console.error("BidRoomPanel upsertWorkItem failed", e);
+      setWorkError(t("app.bidroom.panel.saveFailed"));
       try { await refreshWorkSafe(); } catch { /* ignore */ }
     } finally {
       setWorkSaving(null);
@@ -797,7 +773,6 @@ export function BidRoomPanel(props: {
     type: WorkItemType;
     ref_key: string;
     title: string;
-    // PATCH semantics (only provided fields overwrite)
     status?: string;
     owner_label?: string | null;
     due_at?: string | null;
@@ -805,7 +780,6 @@ export function BidRoomPanel(props: {
   }) {
     const rowKey = `${input.type}:${input.ref_key}`;
 
-    // Merge pending updates for the same rowKey (PATCH semantics).
     const prev = workWritePendingRef.current.get(rowKey) || {};
     const merged: any = { ...prev, type: input.type, ref_key: input.ref_key, title: input.title };
     if (Object.prototype.hasOwnProperty.call(input, "status")) merged.status = canonicalizeWorkStatus(input.status, "todo");
@@ -814,7 +788,6 @@ export function BidRoomPanel(props: {
     if (Object.prototype.hasOwnProperty.call(input, "notes")) merged.notes = input.notes;
     workWritePendingRef.current.set(rowKey, merged);
 
-    // If a write is already running for this rowKey, let it finish and apply the pending merge.
     if (workWriteInFlightRef.current.has(rowKey)) return;
 
     workWriteInFlightRef.current.add(rowKey);
@@ -855,7 +828,7 @@ export function BidRoomPanel(props: {
         {header ? (
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-			  <p className="text-sm font-semibold">{t("app.bidroom.title")}</p>
+              <p className="text-sm font-semibold">{t("app.bidroom.title")}</p>
               <p className="mt-1 text-xs text-muted-foreground">
                 {t("app.bidroom.panel.subtitle")}
               </p>
@@ -1129,7 +1102,6 @@ export function BidRoomPanel(props: {
                               </div>
                             </div>
 
-                            {/* Mobile: grid for form controls (prevents horizontal overflow). Desktop: wraps inline. */}
                             <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-2">
                               <Input
                                 value={owner}
@@ -1148,12 +1120,11 @@ export function BidRoomPanel(props: {
                                     type: r.type,
                                     ref_key: r.ref_key,
                                     title: r.title,
-								  owner_label: e.target.value || null,
+                                  owner_label: e.target.value || null,
                                   });
                                 }}
                                 placeholder={t("app.bidroom.fields.ownerPlaceholder")}
                                 className="h-9 w-full rounded-full sm:w-[160px]"
-                                // keep editable during autosave
                               />
 
                               <select
@@ -1161,7 +1132,6 @@ export function BidRoomPanel(props: {
                                 value={status}
                                 onChange={(e) => {
                                   const v = e.target.value;
-                                  // optimistic UI update
                                   setWorkItems((prev) => {
                                     const next = [...prev];
                                     const idx = next.findIndex((x) => `${x.type}:${x.ref_key}` === key);
@@ -1169,7 +1139,6 @@ export function BidRoomPanel(props: {
                                     else next.unshift({ job_id: jobId, type: r.type, ref_key: r.ref_key, title: r.title, status: v, owner_label: owner });
                                     return next;
                                   });
-                                  // persist immediately (do not rely on blur)
                                   void upsertWorkItem({
                                     type: r.type,
                                     ref_key: r.ref_key,
@@ -1177,7 +1146,6 @@ export function BidRoomPanel(props: {
                                     status: v,
                                   });
                                 }}
-                                // keep editable during autosave
                               >
                                 <option value="todo">{t("app.bidroom.status.todo")}</option>
                                 <option value="doing">{t("app.bidroom.status.doing")}</option>
@@ -1207,34 +1175,46 @@ export function BidRoomPanel(props: {
                                   });
                                 }}
                                 className="h-9 w-full rounded-full sm:w-[150px]"
-                                // keep editable during autosave
                               />
 
                               {notesIsOpen ? (
-                                <Input
-                                  value={notes}
-                                  onChange={(e) => {
-                                    const v = e.target.value;
-                                    setWorkItems((prev) => {
-                                      const next = [...prev];
-                                      const idx = next.findIndex((x) => `${x.type}:${x.ref_key}` === key);
-                                      if (idx >= 0) next[idx] = { ...next[idx], notes: v };
-                                      else next.unshift({ job_id: jobId, type: r.type, ref_key: r.ref_key, title: r.title, status, notes: v });
-                                      return next;
-                                    });
-                                  }}
-                                  onBlur={async (e) => {
-                                    await upsertWorkItem({
-                                      type: r.type,
-                                      ref_key: r.ref_key,
-                                      title: r.title,
-									  notes: e.target.value || null,
-                                    });
-                                  }}
-                                  placeholder={t("app.bidroom.fields.notesPlaceholder")}
-                                  className="col-span-2 h-9 w-full rounded-full sm:col-span-1 sm:flex-1 sm:min-w-[220px]"
-                                  // keep editable during autosave
-                                />
+                                <div className="col-span-2 sm:col-span-1 sm:flex-1 flex gap-2 w-full sm:min-w-[220px]">
+                                  <Input
+                                    value={notes}
+                                    onChange={(e) => {
+                                      const v = e.target.value;
+                                      setWorkItems((prev) => {
+                                        const next = [...prev];
+                                        const idx = next.findIndex((x) => `${x.type}:${x.ref_key}` === key);
+                                        if (idx >= 0) next[idx] = { ...next[idx], notes: v };
+                                        else next.unshift({ job_id: jobId, type: r.type, ref_key: r.ref_key, title: r.title, status, notes: v });
+                                        return next;
+                                      });
+                                    }}
+                                    onBlur={async (e) => {
+                                      await upsertWorkItem({
+                                        type: r.type,
+                                        ref_key: r.ref_key,
+                                        title: r.title,
+                                        notes: e.target.value || null,
+                                      });
+                                    }}
+                                    placeholder={t("app.bidroom.fields.notesPlaceholder")}
+                                    className="h-9 w-full rounded-full"
+                                  />
+                                  {r.type === "clarification" && notes.trim() ? (
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="secondary"
+                                      className="rounded-full shrink-0 h-9 px-3"
+                                      onClick={() => handleSaveToKb(key, r.title, notes)}
+                                      disabled={savingKbIdx === key}
+                                    >
+                                      {savingKbIdx === key ? (t("app.common.saving") || "Saving...") : savedKbIdx[key] ? (t("app.common.saved") || "Saved!") : "Save for future bids"}
+                                    </Button>
+                                  ) : null}
+                                </div>
                               ) : (
                                 <Button
                                   type="button"
