@@ -14,6 +14,7 @@ import {
   MoreHorizontal,
   Search,
   Send,
+  Sparkles,
 } from "lucide-react";
 
 import { BrandIcon } from "@/components/brand-icon";
@@ -25,6 +26,7 @@ import { ModeToggle } from "@/components/mode-toggle";
 import LanguageSwitcherSlot from "@/components/marketing/LanguageSwitcherSlot";
 import { LanguageSwitcher } from "@/components/marketing/LanguageSwitcher";
 import { loginWithNextHref } from "@/lib/access-mode";
+import { ScrollReveal } from "@/components/marketing/ScrollReveal";
 
 type LocalePrefix = "" | "/en" | "/de" | "/it" | "/fr" | "/es";
 
@@ -313,7 +315,7 @@ export function SampleOutputContent({
   }, [sp.data.sourceExcerpt]);
 
   return (
-    <div className="min-h-screen bg-background aurora-bg overflow-x-hidden">
+    <div className="min-h-screen bg-background aurora-bg selection:bg-teal-500/30 overflow-x-hidden">
       {/* Marketing header */}
       <header className="sticky top-0 z-50 border-b border-white/10 bg-background/90 backdrop-blur-xl">
         <div className="mx-auto max-w-7xl px-4 md:px-8">
@@ -368,20 +370,34 @@ export function SampleOutputContent({
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-14 md:px-8">
-        <div className="max-w-3xl mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight">{sp.header.title}</h1>
-          <p className="mt-4 text-muted-foreground text-lg">{sp.header.subtitle}</p>
+      <main className="mx-auto max-w-7xl px-4 py-20 md:px-8">
+        <div className="max-w-3xl mx-auto text-center relative">
+          <div className="pointer-events-none absolute -top-20 left-1/2 -translate-x-1/2 h-[400px] w-[700px] bg-teal-600/10 blur-[100px] rounded-full opacity-50" />
+          <ScrollReveal>
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 text-xs font-medium mb-6 shadow-sm backdrop-blur-md">
+              <Sparkles className="w-3 h-3" />
+              <span>Live preview</span>
+            </div>
+          </ScrollReveal>
+          <ScrollReveal delay={1}>
+            <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
+              <span className="text-gradient-brand">{sp.header.title}</span>
+            </h1>
+          </ScrollReveal>
+          <ScrollReveal delay={2}>
+            <p className="mt-4 text-muted-foreground text-lg leading-relaxed">{sp.header.subtitle}</p>
+          </ScrollReveal>
         </div>
 
-        <div className="mt-8 flex justify-center">
+        <ScrollReveal delay={3} className="mt-8 flex justify-center">
           <div className="w-full max-w-3xl">
             <SegTabs value={view} onChange={(v) => setView(v as any)} items={tabs} />
           </div>
-        </div>
+        </ScrollReveal>
 
         {/* App preview container */}
-        <div className="mt-8 rounded-3xl border border-border bg-background/60 shadow-sm backdrop-blur supports-[backdrop-filter]:bg-background/40 overflow-hidden">
+        <ScrollReveal delay={4}>
+        <div className="mt-8 rounded-3xl border border-white/10 bg-zinc-900/60 dark:bg-background/60 shadow-2xl shadow-black/30 backdrop-blur-sm overflow-hidden">
           {/* Job header (matches app) */}
           <div className="px-6 py-5 border-b border-border bg-card/60">
             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -1114,6 +1130,7 @@ export function SampleOutputContent({
             ) : null}
           </div>
         </div>
+        </ScrollReveal>
 
         <div className="mt-10 text-center">
           <p className="text-sm text-muted-foreground">

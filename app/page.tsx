@@ -12,6 +12,7 @@ import { getAccessMode, loginWithNextHref } from "@/lib/access-mode";
 import { ScrollReveal } from "@/components/marketing/ScrollReveal";
 import { ScrollProgressRing } from "@/components/marketing/ScrollProgressRing";
 import { StatCounter } from "@/components/marketing/StatCounter";
+import { InteractiveDemo } from "@/components/marketing/InteractiveDemo";
 
 type LandingDict = {
   nav: { cta: string; theme: string; language?: string };
@@ -246,7 +247,7 @@ export default async function LandingPage() {
         <div className="pointer-events-none absolute top-1/2 left-0 -translate-x-1/2 h-[700px] w-[700px] bg-teal-600/10 blur-[140px] rounded-full opacity-60 dark:opacity-40" />
         <div className="pointer-events-none absolute top-1/4 right-0 translate-x-1/3 h-[500px] w-[500px] bg-indigo-600/10 blur-[120px] rounded-full opacity-40 dark:opacity-30" />
 
-        <div className="grid gap-16 lg:grid-cols-[1.1fr_0.9fr] lg:items-center relative z-10">
+        <div className="grid gap-12 lg:grid-cols-[1.1fr_0.9fr] lg:items-center relative z-10">
           <div className="flex gap-6">
             {/* Vertical teal accent line */}
             <div className="hidden md:block w-[3px] min-h-full rounded-full bg-gradient-to-b from-teal-400 via-cyan-500 to-transparent self-stretch accent-line flex-shrink-0" />
@@ -313,9 +314,9 @@ export default async function LandingPage() {
             </div>
           </div>
 
-          {/* Scanner */}
-          <ScrollReveal delay={2} direction="right" className="relative pl-4 lg:pl-12">
-            <ScannerHero riskBadge={t.scanner.risk_badge} />
+          {/* Interactive Demo */}
+          <ScrollReveal delay={3} className="w-full">
+            <InteractiveDemo />
           </ScrollReveal>
         </div>
       </section>
