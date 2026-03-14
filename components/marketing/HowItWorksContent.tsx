@@ -58,9 +58,9 @@ function StepCard({
       {/* Hover glow */}
       <div className={`absolute inset-0 bg-gradient-to-b ${glow} to-transparent rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700`} />
 
-      <div className="relative h-full rounded-3xl border border-white/8 bg-zinc-900/60 backdrop-blur-sm overflow-hidden flex flex-col p-7 hover:border-white/15 transition-colors duration-300">
+      <div className="relative h-full rounded-3xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900/60 backdrop-blur-sm overflow-hidden flex flex-col p-7 hover:border-teal-500/20 dark:hover:border-white/15 transition-colors duration-300">
         {/* Ghost step number */}
-        <span className="absolute top-5 right-6 text-7xl font-black text-white/[0.04] font-mono select-none pointer-events-none">
+        <span className="absolute top-5 right-6 text-7xl font-black text-black/[0.03] dark:text-white/[0.04] font-mono select-none pointer-events-none">
           {step}
         </span>
 
@@ -69,8 +69,8 @@ function StepCard({
           {icon}
         </div>
 
-        <h3 className="text-lg font-bold text-white mb-3">{title}</h3>
-        <p className="text-sm text-zinc-400 leading-relaxed flex-grow">{desc}</p>
+        <h3 className="text-lg font-bold text-foreground mb-3">{title}</h3>
+<p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed flex-grow">{desc}</p>
 
         {bullets && bullets.length > 0 && (
           <ul className="mt-4 space-y-2">
@@ -102,7 +102,7 @@ export function HowItWorksContent({
     <div className="min-h-screen bg-background aurora-bg selection:bg-teal-500/30 overflow-x-hidden">
 
       {/* ── HEADER ── */}
-      <header className="sticky top-0 z-50 border-b border-white/5 bg-background/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-zinc-200 dark:border-white/5 bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:h-16 md:px-8 md:py-0">
           <Link href={homeHref} className="flex items-center gap-2 font-bold text-lg tracking-tight hover:opacity-80 transition-opacity">
             <BrandIcon size={35} className="h-8 w-8" />
@@ -123,10 +123,10 @@ export function HowItWorksContent({
           </div>
 
           <details className="relative sm:hidden z-50">
-            <summary className="cursor-pointer list-none rounded-full border border-white/10 bg-zinc-900/50 px-3 py-2 text-sm font-medium text-foreground backdrop-blur-md [&::-webkit-details-marker]:hidden">
+           <summary className="cursor-pointer list-none rounded-full border border-zinc-200 dark:border-white/10 bg-zinc-100/80 dark:bg-zinc-900/50 px-3 py-2 text-sm font-medium text-foreground backdrop-blur-md [&::-webkit-details-marker]:hidden">
               {dict.header.menu ?? "Menu"}
             </summary>
-            <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-white/10 bg-zinc-900/95 p-2 shadow-xl backdrop-blur-xl">
+            <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-zinc-200 dark:border-white/10 bg-white/95 dark:bg-zinc-900/95 p-2 shadow-xl backdrop-blur-xl">
               <Link href={sampleHref} className="block rounded-xl px-3 py-2 text-sm hover:bg-white/5 text-muted-foreground hover:text-foreground">{dict.header.sample}</Link>
               <Link href={primaryCtaHref} className="block rounded-xl px-3 py-2 text-sm font-medium text-teal-400 hover:bg-teal-500/10">{dict.header.cta}</Link>
               <div className="mt-2 space-y-3 border-t border-white/10 px-3 pt-3 pb-1">
@@ -202,7 +202,7 @@ export function HowItWorksContent({
 
         {/* ── BOTTOM CTA ── */}
         <ScrollReveal className="mt-28">
-          <div className="relative rounded-3xl border border-white/10 bg-white/5 dark:bg-zinc-900/40 backdrop-blur-sm p-12 max-w-4xl mx-auto text-center overflow-hidden">
+          <div className="relative rounded-3xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900/40 backdrop-blur-sm p-12 max-w-4xl mx-auto text-center overflow-hidden">
             {/* glow */}
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-teal-500/5 to-transparent" />
             <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-teal-500/40 to-transparent" />
@@ -226,7 +226,7 @@ export function HowItWorksContent({
       </main>
 
       {/* ── FOOTER ── */}
-      <footer className="border-t border-white/5 py-12 bg-zinc-950/80 backdrop-blur-sm">
+      <footer className="border-t border-zinc-200 dark:border-white/5 py-12 bg-zinc-50 dark:bg-zinc-950/80 backdrop-blur-sm">
         <div className="mx-auto max-w-7xl px-4 md:px-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between text-sm text-zinc-500">
           <span>© {new Date().getFullYear()} TenderPilot</span>
           <div className="flex items-center gap-6">

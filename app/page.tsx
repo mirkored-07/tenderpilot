@@ -184,7 +184,7 @@ export default async function LandingPage() {
       <ScrollProgressRing />
 
       {/* ── HEADER ── */}
-      <header className="sticky top-0 z-50 border-b border-white/5 bg-background/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-zinc-200 dark:border-white/5 bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:h-16 md:px-8 md:py-0">
           <Link
             href="/"
@@ -218,10 +218,10 @@ export default async function LandingPage() {
 
           {/* Mobile nav */}
           <details className="relative md:hidden z-50">
-            <summary className="cursor-pointer list-none rounded-full border border-white/10 bg-zinc-900/50 px-3 py-2 text-sm font-medium text-foreground backdrop-blur-md [&::-webkit-details-marker]:hidden">
+            <summary className="cursor-pointer list-none rounded-full border border-zinc-200 dark:border-white/10 bg-zinc-100/80 dark:bg-zinc-900/50 px-3 py-2 text-sm font-medium text-foreground backdrop-blur-md [&::-webkit-details-marker]:hidden">
               {nav.menu}
             </summary>
-            <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-white/10 bg-zinc-900/95 p-2 shadow-xl backdrop-blur-xl ring-1 ring-black/5">
+            <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-zinc-200 dark:border-white/10 bg-white/95 dark:bg-zinc-900/95 p-2 shadow-xl backdrop-blur-xl ring-1 ring-black/5">
               <Link href="/how-it-works" className="block rounded-xl px-3 py-2 text-sm hover:bg-white/5 text-muted-foreground hover:text-foreground">{nav.howItWorks}</Link>
               <Link href="/sample" className="block rounded-xl px-3 py-2 text-sm hover:bg-white/5 text-muted-foreground hover:text-foreground">{nav.sample}</Link>
               <Link href="/pricing" className="block rounded-xl px-3 py-2 text-sm hover:bg-white/5 text-muted-foreground hover:text-foreground">{nav.pricing}</Link>
@@ -322,7 +322,7 @@ export default async function LandingPage() {
       </section>
 
       {/* ── STATS BAR ── */}
-      <section className="border-y border-white/5 bg-zinc-950/40 dark:bg-black/30 backdrop-blur-sm">
+     <section className="border-y border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-black/30 backdrop-blur-sm">
         <div className="mx-auto max-w-7xl px-4 md:px-8 py-12">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 text-center">
             {[
@@ -398,7 +398,7 @@ export default async function LandingPage() {
               { icon: <ShieldCheck className="h-6 w-6 text-purple-400" />, data: t.roi.cards.compliance, delay: 3 },
             ].map(({ icon, data, delay }) => (
               <ScrollReveal key={data.title} delay={delay as 0|1|2|3|4|5}>
-                <div className="h-full rounded-2xl border border-white/10 bg-white/5 dark:bg-zinc-800/20 p-6 backdrop-blur-sm hover:border-teal-500/20 hover:bg-teal-500/5 transition-all duration-300">
+<div className="h-full rounded-2xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-800/20 p-6 backdrop-blur-sm hover:border-teal-500/20 hover:bg-teal-500/5 transition-all duration-300">
                   <div className="flex items-start gap-4">
                     {icon}
                     <div>
@@ -428,7 +428,7 @@ export default async function LandingPage() {
       {accessMode === "public" ? (
         <section className="relative mx-auto max-w-7xl px-4 pb-40 md:px-8 overflow-hidden">
           {/* Full-width dark band */}
-          <div className="absolute inset-x-0 inset-y-0 bg-gradient-to-b from-transparent via-teal-950/20 to-transparent -z-10 pointer-events-none" />
+          <div className="absolute inset-x-0 inset-y-0 bg-gradient-to-b from-transparent via-teal-50 dark:via-teal-950/20 to-transparent -z-10 pointer-events-none" />
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-teal-500/30 to-transparent" />
 
           <div className="max-w-4xl mx-auto relative z-10 text-center">
@@ -446,7 +446,7 @@ export default async function LandingPage() {
             <div className="grid gap-4 md:grid-cols-3 max-w-4xl mx-auto">
               {t.get_started.bullets.map((b, i) => (
                 <ScrollReveal key={i} delay={(i + 1) as 0|1|2|3|4|5}>
-                  <div className="rounded-2xl border border-white/10 bg-white/5 dark:bg-zinc-900/30 backdrop-blur-md p-5 text-left hover:border-teal-500/20 hover:bg-teal-500/5 transition-all duration-300">
+                  <div className="rounded-2xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900/30 backdrop-blur-md p-5 text-left hover:border-teal-500/20 hover:bg-teal-500/5 transition-all duration-300">
                     <div className="flex items-start gap-3">
                       <CheckCircle2 className="h-5 w-5 text-emerald-400 mt-0.5 shrink-0" />
                       <div className="text-sm text-foreground leading-relaxed">{b}</div>
@@ -498,18 +498,18 @@ export default async function LandingPage() {
       )}
 
       {/* ── FOOTER ── */}
-      <footer className="border-t border-white/5 py-12 bg-zinc-950/80 backdrop-blur-sm">
+<footer className="border-t border-zinc-200 dark:border-white/5 py-12 bg-zinc-50 dark:bg-zinc-950/80 backdrop-blur-sm">
         <div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 md:flex-row md:items-center md:justify-between md:px-8">
           <div className="text-sm text-zinc-500">
             © {new Date().getFullYear()} {nav.title}
           </div>
           <div className="flex flex-wrap items-center gap-8 text-sm font-medium">
-            <Link href="/how-it-works" className="text-zinc-400 hover:text-white transition-colors">{nav.howItWorks}</Link>
-            <Link href="/sample"         className="text-zinc-400 hover:text-white transition-colors">{nav.sample}</Link>
-            <Link href="/tenders/software" className="text-zinc-400 hover:text-white transition-colors">{t.footer.browse}</Link>
+            <Link href="/how-it-works" className="text-zinc-600 dark:text-zinc-400 hover:text-white transition-colors">{nav.howItWorks}</Link>
+            <Link href="/sample"         className="text-zinc-600 dark:text-zinc-400 hover:text-white transition-colors">{nav.sample}</Link>
+            <Link href="/tenders/software" className="text-zinc-600 dark:text-zinc-400 hover:text-white transition-colors">{t.footer.browse}</Link>
             <Link href={primaryCtaHref}  className="text-teal-400 hover:text-teal-300 transition-colors">{t.nav.cta}</Link>
-            <Link href="/privacy"        className="text-zinc-400 hover:text-white transition-colors">{t.footer.privacy}</Link>
-            <Link href="/terms"          className="text-zinc-400 hover:text-white transition-colors">{t.footer.terms}</Link>
+            <Link href="/privacy"        className="text-zinc-600 dark:text-zinc-400 hover:text-white transition-colors">{t.footer.privacy}</Link>
+            <Link href="/terms"          className="text-zinc-600 dark:text-zinc-400 hover:text-white transition-colors">{t.footer.terms}</Link>
           </div>
         </div>
       </footer>

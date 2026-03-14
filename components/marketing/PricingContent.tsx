@@ -42,8 +42,8 @@ function TierCard({
   return (
     <div className={`relative rounded-3xl border overflow-hidden flex flex-col h-full ${
       featured
-        ? "border-teal-500/30 bg-zinc-900/80 shadow-[0_0_60px_-12px_rgba(45,212,191,0.3)]"
-        : "border-white/8 bg-zinc-900/50"
+        ? "border-teal-500/30 bg-white dark:bg-zinc-900/80 shadow-[0_0_60px_-12px_rgba(45,212,191,0.3)]"
+        : "border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900/50"
     } backdrop-blur-sm`}>
       {/* Featured glow */}
       {featured && (
@@ -66,8 +66,8 @@ function TierCard({
           {limited && (
             <Badge variant="secondary" className={`rounded-full shrink-0 ${
               featured
-                ? "bg-teal-500/15 border border-teal-500/30 text-teal-300"
-                : "bg-white/5 border border-white/10 text-foreground"
+                ? "bg-teal-50 text-teal-700 dark:bg-teal-500/15 border border-teal-200 dark:border-teal-500/30 dark:text-teal-300"
+                : "bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-foreground"
             }`}>
               {limited}
             </Badge>
@@ -130,7 +130,7 @@ export function PricingContent({
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqLd) }} />
 
       {/* ── HEADER ── */}
-      <header className="sticky top-0 z-50 border-b border-white/5 bg-background/80 backdrop-blur-xl">
+     <header className="sticky top-0 z-50 border-b border-zinc-200 dark:border-white/5 bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:h-16 md:px-8 md:py-0">
           <Link href={homeHref} className="flex items-center gap-2 font-bold text-lg tracking-tight hover:opacity-80 transition-opacity">
             <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-transparent">
@@ -153,10 +153,10 @@ export function PricingContent({
           </div>
 
           <details className="relative md:hidden z-50">
-            <summary className="cursor-pointer list-none rounded-full border border-white/10 bg-zinc-900/50 px-3 py-2 text-sm font-medium text-foreground backdrop-blur-md [&::-webkit-details-marker]:hidden">
+            <summary className="cursor-pointer list-none rounded-full border border-zinc-200 dark:border-white/10 bg-zinc-100/80 dark:bg-zinc-900/50 px-3 py-2 text-sm font-medium text-foreground backdrop-blur-md [&::-webkit-details-marker]:hidden">
               {nav.menu}
             </summary>
-            <div className="absolute right-0 mt-2 w-60 rounded-2xl border border-white/10 bg-zinc-900/95 p-2 shadow-xl backdrop-blur-xl ring-1 ring-black/5">
+           <div className="absolute right-0 mt-2 w-60 rounded-2xl border border-zinc-200 dark:border-white/10 bg-white/95 dark:bg-zinc-900/95 p-2 shadow-xl backdrop-blur-xl ring-1 ring-black/5">
               <Link href={howItWorksHref} className="block rounded-xl px-3 py-2 text-sm hover:bg-white/5 text-muted-foreground hover:text-foreground">{nav.howItWorks}</Link>
               <Link href={sampleHref} className="block rounded-xl px-3 py-2 text-sm hover:bg-white/5 text-muted-foreground hover:text-foreground">{nav.sample}</Link>
               <Link href={pricingHref} className="block rounded-xl px-3 py-2 text-sm hover:bg-white/5 text-foreground">{nav.pricing}</Link>
@@ -222,7 +222,7 @@ export function PricingContent({
         {/* ── CREDITS + FAQ ── */}
         <div className="mt-12 grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-start">
           <ScrollReveal>
-            <Card className="rounded-3xl border-white/8 bg-zinc-900/50 backdrop-blur-sm h-full">
+            <Card className="rounded-3xl border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900/50 backdrop-blur-sm h-full">
               <CardContent className="p-8">
                 <h2 className="text-xl font-bold">{dict.credits.title}</h2>
                 <p className="mt-3 text-sm text-muted-foreground leading-relaxed">{dict.credits.text}</p>
@@ -236,7 +236,7 @@ export function PricingContent({
           </ScrollReveal>
 
           <ScrollReveal delay={1}>
-            <Card className="rounded-3xl border-white/8 bg-zinc-900/50 backdrop-blur-sm h-full">
+            <Card className="rounded-3xl border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900/50 backdrop-blur-sm h-full">
               <CardContent className="p-8">
                 <h2 className="text-xl font-bold">{dict.faq.title}</h2>
                 <div className="mt-6 space-y-5">
@@ -257,7 +257,7 @@ export function PricingContent({
         {/* ── EARLY ACCESS ── */}
         {accessMode !== "public" ? (
           <ScrollReveal className="mt-16">
-            <section id="early-access" className="relative rounded-3xl border border-white/10 overflow-hidden">
+            <section id="early-access" className="relative rounded-3xl border border-zinc-200 dark:border-white/10 overflow-hidden bg-white dark:bg-transparent">
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-teal-500/10 via-transparent to-indigo-500/5" />
               <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-teal-500/40 to-transparent" />
               <div className="relative p-10 md:p-12">
@@ -278,7 +278,7 @@ export function PricingContent({
       </main>
 
       {/* ── FOOTER ── */}
-      <footer className="border-t border-white/5 py-12 bg-zinc-950/80 backdrop-blur-sm">
+      <footer className="border-t border-zinc-200 dark:border-white/5 py-12 bg-zinc-50 dark:bg-zinc-950/80 backdrop-blur-sm">
         <div className="mx-auto max-w-7xl px-4 md:px-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between text-sm text-zinc-500">
           <span>© {new Date().getFullYear()} TenderPilot</span>
           <div className="flex gap-6">
