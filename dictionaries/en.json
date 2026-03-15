@@ -233,7 +233,7 @@
       "badge": "Specialized Tender AI Model",
       "title_line1": "Stop Reading.",
       "title_line2": "Start Deciding.",
-      "description": "Upload a tender PDF or DOCX and get a Go/Hold/No-Go decision cockpit with evidence, MUST blockers, risks, clarifications, a Compliance Matrix, and Bid Room work items.",
+      "description": "Stop reading hundreds of pages. TenderPilot's automated compliance matrix extracts requirements and risks instantly, giving your team the ultimate RFP response software.",
       "primary_cta": "Start now",
       "secondary_cta": "See Sample Output",
       "validated_prefix": "Validated in private pilots by",
@@ -244,7 +244,7 @@
     },
     "features": {
       "section_title": "From tender document to bid-ready pack",
-      "section_subtitle": "Decision cockpit, compliance review, evidence, and execution tasks built for bid managers and tender consultants.",
+      "section_subtitle": "Decision cockpit, automated compliance matrix, evidence, and execution tasks built for bid managers and tender consultants.",
       "cards": {
         "executive": {
           "title": "Decision cockpit",
@@ -274,10 +274,10 @@
           ]
         },
         "execution": {
-          "title": "Execution & exports",
-          "subtitle": "Turn decisions into a bid-ready pack.",
+          "title": "Compliance Matrix & exports",
+          "subtitle": "Turn decisions into a bid-ready compliance matrix and proposal automation workflow.",
           "bullets": [
-            "Compliance Matrix + Bid Room",
+            "Automated Compliance Matrix + Bid Room",
             "Tender brief PDF export",
             "Bid Pack XLSX export"
           ]
@@ -297,7 +297,7 @@
           "desc": "Avoid bidding on projects with hidden penalties."
         },
         "compliance": {
-          "title": "Compliance",
+          "title": "Compliance Matrix",
           "desc": "Never miss a mandatory ISO or GDPR requirement."
         }
       }
@@ -318,7 +318,7 @@
     },
     "get_started": {
       "title": "Start in 30 seconds",
-      "description": "Magic link sign-in. Upload immediately and get a decision cockpit with evidence, blockers, and next actions.",
+      "description": "Magic link sign-in. Upload immediately and get a decision cockpit with evidence, blockers, compliance matrix outputs, and next actions.",
       "bullets": [
         "Upload a tender and get Go/Hold/No-Go with evidence",
         "Track MUST items in the Compliance Matrix",

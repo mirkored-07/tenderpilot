@@ -17,22 +17,26 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.trytenderpilot.com"),
   title: {
-    default: "TenderPilot - AI Tender Analysis & Risk Assessment",
+    default: "TenderPilot - RFP Response Software & Automated Compliance Matrix",
     template: "%s | TenderPilot",
   },
   description:
-    "The Friday 4PM solution. Upload complex tender PDFs and get instant go/no-go decision support, risk analysis, and compliance checklists.",
+    "TenderPilot is the premier AI-powered RFP response software and automated compliance matrix tool. Instantly extract MUST/SHOULD requirements, identify risks, and make Go/No-Go decisions in seconds.",
   icons: {
     icon: "/favicon.ico",
     apple: "/apple-icon.png",
   },
   keywords: [
-    "Tender Analysis AI",
-    "RFP Review Software",
-    "Bid/No-Bid Decision",
-    "Procurement Risk Assessment",
-    "Automated Tender Summary",
-    "Proposal Management Tool",
+    "RFP response software",
+    "Automated compliance matrix",
+    "AI bid management",
+    "Tender go/no-go tool",
+    "Proposal automation software",
+    "Bid qualification software",
+    "Tender compliance software",
+    "Go/no-go decision software",
+    "Proposal compliance matrix",
+    "Public tender response software",
   ],
   authors: [{ name: "TenderPilot Team" }],
   creator: "TenderPilot",
@@ -43,9 +47,9 @@ export const metadata: Metadata = {
     telephone: false,
   },
   openGraph: {
-    title: "Stop Reading. Start Deciding.",
+    title: "TenderPilot - RFP Response Software & Automated Compliance Matrix",
     description:
-      "Instant risk analysis and compliance checklists for public tenders. Make your Go/No-Go decision in minutes, not hours.",
+      "TenderPilot is the premier AI-powered RFP response software and automated compliance matrix tool. Instantly extract MUST/SHOULD requirements, identify risks, and make Go/No-Go decisions in seconds.",
     url: "https://www.trytenderpilot.com",
     siteName: "TenderPilot",
     locale: "en_US",
@@ -61,8 +65,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "TenderPilot - AI Tender Analysis",
-    description: "Automated risk analysis for RFPs and Tenders.",
+    title: "TenderPilot - RFP Response Software & Automated Compliance Matrix",
+    description:
+      "TenderPilot is the premier AI-powered RFP response software and automated compliance matrix tool. Instantly extract MUST/SHOULD requirements, identify risks, and make Go/No-Go decisions in seconds.",
     creator: "@tenderpilot",
     images: [
       {

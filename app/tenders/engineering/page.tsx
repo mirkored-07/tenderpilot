@@ -11,14 +11,14 @@ export const dynamic = "force-static";
 
 // 2. METADATA
 export const metadata: Metadata = {
-  title: "Live Engineering & Architectural Tenders (CPV 71000000) | TenderPilot",
-  description: "Browse active Engineering and Architectural tenders (CPV 71000000). Find opportunities for civil engineering, design, and technical analysis in the EU.",
+  title: "AI Bid Management for Engineering & Technical Tenders | TenderPilot",
+  description: "TenderPilot helps engineering teams qualify technical tenders with AI bid management, an automated compliance matrix, and proposal automation software for complex bids.",
   alternates: {
     canonical: "https://www.trytenderpilot.com/tenders/engineering",
   },
   openGraph: {
-    title: "Live Engineering Tenders (EU) - TenderPilot",
-    description: "Find your next project. View active engineering, architectural, and technical tenders in the EU.",
+    title: "AI Bid Management for Engineering & Technical Tenders | TenderPilot",
+    description: "TenderPilot helps engineering teams qualify technical tenders with AI bid management, an automated compliance matrix, and proposal automation software for complex bids.",
     url: "https://www.trytenderpilot.com/tenders/engineering",
     siteName: "TenderPilot",
     type: "website",
@@ -146,10 +146,10 @@ export default function EngineeringTendersPage() {
           </div>
 
           <h1 className="mt-6 text-4xl font-bold tracking-tight md:text-5xl">
-            Engineering Tenders (EU)
+            AI Bid Management for Engineering & Technical Tenders
           </h1>
           <p className="mt-6 text-lg text-muted-foreground leading-relaxed max-w-2xl">
-            Track CPV 71000000 (Architectural & Engineering Services). Find contracts for civil engineering, design, and technical supervision.
+            TenderPilot acts as an automated compliance matrix for engineering tenders, helping teams extract technical requirements, identify risk early, and make faster go/no-go decisions.
           </p>
         </div>
       </section>
@@ -204,7 +204,7 @@ export default function EngineeringTendersPage() {
       {/* SEO FOOTER */}
       <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
          <div className="border-t border-white/10 pt-8 text-xs text-muted-foreground/60">
-            <p>Active CPV 71000000 listings for Architectural, Construction, Engineering and Inspection Services. Data sourced from Tenders Electronic Daily (TED).</p>
+            <p>Active CPV 71000000 engineering listings aligned to AI bid management, automated compliance matrix review, and proposal automation software workflows.</p>
          </div>
       </section>
     </main>

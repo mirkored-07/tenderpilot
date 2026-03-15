@@ -11,14 +11,14 @@ export const dynamic = "force-static";
 
 // 2. SEO METADATA
 export const metadata: Metadata = {
-  title: "Live Software Development Tenders (CPV 72200000) | TenderPilot",
-  description: "Browse active EU software tenders (CPV 72200000) in Germany, Italy, and Austria. Use AI to analyze risks and write winning bids instantly.",
+  title: "RFP Response Software for IT & Tech Tenders | TenderPilot",
+  description: "TenderPilot helps IT teams qualify software tenders faster with AI bid management, an automated compliance matrix, and a tender go/no-go tool built for RFP response software workflows.",
   alternates: {
     canonical: "https://www.trytenderpilot.com/tenders/software",
   },
   openGraph: {
-    title: "Live Software Tenders (EU) - TenderPilot",
-    description: "Don't waste time searching. View active software tenders in the EU and analyze them with AI.",
+    title: "RFP Response Software for IT & Tech Tenders | TenderPilot",
+    description: "TenderPilot helps IT teams qualify software tenders faster with AI bid management, an automated compliance matrix, and a tender go/no-go tool built for RFP response software workflows.",
     url: "https://www.trytenderpilot.com/tenders/software",
     siteName: "TenderPilot",
     type: "website",
@@ -146,10 +146,10 @@ export default function SoftwareTendersPage() {
           </div>
 
           <h1 className="mt-6 text-4xl font-bold tracking-tight md:text-5xl">
-            Software Tenders (EU)
+            RFP Response Software for IT & Tech Tenders
           </h1>
           <p className="mt-6 text-lg text-muted-foreground leading-relaxed max-w-2xl">
-            Stop searching manually. Active opportunities for CPV 72200000 (Software Services) sourced from TED, ready for AI analysis.
+            TenderPilot acts as an automated compliance matrix for software and IT tenders, extracting MUST and SHOULD requirements, surfacing bid risks, and giving teams AI bid management plus go/no-go support in one RFP response software workflow.
           </p>
         </div>
       </section>
@@ -206,7 +206,7 @@ export default function SoftwareTendersPage() {
       {/* SEO FOOTER */}
       <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
          <div className="border-t border-white/10 pt-8 text-xs text-muted-foreground/60">
-            <p>Active CPV 72200000 listings for Software Programming, IT Consulting, and Digital Transformation in the European Union. Data sourced from Tenders Electronic Daily (TED).</p>
+            <p>Active CPV 72200000 software tender listings enriched for AI bid management, automated compliance matrix workflows, and faster go/no-go qualification.</p>
          </div>
       </section>
     </main>

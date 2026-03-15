@@ -11,14 +11,14 @@ export const dynamic = "force-static";
 
 // 2. SEO METADATA
 export const metadata: Metadata = {
-  title: "Live Construction Tenders (CPV 45000000) | TenderPilot",
-  description: "Browse active EU construction tenders (CPV 45000000). Track opportunities for road works, building renovation, and infrastructure in Germany, Italy, and Austria.",
+  title: "Automated Compliance Matrix for Construction Bids | TenderPilot",
+  description: "TenderPilot gives construction teams an automated compliance matrix, AI bid management, and a tender go/no-go tool for public works and infrastructure bids.",
   alternates: {
     canonical: "https://www.trytenderpilot.com/tenders/construction",
   },
   openGraph: {
-    title: "Live Construction Tenders (EU) - TenderPilot",
-    description: "Find your next project. View active construction and public works tenders in the EU.",
+    title: "Automated Compliance Matrix for Construction Bids | TenderPilot",
+    description: "TenderPilot gives construction teams an automated compliance matrix, AI bid management, and a tender go/no-go tool for public works and infrastructure bids.",
     url: "https://www.trytenderpilot.com/tenders/construction",
     siteName: "TenderPilot",
     type: "website",
@@ -146,10 +146,10 @@ export default function ConstructionTendersPage() {
           </div>
 
           <h1 className="mt-6 text-4xl font-bold tracking-tight md:text-5xl">
-            Construction Tenders (EU)
+            Automated Compliance Matrix for Construction Bids
           </h1>
           <p className="mt-6 text-lg text-muted-foreground leading-relaxed max-w-2xl">
-            Stop searching manually. We track CPV 45000000 (Construction Works) for infrastructure, renovation, and public works across Europe.
+            TenderPilot functions as an automated compliance matrix for construction tenders, extracting mandatory requirements, surfacing delivery and contractual risks, and helping bid teams qualify projects faster.
           </p>
         </div>
       </section>
@@ -206,7 +206,7 @@ export default function ConstructionTendersPage() {
       {/* SEO FOOTER */}
       <section className="mx-auto max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
          <div className="border-t border-white/10 pt-8 text-xs text-muted-foreground/60">
-            <p>Active CPV 45000000 listings for General Construction, Civil Engineering, and Infrastructure Works in the European Union. Data sourced from Tenders Electronic Daily (TED).</p>
+            <p>Active CPV 45000000 construction listings mapped into an automated compliance matrix for public works, infrastructure bids, and faster go/no-go review.</p>
          </div>
       </section>
     </main>
