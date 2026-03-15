@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { BrandIcon } from "@/components/brand-icon";
 import { ModeToggle } from "@/components/mode-toggle";
 import LanguageSwitcherSlot from "@/components/marketing/LanguageSwitcherSlot";
-import { LanguageSwitcher } from "@/components/marketing/LanguageSwitcher";
+import { MarketingMobileMenu } from "@/components/marketing/MarketingMobileMenu";
 import { loginWithNextHref } from "@/lib/access-mode";
 import { ScrollReveal } from "@/components/marketing/ScrollReveal";
 
@@ -122,25 +122,18 @@ export function HowItWorksContent({
             </div>
           </div>
 
-          <details className="relative sm:hidden z-50">
-           <summary className="cursor-pointer list-none rounded-full border border-zinc-200 dark:border-white/10 bg-zinc-100/80 dark:bg-zinc-900/50 px-3 py-2 text-sm font-medium text-foreground backdrop-blur-md [&::-webkit-details-marker]:hidden">
-              {dict.header.menu ?? "Menu"}
-            </summary>
-            <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-zinc-200 dark:border-white/10 bg-white/95 dark:bg-zinc-900/95 p-2 shadow-xl backdrop-blur-xl">
-              <Link href={sampleHref} className="block rounded-xl px-3 py-2 text-sm hover:bg-white/5 text-muted-foreground hover:text-foreground">{dict.header.sample}</Link>
-              <Link href={primaryCtaHref} className="block rounded-xl px-3 py-2 text-sm font-medium text-teal-400 hover:bg-teal-500/10">{dict.header.cta}</Link>
-              <div className="mt-2 space-y-3 border-t border-white/10 px-3 pt-3 pb-1">
-                <div className="flex items-center justify-between gap-4">
-                  <span className="text-sm text-muted-foreground">{dict.header.language ?? "Language"}</span>
-                  <LanguageSwitcher />
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <span className="text-sm text-muted-foreground">{dict.header.theme ?? "Theme"}</span>
-                  <ModeToggle />
-                </div>
-              </div>
-            </div>
-          </details>
+          <div className="sm:hidden">
+            <MarketingMobileMenu
+              menuLabel={dict.header.menu ?? "Menu"}
+              items={[
+                { href: sampleHref, label: dict.header.sample },
+                { href: primaryCtaHref, label: dict.header.cta, accent: true },
+              ]}
+              languageLabel={dict.header.language ?? "Language"}
+              themeLabel={dict.header.theme ?? "Theme"}
+              widthClassName="w-56"
+            />
+          </div>
         </div>
       </header>
 

@@ -7,7 +7,7 @@ import { WaitlistInline } from "@/components/marketing/WaitlistInline";
 import { ModeToggle } from "@/components/mode-toggle";
 import { BrandIcon } from "@/components/brand-icon";
 import LanguageSwitcherSlot from "@/components/marketing/LanguageSwitcherSlot";
-import { LanguageSwitcher } from "@/components/marketing/LanguageSwitcher";
+import { MarketingMobileMenu } from "@/components/marketing/MarketingMobileMenu";
 import { getAccessMode, loginWithNextHref } from "@/lib/access-mode";
 import { ScrollReveal } from "@/components/marketing/ScrollReveal";
 import { ScrollProgressRing } from "@/components/marketing/ScrollProgressRing";
@@ -217,27 +217,18 @@ export default async function LandingPage() {
           </div>
 
           {/* Mobile nav */}
-          <details className="relative md:hidden z-50">
-            <summary className="cursor-pointer list-none rounded-full border border-zinc-200 dark:border-white/10 bg-zinc-100/80 dark:bg-zinc-900/50 px-3 py-2 text-sm font-medium text-foreground backdrop-blur-md [&::-webkit-details-marker]:hidden">
-              {nav.menu}
-            </summary>
-            <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-zinc-200 dark:border-white/10 bg-white/95 dark:bg-zinc-900/95 p-2 shadow-xl backdrop-blur-xl ring-1 ring-black/5">
-              <Link href="/how-it-works" className="block rounded-xl px-3 py-2 text-sm hover:bg-white/5 text-muted-foreground hover:text-foreground">{nav.howItWorks}</Link>
-              <Link href="/sample" className="block rounded-xl px-3 py-2 text-sm hover:bg-white/5 text-muted-foreground hover:text-foreground">{nav.sample}</Link>
-              <Link href="/pricing" className="block rounded-xl px-3 py-2 text-sm hover:bg-white/5 text-muted-foreground hover:text-foreground">{nav.pricing}</Link>
-              <Link href={primaryCtaHref} className="block rounded-xl px-3 py-2 text-sm font-medium text-teal-400 hover:bg-teal-500/10">{t.nav.cta}</Link>
-              <div className="mt-2 space-y-3 border-t border-white/10 px-3 pt-3 pb-1">
-                <div className="flex items-center justify-between gap-4">
-                  <span className="text-sm text-muted-foreground">{t.nav.language ?? "Language"}</span>
-                  <LanguageSwitcher />
-                </div>
-                <div className="flex items-center justify-between gap-4">
-                  <span className="text-sm text-muted-foreground">{t.nav.theme}</span>
-                  <ModeToggle />
-                </div>
-              </div>
-            </div>
-          </details>
+          <MarketingMobileMenu
+            menuLabel={nav.menu}
+            items={[
+              { href: "/how-it-works", label: nav.howItWorks },
+              { href: "/sample", label: nav.sample },
+              { href: "/pricing", label: nav.pricing },
+              { href: primaryCtaHref, label: t.nav.cta, accent: true },
+            ]}
+            languageLabel={t.nav.language ?? "Language"}
+            themeLabel={t.nav.theme}
+            widthClassName="w-56"
+          />
         </div>
       </header>
 

@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { WaitlistInline } from "@/components/marketing/WaitlistInline";
 import { ModeToggle } from "@/components/mode-toggle";
 import LanguageSwitcherSlot from "@/components/marketing/LanguageSwitcherSlot";
-import { LanguageSwitcher } from "@/components/marketing/LanguageSwitcher";
+import { MarketingMobileMenu } from "@/components/marketing/MarketingMobileMenu";
 import type { Metadata } from "next";
 import { BrandIcon } from "@/components/brand-icon";
 import { getAccessMode, loginWithNextHref } from "@/lib/access-mode";
@@ -253,6 +253,9 @@ function RoiBenefitGraphic({ roi }: { roi: LandingDict["roi"] }) {
 export default async function LandingPage() {
   const accessMode = getAccessMode();
   const primaryCtaHref = accessMode === "public" ? loginWithNextHref("/app/upload") : "#early-access";
+  const howItWorksHref = "/fr/how-it-works";
+  const sampleHref = "/fr/sample";
+  const pricingHref = "/fr/pricing";
 
   const dict = (await import("@/dictionaries/fr.json")).default as any;
   const t = dict.landing as LandingDict;
@@ -316,51 +319,18 @@ export default async function LandingPage() {
           </div>
 
           {/* Mobile nav */}
-          <details className="relative md:hidden z-50">
-            <summary className="cursor-pointer list-none rounded-full border border-white/10 bg-background/70 dark:bg-zinc-900/50 px-3 py-2 text-sm font-medium text-foreground backdrop-blur-md [&::-webkit-details-marker]:hidden">
-              {nav.menu}
-            </summary>
-
-            <div className="absolute right-0 mt-2 w-56 rounded-2xl border border-white/10 bg-background/95 dark:bg-zinc-900/95 p-2 shadow-xl backdrop-blur-xl ring-1 ring-black/5">
-              <Link
-                href="/fr/how-it-works"
-                className="block rounded-xl px-3 py-2 text-sm hover:bg-white/5 text-muted-foreground hover:text-foreground"
-              >
-                {nav.howItWorks}
-              </Link>
-              <Link
-                href="/fr/sample"
-                className="block rounded-xl px-3 py-2 text-sm hover:bg-white/5 text-muted-foreground hover:text-foreground"
-              >
-                {nav.sample}
-              </Link>
-              <Link
-                href="/fr/pricing"
-                className="block rounded-xl px-3 py-2 text-sm hover:bg-white/5 text-muted-foreground hover:text-foreground"
-              >
-                {nav.pricing}
-              </Link>
-              <Link
-                href={primaryCtaHref}
-                className="block rounded-xl px-3 py-2 text-sm font-medium text-blue-400 hover:bg-blue-500/10"
-              >
-                {t.nav.cta}
-              </Link>
-
-              {/* Mobile theme toggle */}
-              <div className="mt-2 flex items-center justify-between border-t border-white/10 px-3 pt-3 pb-1">
-                <span className="text-sm text-muted-foreground">
-                  {t.nav.theme}
-                </span>
-                <ModeToggle />
-              </div>
-			  <div className="mt-2 flex items-center justify-between border-t border-white/10 px-3 pt-3 pb-1">
-				  <span className="text-sm text-muted-foreground">{languageLabel}</span>
-				  <LanguageSwitcherSlot />
-				</div>
-
-            </div>
-          </details>
+          <MarketingMobileMenu
+            menuLabel={nav.menu}
+            items={[
+              { href: howItWorksHref, label: nav.howItWorks },
+              { href: sampleHref, label: nav.sample },
+              { href: pricingHref, label: nav.pricing },
+              { href: primaryCtaHref, label: t.nav.cta, accent: true },
+            ]}
+            languageLabel={languageLabel}
+            themeLabel={t.nav.theme}
+            widthClassName="w-56"
+          />
         </div>
       </header>
 

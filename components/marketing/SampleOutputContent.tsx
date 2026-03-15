@@ -24,7 +24,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { ModeToggle } from "@/components/mode-toggle";
 import LanguageSwitcherSlot from "@/components/marketing/LanguageSwitcherSlot";
-import { LanguageSwitcher } from "@/components/marketing/LanguageSwitcher";
+import { MarketingMobileMenu } from "@/components/marketing/MarketingMobileMenu";
 import { loginWithNextHref } from "@/lib/access-mode";
 import { ScrollReveal } from "@/components/marketing/ScrollReveal";
 
@@ -341,31 +341,17 @@ export function SampleOutputContent({
               </div>
             </div>
 
-            <details className="relative sm:hidden">
-              <summary className="cursor-pointer list-none rounded-full border border-zinc-200 dark:border-white/10 bg-zinc-100/80 dark:bg-zinc-900/50 px-3 py-2 text-sm font-medium text-foreground backdrop-blur-md [&::-webkit-details-marker]:hidden">
-                {navApp.menu ?? "Menu"}
-              </summary>
-
-              <div className="absolute right-0 mt-2 w-64 rounded-2xl border border-white/10 bg-background/95 dark:bg-zinc-900/95 p-2 shadow-xl backdrop-blur-xl ring-1 ring-black/5">
-                <Link href={howItWorksHref} className="block rounded-xl px-3 py-2 text-sm hover:bg-zinc-100 dark:hover:bg-white/5 text-muted-foreground hover:text-foreground">
-                  {sp.header.secondaryCta}
-                </Link>
-                <Link href={primaryCtaHref} className="block rounded-xl px-3 py-2 text-sm font-medium text-blue-400 hover:bg-zinc-100 dark:hover:bg-white/5">
-                  {sp.header.primaryCta}
-                </Link>
-
-                <div className="mt-2 space-y-3 border-zinc-200 dark:border-white/10">
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="text-sm text-muted-foreground">{common.language ?? "Language"}</span>
-                    <LanguageSwitcher />
-                  </div>
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="text-sm text-muted-foreground">{common.theme ?? "Theme"}</span>
-                    <ModeToggle />
-                  </div>
-                </div>
-              </div>
-            </details>
+            <div className="sm:hidden">
+              <MarketingMobileMenu
+                menuLabel={navApp.menu ?? "Menu"}
+                items={[
+                  { href: howItWorksHref, label: sp.header.secondaryCta },
+                  { href: primaryCtaHref, label: sp.header.primaryCta, accent: true },
+                ]}
+                languageLabel={common.language ?? "Language"}
+                themeLabel={common.theme ?? "Theme"}
+              />
+            </div>
           </div>
         </div>
       </header>
