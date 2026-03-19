@@ -16,6 +16,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.trytenderpilot.com"),
+  applicationName: "TenderPilot",
+  category: "Business Software",
   title: {
     default: "TenderPilot - RFP Response Software & Automated Compliance Matrix",
     template: "%s | TenderPilot",

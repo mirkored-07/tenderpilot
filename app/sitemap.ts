@@ -8,7 +8,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   // Only the pages that truly exist under each locale folder
   // (/en, /en/how-it-works, /en/sample, etc.)
-  const localizedRoutes = ["", "/how-it-works", "/sample"] as const;
+  const localizedRoutes = [
+    "",
+    "/how-it-works",
+    "/sample",
+    "/tenderpilot-vs-traditional-rfp-software",
+    "/how-to-automate-go-no-go-decisions",
+  ] as const;
 
   // Global (non-localized) pages that exist once
   const globalRoutes = [

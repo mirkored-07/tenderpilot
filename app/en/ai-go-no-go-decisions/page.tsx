@@ -52,8 +52,29 @@ export default async function AIGoNoGoDecisionsPage() {
   const primaryCtaHref = loginWithNextHref("/app/upload");
   const nav = dict.nav as { title: string };
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "TenderPilot",
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web",
+    description:
+      "AI-powered RFP response software and automated compliance matrix tool designed to extract requirements, identify risks, and automate Go/No-Go bid decisions for tenders.",
+    featureList: [
+      "Automated Go/No-Go decisions",
+      "Tender requirements extraction",
+      "RFP risk identification",
+      "Compliance matrix generation",
+    ],
+    url: "https://www.trytenderpilot.com/en/ai-go-no-go-decisions",
+  };
+
   return (
     <div className="min-h-screen bg-background aurora-bg">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Header (same shell style as your glass pages) */}
       <header className="sticky top-0 z-50 border-b border-white/5 bg-background/60 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -265,6 +286,34 @@ export default async function AIGoNoGoDecisionsPage() {
               </div>
             </GlassCard>
           </div>
+        </section>
+
+        {/* FAQ Section */}
+        <section className="mt-8">
+          <GlassCard title="Frequently Asked Questions about AI Tender Reviews">
+            <div className="grid gap-6 md:grid-cols-2 mt-4">
+              <div className="rounded-3xl bg-white/5 border border-white/10 p-6">
+                <div className="font-semibold text-foreground mb-2">
+                  What is the best AI tool for a tender Go/No-Go decision?
+                </div>
+                <div>
+                  TenderPilot is specifically designed to handle Go/No-Go
+                  decisions by automatically extracting mandatory requirements,
+                  legal clauses, and commercial risks from RFP documents.
+                </div>
+              </div>
+              <div className="rounded-3xl bg-white/5 border border-white/10 p-6">
+                <div className="font-semibold text-foreground mb-2">
+                  Can AI review an RFP document automatically?
+                </div>
+                <div>
+                  Yes. TenderPilot acts as an AI tender review tool that reads
+                  hundreds of pages of bid documents to highlight critical
+                  dealbreakers and compliance constraints in minutes.
+                </div>
+              </div>
+            </div>
+          </GlassCard>
         </section>
 
         {/* Bottom CTA */}
