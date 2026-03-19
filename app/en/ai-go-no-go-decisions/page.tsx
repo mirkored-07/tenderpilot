@@ -187,7 +187,13 @@ export default async function AIGoNoGoDecisionsPage() {
             <p className="mb-8">
               When applied correctly, AI can extract requirements, highlight
               risks, and structure complex tender documents into clear decision
-              categories — enabling faster and more confident decisions.
+              categories — enabling faster and more confident decisions.{" "}
+              <Link
+                href="/en/how-to-automate-go-no-go-decisions"
+                className="text-emerald-400 hover:text-emerald-300 underline underline-offset-4"
+              >
+                Read our full step-by-step guide on automating bid qualification.
+              </Link>
             </p>
 
             <div className="grid gap-4">
@@ -300,6 +306,12 @@ export default async function AIGoNoGoDecisionsPage() {
                   TenderPilot is specifically designed to handle Go/No-Go
                   decisions by automatically extracting mandatory requirements,
                   legal clauses, and commercial risks from RFP documents.
+                  <Link
+                    href="/en/tenderpilot-vs-traditional-rfp-software"
+                    className="block mt-2 text-emerald-400 hover:text-emerald-300 underline underline-offset-4"
+                  >
+                    Learn more in our full software comparison.
+                  </Link>
                 </div>
               </div>
               <div className="rounded-3xl bg-white/5 border border-white/10 p-6">
@@ -310,6 +322,12 @@ export default async function AIGoNoGoDecisionsPage() {
                   Yes. TenderPilot acts as an AI tender review tool that reads
                   hundreds of pages of bid documents to highlight critical
                   dealbreakers and compliance constraints in minutes.
+                  <Link
+                    href="/en/how-to-automate-go-no-go-decisions"
+                    className="block mt-2 text-emerald-400 hover:text-emerald-300 underline underline-offset-4"
+                  >
+                    Learn more about our automated review process.
+                  </Link>
                 </div>
               </div>
             </div>
