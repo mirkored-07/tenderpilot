@@ -71,6 +71,9 @@ type MarketingNavDict = {
   pricing: string;
   title: string;
   menu: string;
+  goNoGo?: string;
+  vsTraditional?: string;
+  howToAutomate?: string;
 };
 
 function localeHref(localePrefix: LandingLocalePrefix, path: string) {
@@ -132,6 +135,9 @@ export function LandingPageContent({
   const accessMode = getAccessMode();
   const primaryCtaHref = accessMode === "public" ? loginWithNextHref("/app/upload") : "#early-access";
   const homeHref = localeHref(localePrefix, "/");
+  const goNoGoHref = localeHref(localePrefix, "/ai-go-no-go-decisions");
+  const vsTraditionalHref = localeHref(localePrefix, "/tenderpilot-vs-traditional-rfp-software");
+  const howToAutomateHref = localeHref(localePrefix, "/how-to-automate-go-no-go-decisions");
   const howItWorksHref = localeHref(localePrefix, "/how-it-works");
   const sampleHref = localeHref(localePrefix, "/sample");
   const pricingHref = localeHref(localePrefix, "/pricing");
@@ -153,6 +159,15 @@ export function LandingPageContent({
           </Link>
 
           <div className="hidden md:flex items-center gap-4">
+            <Link href={goNoGoHref} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+              {nav.goNoGo}
+            </Link>
+            <Link href={vsTraditionalHref} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+              {nav.vsTraditional}
+            </Link>
+            <Link href={howToAutomateHref} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+              {nav.howToAutomate}
+            </Link>
             <Link href={howItWorksHref} className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
               {nav.howItWorks}
             </Link>
@@ -174,6 +189,9 @@ export function LandingPageContent({
           <MarketingMobileMenu
             menuLabel={nav.menu}
             items={[
+              { href: goNoGoHref, label: nav.goNoGo || "Go/No-Go" },
+              { href: vsTraditionalHref, label: nav.vsTraditional || "Compare" },
+              { href: howToAutomateHref, label: nav.howToAutomate || "Guide" },
               { href: howItWorksHref, label: nav.howItWorks },
               { href: sampleHref, label: nav.sample },
               { href: pricingHref, label: nav.pricing },
@@ -441,6 +459,9 @@ export function LandingPageContent({
             <Link href={howItWorksHref} className="text-zinc-600 dark:text-zinc-400 hover:text-white transition-colors">{nav.howItWorks}</Link>
             <Link href={sampleHref} className="text-zinc-600 dark:text-zinc-400 hover:text-white transition-colors">{nav.sample}</Link>
             <Link href="/tenders/software" className="text-zinc-600 dark:text-zinc-400 hover:text-white transition-colors">{dict.footer.browse}</Link>
+            <Link href={goNoGoHref} className="text-zinc-600 dark:text-zinc-400 hover:text-white transition-colors">{nav.goNoGo}</Link>
+            <Link href={vsTraditionalHref} className="text-zinc-600 dark:text-zinc-400 hover:text-white transition-colors">{nav.vsTraditional}</Link>
+            <Link href={howToAutomateHref} className="text-zinc-600 dark:text-zinc-400 hover:text-white transition-colors">{nav.howToAutomate}</Link>
             <Link href={primaryCtaHref} className="text-teal-400 hover:text-teal-300 transition-colors">{dict.nav.cta}</Link>
             <Link href="/privacy" className="text-zinc-600 dark:text-zinc-400 hover:text-white transition-colors">{dict.footer.privacy}</Link>
             <Link href="/terms" className="text-zinc-600 dark:text-zinc-400 hover:text-white transition-colors">{dict.footer.terms}</Link>

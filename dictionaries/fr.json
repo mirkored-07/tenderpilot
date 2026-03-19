@@ -10,7 +10,10 @@
     "join": "S’inscrire",
     "export": "Exporter l’exemple (PDF)",
     "delete": "Supprimer",
-    "pricing": "Tarifs"
+    "pricing": "Tarifs",
+    "goNoGo": "IA Go/No-Go",
+    "vsTraditional": "Comparer",
+    "howToAutomate": "Guide Pratique"
   },
   "hero": {
     "subtitle": "Aide à la décision go/no-go pour consultants en appels d’offres et PME.",

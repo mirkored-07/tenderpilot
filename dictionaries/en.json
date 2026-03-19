@@ -10,7 +10,10 @@
     "join": "Join",
     "export": "Export sample (PDF)",
     "delete": "Delete",
-    "pricing": "Pricing"
+    "pricing": "Pricing",
+    "goNoGo": "Go/No-Go AI",
+    "vsTraditional": "Compare",
+    "howToAutomate": "How-To Guide"
   },
   "hero": {
     "subtitle": "Go/no-go decision support for tender consultants and SMEs.",

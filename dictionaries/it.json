@@ -10,7 +10,10 @@
     "join": "Iscriviti",
     "export": "Esporta esempio (PDF)",
     "delete": "Elimina",
-    "pricing": "Prezzi"
+    "pricing": "Prezzi",
+    "goNoGo": "Decisioni Go/No-Go",
+    "vsTraditional": "Confronta",
+    "howToAutomate": "Guida Pratica"
   },
   "hero": {
     "subtitle": "Supporto decisionale go/no-go per consulenti gare e PMI.",

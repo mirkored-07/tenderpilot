@@ -10,7 +10,10 @@
     "join": "Unirse",
     "export": "Exportar ejemplo (PDF)",
     "delete": "Eliminar",
-    "pricing": "Precios"
+    "pricing": "Precios",
+    "goNoGo": "IA Go/No-Go",
+    "vsTraditional": "Comparar",
+    "howToAutomate": "Guía Práctica"
   },
   "hero": {
     "subtitle": "Ayuda para la decisión go/no-go para consultores de licitaciones y pymes.",

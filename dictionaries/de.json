@@ -10,7 +10,10 @@
     "join": "Beitreten",
     "export": "Beispiel exportieren (PDF)",
     "delete": "Löschen",
-    "pricing": "Preise"
+    "pricing": "Preise",
+    "goNoGo": "Go/No-Go KI",
+    "vsTraditional": "Vergleich",
+    "howToAutomate": "Anleitung"
   },
   "hero": {
     "subtitle": "Go/No-Go Entscheidungshilfe für Ausschreibungsberater und KMU.",
